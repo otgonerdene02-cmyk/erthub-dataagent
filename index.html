@@ -2393,10 +2393,26 @@
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>Улаанбаатараас чиглэсэн зорчигчийн урсгал</div>
-        <div style="display:inline-flex;gap:3px;padding:3px;border-radius:11px;background:var(--surface2);border:1px solid var(--line);flex-shrink:0;">
-          <sc-for list="{{ detail.flowMap.typeTabs }}" as="tt" hint-placeholder-count="3">
-            <button sc-camel-on-click="{{ tt.pick }}" style="{{ tt.style }}">{{ tt.label }}</button>
-          </sc-for>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0;">
+          <sc-if value="{{ detail.flowMap.isWorld }}">
+            <div style="display:inline-flex;gap:3px;padding:3px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);">
+              <sc-for list="{{ detail.flowMap.projTabs }}" as="pt" hint-placeholder-count="2">
+                <button sc-camel-on-click="{{ pt.pick }}" style="{{ pt.style }}">{{ pt.label }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ detail.flowMap.isGlobe }}">
+            <div style="display:inline-flex;gap:3px;padding:3px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);">
+              <button sc-camel-on-click="{{ detail.flowMap.zoomOut }}" aria-label="Багасгах" style="cursor:pointer;font-family:inherit;width:26px;height:24px;border:none;border-radius:7px;background:transparent;color:var(--ink2);font-size:14px;line-height:1;">−</button>
+              <button sc-camel-on-click="{{ detail.flowMap.zoomIn }}" aria-label="Томруулах" style="cursor:pointer;font-family:inherit;width:26px;height:24px;border:none;border-radius:7px;background:transparent;color:var(--ink2);font-size:14px;line-height:1;">+</button>
+              <button sc-camel-on-click="{{ detail.flowMap.resetView }}" aria-label="Дахин тохируулах" style="cursor:pointer;font-family:inherit;width:26px;height:24px;border:none;border-radius:7px;background:transparent;color:var(--ink2);font-size:12px;line-height:1;">⟲</button>
+            </div>
+          </sc-if>
+          <div style="display:inline-flex;gap:3px;padding:3px;border-radius:11px;background:var(--surface2);border:1px solid var(--line);">
+            <sc-for list="{{ detail.flowMap.typeTabs }}" as="tt" hint-placeholder-count="3">
+              <button sc-camel-on-click="{{ tt.pick }}" style="{{ tt.style }}">{{ tt.label }}</button>
+            </sc-for>
+          </div>
         </div>
       </div>
       <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;">Бөмбөлгийн хэмжээ = зорчигчийн тоо. Улс/боомт дээр hover хийхэд нэрс, дарахад дэлгэрэнгүй харагдана. Баруун дээд булангийн "Дотоодын" товчоор Монголын аймгийн газрын зураг руу шилжинэ.</div>
@@ -2404,7 +2420,7 @@
         <div style="height:220px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:12.5px;">Газрын зургийн өгөгдөл ачаалж байна…</div>
       </sc-if>
       <sc-if value="{{ detail.flowMap.ready }}">
-        <svg sc-camel-view-box="{{ detail.flowMap.viewBox }}" style="width:100%;height:auto;min-height:250px;max-height:560px;display:block;border-radius:16px;overflow:hidden;background:linear-gradient(160deg,{{ detail.flowMap.oceanA }},{{ detail.flowMap.oceanB }});">
+        <svg sc-camel-view-box="{{ detail.flowMap.viewBox }}" sc-camel-on-mouse-down="{{ detail.flowMap.onGlobeDown }}" style="width:100%;height:auto;min-height:250px;max-height:560px;display:block;border-radius:16px;overflow:hidden;user-select:none;cursor:{{ detail.flowMap.svgCursor }};background:linear-gradient(160deg,{{ detail.flowMap.oceanA }},{{ detail.flowMap.oceanB }});">
           <defs>
             <linearGradient id="fmocean" x1="0" y1="0" x2="0.35" y2="1">
               <stop offset="0" stop-color="{{ detail.flowMap.oceanA }}"></stop>
@@ -2421,6 +2437,9 @@
             <sc-for list="{{ detail.flowMap.regions }}" as="rg" hint-placeholder-count="24">
               <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="{{ detail.flowMap.landStroke }}" stroke-width="0.9" vector-effect="non-scaling-stroke"></path>
             </sc-for>
+          </sc-if>
+          <sc-if value="{{ detail.flowMap.isGlobe }}">
+            <circle cx="{{ detail.flowMap.globeCx }}" cy="{{ detail.flowMap.globeCy }}" r="{{ detail.flowMap.globeR }}" fill="{{ detail.flowMap.oceanB }}" stroke="{{ detail.flowMap.landStroke }}" stroke-width="1" vector-effect="non-scaling-stroke"></circle>
           </sc-if>
           <sc-if value="{{ detail.flowMap.isWorld }}">
             <sc-for list="{{ detail.flowMap.countryPaths }}" as="cp" hint-placeholder-count="180">
@@ -2442,8 +2461,10 @@
           <sc-for list="{{ detail.flowMap.nodes }}" as="nd" hint-placeholder-count="14">
             <circle sc-camel-on-click="{{ nd.pick }}" cx="{{ nd.cx }}" cy="{{ nd.cy }}" r="{{ nd.r }}" fill="{{ nd.color }}" opacity="{{ nd.opacity }}" stroke="{{ nd.ringStroke }}" stroke-width="{{ nd.ringWidth }}" vector-effect="non-scaling-stroke" style="cursor:pointer;"><title>{{ nd.title }}</title></circle>
           </sc-for>
-          <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="15" fill="{{ detail.flowMap.ubInk }}" opacity="0.14" style="transform-box:fill-box;transform-origin:center;animation:pulseGlow 2.8s ease-in-out infinite;"></circle>
-          <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="6.5" fill="{{ detail.flowMap.ubInk }}" stroke="rgba(var(--surface-rgb),.95)" stroke-width="2"><title>Улаанбаатар (эх цэг)</title></circle>
+          <sc-if value="{{ detail.flowMap.ubVisible }}">
+            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="15" fill="{{ detail.flowMap.ubInk }}" opacity="0.14" style="transform-box:fill-box;transform-origin:center;animation:pulseGlow 2.8s ease-in-out infinite;"></circle>
+            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="6.5" fill="{{ detail.flowMap.ubInk }}" stroke="rgba(var(--surface-rgb),.95)" stroke-width="2"><title>Улаанбаатар (эх цэг)</title></circle>
+          </sc-if>
           <sc-for list="{{ detail.flowMap.labels }}" as="lb0" hint-placeholder-count="6">
             <text x="{{ lb0.x }}" y="{{ lb0.y }}" text-anchor="{{ lb0.anchor }}" fill="none" stroke="{{ detail.flowMap.labelHalo }}" stroke-width="{{ detail.flowMap.labelHaloW }}" stroke-linejoin="round" style="font-family:inherit;font-size:{{ detail.flowMap.labelFs }}px;font-weight:650;pointer-events:none;">{{ lb0.text }}</text>
           </sc-for>
@@ -3896,6 +3917,7 @@ class Component extends DCLogic {
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12',
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{},
+    mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
     theme:(function(){
       try{
         const saved=localStorage.getItem('eh-theme');
@@ -3937,6 +3959,35 @@ class Component extends DCLogic {
     this._onColResizeUp=()=>{ this._colDrag=null; };
     window.addEventListener('mousemove',this._onColResizeMove);
     window.addEventListener('mouseup',this._onColResizeUp);
+    // Бөмбөрцгийг чирж эргүүлэх. Хулганы хөдөлгөөн бүрт setState дуудвал
+    // (dc-runtime бүх template-ээ дахин барьдаг тул) хүнд болно — иймд
+    // хүлээгдэж буй эргэлтийг хадгалаад requestAnimationFrame-д нэг л
+    // удаа буулгана, өөрөөр хэлбэл кадрт нэгээс илүү render хийхгүй.
+    this._onGlobeMove=(e)=>{
+      if(!this._globeDrag) return;
+      e.preventDefault();
+      const g=this._globeDrag;
+      const k=0.34/(this.state.globeZoom||1);
+      this._globePending=[g.rot[0]+(e.clientX-g.x)*k,
+        Math.max(-85,Math.min(85,g.rot[1]-(e.clientY-g.y)*k))];
+      if(this._globeRaf) return;
+      this._globeRaf=requestAnimationFrame(()=>{
+        this._globeRaf=null;
+        if(this._globePending) this.setState({globeRot:this._globePending});
+      });
+    };
+    this._onGlobeUp=()=>{
+      if(!this._globeDrag) return;
+      this._globeDrag=null;
+      // Хүлээгдэж буй эргэлтийг заавал буулгаад rAF-ийн түгжээг тайлна.
+      // Хэрэв хуудас нуугдсан/throttle хийгдсэн бол rAF огт ажиллахгүй
+      // тул _globeRaf үлдэж, дараагийн чирэлтүүд бүгд блоклогдох эрсдэлтэй.
+      if(this._globeRaf){ cancelAnimationFrame(this._globeRaf); this._globeRaf=null; }
+      const pending=this._globePending; this._globePending=null;
+      this.setState(pending?{globeDragging:false,globeRot:pending}:{globeDragging:false});
+    };
+    window.addEventListener('mousemove',this._onGlobeMove);
+    window.addEventListener('mouseup',this._onGlobeUp);
     if(window.auth){
       this._unsubAuth=window.auth.onAuthStateChanged(user=>{
         this.setState({authed:!!user,authReady:true,
@@ -3968,7 +4019,12 @@ class Component extends DCLogic {
       this.worldCountries=countries.features;
       this.mongoliaFeature=countries.features.find(f=>String(f.id)==='496' || (f.properties && f.properties.name==='Mongolia'));
       this.setState({globeReady:true});
+      // Зөвхөн нүүр хуудсанд эргүүлнэ. Өмнө нь энэ 60мс тутам хуудас
+      // харгалзалгүй setState дуудаж, датасетийн дэлгэрэнгүй хуудсан дээр
+      // (150 мөр x 31 багана хүснэгттэй) бүх template-ийг дэмий дахин
+      // render хийлгэж байсан.
       this.rotInterval=setInterval(()=>{
+        if(this.state.page!=='home') return;
         this.setState(s=>({globeRotation:(s.globeRotation+0.5)%360}));
       },60);
     }catch(e){}
@@ -5649,20 +5705,32 @@ class Component extends DCLogic {
     // нь өргөнийг нь шилжүүлж (эхлэлд өргөн, төгсгөлд нарийсгаж) дүүргэсэн
     // path болгоно. Шугамын ЗУЗААН нь зорчигчийн тоог илэрхийлдэг тул
     // amCharts-ийн sankey map шиг эзлэхүүн шууд уншигдана.
-    const ribbonPath=(x1,y1,x2,y2,bend,w0,w1)=>{
-      const cx=(x1+x2)/2-(y2-y1)*bend, cy=(y1+y2)/2+(x2-x1)*bend;
-      const N=26, top=[], bot=[];
-      for(let i=0;i<=N;i++){
-        const t=i/N, mt=1-t;
-        const x=mt*mt*x1+2*mt*t*cx+t*t*x2, y=mt*mt*y1+2*mt*t*cy+t*t*y2;
-        const dx=2*mt*(cx-x1)+2*t*(x2-cx), dy=2*mt*(cy-y1)+2*t*(y2-cy);
+    // Дурын projected полилиниас тууз барина — ингэснээр хавтгай зураг
+    // (bezier-ээс түүвэрлэсэн цэгүүд) ба бөмбөрцөг (их тойргоос
+    // түүвэрлэсэн цэгүүд) хоёулаа ижил кодыг хуваалцана.
+    const ribbonFromPts=(pts,w0,w1)=>{
+      const n=pts.length-1;
+      if(n<1) return '';
+      const top=[],bot=[];
+      for(let i=0;i<=n;i++){
+        const p=pts[i], a=pts[Math.max(0,i-1)], b=pts[Math.min(n,i+1)];
+        const dx=b[0]-a[0], dy=b[1]-a[1];
         const L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;
-        const h=(w0*mt+w1*t)/2;
-        top.push((x+nx*h).toFixed(1)+','+(y+ny*h).toFixed(1));
-        bot.push((x-nx*h).toFixed(1)+','+(y-ny*h).toFixed(1));
+        const t=i/n, h=(w0*(1-t)+w1*t)/2;
+        top.push((p[0]+nx*h).toFixed(1)+','+(p[1]+ny*h).toFixed(1));
+        bot.push((p[0]-nx*h).toFixed(1)+','+(p[1]-ny*h).toFixed(1));
       }
       return 'M'+top.join('L')+'L'+bot.reverse().join('L')+'Z';
     };
+    const bezierPts=(x1,y1,x2,y2,bend,N)=>{
+      const cx=(x1+x2)/2-(y2-y1)*bend, cy=(y1+y2)/2+(x2-x1)*bend, out=[];
+      for(let i=0;i<=N;i++){
+        const t=i/N, mt=1-t;
+        out.push([mt*mt*x1+2*mt*t*cx+t*t*x2, mt*mt*y1+2*mt*t*cy+t*t*y2]);
+      }
+      return out;
+    };
+    const ribbonPath=(x1,y1,x2,y2,bend,w0,w1)=>ribbonFromPts(bezierPts(x1,y1,x2,y2,bend,26),w0,w1);
     // Градиент нь objectBoundingBox дээр ажиллах тул чиглэлийг 0/1 булангаар
     // өгнө — userSpaceOnUse-гүйгээр УБ-аас очих цэг рүү өнгө шилжинэ.
     const gradDir=(x1,y1,x2,y2)=>({gx1:x2>=x1?'0':'1',gx2:x2>=x1?'1':'0',gy1:y2>=y1?'0':'1',gy2:y2>=y1?'1':'0'});
@@ -5768,6 +5836,7 @@ class Component extends DCLogic {
       });
       return {ready:true,isDomestic:true,isWorld:false,viewBox:'0 0 '+W+' '+H,
         regions,arcs:flow.arcs,halos:flow.halos,labels:flow.labels,nodes,closeNode,
+        isGlobe:false,ubVisible:true,svgCursor:'default',onGlobeDown:null,
         oceanA,oceanB,landStroke,ubInk,labelHalo,typeTabs,labelFs,labelHaloW,
         ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
         detail:selected,
@@ -5796,8 +5865,25 @@ class Component extends DCLogic {
       const t=i/8;
       edge.push([bx0+(bx1-bx0)*t,by0],[bx0+(bx1-bx0)*t,by1],[bx0,by0+(by1-by0)*t],[bx1,by0+(by1-by0)*t]);
     }
-    const proj=d3.geoNaturalEarth1().fitExtent([[16,16],[W-16,H-16]],{type:'MultiPoint',coordinates:edge});
+    // Бөмбөрцөг горим: orthographic projection, чирж эргүүлнэ. clipAngle(90)
+    // нь ард талын геометрийг өөрөө таслах тул улсын path-ууд автоматаар
+    // зөв тайрагдана; цэгүүдийг (бөмбөлөг, шошго, тууз) geoDistance-аар
+    // өөрсдөө шалгаж нуух хэрэгтэй.
+    const isGlobe=this.state.mapProj!=='flat';
+    const rot=this.state.globeRot||[-72,-26];
+    const zoom=this.state.globeZoom||1;
+    let proj,sphereD='',globeCx=W/2,globeCy=H/2,globeR=0;
+    if(isGlobe){
+      globeR=Math.min(W,H)*0.44*zoom;
+      proj=d3.geoOrthographic().scale(globeR).translate([globeCx,globeCy])
+        .rotate([rot[0],rot[1]]).clipAngle(90);
+    }else{
+      proj=d3.geoNaturalEarth1().fitExtent([[16,16],[W-16,H-16]],{type:'MultiPoint',coordinates:edge});
+    }
     const pathGen=d3.geoPath(proj);
+    if(isGlobe) sphereD=pathGen({type:'Sphere'})||'';
+    const rotCenter=[-rot[0],-rot[1]];
+    const onFront=(coord)=>!isGlobe||d3.geoDistance(coord,rotCenter)<Math.PI/2-0.03;
     // Аль улсын полигон дотор очих цэг байгааг geoContains-аар тогтоож,
     // тухайн улсыг өөрийнх нь бөмбөлгийн өнгөөр бүдэг будна (нэрийн
     // англи/монгол mapping хэрэггүй). Улсын жагсаалт өөрчлөгдөх хүртэл
@@ -5841,13 +5927,45 @@ class Component extends DCLogic {
     };
     const maxPax=maxCountryPax;
     const ubProj=proj(UB_COORD)||[W/2,H/2];
-    const items=countries.map(c=>{
+    const ubVisible=onFront(UB_COORD);
+    // Бөмбөрцөг дээр зөвхөн урд талд буй улсуудыг үзүүлнэ — ар талынхыг
+    // projection буулгасан ч гэсэн бөмбөрцгийн нөгөө талд байх тул
+    // харагдвал буруу уншигдана.
+    const items=countries.filter(c=>onFront(COUNTRY_COORD[c])).map(c=>{
       const pt=proj(COUNTRY_COORD[c]);
       if(!pt) return null;
       return {name:c,pax:totals[c],atUb:false,x:pt[0],y:pt[1],color:nodeColor(c),
-        r:bubbleSize(totals[c],maxPax,5,24)};
+        coord:COUNTRY_COORD[c],r:bubbleSize(totals[c],maxPax,5,24)};
     }).filter(Boolean);
-    const flow=buildFlow(items,ubProj,0.20);
+    let flow;
+    if(isGlobe){
+      // Бөмбөрцөг дээрх урсгал нь дэлгэцийн bezier биш, ИХ ТОЙРГИЙГ
+      // (great circle) дагана — эргүүлэхэд зам нь бөмбөрцгийн гадаргууг
+      // зөв даган хэвтэнэ. Энэ нь amCharts-ийн "waypoints" ойлголттой ижил:
+      // хоёр цэгийн хооронд завсрын цэгүүд түүвэрлээд projection-оор
+      // буулгана.
+      const vis=ubVisible?items:[];
+      const maxP=vis.reduce((m,it)=>Math.max(m,it.pax),0);
+      const ribbons=vis.slice().sort((a,b)=>b.pax-a.pax).map(it=>{
+        const interp=d3.geoInterpolate(UB_COORD,it.coord);
+        const pts=[];
+        for(let i=0;i<=26;i++){
+          const c=interp(i/26);
+          if(!onFront(c)) continue;
+          const p=proj(c); if(p) pts.push(p);
+        }
+        if(pts.length<2) return null;
+        const t=maxP?Math.sqrt(it.pax/maxP):0;
+        const w0=1.5+10.5*t;
+        return {d:ribbonFromPts(pts,w0,w0*0.42),color:it.color,
+          opacity:(0.26+0.30*t).toFixed(2),
+          title:it.name+' — '+it.pax.toLocaleString('en-US')+' зорчигч'};
+      }).filter(Boolean);
+      const base=buildFlow(items,ubProj,0.20);
+      flow={arcs:[],halos:base.halos,labels:base.labels,ribbons};
+    }else{
+      flow=buildFlow(items,ubProj,0.20);
+    }
     const nodes=items.slice().sort((a,b)=>b.r-a.r).map(it=>{
       const key='intl:'+it.name, sel=isSelected(key);
       return {key,cx:it.x.toFixed(1),cy:it.y.toFixed(1),r:it.r.toFixed(1),color:it.color,name:it.name,
@@ -5856,9 +5974,26 @@ class Component extends DCLogic {
         ringStroke:sel?ubInk:'rgba(var(--surface-rgb),.92)',ringWidth:sel?2.6:1.3,
         opacity:sel?'1':'0.86'};
     });
+    const projTabs=[['globe','Бөмбөрцөг'],['flat','Хавтгай']].map(o=>{
+      const on=(this.state.mapProj!=='flat')===(o[0]==='globe');
+      return {label:o[1],on,pick:()=>this.setState({mapProj:o[0],mapSelectedNode:null}),
+        style:'cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;white-space:nowrap;border:none;border-radius:7px;padding:5px 11px;transition:.16s var(--ease);'
+          +(on?'background:var(--ink);color:#EEF3FA;':'background:transparent;color:var(--ink3);')};
+    });
+    const zoomBy=(f)=>()=>this.setState(s=>({globeZoom:Math.max(0.7,Math.min(2.6,(s.globeZoom||1)*f))}));
     return {ready:true,isDomestic:false,isWorld:true,viewBox:'0 0 '+W+' '+H,
       countryPaths,arcs:[],ribbons:flow.ribbons,halos:flow.halos,labels:flow.labels,nodes,closeNode,
-      choroLegend,
+      choroLegend,projTabs,isGlobe,sphereD,ubVisible,
+      globeCx:globeCx.toFixed(1),globeCy:globeCy.toFixed(1),globeR:globeR.toFixed(1),
+      zoomIn:zoomBy(1.25),zoomOut:zoomBy(0.8),
+      resetView:()=>this.setState({globeRot:[-72,-26],globeZoom:1}),
+      dragging:!!this.state.globeDragging,
+      svgCursor:isGlobe?(this.state.globeDragging?'grabbing':'grab'):'default',
+      onGlobeDown:isGlobe?((e)=>{
+        e.preventDefault();
+        this._globeDrag={x:e.clientX,y:e.clientY,rot:(this.state.globeRot||[-72,-26]).slice()};
+        this.setState({globeDragging:true});
+      }):null,
       oceanA,oceanB,landStroke,ubInk,labelHalo,typeTabs,labelFs,labelHaloW,
       ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
       detail:selected,
