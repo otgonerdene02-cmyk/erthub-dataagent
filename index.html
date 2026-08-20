@@ -2049,13 +2049,13 @@
       <div style="display:flex;gap:10px;flex-shrink:0;">
         <div style="min-width:118px;background:linear-gradient(155deg,#2E7CF61c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:15px;box-shadow:var(--shadow);padding:15px 17px;">
           <div style="font-size:16px;margin-bottom:8px;">🔄</div>
-          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;">Шинэчлэл</div>
-          <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.freq }}</div>
+          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.freqCard.label }}<sc-if value="{{ detail.freqCard.live }}"><span title="Бодит өгөгдлөөс тооцов" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+          <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.freqCard.value }}</div>
         </div>
         <div style="min-width:118px;background:linear-gradient(155deg,#7C5CF01c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:15px;box-shadow:var(--shadow);padding:15px 17px;">
           <div style="font-size:16px;margin-bottom:8px;">📈</div>
-          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;">Ашиглалт (сар)</div>
-          <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.use }}</div>
+          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.useCard.label }}<sc-if value="{{ detail.useCard.live }}"><span title="Бодит өгөгдлөөс тооцов" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+          <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.useCard.value }}</div>
         </div>
       </div>
     </div>
@@ -3673,12 +3673,37 @@ const SERVICES=[
   ['public','U-Money / Ubcard цахим тасалбар','Нийтийн тээврийн цахим карт цэнэглэх, үлдэгдэл шалгах, гүйлгээний түүх.',''],
   ['public','"ЕС", "ТҮР" замын хуудас','Хязгаарласан, хориглосон гудамж зам руу нэвтрэх зөвшөөрлийн хуудас авах.','']
 ];
+// ─── Картын талбар ↔ бодит өгөгдлийн MAPPING ────────────────────────────
+// "Энэ картын энэ утгыг датасэтээс хаанаас ав гэж яаж хэлэх вэ?" — энд
+// ЗАРЛАНА. Гурван хэсэгтэй:
+//   1) applyRealFlightsData() бодит мөрүүдээс this._liveStats[салбар]-ыг
+//      бөглөнө (rows, totalPax, carriers, lastDate, monthSpan, ...).
+//   2) DATA_BINDINGS[салбар][нэр] нь тэр статистикийг картад харагдах
+//      {label, value} хос болгож хөрвүүлнэ.
+//   3) DATASETS доторх датасэт бүр `live:{картынТалбар:'нэр'}`-ээр аль
+//      картын аль талбар аль хөрвүүлэгчийг дуудахыг сонгоно.
+// Шинэ утга нэмэх = (1)-д тоо нэмээд, (2)-т нэг мөр функц бичээд, (3)-т
+// нэрийг нь бичих. Өгөгдөл ачаалагдаагүй, эсвэл mapping зарлаагүй бол
+// DATASETS доторх статик текст хэвээр үлдэнэ.
+const DATA_BINDINGS={
+  air:{
+    updateFreq:  s=>({label:'Шинэчлэл',       value:'Өдөр бүр'}),
+    lastRecord:  s=>({label:'Сүүлийн бичлэг', value:s.lastDate}),
+    recordCount: s=>({label:'Бичлэг (нийт)',  value:s.rows.toLocaleString('en-US')}),
+    monthlyRows: s=>({label:'Бичлэг (сар)',   value:Math.round(s.rows/s.monthSpan).toLocaleString('en-US')}),
+    totalPax:    s=>({label:'Нийт зорчигч',   value:s.totalPax.toLocaleString('en-US')}),
+    carriers:    s=>({label:'Тээвэрлэгч',     value:String(s.carriers)}),
+    cities:      s=>({label:'Хот, боомт',     value:String(s.cities)}),
+    coverage:    s=>({label:'Хамрах хугацаа', value:s.yearFrom===s.yearTo?String(s.yearFrom):s.yearFrom+'–'+s.yearTo})
+  }
+};
 const DATASETS=[
   {sector:'road',name:'Улаанбаатарын замын хөдөлгөөний ачаалал',agency:'ЗТХЕГ',fmt:'API',badges:['Үнэгүй','Шууд'],freq:'20 сек тутам',use:'86,400 дуудлага',desc:'Хотын гол чиглэлүүдийн замын хөдөлгөөний ачааллыг мэдрэгчээс бодит цагаар дамжуулна.'},
   {sector:'road',name:'Замын ослын бүртгэл',agency:'ЗТХЕГ',fmt:'CSV',badges:['Үнэгүй'],freq:'Сар бүр',use:'1,240 татсан',desc:'Улсын хэмжээний замын ослын дэлгэрэнгүй бүртгэл, аймаг, төрлөөр.'},
   {sector:'rail',name:'Зорчигчийн галт тэрэгний хуваарь',agency:'УБТЗ',fmt:'CSV, API',badges:['Үнэгүй'],freq:'Улирал бүр',use:'3,410 татсан',desc:'Улсын хэмжээний зорчигчийн галт тэрэгний хуваарь, чиглэл, буудал.'},
   {sector:'rail',name:'Ачаа тээврийн бодит байршил',agency:'МТЗ',fmt:'API',badges:['Premium','Шууд'],freq:'1 мин тутам',use:'SLA-тай',desc:'Ачаа тээврийн галт тэрэгний бодит цагийн байршил, эрчимжсэн хандалттай.'},
-  {sector:'air',name:'Агаарын тээврийн статистик',agency:'ИНЕГ',fmt:'Вэбсервис',badges:['Үнэгүй'],freq:'Өдөр бүр',use:'14,200 дуудлага',desc:'Олон улс, дотоодын нислэг, зорчигч, ачааны иж бүрэн статистик.'},
+  {sector:'air',name:'Агаарын тээврийн статистик',agency:'ИНЕГ',fmt:'Вэбсервис',badges:['Үнэгүй'],freq:'Өдөр бүр',use:'14,200 дуудлага',desc:'Олон улс, дотоодын нислэг, зорчигч, ачааны иж бүрэн статистик.',
+   live:{freq:'lastRecord',use:'monthlyRows'}},
   {sector:'air',name:'Нислэгийн бодит байршил',agency:'ИНЕГ',fmt:'API',badges:['Premium','Шууд'],freq:'Шууд',use:'350,000 дуудлага',desc:'Монголын агаарын зайд байгаа нислэгийн бодит байршил, өндөр, хурд.'},
   {sector:'water',name:'Боомтын ачаа эргэлт',agency:'ЗТЯ',fmt:'CSV',badges:['Үнэгүй'],freq:'Сар бүр',use:'890 татсан',desc:'Идэвхтэй боомтуудын сарын ачаа эргэлтийн дэлгэрэнгүй тайлан.'},
   {sector:'public',name:'Нийтийн тээврийн чиглэл, хуваарь',agency:'НТБГ',fmt:'CSV, GEOJSON',badges:['Үнэгүй'],freq:'Сар бүр',use:'5,680 татсан',desc:'Хотын нийтийн тээврийн бүх чиглэлийн зурвас, зогсоол, хуваарь.'},
@@ -4298,6 +4323,20 @@ class Component extends DCLogic {
     // perf; head/types/notes are rewritten alongside so schema, table and
     // Excel export all stay in lockstep.
     const sortedFull=filtered.slice().sort((a,b)=>b.unixtimestamp-a.unixtimestamp);
+    // Датасэтийн картуудад зориулсан бодит үзүүлэлтүүд. DATA_BINDINGS энэ
+    // объектоос уншина — карт бүр аль хэмжигдэхүүнийг авахаа DATASETS доторх
+    // `live` тохиргоогоор зарлана (доорх тайлбарыг үз).
+    const ymSet=new Set();
+    for(const f of filtered) ymSet.add(f.year+'-'+f.month);
+    const newest=sortedFull[0], yrs=[...new Set(filtered.map(f=>f.year))].sort();
+    this._liveStats=this._liveStats||{};
+    this._liveStats.air={
+      rows:filtered.length, flights:cur.count, totalPax:cur.totalPax,
+      carriers:cur.carrierCount, cities:cur.cityCount, cargoTon:cur.cargoTon,
+      monthSpan:Math.max(1,ymSet.size),
+      yearFrom:yrs[0]||'', yearTo:yrs[yrs.length-1]||'',
+      lastDate:newest?(newest.year+'-'+String(newest.month).padStart(2,'0')+'-'+String(newest.day).padStart(2,'0')):'—'
+    };
     const valueCols=AIR_COLUMNS.slice(0,-1);
     DS_SCHEMA.air.head=AIR_COLUMNS.map(c=>c[0]);
     DS_SCHEMA.air.types=AIR_COLUMNS.map(c=>c[1]);
@@ -5445,8 +5484,21 @@ class Component extends DCLogic {
       const airCountries=sAir.bars.map(b=>({name:b[0],widthPct:(b[1]/cMax*100).toFixed(0)+'%',value:b[2]}));
       airExtra={isAirDetail:true,airDonut,airCountries,flowMap:this.buildFlowMap()};
     }
+    // DATASETS.live-д зарласан mapping-ийг бодит статистик дээр буулгана.
+    // Өгөгдөл ирээгүй, эсвэл mapping байхгүй бол статик утга руу ухарна —
+    // хуудас хэзээ ч хоосон талбартай гарахгүй.
+    const liveCard=(field,fallbackLabel)=>{
+      const name=dsel.live&&dsel.live[field];
+      const stats=this._liveStats&&this._liveStats[dsel.sector];
+      const fn=name&&DATA_BINDINGS[dsel.sector]&&DATA_BINDINGS[dsel.sector][name];
+      if(!fn||!stats) return {label:fallbackLabel,value:dsel[field],live:false};
+      const r=fn(stats);
+      return {label:r.label,value:r.value,live:true};
+    };
+    const freqCard=liveCard('freq','Шинэчлэл'), useCard=liveCard('use','Ашиглалт (сар)');
     const detail={
       isAirDetail,...airExtra,
+      freqCard,useCard,
       name:dsel.name,desc:dsel.desc,agency:dsel.agency,fmt:dsel.fmt,freq:dsel.freq,use:dsel.use,
       color:NEON[dsel.sector],glyph:GLYPH[dsel.sector],sectorLabel:SECTORS[dsel.sector].label,
       badgeList:dsel.badges.map(b=>({label:b})),wp,
