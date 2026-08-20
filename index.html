@@ -3330,7 +3330,7 @@ const DS_SCHEMA={
       ['2026-08-09','№286','УБ – Чойр',2080,'ok:Хэвийн'],['2026-08-09','№271','УБ – Замын-Үүд',3960,'ok:Хэвийн']]},
   air:{head:['Огноо','Нислэг','Чиглэл','Зорчигч','Төлөв'],
     types:['date','string','string','int','enum'],
-    notes:['Нислэгийн огноо','Тээвэрлэгчийн нислэгийн код','Хүрэх хот (IATA)','Зорчигчийн тоо','Хоцролтын төлөв'],
+    notes:['Нислэгийн огноо','Тээвэрлэгчийн нислэгийн код','Хүрэх/гарах хот','Зорчигчийн тоо','Нислэгийн төрөл'],
     rows:[['2026-08-12','OM301','Сөүл (ICN)',218,'ok:Хэвийн'],['2026-08-12','MR331','Бангкок (HKT)',176,'ok:Хэвийн'],
       ['2026-08-12','CA909','Бээжин (PEK)',162,'warn:20 мин'],['2026-08-12','OM223','Улаангом (ULG)',48,'ok:Хэвийн'],
       ['2026-08-11','KE867','Сөүл (ICN)',241,'ok:Хэвийн'],['2026-08-11','TK028','Истанбул (IST)',198,'ok:Хэвийн'],
@@ -3685,7 +3685,7 @@ class Component extends DCLogic {
     if(window.scrollTo) window.scrollTo(0,0);
   }
   componentDidMount(){
-    this.loadGlobe(); this.syncMonths();
+    this.loadGlobe(); this.syncMonths(); this.loadFlightsData();
     this._esc=(e)=>{ if(e.key==='Escape') this.escClose(); };
     window.addEventListener('keydown',this._esc);
     this._onResize=()=>this.setState({viewportW:window.innerWidth});
@@ -3724,6 +3724,116 @@ class Component extends DCLogic {
         this.setState(s=>({globeRotation:(s.globeRotation+0.5)%360}));
       },60);
     }catch(e){}
+  }
+  // Live Агаарын тээвэр data — fetched at runtime from the already-published,
+  // already-updating JSON of the veritech-flights-dashboard repo (no new
+  // workflow/secrets here, we just read what that repo already publishes).
+  // Mutates SECTORS.air / RATIO.air / SECTOR_TABLES.air in place so the
+  // existing generic sector-page/home-KPI/donut rendering — which all read
+  // those objects fresh via SECTORS[key] on every render — picks the real
+  // numbers up with no other code changes.
+  async loadFlightsData(){
+    const BASE='https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/';
+    try{
+      const idxRes=await fetch(BASE+'flights-index.json');
+      if(!idxRes.ok) throw new Error('index fetch failed: '+idxRes.status);
+      const idx=await idxRes.json();
+      const years=(idx.years||[]).map(y=>y.year).sort((a,b)=>b-a);
+      const year=years[0];
+      if(!year) throw new Error('no years in index');
+      const res=await fetch(BASE+'flights-'+year+'.json');
+      if(!res.ok) throw new Error('flights fetch failed: '+res.status);
+      const data=await res.json();
+      const flights=data.flights||[];
+      if(!flights.length) throw new Error('empty flights array');
+      this.applyRealFlightsData(flights,year);
+      this.setState({flightsLive:true});
+    }catch(e){
+      console.warn('[ErtHub] Live flights data unavailable, keeping demo values for Агаарын тээвэр:',e);
+    }
+  }
+  applyRealFlightsData(flights,year){
+    const fmtBig=(n)=>{
+      if(n>=1000000) return (n/1000000).toFixed(1)+'M';
+      if(n>=100000) return Math.round(n/1000)+'K';
+      return Math.round(n).toLocaleString('en-US');
+    };
+    const monthCounts=new Array(13).fill(0), monthPax=new Array(13).fill(0);
+    let totalPax=0, intlFlights=0, intlPax=0, domPax=0;
+    const byCarrier={}, byCountry={};
+    for(const f of flights){
+      const m=f.month||1, pax=f.pax||0;
+      monthCounts[m]=(monthCounts[m]||0)+1;
+      monthPax[m]=(monthPax[m]||0)+pax;
+      totalPax+=pax;
+      if(f.ou==='ОУ'){ intlFlights++; intlPax+=pax; } else { domPax+=pax; }
+      if(f.carr) byCarrier[f.carr]=(byCarrier[f.carr]||0)+pax;
+      if(f.cntry && f.cntry!=='Монгол') byCountry[f.cntry]=(byCountry[f.cntry]||0)+pax;
+    }
+    const c1d=[]; for(let m=1;m<=12;m++) c1d.push(monthCounts[m]||0);
+    // The latest month with data is very likely still in progress (this feed
+    // updates continuously) — comparing a partial month to a complete one
+    // would read as a fake drop, so skip it for the delta and compare the
+    // two most recent COMPLETE months instead.
+    const now=new Date();
+    const latestIdx=(()=>{ for(let i=11;i>=0;i--) if(c1d[i]>0) return i; return -1; })();
+    const latestIsInProgress=latestIdx>=0 && year===now.getFullYear() && (latestIdx+1)===(now.getMonth()+1);
+    const searchFrom=latestIsInProgress?latestIdx-1:latestIdx;
+    const lastIdx=(()=>{ for(let i=searchFrom;i>=0;i--) if(c1d[i]>0) return i; return Math.max(searchFrom,0); })();
+    const prevIdx=(()=>{ for(let i=lastIdx-1;i>=0;i--) if(c1d[i]>0) return i; return lastIdx; })();
+    const pctDelta=(cur,prev)=>{
+      if(!prev) return {s:'0.0%',dir:'flat'};
+      const d=(cur-prev)/prev*100;
+      return {s:(d>=0?'+':'')+d.toFixed(1)+'%', dir:d>0?'up':(d<0?'down':'flat')};
+    };
+    const flightDelta=pctDelta(c1d[lastIdx],c1d[prevIdx]);
+    const paxDelta=pctDelta(monthPax[lastIdx+1]||0,monthPax[prevIdx+1]||0);
+    const total=flights.length;
+    const intlPct=total?(intlFlights/total*100):0;
+    const domPaxPct=totalPax?(domPax/totalPax*100):0;
+
+    SECTORS.air.kpis=[
+      ['НИЙТ НИСЛЭГ',fmtBig(total),'',flightDelta.s,flightDelta.dir],
+      ['НИЙТ ЗОРЧИГЧ',fmtBig(totalPax),'',paxDelta.s,paxDelta.dir],
+      ['ОУ НИСЛЭГ',fmtBig(intlFlights),intlPct.toFixed(0)+'%',flightDelta.s,flightDelta.dir],
+      ['ДОТООД ЗОРЧИГЧ',fmtBig(domPax),domPaxPct.toFixed(0)+'%',paxDelta.s,paxDelta.dir]
+    ];
+    SECTORS.air.c1d=c1d;
+
+    const carrierList=Object.entries(byCarrier).sort((a,b)=>b[1]-a[1]);
+    const carrierTotal=carrierList.reduce((s,c)=>s+c[1],0)||1;
+    const topCarriers=carrierList.slice(0,4);
+    const otherCarrierPax=carrierList.slice(4).reduce((s,c)=>s+c[1],0);
+    const rank=topCarriers.map(c=>[c[0],c[1].toLocaleString('en-US'),(c[1]/carrierTotal*100).toFixed(1)+'%']);
+    if(otherCarrierPax>0) rank.push(['Бусад',otherCarrierPax.toLocaleString('en-US'),(otherCarrierPax/carrierTotal*100).toFixed(1)+'%']);
+    SECTORS.air.rank=rank;
+
+    const countryList=Object.entries(byCountry).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const maxCountry=countryList.length?countryList[0][1]:1;
+    SECTORS.air.bars=countryList.map(c=>[c[0],Math.round(c[1]/maxCountry*100),c[1].toLocaleString('en-US')]);
+
+    RATIO.air={labels:['Олон улсын','Дотоодын'],pct:intlPct};
+
+    const sorted=flights.slice().sort((a,b)=>b.unixtimestamp-a.unixtimestamp).slice(0,20);
+    SECTOR_TABLES.air={
+      title:'Нислэгүүдийн жагсаалт · бодит цагийн эх сурвалж',
+      head:['Нислэг','Тээвэрлэгч','Хот','Улс','Чиг','Зорчигч','Огноо','Төлөв'],
+      rows:sorted.map(f=>{
+        const mm=String(f.month).padStart(2,'0'), dd=String(f.day).padStart(2,'0');
+        const isCharter=f.flightType==='Захиалгат';
+        return [f.flight||'—',f.carr||'—',f.city||'—',f.cntry||'—',f.dir==='1'?'↗':'↙',
+          String(f.pax||0),mm+'-'+dd,(isCharter?'warn:':'ok:')+(f.flightType||'Тогтмол')];
+      })
+    };
+
+    // This is the table actually shown on the dataset detail page's
+    // "Өгөгдлийн сан" preview (DS_SCHEMA[sector].rows) — separate from
+    // SECTOR_TABLES.air above, which nothing currently renders.
+    DS_SCHEMA.air.rows=sorted.slice(0,12).map(f=>{
+      const mm=String(f.month).padStart(2,'0'), dd=String(f.day).padStart(2,'0');
+      const isCharter=f.flightType==='Захиалгат';
+      return [year+'-'+mm+'-'+dd,f.flight||'—',f.city||'—',f.pax||0,(isCharter?'warn:':'ok:')+(f.flightType||'Тогтмол')];
+    });
   }
   buildTable(){
     const k=this.state.activeSector, t=SECTOR_TABLES[k];
