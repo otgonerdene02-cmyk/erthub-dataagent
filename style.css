@@ -1,0 +1,28 @@
+/* ErtHub — animation keyframes. All layout/spacing/colors are generated as
+   inline styles by js/app logic (Design Canvas convention) — this file only
+   holds the @keyframes referenced from those inline `animation:` values,
+   plus the page-level reset. Fonts are loaded via Google Fonts (see index.html <head>). */
+body{margin:0;}
+@keyframes driftA{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(6%,8%,0) scale(1.15);}}
+@keyframes driftB{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(-8%,-5%,0) scale(1.2);}}
+@keyframes driftC{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(5%,-9%,0) scale(1.1);}}
+@keyframes gridDrift{from{background-position:0 0;}to{background-position:48px 48px;}}
+@keyframes pulseGlow{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.25);}}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+@keyframes floaty{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+@keyframes slowPan{from{transform:translate3d(0,0,0);}to{transform:translate3d(-6%,-3%,0);}}
+@keyframes slowPanB{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(5%,2%,0) scale(1.08);}}
+@keyframes breathe{0%,100%{opacity:.5;}50%{opacity:1;}}
+@keyframes dashLong{from{stroke-dashoffset:0;}to{stroke-dashoffset:-1200;}}
+@keyframes dataRise{0%{transform:translateY(14%) scaleY(.82);}50%{transform:translateY(-6%) scaleY(1.08);}100%{transform:translateY(14%) scaleY(.82);}}
+@keyframes ringOut{0%{transform:scale(.55);opacity:.5;}100%{transform:scale(1.45);opacity:0;}}
+@keyframes waveShift{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+@keyframes netPulse{0%,100%{opacity:.25;transform:scale(1);}50%{opacity:.7;transform:scale(1.35);}}
+@keyframes streamFlow{from{stroke-dashoffset:0;}to{stroke-dashoffset:-260;}}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+@keyframes floatZ{0%,100%{transform:translateZ(0) translateY(0) scale(1);}50%{transform:translateZ(70px) translateY(-18px) scale(1.25);}}
+@keyframes tickerScroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+@keyframes dashFlow{to{stroke-dashoffset:-24;}}
+@keyframes scanSweep{0%{transform:translateX(-120%);}100%{transform:translateX(320%);}}
+@keyframes barGrow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+@keyframes glowPulse{0%,100%{opacity:.35;}50%{opacity:.85;}}
