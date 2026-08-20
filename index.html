@@ -3647,19 +3647,21 @@ function buildDiverging(activeKey){
 function mapFirebaseError(err){
   const code=(err&&err.code)||'';
   const map={
-    'auth/email-already-in-use':'Энэ и-мэйл хаягаар бүртгэл үүссэн байна.',
-    'auth/invalid-email':'И-мэйл хаяг зөв биш байна.',
-    'auth/weak-password':'Нэвтрэх үг хэт сул байна.',
-    'auth/wrong-password':'Нэвтрэх үг буруу байна.',
+    'auth/user-cancelled':'Нэвтрэх цонхыг хаасан тул нэвтрэлт цуцлагдлаа. Дахин оролдоно уу.',
+    'auth/popup-closed-by-user':'Нэвтрэх цонхыг хаасан тул нэвтрэлт цуцлагдлаа. Дахин оролдоно уу.',
+    'auth/cancelled-popup-request':'Нэвтрэх цонхыг хаасан тул нэвтрэлт цуцлагдлаа. Дахин оролдоно уу.',
+    'auth/wrong-password':'И-мэйл эсвэл нэвтрэх үг буруу байна.',
     'auth/invalid-credential':'И-мэйл эсвэл нэвтрэх үг буруу байна.',
-    'auth/user-not-found':'Ийм и-мэйлтэй хэрэглэгч олдсонгүй.',
+    'auth/user-not-found':'Энэ и-мэйл хаягаар бүртгэл олдсонгүй.',
+    'auth/email-already-in-use':'Энэ и-мэйл хаяг аль хэдийн бүртгэлтэй байна.',
+    'auth/weak-password':'Нэвтрэх үг хэт энгийн байна. Дор хаяж 6 тэмдэгт ашиглана уу.',
+    'auth/network-request-failed':'Сүлжээний алдаа гарлаа. Интернэт холболтоо шалгана уу.',
+    'auth/popup-blocked':'Хөтөч popup цонхыг блоклосон байна. Popup зөвшөөрч дахин оролдоно уу.',
+    'auth/invalid-email':'И-мэйл хаяг зөв биш байна.',
     'auth/too-many-requests':'Оролдлого хэт олон боллоо. Түр хүлээгээд дахин оролдоно уу.',
-    'auth/popup-closed-by-user':'Нэвтрэх цонхыг хаасан байна.',
-    'auth/cancelled-popup-request':'Нэвтрэх хүсэлт цуцлагдлаа.',
-    'auth/network-request-failed':'Сүлжээний алдаа гарлаа. Холболтоо шалгана уу.',
     'auth/configuration-not-found':'Firebase тохиргоо дутуу байна (Email/Password эсвэл Google нэвтрэлт идэвхжээгүй байж болзошгүй).'
   };
-  return map[code] || (err&&err.message) || 'Алдаа гарлаа. Дахин оролдоно уу.';
+  return map[code] || 'Тодорхойгүй алдаа гарлаа. Дахин оролдоно уу.';
 }
 
 class Component extends DCLogic {
