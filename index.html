@@ -2368,21 +2368,49 @@
     </div>
 
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
-      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:8px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>Улаанбаатараас чиглэсэн зорчигчийн урсгал</div>
-      <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;">Схемчилсэн дүрслэл — бөмбөлгийн хэмжээ тухайн чиглэлийн зорчигчийн тоонд пропорциональ.</div>
-      <svg sc-camel-view-box="0 0 280 280" style="width:100%;max-width:420px;height:auto;display:block;margin:0 auto;">
-        <sc-for list="{{ detail.flowNodes }}" as="fn" hint-placeholder-count="5">
-          <line x1="140" y1="140" x2="{{ fn.cx }}" y2="{{ fn.cy }}" stroke="{{ fn.color }}" stroke-width="1" opacity="0.3"></line>
-        </sc-for>
-        <circle cx="140" cy="140" r="10" fill="{{ activeColor }}"></circle>
-        <foreignObject x="100" y="152" width="80" height="16"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink2);text-align:center;">Улаанбаатар</div></foreignObject>
-        <sc-for list="{{ detail.flowNodes }}" as="fn" hint-placeholder-count="5">
-          <circle cx="{{ fn.cx }}" cy="{{ fn.cy }}" r="{{ fn.r }}" fill="{{ fn.color }}" opacity="{{ fn.opacity }}"></circle>
-          <foreignObject x="{{ fn.cx }}" y="{{ fn.cy }}" width="90" height="30" style="overflow:visible;transform:translate(-45px,4px);">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink2);text-align:center;line-height:1.3;">{{ fn.label }}<br><span style="font-weight:700;color:var(--ink);">{{ fn.value }}</span></div>
-          </foreignObject>
-        </sc-for>
-      </svg>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>Улаанбаатараас чиглэсэн зорчигчийн урсгал</div>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;">Бөмбөлгийн хэмжээ = зорчигчийн тоо. Улс/боомт дээр hover хийхэд нэрс, дарахад дэлгэрэнгүй харагдана. "Төрөл" шүүлтээр Дотоодын сонговол Монголын аймгийн газрын зураг руу шилжинэ.</div>
+      <sc-if value="{{ detail.flowMap.notReady }}">
+        <div style="height:220px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:12.5px;">Газрын зургийн өгөгдөл ачаалж байна…</div>
+      </sc-if>
+      <sc-if value="{{ detail.flowMap.ready }}">
+        <svg sc-camel-view-box="{{ detail.flowMap.viewBox }}" style="width:100%;height:auto;display:block;">
+          <sc-if value="{{ detail.flowMap.isDomestic }}">
+            <sc-for list="{{ detail.flowMap.regions }}" as="rg" hint-placeholder-count="24">
+              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="rgba(var(--surface-rgb),.7)" stroke-width="0.6"></path>
+            </sc-for>
+          </sc-if>
+          <sc-if value="{{ detail.flowMap.isWorld }}">
+            <path d="{{ detail.flowMap.land }}" fill="var(--surface2)" stroke="var(--line)" stroke-width="0.6"></path>
+          </sc-if>
+          <sc-for list="{{ detail.flowMap.lines }}" as="ln" hint-placeholder-count="14">
+            <line x1="{{ ln.x1 }}" y1="{{ ln.y1 }}" x2="{{ ln.x2 }}" y2="{{ ln.y2 }}" stroke="{{ ln.color }}" stroke-width="1" opacity="0.5"></line>
+          </sc-for>
+          <sc-for list="{{ detail.flowMap.nodes }}" as="nd" hint-placeholder-count="14">
+            <circle sc-camel-on-click="{{ nd.pick }}" cx="{{ nd.cx }}" cy="{{ nd.cy }}" r="{{ nd.r }}" fill="{{ nd.color }}" opacity="0.88" stroke="{{ nd.ringStroke }}" stroke-width="{{ nd.ringWidth }}" style="cursor:pointer;"><title>{{ nd.title }}</title></circle>
+          </sc-for>
+          <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="5" fill="var(--ink)" stroke="rgba(var(--surface-rgb),.9)" stroke-width="1.5"><title>Улаанбаатар (эх цэг)</title></circle>
+        </svg>
+        <sc-if value="{{ detail.flowMap.detail }}">
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 16px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ detail.flowMap.detail.name }}</div>
+              <div style="font-size:11.5px;color:var(--ink3);margin-top:2px;">{{ detail.flowMap.detail.sub }}</div>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;">{{ detail.flowMap.detail.value }} <span style="font-size:10.5px;color:var(--ink3);font-weight:500;">зорчигч</span></div>
+            <button sc-camel-on-click="{{ detail.flowMap.closeNode }}" style="cursor:pointer;font-family:inherit;width:26px;height:26px;flex-shrink:0;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:12px;">✕</button>
+          </div>
+        </sc-if>
+        <div style="display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:14px;">
+          <sc-for list="{{ detail.flowMap.legend }}" as="lg" hint-placeholder-count="14">
+            <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2);">
+              <span style="width:8px;height:8px;border-radius:50%;background:{{ lg.color }};flex-shrink:0;"></span>{{ lg.name }}
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
     </div>
     </sc-if>
 
@@ -3230,6 +3258,60 @@
 <script type="text/x-dc" data-dc-script="">
 const NEON = {road:'#8CA9E8',rail:'#B48CFF',air:'#2FE0C4',water:'#4FA8FF',public:'#F2A93B'};
 const GLYPH = {road:'🚗',rail:'🚆',air:'✈️',water:'🚢',public:'🚌'};
+// Улаанбаатараас чиглэсэн зорчигчийн урсгал (bubble map) — жинхэнэ газрын
+// зургийн горим: geo координатууд veritech-flights-dashboard-аас шилжсэн
+// баримтат мэдээлэл (country centroid / нисэх буудлын байршил), Bilgee/
+// mongolia-geojson-той хамт. Өнгийг эндээс биш render vед theme-ээс
+// (--surface-rgb/NEON.air) hash-ээр тооцоолно — доор hardcode өнгө алга.
+const UB_COORD=[106.9,47.9];
+const COUNTRY_COORD={
+  'Өмнөд Солонгос':[127.5,37.5],'Хятад':[104.0,35.0],'Япон':[138.0,36.0],
+  'Турк':[35.0,39.0],'Хонг Конг':[114.2,22.3],'Герман':[10.5,51.2],
+  'Вьетнам':[108.0,14.0],'Тайланд':[101.0,15.0],'Казахстан':[66.9,48.0],
+  'Орос':[105.0,61.0],'Сингапур':[103.8,1.3],'Энэтхэг':[78.9,20.6],
+  'Узбекистан':[63.9,41.3],'АНАУ':[54.4,24.0],'Их Британи':[-1.5,52.5],
+  'Унгар':[19.5,47.2],'Азербайжан':[47.6,40.4],'Филиппин':[122.0,12.9],
+  'Ирланд':[-8.2,53.4],'Индонез':[113.9,-0.8]
+};
+const DOMESTIC_AIRPORT_COORD={
+  'Алтай':{lat:46.37583,lng:96.21917,aimag:'Говь-Алтай'},
+  'Баянхонгор':{lat:46.17056,lng:100.70000,aimag:'Баянхонгор'},
+  'Богд хан':{lat:47.75000,lng:106.85000,aimag:'Төв (Богдхан уулын бүс)'},
+  'Буянт-Ухаа':{lat:47.84306,lng:106.76639,aimag:'Улаанбаатар'},
+  'Гурван тэмээт':{lat:43.30000,lng:104.60000,aimag:'Өмнөговь'},
+  'Даланзадгад':{lat:43.60861,lng:104.36694,aimag:'Өмнөговь'},
+  'Мөрөн':{lat:49.66306,lng:100.09917,aimag:'Хөвсгөл'},
+  'Улаангом':{lat:50.06722,lng:91.93778,aimag:'Увс'},
+  'Улиастай':{lat:47.71280,lng:96.52420,aimag:'Завхан'},
+  'Ханбумбат':{lat:43.13472,lng:106.84639,aimag:'Өмнөговь'},
+  'Ховд':{lat:47.96139,lng:91.62583,aimag:'Ховд'},
+  'Чингис хаан':{lat:47.65139,lng:106.82139,aimag:'Улаанбаатар'},
+  'Чойбалсан':{lat:48.13556,lng:114.64611,aimag:'Дорнод'},
+  'Өлгий':{lat:48.99167,lng:89.91972,aimag:'Баян-Өлгий'}
+};
+const AIMAG_NAME_MAP={
+  'Arkhangai':'Архангай','Bagakhangai':'Багахангай','Baganuur':'Багануур',
+  'Bayankhongor':'Баянхонгор','Bayan-Ulgii':'Баян-Өлгий','Bulgan':'Булган',
+  'Darkhan-Uul':'Дархан-Уул','Dornod':'Дорнод','Dornogovi':'Дорноговь',
+  'Dundgovi':'Дундговь','GoviAltai':'Говь-Алтай','Govisumber':'Говьсүмбэр',
+  'Khentii':'Хэнтий','Khovd':'Ховд','Khuvsgul':'Хөвсгөл','Orkhon':'Орхон',
+  'Selenge':'Сэлэнгэ','Sukhbaatar':'Сүхбаатар','Tuv':'Төв','Ulaanbaatar':'Улаанбаатар',
+  'Umnugovi':'Өмнөговь','uvs':'Увс','Uvurkhangai':'Өвөрхангай','Zavkhan':'Завхан'
+};
+function aimagKey(raw){ return String(raw).replace(/\s*\(.*\)\s*$/,'').trim(); }
+function hashHue(str){
+  let h=0; for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))>>>0;
+  return h%360;
+}
+function bubbleSize(pax,maxPax){
+  const minS=4,maxS=17;
+  if(!maxPax) return minS;
+  return minS+(maxS-minS)*Math.sqrt(Math.max(pax,0)/maxPax);
+}
+function hexToRgb(hex){
+  const h=hex.replace('#','');
+  return [parseInt(h.substring(0,2),16),parseInt(h.substring(2,4),16),parseInt(h.substring(4,6),16)];
+}
 const RECENT = [
   {title:'Агаарын тээврийн статистик', agency:'ИНЕГ', src:'Вэбсервис', date:'2026-07-30', sector:'air'},
   {title:'Улаанбаатарын замын хөдөлгөөний ачаалал', agency:'ЗТХЕГ', src:'Вэбсервис', date:'2026-07-29', sector:'road'},
@@ -3699,6 +3781,7 @@ function mapFirebaseError(err){
 class Component extends DCLogic {
   state={ authed:false, authBusy:false, authReady:false, mobileNavOpen:false, viewportW:(typeof window!=='undefined'?window.innerWidth:1280),
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
+    mongoliaGeoReady:false, mapSelectedNode:null,
     theme:(function(){
       try{
         const saved=localStorage.getItem('eh-theme');
@@ -3717,7 +3800,7 @@ class Component extends DCLogic {
     if(window.scrollTo) window.scrollTo(0,0);
   }
   componentDidMount(){
-    this.loadGlobe(); this.syncMonths(); this.loadFlightsData();
+    this.loadGlobe(); this.syncMonths(); this.loadFlightsData(); this.loadMongoliaGeo();
     this._esc=(e)=>{ if(e.key==='Escape') this.escClose(); };
     window.addEventListener('keydown',this._esc);
     this._onResize=()=>this.setState({viewportW:window.innerWidth});
@@ -3756,6 +3839,19 @@ class Component extends DCLogic {
         this.setState(s=>({globeRotation:(s.globeRotation+0.5)%360}));
       },60);
     }catch(e){}
+  }
+  // Аймгийн (admin-1) хилийн шугам — Bilgee/mongolia-geojson repo-гийн
+  // хялбаршуулсан хувилбар (~225KB), веритех dashboard-той ижил эх сурвалж.
+  async loadMongoliaGeo(){
+    try{
+      const res=await fetch('https://raw.githubusercontent.com/Bilgee/mongolia-geojson/master/mongolia.prefectures.geojson');
+      const geoJson=await res.json();
+      geoJson.features.forEach(f=>{ f.properties.name=AIMAG_NAME_MAP[f.properties.prefecture]||f.properties.prefecture; });
+      this.mongoliaAimags=geoJson;
+      this.setState({mongoliaGeoReady:true});
+    }catch(e){
+      console.warn('[ErtHub] Mongolia aimag geojson unavailable:',e);
+    }
   }
   // Live Агаарын тээвэр data — fetched at runtime from the already-published,
   // already-updating JSON of the veritech-flights-dashboard repo (no new
@@ -3809,10 +3905,13 @@ class Component extends DCLogic {
     }catch(e){
       console.warn('[ErtHub] Failed to load flights for',year,e);
     }
-    this.setState({airYear:year,airYearLoading:false},()=>this.recomputeAirData());
+    this.setState({airYear:year,airYearLoading:false,mapSelectedNode:null},()=>this.recomputeAirData());
   }
   setAirFilter(key,val){
-    this.setState({[key]:val},()=>this.recomputeAirData());
+    // Clear any selected map bubble on filter change — it belongs to
+    // whichever country/airport set was visible before, which may no
+    // longer even be on screen after e.g. a world/domestic switch.
+    this.setState({[key]:val,mapSelectedNode:null},()=>this.recomputeAirData());
   }
   recomputeAirData(){
     const year=this.state.airYear;
@@ -3906,11 +4005,20 @@ class Component extends DCLogic {
     const lastRealIdx=(()=>{ for(let i=11;i>=0;i--) if(c1dFull[i]>0) return i; return -1; })();
     SECTORS.air.c1d=lastRealIdx>=0?c1dFull.slice(0,lastRealIdx+1):c1dFull;
 
-    const byCarrier={},byCountry={};
+    const byCarrier={},byCountry={},byDomesticAirport={};
     for(const f of filtered){
       if(f.carr) byCarrier[f.carr]=(byCarrier[f.carr]||0)+(f.pax||0);
       if(f.cntry && f.cntry!=='Монгол') byCountry[f.cntry]=(byCountry[f.cntry]||0)+(f.pax||0);
+      if(f.ou!=='ОУ' && f.city && DOMESTIC_AIRPORT_COORD[f.city]){
+        const d=byDomesticAirport[f.city]||{pax:0,fl:0};
+        d.pax+=(f.pax||0); d.fl++;
+        byDomesticAirport[f.city]=d;
+      }
     }
+    // Full (not top-N-limited) totals for the "Улаанбаатараас чиглэсэн
+    // зорчигчийн урсгал" bubble map — buildFlowMap() reads these directly.
+    this._airCountryFull=byCountry;
+    this._airDomesticFull=byDomesticAirport;
     const carrierList=Object.entries(byCarrier).sort((a,b)=>b[1]-a[1]);
     const carrierTotal=carrierList.reduce((s,c)=>s+c[1],0)||1;
     const topCarriers=carrierList.slice(0,4);
@@ -4999,17 +5107,12 @@ class Component extends DCLogic {
       ];
       let acc2=0;
       const airDonut=donutSegs.map(s=>{
-        const seg={...s,pctLabel:s.pct+'%',dash:(s.pct/100*circA).toFixed(1)+' '+circA.toFixed(1),offset:(-acc2/100*circA).toFixed(1)};
+        const seg={...s,pctLabel:s.pct.toFixed(1)+'%',dash:(s.pct/100*circA).toFixed(1)+' '+circA.toFixed(1),offset:(-acc2/100*circA).toFixed(1)};
         acc2+=s.pct; return seg;
       });
       const cMax=Math.max.apply(null,sAir.bars.map(b=>b[1]));
       const airCountries=sAir.bars.map(b=>({name:b[0],widthPct:(b[1]/cMax*100).toFixed(0)+'%',value:b[2]}));
-      const flowNodes=sAir.bars.map((b,i)=>{
-        const ang=(-70+i*35)*Math.PI/180, dist=70+i*34;
-        return {label:b[0],cx:(140+Math.cos(ang)*dist).toFixed(1),cy:(140+Math.sin(ang)*dist).toFixed(1),
-          r:(6+b[1]/cMax*20).toFixed(1),value:b[2],color:'#2E7CF6',opacity:(0.35+b[1]/cMax*0.5).toFixed(2)};
-      });
-      airExtra={isAirDetail:true,airDonut,airCountries,flowNodes};
+      airExtra={isAirDetail:true,airDonut,airCountries,flowMap:this.buildFlowMap()};
     }
     const detail={
       isAirDetail,...airExtra,
@@ -5224,6 +5327,106 @@ class Component extends DCLogic {
       }
     }
     return {sphere,land,mn,markerVisible,markerX,markerY};
+  }
+  // "Улаанбаатараас чиглэсэн зорчигчийн урсгал" — жинхэнэ газрын зураг дээрх
+  // bubble map (veritech-flights-dashboard-ийн ECharts хувилбартай ижил
+  // өгөгдлийн эх сурвалж/логиктой, гэхдээ энд d3 projection зөвхөн координат
+  // ТООЦООЛОЛД ашиглагдаж, vр дvнг plain SVG болгон declarative template-рvv
+  // дамжуулна — buildGlobe()-той адил зарчим, dc-runtime-ийн re-render-тэй
+  // зөрчилдөх imperative DOM library (жиш. ECharts instance) шаардлагагvй.
+  // Өнгийг NEON.air/--surface-rgb-ээс тооцоолсон hash-based HSL/RGB утгаар
+  // vvсгэдэг тул hardcode hex алга (theme солиход автоматаар зохицно).
+  buildFlowMap(){
+    const d3=window.d3;
+    if(!d3) return {ready:false};
+    const isDomestic=this.state.airType==='domestic';
+    const W=560,H=320;
+    const theme=this.state.theme;
+    const rootEl=document.querySelector('.eh-app');
+    const surfaceRgbStr=(rootEl?getComputedStyle(rootEl).getPropertyValue('--surface-rgb'):'').trim()||'255,255,255';
+    const [sr,sg,sb]=surfaceRgbStr.split(',').map(Number);
+    const accRgb=hexToRgb(NEON.air);
+    const nodeColor=(name)=>{
+      const hue=hashHue(name);
+      const light=theme==='dark'?60:44;
+      return 'hsl('+hue+',60%,'+light+'%)';
+    };
+    const selected=this.state.mapSelectedNode;
+    const isSelected=(key)=>!!(selected&&selected.key===key);
+    const pickNode=(node)=>()=>this.setState(s=>({mapSelectedNode:(s.mapSelectedNode&&s.mapSelectedNode.key===node.key)?null:node}));
+    const closeNode=()=>this.setState({mapSelectedNode:null});
+
+    if(isDomestic){
+      if(!this.mongoliaAimags) return {ready:false,notReady:true,isDomestic:true};
+      const proj=d3.geoMercator().fitSize([W-24,H-24],this.mongoliaAimags);
+      proj.translate([proj.translate()[0]+12,proj.translate()[1]+12]);
+      const pathGen=d3.geoPath(proj);
+      const totals=this._airDomesticFull||{};
+      const airports=Object.keys(totals);
+      const maxPax=airports.reduce((m,c)=>Math.max(m,totals[c].pax),0);
+      const aimagTotals={};
+      airports.forEach(c=>{
+        const key=aimagKey(DOMESTIC_AIRPORT_COORD[c].aimag);
+        aimagTotals[key]=(aimagTotals[key]||0)+totals[c].pax;
+      });
+      const maxAimag=Object.keys(aimagTotals).reduce((m,k)=>Math.max(m,aimagTotals[k]),0);
+      const regions=this.mongoliaAimags.features.map(f=>{
+        const name=f.properties.name;
+        const pax=aimagTotals[name]||0;
+        const t=maxAimag?Math.sqrt(pax/maxAimag):0;
+        const r=Math.round(sr+(accRgb[0]-sr)*t),g=Math.round(sg+(accRgb[1]-sg)*t),b=Math.round(sb+(accRgb[2]-sb)*t);
+        return {d:pathGen(f)||'',fill:'rgb('+r+','+g+','+b+')',name};
+      });
+      const ubProj=proj(UB_COORD)||[W/2,H/2];
+      const airportKeys=Object.keys(DOMESTIC_AIRPORT_COORD);
+      const nodes=airportKeys.filter(c=>totals[c]).map(c=>{
+        const coord=DOMESTIC_AIRPORT_COORD[c];
+        const isUbAirport=(c==='Чингис хаан'||c==='Буянт-Ухаа');
+        const pt=isUbAirport?ubProj:(proj([coord.lng,coord.lat])||ubProj);
+        const color=nodeColor(c);
+        const key='dom:'+c;
+        const sz=bubbleSize(totals[c].pax,maxPax)*(isUbAirport?0.6:1);
+        return {key,cx:pt[0].toFixed(1),cy:pt[1].toFixed(1),r:sz.toFixed(1),color,name:c,
+          title:c+' ('+coord.aimag+') — '+totals[c].pax.toLocaleString('en-US')+' зорчигч, '+totals[c].fl+' нислэг',
+          pick:pickNode({key,name:c,sub:coord.aimag,value:totals[c].pax.toLocaleString('en-US'),flCount:totals[c].fl}),
+          selected:isSelected(key),ringStroke:isSelected(key)?'var(--ink)':'none',ringWidth:isSelected(key)?2:0};
+      });
+      const lines=airportKeys.filter(c=>totals[c]&&c!=='Чингис хаан'&&c!=='Буянт-Ухаа').map(c=>{
+        const coord=DOMESTIC_AIRPORT_COORD[c];
+        const pt=proj([coord.lng,coord.lat])||ubProj;
+        return {x1:ubProj[0].toFixed(1),y1:ubProj[1].toFixed(1),x2:pt[0].toFixed(1),y2:pt[1].toFixed(1),color:nodeColor(c)};
+      });
+      return {ready:true,isDomestic:true,isWorld:false,viewBox:'0 0 '+W+' '+H,regions,lines,nodes,closeNode,
+        ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
+        detail:selected,
+        legend:airportKeys.filter(c=>totals[c]).sort((a,b)=>totals[b].pax-totals[a].pax)
+          .map(c=>({name:c,color:nodeColor(c)}))};
+    }
+
+    if(!this.landFeature) return {ready:false,notReady:true,isDomestic:false};
+    const proj=d3.geoNaturalEarth1().fitSize([W-24,H-24],this.landFeature);
+    proj.translate([proj.translate()[0]+12,proj.translate()[1]+12]);
+    const pathGen=d3.geoPath(proj);
+    const land=pathGen(this.landFeature)||'';
+    const totals=this._airCountryFull||{};
+    const countries=Object.keys(totals).filter(c=>COUNTRY_COORD[c]);
+    const maxPax=countries.reduce((m,c)=>Math.max(m,totals[c]),0);
+    const ubProj=proj(UB_COORD)||[W/2,H/2];
+    const nodes=countries.map(c=>{
+      const pt=proj(COUNTRY_COORD[c]);
+      if(!pt) return null;
+      const color=nodeColor(c);
+      const key='intl:'+c;
+      return {key,cx:pt[0].toFixed(1),cy:pt[1].toFixed(1),r:bubbleSize(totals[c],maxPax).toFixed(1),color,name:c,
+        title:c+' — '+totals[c].toLocaleString('en-US')+' зорчигч',
+        pick:pickNode({key,name:c,sub:'',value:totals[c].toLocaleString('en-US'),flCount:null}),
+        selected:isSelected(key),ringStroke:isSelected(key)?'var(--ink)':'none',ringWidth:isSelected(key)?2:0};
+    }).filter(Boolean);
+    const lines=nodes.map(n=>({x1:ubProj[0].toFixed(1),y1:ubProj[1].toFixed(1),x2:n.cx,y2:n.cy,color:n.color}));
+    return {ready:true,isDomestic:false,isWorld:true,viewBox:'0 0 '+W+' '+H,land,lines,nodes,closeNode,
+      ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
+      detail:selected,
+      legend:countries.slice().sort((a,b)=>a.localeCompare(b)).map(c=>({name:c,color:nodeColor(c)}))};
   }
 
   buildRings(rank){
