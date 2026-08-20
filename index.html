@@ -2393,13 +2393,18 @@
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>Улаанбаатараас чиглэсэн зорчигчийн урсгал</div>
+        <div style="display:inline-flex;gap:3px;padding:3px;border-radius:11px;background:var(--surface2);border:1px solid var(--line);flex-shrink:0;">
+          <sc-for list="{{ detail.flowMap.typeTabs }}" as="tt" hint-placeholder-count="3">
+            <button sc-camel-on-click="{{ tt.pick }}" style="{{ tt.style }}">{{ tt.label }}</button>
+          </sc-for>
+        </div>
       </div>
-      <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;">Бөмбөлгийн хэмжээ = зорчигчийн тоо. Улс/боомт дээр hover хийхэд нэрс, дарахад дэлгэрэнгүй харагдана. "Төрөл" шүүлтээр Дотоодын сонговол Монголын аймгийн газрын зураг руу шилжинэ.</div>
+      <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;">Бөмбөлгийн хэмжээ = зорчигчийн тоо. Улс/боомт дээр hover хийхэд нэрс, дарахад дэлгэрэнгүй харагдана. Баруун дээд булангийн "Дотоодын" товчоор Монголын аймгийн газрын зураг руу шилжинэ.</div>
       <sc-if value="{{ detail.flowMap.notReady }}">
         <div style="height:220px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:12.5px;">Газрын зургийн өгөгдөл ачаалж байна…</div>
       </sc-if>
       <sc-if value="{{ detail.flowMap.ready }}">
-        <svg sc-camel-view-box="{{ detail.flowMap.viewBox }}" style="width:100%;height:auto;display:block;border-radius:16px;overflow:hidden;">
+        <svg sc-camel-view-box="{{ detail.flowMap.viewBox }}" style="width:100%;height:auto;min-height:250px;max-height:560px;display:block;border-radius:16px;overflow:hidden;background:linear-gradient(160deg,{{ detail.flowMap.oceanA }},{{ detail.flowMap.oceanB }});">
           <defs>
             <linearGradient id="fmocean" x1="0" y1="0" x2="0.35" y2="1">
               <stop offset="0" stop-color="{{ detail.flowMap.oceanA }}"></stop>
@@ -2412,36 +2417,35 @@
               </linearGradient>
             </sc-for>
           </defs>
-          <rect x="0" y="0" width="100%" height="100%" rx="16" fill="url(#fmocean)"></rect>
           <sc-if value="{{ detail.flowMap.isDomestic }}">
             <sc-for list="{{ detail.flowMap.regions }}" as="rg" hint-placeholder-count="24">
-              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="{{ detail.flowMap.landStroke }}" stroke-width="0.9"></path>
+              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="{{ detail.flowMap.landStroke }}" stroke-width="0.9" vector-effect="non-scaling-stroke"></path>
             </sc-for>
           </sc-if>
           <sc-if value="{{ detail.flowMap.isWorld }}">
             <sc-for list="{{ detail.flowMap.countryPaths }}" as="cp" hint-placeholder-count="180">
-              <path d="{{ cp.d }}" fill="{{ cp.fill }}" stroke="{{ cp.stroke }}" stroke-width="{{ cp.width }}"></path>
+              <path d="{{ cp.d }}" fill="{{ cp.fill }}" stroke="{{ cp.stroke }}" stroke-width="{{ cp.width }}" vector-effect="non-scaling-stroke"></path>
             </sc-for>
           </sc-if>
           <sc-for list="{{ detail.flowMap.arcs }}" as="ar" hint-placeholder-count="20">
-            <path d="{{ ar.d }}" fill="none" stroke="{{ ar.stroke }}" stroke-width="{{ ar.width }}" stroke-linecap="round" opacity="0.32"></path>
+            <path d="{{ ar.d }}" fill="none" stroke="{{ ar.stroke }}" stroke-width="{{ ar.width }}" stroke-linecap="round" opacity="0.26" vector-effect="non-scaling-stroke"></path>
           </sc-for>
           <sc-for list="{{ detail.flowMap.arcs }}" as="ar2" hint-placeholder-count="20">
-            <path d="{{ ar2.d }}" fill="none" stroke="{{ ar2.stroke }}" stroke-width="{{ ar2.dashWidth }}" stroke-linecap="round" stroke-dasharray="6 6" opacity="0.9" style="animation:dashFlow 1.5s linear infinite;"></path>
+            <path d="{{ ar2.d }}" fill="none" stroke="{{ ar2.stroke }}" stroke-width="{{ ar2.dashWidth }}" stroke-linecap="round" stroke-dasharray="6 6" opacity="0.72" vector-effect="non-scaling-stroke" style="animation:dashFlow 1.8s linear infinite;"></path>
           </sc-for>
           <sc-for list="{{ detail.flowMap.halos }}" as="ha" hint-placeholder-count="6">
-            <circle cx="{{ ha.cx }}" cy="{{ ha.cy }}" r="{{ ha.r }}" fill="none" stroke="{{ ha.color }}" stroke-width="1.4" opacity="0.42"></circle>
+            <circle cx="{{ ha.cx }}" cy="{{ ha.cy }}" r="{{ ha.r }}" fill="none" stroke="{{ ha.color }}" stroke-width="1.1" opacity="0.3" vector-effect="non-scaling-stroke"></circle>
           </sc-for>
           <sc-for list="{{ detail.flowMap.nodes }}" as="nd" hint-placeholder-count="14">
-            <circle sc-camel-on-click="{{ nd.pick }}" cx="{{ nd.cx }}" cy="{{ nd.cy }}" r="{{ nd.r }}" fill="{{ nd.color }}" opacity="{{ nd.opacity }}" stroke="{{ nd.ringStroke }}" stroke-width="{{ nd.ringWidth }}" style="cursor:pointer;"><title>{{ nd.title }}</title></circle>
+            <circle sc-camel-on-click="{{ nd.pick }}" cx="{{ nd.cx }}" cy="{{ nd.cy }}" r="{{ nd.r }}" fill="{{ nd.color }}" opacity="{{ nd.opacity }}" stroke="{{ nd.ringStroke }}" stroke-width="{{ nd.ringWidth }}" vector-effect="non-scaling-stroke" style="cursor:pointer;"><title>{{ nd.title }}</title></circle>
           </sc-for>
           <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="15" fill="{{ detail.flowMap.ubInk }}" opacity="0.14" style="transform-box:fill-box;transform-origin:center;animation:pulseGlow 2.8s ease-in-out infinite;"></circle>
           <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="6.5" fill="{{ detail.flowMap.ubInk }}" stroke="rgba(var(--surface-rgb),.95)" stroke-width="2"><title>Улаанбаатар (эх цэг)</title></circle>
           <sc-for list="{{ detail.flowMap.labels }}" as="lb0" hint-placeholder-count="6">
-            <text x="{{ lb0.x }}" y="{{ lb0.y }}" text-anchor="{{ lb0.anchor }}" fill="none" stroke="{{ detail.flowMap.labelHalo }}" stroke-width="4" stroke-linejoin="round" style="font-family:inherit;font-size:13px;font-weight:700;pointer-events:none;">{{ lb0.text }}</text>
+            <text x="{{ lb0.x }}" y="{{ lb0.y }}" text-anchor="{{ lb0.anchor }}" fill="none" stroke="{{ detail.flowMap.labelHalo }}" stroke-width="{{ detail.flowMap.labelHaloW }}" stroke-linejoin="round" style="font-family:inherit;font-size:{{ detail.flowMap.labelFs }}px;font-weight:650;pointer-events:none;">{{ lb0.text }}</text>
           </sc-for>
           <sc-for list="{{ detail.flowMap.labels }}" as="lb" hint-placeholder-count="6">
-            <text x="{{ lb.x }}" y="{{ lb.y }}" text-anchor="{{ lb.anchor }}" fill="{{ lb.color }}" style="font-family:inherit;font-size:13px;font-weight:700;pointer-events:none;">{{ lb.text }}</text>
+            <text x="{{ lb.x }}" y="{{ lb.y }}" text-anchor="{{ lb.anchor }}" fill="{{ lb.color }}" style="font-family:inherit;font-size:{{ detail.flowMap.labelFs }}px;font-weight:650;pointer-events:none;">{{ lb.text }}</text>
           </sc-for>
         </svg>
         <sc-if value="{{ detail.flowMap.detail }}">
@@ -3395,6 +3399,11 @@ function hashHue(str){
   let h=0; for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))>>>0;
   return h%360;
 }
+// Газрын зургийн категорийн палитр. Цэвэр hash-hue нь солонго мэт хурц,
+// зөрчилдсөн өнгө өгдөг тул тодорхой сонгосон, намуухан hue-үүдийг
+// эргэлдүүлж, ханалт/гэрэлтүүлгийг нэг стандартаар барина.
+const FLOW_HUES=[210,168,26,264,344,146,42,196,308,96,14,232,178,320];
+function flowHue(name){ return FLOW_HUES[hashHue(name)%FLOW_HUES.length]; }
 function bubbleSize(pax,maxPax,minS,maxS){
   minS=minS||5; maxS=maxS||22;
   if(!maxPax) return minS;
@@ -5587,12 +5596,32 @@ class Component extends DCLogic {
   // vvсгэдэг тул hardcode hex алга (theme солиход автоматаар зохицно).
   buildFlowMap(){
     const d3=window.d3;
-    if(!d3) return {ready:false};
+    // "Олон улсын / Дотоодын" сонголтыг газрын зургийн толгойд segmented
+    // control болгон гаргана — бүх буцаалтад (ачаалж байгаа үед ч) байх
+    // ёстой тул энд нэг удаа бэлдээд доор тархаана.
+    const typeTabs=[['all','Бүгд'],['intl','Олон улсын'],['domestic','Дотоодын']].map(o=>{
+      const on=this.state.airType===o[0];
+      return {label:o[1],on,pick:()=>this.setAirFilter('airType',o[0]),
+        style:'cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:600;white-space:nowrap;border:none;border-radius:8px;padding:6px 14px;transition:.16s var(--ease);'
+          +(on?'background:var(--ink);color:#EEF3FA;box-shadow:0 2px 8px -3px rgba(15,23,46,.5);':'background:transparent;color:var(--ink3);')};
+    });
+    if(!d3) return {ready:false,typeTabs};
     const isDomestic=this.state.airType==='domestic';
     const W=900,H=isDomestic?400:440;
     const theme=this.state.theme;
     const dark=theme==='dark';
-    const nodeColor=(name)=>'hsl('+hashHue(name)+',62%,'+(dark?58:45)+'%)';
+    // Zoom/жижиг дэлгэцэнд текст, хилийн шугам хамт агшиж уншигдахаа
+    // болих асуудлыг засахын тулд SVG-ийн бодит хэмжээсийг тооцоолж,
+    // шошгын хэмжээг viewBox нэгжид ХӨРВҮҮЛЖ өгнө — үр дүнд нь дэлгэц
+    // дээр үргэлж ойролцоогоор ижил px-ээр гарна. Хил, нумын шугам нь
+    // vector-effect="non-scaling-stroke"-оор ижил зарчмаар тогтвортой.
+    const vw=this.state.viewportW||1280;
+    const contentW=Math.max(260,Math.min(1140,vw-100));
+    const unit=W/contentW;                     // 1 дэлгэцийн px хэдэн viewBox нэгж вэ
+    const px=(n)=>+(n*unit).toFixed(2);
+    const labelFs=px(12.5), labelHaloW=px(3.4);
+    // Намуухан, нэг стандартын өнгө — өмнөх 62% ханалт хэт хурц байсан.
+    const nodeColor=(name)=>'hsl('+flowHue(name)+','+(dark?44:47)+'%,'+(dark?60:47)+'%)';
     const selected=this.state.mapSelectedNode;
     const isSelected=(key)=>!!(selected&&selected.key===key);
     const pickNode=(node)=>()=>this.setState(s=>({mapSelectedNode:(s.mapSelectedNode&&s.mapSelectedNode.key===node.key)?null:node}));
@@ -5607,12 +5636,14 @@ class Component extends DCLogic {
     // Градиент нь objectBoundingBox дээр ажиллах тул чиглэлийг 0/1 булангаар
     // өгнө — userSpaceOnUse-гүйгээр УБ-аас очих цэг рүү өнгө шилжинэ.
     const gradDir=(x1,y1,x2,y2)=>({gx1:x2>=x1?'0':'1',gx2:x2>=x1?'1':'0',gy1:y2>=y1?'0':'1',gy2:y2>=y1?'1':'0'});
-    const ubInk=dark?'#E6EDFA':'#1B2540';
-    const oceanA=dark?'#0E1626':'#F4F8FE';
-    const oceanB=dark?'#131D31':'#E9F0FA';
-    const landIdle=dark?'#1E2940':'#E4EAF3';
-    const landStroke=dark?'rgba(150,170,205,.34)':'rgba(40,58,94,.30)';
-    const labelColor=dark?'#DCE6F7':'#26324C';
+    const ubInk=dark?'#E6EDFA':'#243049';
+    // Далай/суурь — намуухан, бага контрасттай. Өмнөх хувилбар хэт цайвар
+    // цагаан дээр хурц өнгө тавьснаас "хатуу" харагдаж байсан.
+    const oceanA=dark?'#101827':'#F7F9FC';
+    const oceanB=dark?'#151E30':'#EDF1F7';
+    const landIdle=dark?'#1C2537':'#E8ECF2';
+    const landStroke=dark?'rgba(146,164,196,.30)':'rgba(58,74,104,.26)';
+    const labelColor=dark?'#D8E2F2':'#2B3752';
     // Шошгын ард зурах "гэрэлтүүлэг" — paint-order-т найдалгүй, доор нэг
     // удаа зузаан stroke-оор, дээр нь дүүргэлтээр давхарлаж зурна.
     const labelHalo=dark?'rgba(14,22,38,.88)':'rgba(255,255,255,.9)';
@@ -5636,14 +5667,14 @@ class Component extends DCLogic {
         halos.push({cx:it.x.toFixed(1),cy:it.y.toFixed(1),r:(it.r+5.5).toFixed(1),color:it.color});
         if(it.atUb) return;
         const right=it.x<W*0.84;
-        labels.push({x:(it.x+(right?it.r+9:-it.r-9)).toFixed(1),y:(it.y+4).toFixed(1),
+        labels.push({x:(it.x+(right?it.r+px(7):-it.r-px(7))).toFixed(1),y:(it.y+labelFs*0.34).toFixed(1),
           anchor:right?'start':'end',text:it.name,color:labelColor});
       });
       return {arcs,halos,labels};
     };
 
     if(isDomestic){
-      if(!this.mongoliaAimags) return {ready:false,notReady:true,isDomestic:true};
+      if(!this.mongoliaAimags) return {ready:false,notReady:true,isDomestic:true,typeTabs};
       const proj=d3.geoMercator().fitExtent([[26,26],[W-26,H-26]],this.mongoliaAimags);
       const pathGen=d3.geoPath(proj);
       const totals=this._airDomesticFull||{};
@@ -5657,12 +5688,23 @@ class Component extends DCLogic {
       // Аймаг бүр өөрийн hue-тэй (нэг өнгийн цулгай биш), гэхдээ нислэгтэй
       // аймгууд нь илүү ханасан/тод, нислэггүй нь намуухан — өнгө ялгаж
       // харуулах шаардлагыг хангахын зэрэгцээ дата ачааллыг бас уншуулна.
-      const regions=this.mongoliaAimags.features.map(f=>{
+      // Аймаг бүр өөр өнгөтэй мөртлөө намуухан: ханалт бага, гэрэлтүүлэг
+      // өндөр. Ялгарлыг нь нэмэхийн тулд hash-аас жижиг гэрэлтүүлгийн
+      // хазайлт нэмнэ (24 аймагт 14 hue ноогдох тул хөрш давхцахаас
+      // сэргийлнэ). Нислэгтэй аймаг арай ханасан — дата нь өнгөөр уншигдана.
+      // Өнгийг hash-аар биш ИНДЕКСЭЭР хуваарилна: hash нь 24 аймагт
+      // давхцал үүсгэж (хажуу хоёр аймаг ижил өнгөтэй болох эрсдэлтэй)
+      // байсан. 14 hue-г 5-ын алхмаар эргүүлж, нэг тойрог дуусахад
+      // гэрэлтүүлгийн шатыг өөрчилснөөр 24/24 өвөрмөц өнгө баталгаажна.
+      const nHue=FLOW_HUES.length;
+      const regions=this.mongoliaAimags.features.map((f,i)=>{
         const name=f.properties.name;
         const live=(aimagTotals[name]||0)>0;
-        const hue=hashHue(name);
-        return {d:pathGen(f)||'',name,
-          fill:'hsl('+hue+','+(live?(dark?46:52):(dark?20:26))+'%,'+(dark?(live?30:23):(live?83:90))+'%)'};
+        const hue=FLOW_HUES[(i*5)%nHue];
+        const tier=Math.floor(i/nHue);
+        const sat=live?(dark?32:34):(dark?12:15);
+        const lig=dark?(live?27:21)+tier*4:(live?87:92)-tier*4;
+        return {d:pathGen(f)||'',name,fill:'hsl('+hue+','+sat+'%,'+lig+'%)'};
       });
       const ubProj=proj(UB_COORD)||[W/2,H/2];
       const airportKeys=Object.keys(DOMESTIC_AIRPORT_COORD).filter(c=>totals[c]);
@@ -5685,17 +5727,17 @@ class Component extends DCLogic {
       });
       return {ready:true,isDomestic:true,isWorld:false,viewBox:'0 0 '+W+' '+H,
         regions,arcs:flow.arcs,halos:flow.halos,labels:flow.labels,nodes,closeNode,
-        oceanA,oceanB,landStroke,ubInk,labelHalo,
+        oceanA,oceanB,landStroke,ubInk,labelHalo,typeTabs,labelFs,labelHaloW,
         ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
         detail:selected,
         legend:items.slice().sort((a,b)=>b.pax-a.pax).slice(0,10)
           .map(it=>({name:it.name,color:it.color,value:it.pax.toLocaleString('en-US')}))};
     }
 
-    if(!this.worldCountries) return {ready:false,notReady:true,isDomestic:false};
+    if(!this.worldCountries) return {ready:false,notReady:true,isDomestic:false,typeTabs};
     const totals=this._airCountryFull||{};
     const countries=Object.keys(totals).filter(c=>COUNTRY_COORD[c]);
-    if(!countries.length) return {ready:false,notReady:true,isDomestic:false};
+    if(!countries.length) return {ready:false,notReady:true,isDomestic:false,typeTabs};
     // Бүтэн бөмбөрцгийг биш, зөвхөн урсгал байгаа улсуудыг (+УБ) багтаах
     // хүрээг зурна — өмнө нь Америк/Номхон далай хоосон зай эзэлж, бүх
     // бөмбөлөг нэг буланд шахагдаж байсан.
@@ -5735,8 +5777,8 @@ class Component extends DCLogic {
       const d=pathGen(f)||'';
       if(!d) return null;
       const dest=hit[i];
-      return {d,fill:dest?'hsl('+hashHue(dest)+','+(dark?38:46)+'%,'+(dark?26:86)+'%)':landIdle,
-        stroke:landStroke,width:dest?'0.9':'0.5'};
+      return {d,fill:dest?'hsl('+flowHue(dest)+','+(dark?30:34)+'%,'+(dark?25:87)+'%)':landIdle,
+        stroke:landStroke,width:dest?'0.9':'0.6'};
     }).filter(Boolean);
     const maxPax=countries.reduce((m,c)=>Math.max(m,totals[c]),0);
     const ubProj=proj(UB_COORD)||[W/2,H/2];
@@ -5757,7 +5799,7 @@ class Component extends DCLogic {
     });
     return {ready:true,isDomestic:false,isWorld:true,viewBox:'0 0 '+W+' '+H,
       countryPaths,arcs:flow.arcs,halos:flow.halos,labels:flow.labels,nodes,closeNode,
-      oceanA,oceanB,landStroke,ubInk,labelHalo,
+      oceanA,oceanB,landStroke,ubInk,labelHalo,typeTabs,labelFs,labelHaloW,
       ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
       detail:selected,
       legend:items.slice().sort((a,b)=>b.pax-a.pax).slice(0,10)
