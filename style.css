@@ -18,6 +18,23 @@ body{margin:0;}
   .eh-nav-toggle { display: flex !important; }
   .eh-auth-group { gap: 6px !important; }
 }
+
+/* Dark mode. The root tokens (--bg/--ink/--ink2/--ink3/--surface-rgb/
+   --ink-rgb) live in the app script's rootStyle (see Component.render in
+   index.html), not here — descendants referencing var(--ink) etc. did
+   not reliably repaint when only an ancestor custom property changed via
+   a stylesheet rule (observed: a freshly-inserted element resolved the
+   new value correctly, an existing one kept the old computed color until
+   its own inline style attribute changed), so theme values are threaded
+   through as literal text in the root's own style attribute instead,
+   which is proven to repaint correctly (same mechanism as the mobile
+   nav/auth-button responsive styles below). Only the sticky header's
+   background — hardcoded, not var()-based — still needs a CSS override,
+   since that one is a direct property on the matched element itself,
+   not something inherited through a changed ancestor custom property. */
+.eh-app[data-theme="dark"] .eh-header {
+  background: rgba(10,16,28,.78) !important;
+}
 @media (min-width: 769px) {
   .eh-nav-mobile { display: none !important; }
 }
