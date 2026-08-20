@@ -3,6 +3,24 @@
    holds the @keyframes referenced from those inline `animation:` values,
    plus the page-level reset. Fonts are loaded via Google Fonts (see index.html <head>). */
 body{margin:0;}
+
+/* Mobile header nav: below 769px the desktop nav row and the live-clock
+   badge (least essential — makes room for Нэвтрэх/Бүртгүүлэх) give way to
+   a hamburger toggle + a stacked dropdown, both driven by mobileNavOpen
+   state in the app script (see .eh-nav-toggle / .eh-nav-mobile markup).
+   The auth buttons' own padding/font-size shrink via loginBtnStyle/
+   signupBtnStyle in the app script instead of CSS — they carry a
+   style-hover companion attribute that the runtime compiles into a
+   generated class, which inline/external overrides on those specific
+   properties can't reliably beat. */
+@media (max-width: 768px) {
+  .eh-nav-desktop, .eh-clock { display: none !important; }
+  .eh-nav-toggle { display: flex !important; }
+  .eh-auth-group { gap: 6px !important; }
+}
+@media (min-width: 769px) {
+  .eh-nav-mobile { display: none !important; }
+}
 @keyframes driftA{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(6%,8%,0) scale(1.15);}}
 @keyframes driftB{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(-8%,-5%,0) scale(1.2);}}
 @keyframes driftC{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(5%,-9%,0) scale(1.1);}}

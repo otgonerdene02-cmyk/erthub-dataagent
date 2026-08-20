@@ -55,12 +55,12 @@
         </div>
       </div>
       <div style="flex:1;"></div>
-      <div style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;flex-shrink:0;">
+      <div class="eh-clock" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;flex-shrink:0;">
         <div style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;animation:pulseGlow 2.2s infinite;"></div>
         {{ nowLabel }}
       </div>
       <sc-if value="{{ isAuthed }}">
-        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <div class="eh-auth-group" style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
           <div style="display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:999px;padding:5px 14px 5px 6px;">
             <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,{{ activeColor }},#3355ff);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;flex-shrink:0;">{{ userInitial }}</div>
             <div style="min-width:0;">
@@ -72,19 +72,27 @@
         </div>
       </sc-if>
       <sc-if value="{{ notAuthed }}" hint-placeholder-val="{{ true }}">
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          <button sc-camel-on-click="{{ goLogin }}" style="cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--ink2);background:none;border:1px solid var(--line);border-radius:11px;padding:9px 16px;white-space:nowrap;transition:.16s var(--ease);" style-hover="color:var(--ink);border-color:var(--line2);">Нэвтрэх</button>
-          <button sc-camel-on-click="{{ goSignup }}" style="cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;color:#FFFFFF;background:linear-gradient(135deg,var(--ink),#22345C);border:none;border-radius:11px;padding:10px 18px;white-space:nowrap;box-shadow:0 8px 20px -8px rgba(12,20,40,.7);transition:.18s var(--ease);" style-hover="transform:translateY(-1px);">Бүртгүүлэх</button>
+        <div class="eh-auth-group" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <button sc-camel-on-click="{{ goLogin }}" style="{{ loginBtnStyle }}" style-hover="color:var(--ink);border-color:var(--line2);">Нэвтрэх</button>
+          <button sc-camel-on-click="{{ goSignup }}" style="{{ signupBtnStyle }}" style-hover="transform:translateY(-1px);">Бүртгүүлэх</button>
         </div>
       </sc-if>
+      <button class="eh-nav-toggle" sc-camel-on-click="{{ toggleMobileNav }}" aria-label="Цэс" style="display:none;cursor:pointer;font-family:inherit;width:38px;height:38px;flex-shrink:0;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:17px;line-height:1;">{{ mobileNavIcon }}</button>
     </div>
-    <div style="max-width:1240px;margin:0 auto;padding:0 24px;">
+    <div class="eh-nav-desktop" style="max-width:1240px;margin:0 auto;padding:0 24px;">
       <div style="display:flex;align-items:center;gap:4px;height:44px;border-top:1px solid var(--line);">
         <sc-for list="{{ navItems }}" as="nv" hint-placeholder-count="6">
           <button sc-camel-on-click="{{ nv.go }}" style="{{ nv.style }}">{{ nv.label }}</button>
         </sc-for>
       </div>
     </div>
+    <sc-if value="{{ mobileNavOpen }}">
+      <div class="eh-nav-mobile" style="border-top:1px solid var(--line);padding:10px 16px 16px;display:flex;flex-direction:column;gap:2px;">
+        <sc-for list="{{ navItems }}" as="nv" hint-placeholder-count="6">
+          <button sc-camel-on-click="{{ nv.goClose }}" style="{{ nv.mobileStyle }}">{{ nv.label }}</button>
+        </sc-for>
+      </div>
+    </sc-if>
   </div>
 
   <sc-if value="{{ showBack }}">
@@ -249,14 +257,10 @@
             <button sc-camel-on-click="{{ closeLogin }}" style="margin-left:auto;cursor:pointer;font-family:inherit;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
           </div>
           <div style="font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:20px;text-wrap:pretty;">Санал бүр нэг хүнд нэг удаа. Бүртгэл нь санал хураалтыг ил тод, давхардалгүй болгоход хэрэгтэй.</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="display:grid;grid-template-columns:1fr;gap:10px;">
             <button sc-camel-on-click="{{ quickLogin }}" style="cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--surface);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:13px;font-size:13px;font-weight:600;box-shadow:var(--shadow);transition:.18s var(--ease);" style-hover="transform:translateY(-1px);border-color:#D9432E;">
               <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#D9432E;line-height:1;flex-shrink:0;">G</span>
               <span style="white-space:nowrap;">Google</span>
-            </button>
-            <button sc-camel-on-click="{{ quickLogin }}" style="cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--surface);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:13px;font-size:13px;font-weight:600;box-shadow:var(--shadow);transition:.18s var(--ease);" style-hover="transform:translateY(-1px);border-color:#1877F2;">
-              <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#1877F2;line-height:1;flex-shrink:0;">f</span>
-              <span style="white-space:nowrap;">Facebook</span>
             </button>
           </div>
         </div>
@@ -1334,14 +1338,10 @@
             </sc-for>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:16px;">
             <button sc-camel-on-click="{{ onSocial }}" style="cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--surface);color:var(--ink);border:1px solid var(--line2);border-radius:13px;padding:14px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);transition:.18s var(--ease);" style-hover="transform:translateY(-1px);border-color:#D9432E;">
               <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#D9432E;line-height:1;flex-shrink:0;">G</span>
               <span style="white-space:nowrap;">Google</span>
-            </button>
-            <button sc-camel-on-click="{{ onSocial }}" style="cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--surface);color:var(--ink);border:1px solid var(--line2);border-radius:13px;padding:14px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);transition:.18s var(--ease);" style-hover="transform:translateY(-1px);border-color:#1877F2;">
-              <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#1877F2;line-height:1;flex-shrink:0;">f</span>
-              <span style="white-space:nowrap;">Facebook</span>
             </button>
           </div>
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
@@ -3665,7 +3665,7 @@ function mapFirebaseError(err){
 }
 
 class Component extends DCLogic {
-  state={ authed:false, authBusy:false, authReady:false, authTab:'login', authRole:'citizen', authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', tblQuery:'', tblStatus:'all', tblPage:0, fYear:'2026', fMonth:'Бүгд', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
+  state={ authed:false, authBusy:false, authReady:false, mobileNavOpen:false, viewportW:(typeof window!=='undefined'?window.innerWidth:1280), authTab:'login', authRole:'citizen', authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', tblQuery:'', tblStatus:'all', tblPage:0, fYear:'2026', fMonth:'Бүгд', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
 
   go(id){ this.setState(s=>({page:id,prevPage:s.page})); if(window.scrollTo) window.scrollTo(0,0); }
   goBack(fallback){
@@ -3678,6 +3678,8 @@ class Component extends DCLogic {
     this.loadGlobe(); this.syncMonths();
     this._esc=(e)=>{ if(e.key==='Escape') this.escClose(); };
     window.addEventListener('keydown',this._esc);
+    this._onResize=()=>this.setState({viewportW:window.innerWidth});
+    window.addEventListener('resize',this._onResize);
     if(window.auth){
       this._unsubAuth=window.auth.onAuthStateChanged(user=>{
         this.setState({authed:!!user,authReady:true,
@@ -4540,8 +4542,12 @@ class Component extends DCLogic {
     const navItems=PAGES.map(p=>({
       id:p.id,label:p.label,
       go:()=>this.go(p.id),
+      goClose:()=>{ this.go(p.id); this.setState({mobileNavOpen:false}); },
       style:'background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;padding:8px 14px;border-radius:9px;white-space:nowrap;flex-shrink:0;transition:.16s var(--ease);'
         +(p.id===page?'color:var(--ink);font-weight:600;background:var(--surface2);box-shadow:inset 0 -2px 0 '+NEON[this.state.activeSector]+';'
+                     :'color:var(--ink2);font-weight:500;'),
+      mobileStyle:'display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;font-family:inherit;font-size:14.5px;padding:14px 16px;border-radius:11px;transition:.16s var(--ease);'
+        +(p.id===page?'color:var(--ink);font-weight:600;background:var(--surface2);'
                      :'color:var(--ink2);font-weight:500;')
     }));
     const services=SERVICES.map((s,i)=>({
@@ -4813,6 +4819,14 @@ class Component extends DCLogic {
       detail,isDetail:page==='detail',
       isAuth:page==='auth',
       isAuthed:this.state.authed,notAuthed:!this.state.authed,
+      mobileNavOpen:this.state.mobileNavOpen,
+      mobileNavIcon:this.state.mobileNavOpen?'✕':'☰',
+      toggleMobileNav:()=>this.setState(s=>({mobileNavOpen:!s.mobileNavOpen})),
+      closeMobileNav:()=>this.setState({mobileNavOpen:false}),
+      loginBtnStyle:'cursor:pointer;font-family:inherit;font-weight:500;color:var(--ink2);background:none;border:1px solid var(--line);white-space:nowrap;transition:.16s var(--ease);'
+        +((this.state.viewportW||1280)<=480?'font-size:11px;border-radius:9px;padding:7px 9px;':'font-size:12.5px;border-radius:11px;padding:9px 16px;'),
+      signupBtnStyle:'cursor:pointer;font-family:inherit;font-weight:600;color:#FFFFFF;background:linear-gradient(135deg,var(--ink),#22345C);border:none;white-space:nowrap;box-shadow:0 8px 20px -8px rgba(12,20,40,.7);transition:.18s var(--ease);'
+        +((this.state.viewportW||1280)<=480?'font-size:11px;border-radius:9px;padding:7px 9px;':'font-size:12.5px;border-radius:11px;padding:10px 18px;'),
       userName:this.state.authFull||this.state.authName||'Бат-Эрдэнэ Д.',
       userInitial:(this.state.authFull||this.state.authName||'Б')[0],
       userPlan:({citizen:'Иргэн · Үнэгүй',business:'Бизнес · Үнэгүй',dev:'Хөгжүүлэгч · Үнэгүй'})[this.state.authRole]||'Иргэн · Үнэгүй',
