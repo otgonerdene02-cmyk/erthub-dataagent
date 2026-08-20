@@ -6,6 +6,7 @@
 <link rel="preload" as="script" href="js/vendor/d3.v7.min.js">
 <link rel="preload" as="script" href="js/vendor/topojson-client.min.js">
 <link rel="preload" as="script" href="js/vendor/starter-component.js">
+<link rel="preload" as="script" href="js/vendor/xlsx.full.min.js">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="js/firebase-config.js"></script>
@@ -21,6 +22,7 @@
   <script src="js/vendor/starter-component.js"></script>
   <script src="js/vendor/d3.v7.min.js"></script>
   <script src="js/vendor/topojson-client.min.js"></script>
+  <script src="js/vendor/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </helmet>
 
@@ -2177,7 +2179,7 @@
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
         <input type="text" value="{{ detail.pvQuery }}" sc-camel-on-input="{{ detail.onPvQuery }}" placeholder="Хайх…" style="flex:1;min-width:180px;height:38px;border:1px solid var(--line2);border-radius:10px;background:rgba(var(--ink-rgb),.05);box-shadow:inset 0 1px 3px rgba(12,20,40,.07);padding:0 13px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;box-sizing:border-box;">
         <button sc-camel-on-click="{{ detail.toggleFilter }}" style="{{ detail.filterBtnStyle }}"><span style="opacity:.7;">▽</span>Шүүлт</button>
-        <button style="cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,var(--ink),#22345C);border:none;border-radius:9px;padding:9px 16px;white-space:nowrap;flex-shrink:0;">⇩ Excel татах</button>
+        <button sc-camel-on-click="{{ detail.pvExport }}" style="cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,var(--ink),#22345C);border:none;border-radius:9px;padding:9px 16px;white-space:nowrap;flex-shrink:0;">⇩ Excel татах</button>
         <div style="position:relative;flex-shrink:0;">
           <button sc-camel-on-click="{{ detail.togglePvSettings }}" aria-label="Тохиргоо" style="cursor:pointer;font-family:inherit;width:38px;height:38px;border-radius:9px;border:1px solid var(--line2);background:var(--surface);color:var(--ink2);font-size:15px;display:flex;align-items:center;justify-content:center;">⚙</button>
         </div>
@@ -2252,20 +2254,22 @@
         </div>
       </sc-if>
       <div style="overflow-x:auto;">
-      <div style="min-width:640px;">
+      <div style="min-width:560px;width:fit-content;">
       <div style="{{ detail.pvGrid }}padding:0 2px 11px;border-bottom:1px solid var(--line2);align-items:end;">
         <sc-for list="{{ detail.pvHead }}" as="ph" hint-placeholder-count="5">
-          <button sc-camel-on-click="{{ ph.sortIt }}" style="{{ ph.style }}">{{ ph.label }} {{ ph.arrow }}</button>
+          <button sc-camel-on-click="{{ ph.sortIt }}" style="{{ ph.style }}">{{ ph.label }} {{ ph.arrow }}<div sc-camel-on-mouse-down="{{ ph.startResize }}" style="position:absolute;top:-6px;right:-8px;bottom:-6px;width:13px;cursor:col-resize;"></div></button>
         </sc-for>
       </div>
+      <div style="max-height:640px;overflow-y:auto;">
       <sc-for list="{{ detail.pvRows }}" as="pr" hint-placeholder-count="6">
         <div style="{{ detail.pvGrid }}padding:13px 2px;border-bottom:1px solid var(--line);align-items:center;">
           <sc-for list="{{ pr.cells }}" as="pc" hint-placeholder-count="4">
             <div style="{{ pc.style }}">{{ pc.v }}</div>
           </sc-for>
-          <div style="justify-self:end;font-size:11px;font-weight:600;padding:4px 12px;border-radius:999px;color:{{ pr.status.color }};background:{{ pr.status.color }}1c;white-space:nowrap;">{{ pr.status.label }}</div>
+          <div style="justify-self:end;font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:999px;color:{{ pr.status.color }};background:{{ pr.status.color }}1c;white-space:nowrap;">{{ pr.status.label }}</div>
         </div>
       </sc-for>
+      </div>
       </div>
       </div>
       <sc-if value="{{ detail.pvEmpty }}">
@@ -2379,11 +2383,13 @@
         <svg sc-camel-view-box="{{ detail.flowMap.viewBox }}" style="width:100%;height:auto;display:block;">
           <sc-if value="{{ detail.flowMap.isDomestic }}">
             <sc-for list="{{ detail.flowMap.regions }}" as="rg" hint-placeholder-count="24">
-              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="rgba(var(--surface-rgb),.7)" stroke-width="0.6"></path>
+              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="rgba(var(--ink-rgb),.4)" stroke-width="0.8"></path>
             </sc-for>
           </sc-if>
           <sc-if value="{{ detail.flowMap.isWorld }}">
-            <path d="{{ detail.flowMap.land }}" fill="var(--surface2)" stroke="var(--line)" stroke-width="0.6"></path>
+            <sc-for list="{{ detail.flowMap.countryPaths }}" as="cp" hint-placeholder-count="180">
+              <path d="{{ cp.d }}" fill="var(--surface2)" stroke="rgba(var(--ink-rgb),.38)" stroke-width="0.5"></path>
+            </sc-for>
           </sc-if>
           <sc-for list="{{ detail.flowMap.lines }}" as="ln" hint-placeholder-count="14">
             <line x1="{{ ln.x1 }}" y1="{{ ln.y1 }}" x2="{{ ln.x2 }}" y2="{{ ln.y2 }}" stroke="{{ ln.color }}" stroke-width="1" opacity="0.5"></line>
@@ -3781,7 +3787,7 @@ function mapFirebaseError(err){
 class Component extends DCLogic {
   state={ authed:false, authBusy:false, authReady:false, mobileNavOpen:false, viewportW:(typeof window!=='undefined'?window.innerWidth:1280),
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
-    mongoliaGeoReady:false, mapSelectedNode:null,
+    mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{},
     theme:(function(){
       try{
         const saved=localStorage.getItem('eh-theme');
@@ -3805,6 +3811,24 @@ class Component extends DCLogic {
     window.addEventListener('keydown',this._esc);
     this._onResize=()=>this.setState({viewportW:window.innerWidth});
     window.addEventListener('resize',this._onResize);
+    // Excel-style dataset-table column resize (see buildPreview/startResize):
+    // drag start stores {sector,index,startX,startWidths} on this._colDrag
+    // (an instance field, not state, so mousemove doesn't setState every
+    // pixel until the width actually changes); mouseup clears it.
+    this._onColResizeMove=(e)=>{
+      if(!this._colDrag) return;
+      const {sector,index,startX,startWidths}=this._colDrag;
+      const dx=e.clientX-startX;
+      if(Math.abs(dx)>3) this._colDragMoved=true;
+      const w=Math.max(56,Math.round(startWidths[index]+dx));
+      const widths=startWidths.slice(); widths[index]=w;
+      const all=Object.assign({},this.state.pvColWidths||{});
+      all[sector]=widths;
+      this.setState({pvColWidths:all});
+    };
+    this._onColResizeUp=()=>{ this._colDrag=null; };
+    window.addEventListener('mousemove',this._onColResizeMove);
+    window.addEventListener('mouseup',this._onColResizeUp);
     if(window.auth){
       this._unsubAuth=window.auth.onAuthStateChanged(user=>{
         this.setState({authed:!!user,authReady:true,
@@ -3833,6 +3857,7 @@ class Component extends DCLogic {
       const topology=await res.json();
       const countries=window.topojson.feature(topology, topology.objects.countries);
       this.landFeature=window.topojson.merge(topology, topology.objects.countries.geometries);
+      this.worldCountries=countries.features;
       this.mongoliaFeature=countries.features.find(f=>String(f.id)==='496' || (f.properties && f.properties.name==='Mongolia'));
       this.setState({globeReady:true});
       this.rotInterval=setInterval(()=>{
@@ -4047,8 +4072,12 @@ class Component extends DCLogic {
 
     // The table actually shown on the dataset detail page's "Өгөгдлийн сан"
     // preview (DS_SCHEMA[sector].rows) — separate from SECTOR_TABLES.air
-    // above, which nothing currently renders.
-    DS_SCHEMA.air.rows=sorted.slice(0,12).map(f=>{
+    // above (that one's a small home-page widget capped at 20 by `sorted`).
+    // This preview shows essentially the full filtered/sorted set — the
+    // page-level table scrolls through it — so it reads straight off
+    // `filtered`, only bounded generously (5000) to protect DOM perf.
+    const sortedFull=filtered.slice().sort((a,b)=>b.unixtimestamp-a.unixtimestamp);
+    DS_SCHEMA.air.rows=sortedFull.slice(0,5000).map(f=>{
       const mm=String(f.month).padStart(2,'0'), dd=String(f.day).padStart(2,'0');
       const isCharter=f.flightType==='Захиалгат';
       return [year+'-'+mm+'-'+dd,f.flight||'—',f.city||'—',f.pax||0,(isCharter?'warn:':'ok:')+(f.flightType||'Тогтмол')];
@@ -4244,23 +4273,36 @@ class Component extends DCLogic {
       if(!isNaN(an)&&!isNaN(bn)&&typeof av!=='string'){av=an;bv=bn;}
       return av<bv?-dir:av>bv?dir:0;
     });
-    const PER=6;
+    const PER=300;
     const pages=Math.max(1,Math.ceil(rows.length/PER));
     const pg=Math.min(this.state.dsPage||0,pages-1);
     const cols=sc.head.length;
-    const grid='display:grid;grid-template-columns:110px minmax(0,1.5fr) minmax(0,1.2fr) 104px 126px;gap:14px;';
+    // Excel-style resizable columns: defaults are narrow px widths (not the
+    // old fr-based auto-stretch), overridden per-sector by state.pvColWidths
+    // once the user drags a header edge (see startResize/_colDrag, wired up
+    // via global mousemove/mouseup in componentDidMount like _onResize).
+    const DEFAULT_W=[90,190,160,92,112];
+    const savedW=(this.state.pvColWidths&&this.state.pvColWidths[dsel.sector])||[];
+    const colWidths=Array.from({length:cols},(_,i)=>savedW[i]||DEFAULT_W[i]||110);
+    const grid='display:grid;grid-template-columns:'+colWidths.map(w=>w+'px').join(' ')+';gap:12px;';
+    const startResize=(ci)=>(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      this._colDrag={sector:dsel.sector,index:ci,startX:e.clientX,startWidths:colWidths.slice()};
+      this._colDragMoved=false;
+    };
     return {
       pvGrid:grid,
       pvHead:sc.head.map((h,ci)=>({label:h,
         arrow:sort===ci?(dir>0?'↑':'↓'):'',
-        sortIt:()=>this.setState(s=>({dsSort:ci,dsDir:(s.dsSort===ci?-(s.dsDir||-1):-1),dsPage:0})),
-        style:'cursor:pointer;user-select:none;background:none;border:none;font-family:\'JetBrains Mono\',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:0;text-align:'
+        startResize:startResize(ci),
+        sortIt:()=>{ if(this._colDragMoved){ this._colDragMoved=false; return; } this.setState(s=>({dsSort:ci,dsDir:(s.dsSort===ci?-(s.dsDir||-1):-1),dsPage:0})); },
+        style:'position:relative;cursor:pointer;user-select:none;background:none;border:none;font-family:\'JetBrains Mono\',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:0;width:100%;text-align:'
           +(ci>=3?'right':'left')+';color:'+(sort===ci?'var(--ink)':'var(--ink3)')+';font-weight:'+(sort===ci?'700':'500')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
           +(ci>=3?'justify-self:end;':'')})),
       pvRows:rows.slice(pg*PER,(pg+1)*PER).map(r=>({
         cells:r.slice(0,-1).map((c,ci)=>({v:c,
-          style:'font-size:13px;color:'+(ci===0?'var(--ink2)':'var(--ink)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
-            +(ci===0||ci>=3?'font-family:\'JetBrains Mono\',monospace;font-size:12.5px;':'')
+          style:'font-size:14.5px;color:'+(ci===0?'var(--ink2)':'var(--ink)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
+            +(ci===0||ci>=3?'font-family:\'JetBrains Mono\',monospace;font-size:13.5px;':'')
             +(ci>=3?'text-align:right;justify-self:end;font-weight:600;':'')})),
         status:{label:String(r[r.length-1]).split(':')[1]||'',
           color:String(r[r.length-1]).split(':')[0]==='warn'?'#B9903A':'#0E8F63'}
@@ -4275,6 +4317,17 @@ class Component extends DCLogic {
       pvEmpty:rows.length===0,
       pvTotal:dsRows,
       pvTitle:dsel.name+'-ийн жагсаалт',
+      pvExport:()=>{
+        const XLSX=window.XLSX;
+        if(!XLSX){ this.setState({toast:'Excel сан ачаалагдаж байна, түр хүлээгээд дахин оролдоно уу.'}); this.fadeToast&&this.fadeToast(); return; }
+        const header=sc.head;
+        const body=rows.map(r=>r.slice(0,-1).concat([String(r[r.length-1]).split(':')[1]||String(r[r.length-1])]));
+        const ws=XLSX.utils.aoa_to_sheet([header].concat(body));
+        const wb=XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb,ws,dsel.name.slice(0,28)||'Дата');
+        const today=new Date().toISOString().slice(0,10);
+        XLSX.writeFile(wb,dsel.sector+'_'+today+'.xlsx');
+      },
       toggleFilter:()=>this.setState(s=>({pvFilterOpen:!s.pvFilterOpen})),
       pvFilterOpen:!!this.state.pvFilterOpen,
       filterBtnStyle:'display:flex;align-items:center;gap:7px;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;flex-shrink:0;border-radius:9px;padding:9px 15px;transition:.16s var(--ease);'
@@ -5136,7 +5189,14 @@ class Component extends DCLogic {
             ?(a[0]==='download'?'border:1px solid '+NEON[dsel.sector]+';background:'+NEON[dsel.sector]+';color:#0d1524;font-weight:700;box-shadow:0 10px 24px -10px '+NEON[dsel.sector]+';'
                                 :'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;box-shadow:0 10px 24px -12px rgba(15,23,46,.8);')
             :'border:1px solid var(--line2);background:var(--surface);color:var(--ink2);font-weight:600;box-shadow:var(--shadow);')
-      })),
+      })).concat([{
+        id:'filter',label:'Шүүлт',glyph:'▽',
+        pick:()=>this.setState(s=>({pvFilterOpen:!s.pvFilterOpen})),
+        style:'display:flex;align-items:center;gap:9px;cursor:pointer;font-family:inherit;font-size:13.5px;border-radius:11px;padding:12px 20px;white-space:nowrap;transition:.18s var(--ease);'
+          +(this.state.pvFilterOpen
+            ?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;box-shadow:0 10px 24px -12px rgba(15,23,46,.8);'
+            :'border:1px solid var(--line2);background:var(--surface);color:var(--ink2);font-weight:600;box-shadow:var(--shadow);')
+      }]),
       act:this.state.dsAction,
       isDownload:this.state.dsAction==='download',isApiAct:this.state.dsAction==='api',isFollow:this.state.dsAction==='follow',
       pvSettingsOpen:!!this.state.pvSettingsOpen,
@@ -5342,10 +5402,6 @@ class Component extends DCLogic {
     const isDomestic=this.state.airType==='domestic';
     const W=560,H=320;
     const theme=this.state.theme;
-    const rootEl=document.querySelector('.eh-app');
-    const surfaceRgbStr=(rootEl?getComputedStyle(rootEl).getPropertyValue('--surface-rgb'):'').trim()||'255,255,255';
-    const [sr,sg,sb]=surfaceRgbStr.split(',').map(Number);
-    const accRgb=hexToRgb(NEON.air);
     const nodeColor=(name)=>{
       const hue=hashHue(name);
       const light=theme==='dark'?60:44;
@@ -5370,12 +5426,11 @@ class Component extends DCLogic {
         aimagTotals[key]=(aimagTotals[key]||0)+totals[c].pax;
       });
       const maxAimag=Object.keys(aimagTotals).reduce((m,k)=>Math.max(m,aimagTotals[k]),0);
+      const aimagLight=theme==='dark'?30:83;
       const regions=this.mongoliaAimags.features.map(f=>{
         const name=f.properties.name;
         const pax=aimagTotals[name]||0;
-        const t=maxAimag?Math.sqrt(pax/maxAimag):0;
-        const r=Math.round(sr+(accRgb[0]-sr)*t),g=Math.round(sg+(accRgb[1]-sg)*t),b=Math.round(sb+(accRgb[2]-sb)*t);
-        return {d:pathGen(f)||'',fill:'rgb('+r+','+g+','+b+')',name};
+        return {d:pathGen(f)||'',fill:'hsl('+hashHue(name)+',48%,'+aimagLight+'%)',name,pax};
       });
       const ubProj=proj(UB_COORD)||[W/2,H/2];
       const airportKeys=Object.keys(DOMESTIC_AIRPORT_COORD);
@@ -5403,11 +5458,11 @@ class Component extends DCLogic {
           .map(c=>({name:c,color:nodeColor(c)}))};
     }
 
-    if(!this.landFeature) return {ready:false,notReady:true,isDomestic:false};
+    if(!this.worldCountries) return {ready:false,notReady:true,isDomestic:false};
     const proj=d3.geoNaturalEarth1().fitSize([W-24,H-24],this.landFeature);
     proj.translate([proj.translate()[0]+12,proj.translate()[1]+12]);
     const pathGen=d3.geoPath(proj);
-    const land=pathGen(this.landFeature)||'';
+    const countryPaths=this.worldCountries.map(f=>({d:pathGen(f)||''})).filter(cp=>cp.d);
     const totals=this._airCountryFull||{};
     const countries=Object.keys(totals).filter(c=>COUNTRY_COORD[c]);
     const maxPax=countries.reduce((m,c)=>Math.max(m,totals[c]),0);
@@ -5423,7 +5478,7 @@ class Component extends DCLogic {
         selected:isSelected(key),ringStroke:isSelected(key)?'var(--ink)':'none',ringWidth:isSelected(key)?2:0};
     }).filter(Boolean);
     const lines=nodes.map(n=>({x1:ubProj[0].toFixed(1),y1:ubProj[1].toFixed(1),x2:n.cx,y2:n.cy,color:n.color}));
-    return {ready:true,isDomestic:false,isWorld:true,viewBox:'0 0 '+W+' '+H,land,lines,nodes,closeNode,
+    return {ready:true,isDomestic:false,isWorld:true,viewBox:'0 0 '+W+' '+H,countryPaths,lines,nodes,closeNode,
       ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
       detail:selected,
       legend:countries.slice().sort((a,b)=>a.localeCompare(b)).map(c=>({name:c,color:nodeColor(c)}))};
