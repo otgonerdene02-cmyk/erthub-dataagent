@@ -2435,7 +2435,13 @@
           </defs>
           <sc-if value="{{ detail.flowMap.isDomestic }}">
             <sc-for list="{{ detail.flowMap.regions }}" as="rg" hint-placeholder-count="24">
-              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="{{ detail.flowMap.landStroke }}" stroke-width="0.9" vector-effect="non-scaling-stroke"></path>
+              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="rgba(var(--surface-rgb),.85)" stroke-width="1" vector-effect="non-scaling-stroke"><title>{{ rg.name }}</title></path>
+            </sc-for>
+            <sc-for list="{{ detail.flowMap.aimagLabels }}" as="al0" hint-placeholder-count="24">
+              <text x="{{ al0.x }}" y="{{ al0.y }}" text-anchor="middle" fill="none" stroke="{{ detail.flowMap.labelHalo }}" stroke-width="3" stroke-linejoin="round" style="font-family:inherit;font-size:{{ detail.flowMap.aimagFs }}px;font-weight:500;pointer-events:none;">{{ al0.text }}</text>
+            </sc-for>
+            <sc-for list="{{ detail.flowMap.aimagLabels }}" as="al" hint-placeholder-count="24">
+              <text x="{{ al.x }}" y="{{ al.y }}" text-anchor="middle" fill="{{ detail.flowMap.labelColor }}" style="font-family:inherit;font-size:{{ detail.flowMap.aimagFs }}px;font-weight:500;pointer-events:none;">{{ al.text }}</text>
             </sc-for>
           </sc-if>
           <sc-if value="{{ detail.flowMap.isGlobe }}">
@@ -2454,6 +2460,9 @@
           </sc-for>
           <sc-for list="{{ detail.flowMap.arcs }}" as="ar2" hint-placeholder-count="20">
             <path d="{{ ar2.d }}" fill="none" stroke="{{ ar2.stroke }}" stroke-width="{{ ar2.dashWidth }}" stroke-linecap="round" stroke-dasharray="6 6" opacity="0.72" vector-effect="non-scaling-stroke" style="animation:dashFlow 1.8s linear infinite;"></path>
+          </sc-for>
+          <sc-for list="{{ detail.flowMap.ripples }}" as="rp" hint-placeholder-count="24">
+            <circle cx="{{ rp.cx }}" cy="{{ rp.cy }}" r="{{ rp.r }}" fill="none" stroke="{{ rp.color }}" stroke-width="1.2" vector-effect="non-scaling-stroke" style="{{ rp.style }}"></circle>
           </sc-for>
           <sc-for list="{{ detail.flowMap.halos }}" as="ha" hint-placeholder-count="6">
             <circle cx="{{ ha.cx }}" cy="{{ ha.cy }}" r="{{ ha.r }}" fill="none" stroke="{{ ha.color }}" stroke-width="1.1" opacity="0.3" vector-effect="non-scaling-stroke"></circle>
@@ -2488,15 +2497,12 @@
             <button sc-camel-on-click="{{ detail.flowMap.closeNode }}" style="cursor:pointer;font-family:inherit;width:26px;height:26px;flex-shrink:0;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:12px;">✕</button>
           </div>
         </sc-if>
-        <sc-if value="{{ detail.flowMap.isWorld }}">
-          <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:16px;">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">Улсын choropleth (нийт зорчигч):</span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">0</span>
-            <span style="width:150px;height:9px;border-radius:5px;border:1px solid var(--line);background:{{ detail.flowMap.choroLegend.gradient }};flex-shrink:0;"></span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);">{{ detail.flowMap.choroLegend.max }}</span>
-            <span style="font-size:11px;color:var(--ink3);">· туузны зузаан = зорчигчийн урсгал</span>
-          </div>
-        </sc-if>
+        <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:16px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.flowMap.choroLabel }}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">0</span>
+          <span style="width:150px;height:9px;border-radius:5px;border:1px solid var(--line);background:{{ detail.flowMap.choroLegend.gradient }};flex-shrink:0;"></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);">{{ detail.flowMap.choroLegend.max }}</span>
+        </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
           <sc-for list="{{ detail.flowMap.legend }}" as="lg" hint-placeholder-count="10">
             <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 9px;white-space:nowrap;">
@@ -5824,27 +5830,35 @@ class Component extends DCLogic {
         const key=aimagKey(DOMESTIC_AIRPORT_COORD[c].aimag);
         aimagTotals[key]=(aimagTotals[key]||0)+totals[c].pax;
       });
-      // Аймаг бүр өөрийн hue-тэй (нэг өнгийн цулгай биш), гэхдээ нислэгтэй
-      // аймгууд нь илүү ханасан/тод, нислэггүй нь намуухан — өнгө ялгаж
-      // харуулах шаардлагыг хангахын зэрэгцээ дата ачааллыг бас уншуулна.
-      // Аймаг бүр өөр өнгөтэй мөртлөө намуухан: ханалт бага, гэрэлтүүлэг
-      // өндөр. Ялгарлыг нь нэмэхийн тулд hash-аас жижиг гэрэлтүүлгийн
-      // хазайлт нэмнэ (24 аймагт 14 hue ноогдох тул хөрш давхцахаас
-      // сэргийлнэ). Нислэгтэй аймаг арай ханасан — дата нь өнгөөр уншигдана.
-      // Өнгийг hash-аар биш ИНДЕКСЭЭР хуваарилна: hash нь 24 аймагт
-      // давхцал үүсгэж (хажуу хоёр аймаг ижил өнгөтэй болох эрсдэлтэй)
-      // байсан. 14 hue-г 5-ын алхмаар эргүүлж, нэг тойрог дуусахад
-      // гэрэлтүүлгийн шатыг өөрчилснөөр 24/24 өвөрмөц өнгө баталгаажна.
-      const nHue=FLOW_HUES.length;
-      const regions=this.mongoliaAimags.features.map((f,i)=>{
+      // Аймгийн choropleth — веритех dashboard-тай ижил зарчим: нислэггүй
+      // аймаг саарал, нислэгтэй нь --accent-strong (#246cc4 ≈ hsl(213,69%,46%))
+      // хүртэл нэг hue дээр гүнзгийрнэ. Хуваарилалт нь sqrt тул Өмнөговь шиг
+      // нэг давамгай аймаг бусдыг цайруулж алга болгохгүй.
+      const maxAimag=Object.keys(aimagTotals).reduce((m,k)=>Math.max(m,aimagTotals[k]),0);
+      const aimagFill=(pax)=>{
+        if(!pax) return landIdle;
+        const t=maxAimag?Math.sqrt(pax/maxAimag):0;
+        const s=dark?(22+46*t):(20+49*t);
+        const l=dark?(20+26*t):(88-42*t);
+        return 'hsl(213,'+s.toFixed(0)+'%,'+l.toFixed(0)+'%)';
+      };
+      const regions=this.mongoliaAimags.features.map(f=>{
         const name=f.properties.name;
-        const live=(aimagTotals[name]||0)>0;
-        const hue=FLOW_HUES[(i*5)%nHue];
-        const tier=Math.floor(i/nHue);
-        const sat=live?(dark?32:34):(dark?12:15);
-        const lig=dark?(live?27:21)+tier*4:(live?87:92)-tier*4;
-        return {d:pathGen(f)||'',name,fill:'hsl('+hue+','+sat+'%,'+lig+'%)'};
+        return {d:pathGen(f)||'',name,fill:aimagFill(aimagTotals[name]||0)};
       });
+      // Аймаг бүрийн нэрийг центроид дээр нь бичнэ (reference-д geo.label
+      // show:true fontSize:9 — энд дэлгэцийн px тогтмол байлгахаар px()).
+      const aimagLabels=this.mongoliaAimags.features.map(f=>{
+        const c=pathGen.centroid(f);
+        if(!c||isNaN(c[0])) return null;
+        return {x:c[0].toFixed(1),y:c[1].toFixed(1),text:f.properties.name};
+      }).filter(Boolean);
+      const aimagFs=px(10.5).toFixed(2);
+      const choroLegend={
+        max:(maxAimag>=1000?(maxAimag/1000).toFixed(1)+'K':String(maxAimag)),
+        gradient:'linear-gradient(90deg,'+aimagFill(0)+','+aimagFill(maxAimag*0.12)
+          +','+aimagFill(maxAimag*0.45)+','+aimagFill(maxAimag)+')'
+      };
       const ubProj=proj(UB_COORD)||[W/2,H/2];
       const airportKeys=Object.keys(DOMESTIC_AIRPORT_COORD).filter(c=>totals[c]);
       const items=airportKeys.map(c=>{
@@ -5864,10 +5878,22 @@ class Component extends DCLogic {
           ringStroke:sel?ubInk:'rgba(var(--surface-rgb),.92)',ringWidth:sel?2.6:1.3,
           opacity:sel?'1':'0.88'};
       });
+      // Боомт бүр дээр тэлэх цагираг (effectScatter rippleEffect-ийн дүйцэл).
+      // Хоёр давхарга, тал үечлэлээр шилжүүлсэн тул тасралтгүй давалгаа болно.
+      const ripples=[];
+      items.forEach(it=>{
+        const per=(3+(hashHue(it.name)%5)*0.22).toFixed(2);
+        for(let k=0;k<2;k++){
+          ripples.push({cx:it.x.toFixed(1),cy:it.y.toFixed(1),r:it.r.toFixed(1),color:it.color,
+            style:'transform-box:fill-box;transform-origin:center;'
+              +'animation:ripplePulse '+per+'s ease-out infinite;animation-delay:-'+(k*per/2).toFixed(2)+'s;'});
+        }
+      });
       return {ready:true,isDomestic:true,isWorld:false,viewBox:'0 0 '+W+' '+H,
         regions,arcs:flow.arcs,halos:flow.halos,labels:flow.labels,flyDots:flow.flyDots,nodes,closeNode,
+        aimagLabels,aimagFs,choroLegend,ripples,choroLabel:'Аймгийн choropleth (нийт зорчигч):',
         isGlobe:false,ubVisible:true,svgCursor:'default',onGlobeDown:null,
-        oceanA,oceanB,landStroke,ubInk,labelHalo,typeTabs,labelFs,labelHaloW,
+        oceanA,oceanB,landStroke,ubInk,labelHalo,labelColor,typeTabs,labelFs,labelHaloW,
         ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
         detail:selected,
         legend:items.slice().sort((a,b)=>b.pax-a.pax).slice(0,10)
@@ -6015,7 +6041,7 @@ class Component extends DCLogic {
     });
     const zoomBy=(f)=>()=>this.setState(s=>({globeZoom:Math.max(0.7,Math.min(2.6,(s.globeZoom||1)*f))}));
     return {ready:true,isDomestic:false,isWorld:true,viewBox:'0 0 '+W+' '+H,
-      countryPaths,arcs:[],ribbons:flow.ribbons,halos:flow.halos,labels:flow.labels,flyDots:flow.flyDots,nodes,closeNode,
+      countryPaths,arcs:[],ribbons:flow.ribbons,aimagLabels:[],ripples:[],choroLabel:'Улсын choropleth (нийт зорчигч):',halos:flow.halos,labels:flow.labels,flyDots:flow.flyDots,nodes,closeNode,
       choroLegend,projTabs,isGlobe,sphereD,ubVisible,
       globeCx:globeCx.toFixed(1),globeCy:globeCy.toFixed(1),globeR:globeR.toFixed(1),
       zoomIn:zoomBy(1.25),zoomOut:zoomBy(0.8),
@@ -6027,7 +6053,7 @@ class Component extends DCLogic {
         this._globeDrag={x:e.clientX,y:e.clientY,rot:(this.state.globeRot||[-72,-26]).slice()};
         this.setState({globeDragging:true});
       }):null,
-      oceanA,oceanB,landStroke,ubInk,labelHalo,typeTabs,labelFs,labelHaloW,
+      oceanA,oceanB,landStroke,ubInk,labelHalo,labelColor,typeTabs,labelFs,labelHaloW,
       ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
       detail:selected,
       legend:items.slice().sort((a,b)=>b.pax-a.pax).slice(0,10)

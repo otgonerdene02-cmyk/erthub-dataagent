@@ -62,6 +62,9 @@ body{margin:0;}
    замын дагуу зөөж, offset-rotate:auto нь хөдөлгөөний чиглэл рүү эргүүлнэ
    — тиймээс онгоцны дүрсийг эх цэг (0,0) орчим тодорхойлсон байдаг. */
 @keyframes flyPath{from{offset-distance:0%;}to{offset-distance:100%;}}
+/* Боомтын маркерын тэлэх цагираг (веритех dashboard-ийн effectScatter
+   rippleEffect-тэй дүйцүүлсэн: brushType stroke, scale ~2.2). */
+@keyframes ripplePulse{from{transform:scale(.9);opacity:.5;}to{transform:scale(2.3);opacity:0;}}
 @keyframes scanSweep{0%{transform:translateX(-120%);}100%{transform:translateX(320%);}}
 @keyframes barGrow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
 @keyframes glowPulse{0%,100%{opacity:.35;}50%{opacity:.85;}}
