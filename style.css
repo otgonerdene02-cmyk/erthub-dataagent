@@ -58,6 +58,10 @@ body{margin:0;}
 @keyframes floatZ{0%,100%{transform:translateZ(0) translateY(0) scale(1);}50%{transform:translateZ(70px) translateY(-18px) scale(1.25);}}
 @keyframes tickerScroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
 @keyframes dashFlow{to{stroke-dashoffset:-24;}}
+/* Маршрутын дагуу нисэх онгоц (see buildFlowMap). offset-path элементийг
+   замын дагуу зөөж, offset-rotate:auto нь хөдөлгөөний чиглэл рүү эргүүлнэ
+   — тиймээс онгоцны дүрсийг эх цэг (0,0) орчим тодорхойлсон байдаг. */
+@keyframes flyPath{from{offset-distance:0%;}to{offset-distance:100%;}}
 @keyframes scanSweep{0%{transform:translateX(-120%);}100%{transform:translateX(320%);}}
 @keyframes barGrow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
 @keyframes glowPulse{0%,100%{opacity:.35;}50%{opacity:.85;}}
