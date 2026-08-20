@@ -1032,7 +1032,7 @@
               <div style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ k.deltaColor }};background:{{ k.deltaColor }}18;border-radius:999px;padding:4px 11px;">
                 <span style="font-size:9px;">{{ k.deltaGlyph }}</span>{{ k.delta }}
               </div>
-              <div style="font-size:9.5px;color:var(--ink3);white-space:nowrap;">өмнөх сартай харьцуулбал</div>
+              <div style="font-size:9.5px;color:var(--ink3);white-space:nowrap;">{{ k.compareLabel }}</div>
             </div>
           </div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);opacity:.8;margin-top:12px;padding:0 22px;white-space:nowrap;">12 сарын чиг хандлага</div>
@@ -2218,6 +2218,37 @@
           <sc-for list="{{ detail.pvStatusFilters }}" as="sf" hint-placeholder-count="3">
             <button sc-camel-on-click="{{ sf.pick }}" style="{{ sf.style }}">{{ sf.label }}</button>
           </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ detail.showAirFilters }}">
+        <div style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Жил:</div>
+            <sc-for list="{{ detail.airYearChips }}" as="yc" hint-placeholder-count="3">
+              <button sc-camel-on-click="{{ yc.pick }}" style="{{ yc.style }}">{{ yc.label }}</button>
+            </sc-for>
+            <sc-if value="{{ detail.airYearLoading }}"><span style="font-size:11px;color:var(--ink3);white-space:nowrap;">ачаалж байна…</span></sc-if>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Төрөл:</div>
+            <sc-for list="{{ detail.airTypeChips }}" as="tc" hint-placeholder-count="3">
+              <button sc-camel-on-click="{{ tc.pick }}" style="{{ tc.style }}">{{ tc.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Чиглэл:</div>
+            <sc-for list="{{ detail.airDirChips }}" as="dc" hint-placeholder-count="3">
+              <button sc-camel-on-click="{{ dc.pick }}" style="{{ dc.style }}">{{ dc.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;padding-top:5px;">Бүс нутгаар:</div>
+            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;max-height:74px;overflow-y:auto;">
+              <sc-for list="{{ detail.airRegionChips }}" as="rc" hint-placeholder-count="6">
+                <button sc-camel-on-click="{{ rc.pick }}" style="{{ rc.style }}">{{ rc.label }}</button>
+              </sc-for>
+            </div>
+          </div>
         </div>
       </sc-if>
       <div style="overflow-x:auto;">
@@ -3667,6 +3698,7 @@ function mapFirebaseError(err){
 
 class Component extends DCLogic {
   state={ authed:false, authBusy:false, authReady:false, mobileNavOpen:false, viewportW:(typeof window!=='undefined'?window.innerWidth:1280),
+    airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
     theme:(function(){
       try{
         const saved=localStorage.getItem('eh-theme');
@@ -3728,78 +3760,157 @@ class Component extends DCLogic {
   // Live Агаарын тээвэр data — fetched at runtime from the already-published,
   // already-updating JSON of the veritech-flights-dashboard repo (no new
   // workflow/secrets here, we just read what that repo already publishes).
-  // Mutates SECTORS.air / RATIO.air / SECTOR_TABLES.air in place so the
-  // existing generic sector-page/home-KPI/donut rendering — which all read
-  // those objects fresh via SECTORS[key] on every render — picks the real
-  // numbers up with no other code changes.
+  // Mutates SECTORS.air / RATIO.air / SECTOR_TABLES.air / DS_SCHEMA.air in
+  // place so the existing generic sector-page/home-KPI/donut/dataset-table
+  // rendering — which all read those objects fresh via SECTORS[key] on
+  // every render — picks the real numbers up with no other code changes.
+  // Each year is cached separately (this._flightsCache) so switching the
+  // Он filter, or any of Төрөл/Чиглэл/Бүс нутгаар, only re-fetches when a
+  // not-yet-seen year is picked; recomputeAirData() re-runs purely from
+  // cache otherwise.
   async loadFlightsData(){
     const BASE='https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/';
+    this._flightsCache={};
+    this._flightsYears=[];
     try{
       const idxRes=await fetch(BASE+'flights-index.json');
       if(!idxRes.ok) throw new Error('index fetch failed: '+idxRes.status);
       const idx=await idxRes.json();
       const years=(idx.years||[]).map(y=>y.year).sort((a,b)=>b-a);
+      if(!years.length) throw new Error('no years in index');
+      this._flightsYears=years;
       const year=years[0];
-      if(!year) throw new Error('no years in index');
-      const res=await fetch(BASE+'flights-'+year+'.json');
-      if(!res.ok) throw new Error('flights fetch failed: '+res.status);
-      const data=await res.json();
-      const flights=data.flights||[];
+      const flights=await this.fetchFlightsYear(year);
       if(!flights.length) throw new Error('empty flights array');
-      this.applyRealFlightsData(flights,year);
-      this.setState({flightsLive:true});
+      if(years[1]) await this.fetchFlightsYear(years[1]).catch(()=>{});
+      this.setState({airYear:year},()=>this.recomputeAirData());
     }catch(e){
       console.warn('[ErtHub] Live flights data unavailable, keeping demo values for Агаарын тээвэр:',e);
     }
   }
-  applyRealFlightsData(flights,year){
+  async fetchFlightsYear(year){
+    if(this._flightsCache[year]) return this._flightsCache[year];
+    const BASE='https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/';
+    const res=await fetch(BASE+'flights-'+year+'.json');
+    if(!res.ok) throw new Error('flights fetch failed for '+year+': '+res.status);
+    const data=await res.json();
+    const flights=data.flights||[];
+    this._flightsCache[year]=flights;
+    return flights;
+  }
+  async selectAirYear(year){
+    if(year===this.state.airYear || this.state.airYearLoading) return;
+    this.setState({airYearLoading:true});
+    try{
+      await this.fetchFlightsYear(year);
+      const idx=this._flightsYears.indexOf(year);
+      const prevYear=this._flightsYears[idx+1];
+      if(prevYear) await this.fetchFlightsYear(prevYear).catch(()=>{});
+    }catch(e){
+      console.warn('[ErtHub] Failed to load flights for',year,e);
+    }
+    this.setState({airYear:year,airYearLoading:false},()=>this.recomputeAirData());
+  }
+  setAirFilter(key,val){
+    this.setState({[key]:val},()=>this.recomputeAirData());
+  }
+  recomputeAirData(){
+    const year=this.state.airYear;
+    const flights=this._flightsCache[year];
+    if(!flights) return;
+    const idx=this._flightsYears.indexOf(year);
+    const prevYear=this._flightsYears[idx+1];
+    const prevFlights=prevYear?this._flightsCache[prevYear]:null;
+    this.applyRealFlightsData(flights,prevFlights,year,{
+      type:this.state.airType,dir:this.state.airDir,region:this.state.airRegion
+    });
+    this.setState({flightsLive:true});
+  }
+  applyRealFlightsData(flights,prevFlights,year,filters){
+    // Passenger/cargo weight values abbreviate (K at 1,000+, M at 1,000,000+);
+    // flight/carrier/city COUNTS always stay plain comma-formatted, matching
+    // the source veritech dashboard's own convention (e.g. "13,504" flights
+    // but "269.3K" passengers).
     const fmtBig=(n)=>{
       if(n>=1000000) return (n/1000000).toFixed(1)+'M';
-      if(n>=100000) return Math.round(n/1000)+'K';
+      if(n>=1000) return (n/1000).toFixed(1)+'K';
       return Math.round(n).toLocaleString('en-US');
     };
-    const monthCounts=new Array(13).fill(0), monthPax=new Array(13).fill(0);
-    let totalPax=0, intlFlights=0, intlPax=0, domPax=0;
-    const byCarrier={}, byCountry={};
-    for(const f of flights){
-      const m=f.month||1, pax=f.pax||0;
-      monthCounts[m]=(monthCounts[m]||0)+1;
-      monthPax[m]=(monthPax[m]||0)+pax;
-      totalPax+=pax;
-      if(f.ou==='ОУ'){ intlFlights++; intlPax+=pax; } else { domPax+=pax; }
-      if(f.carr) byCarrier[f.carr]=(byCarrier[f.carr]||0)+pax;
-      if(f.cntry && f.cntry!=='Монгол') byCountry[f.cntry]=(byCountry[f.cntry]||0)+pax;
-    }
-    const c1d=[]; for(let m=1;m<=12;m++) c1d.push(monthCounts[m]||0);
-    // The latest month with data is very likely still in progress (this feed
-    // updates continuously) — comparing a partial month to a complete one
-    // would read as a fake drop, so skip it for the delta and compare the
-    // two most recent COMPLETE months instead.
-    const now=new Date();
-    const latestIdx=(()=>{ for(let i=11;i>=0;i--) if(c1d[i]>0) return i; return -1; })();
-    const latestIsInProgress=latestIdx>=0 && year===now.getFullYear() && (latestIdx+1)===(now.getMonth()+1);
-    const searchFrom=latestIsInProgress?latestIdx-1:latestIdx;
-    const lastIdx=(()=>{ for(let i=searchFrom;i>=0;i--) if(c1d[i]>0) return i; return Math.max(searchFrom,0); })();
-    const prevIdx=(()=>{ for(let i=lastIdx-1;i>=0;i--) if(c1d[i]>0) return i; return lastIdx; })();
-    const pctDelta=(cur,prev)=>{
-      if(!prev) return {s:'0.0%',dir:'flat'};
-      const d=(cur-prev)/prev*100;
-      return {s:(d>=0?'+':'')+d.toFixed(1)+'%', dir:d>0?'up':(d<0?'down':'flat')};
+    const fmtCount=(n)=>Math.round(n).toLocaleString('en-US');
+    const matchFilter=(f)=>{
+      if(filters.type==='intl' && f.ou!=='ОУ') return false;
+      if(filters.type==='domestic' && f.ou==='ОУ') return false;
+      if(filters.dir==='dep' && f.dir!=='1') return false;
+      if(filters.dir==='arr' && f.dir!=='0') return false;
+      if(filters.region!=='all' && f.region!==filters.region) return false;
+      return true;
     };
-    const flightDelta=pctDelta(c1d[lastIdx],c1d[prevIdx]);
-    const paxDelta=pctDelta(monthPax[lastIdx+1]||0,monthPax[prevIdx+1]||0);
-    const total=flights.length;
-    const intlPct=total?(intlFlights/total*100):0;
-    const domPaxPct=totalPax?(domPax/totalPax*100):0;
+    const filtered=flights.filter(matchFilter);
+
+    const aggregate=(list)=>{
+      const monthCounts={};
+      let totalPax=0,intlFlights=0,intlPax=0,domPax=0,cargoKg=0;
+      const carriers=new Set(),cities=new Set();
+      let latestM=0,latestD=0;
+      for(const f of list){
+        const m=f.month||1,pax=f.pax||0;
+        monthCounts[m]=(monthCounts[m]||0)+1;
+        totalPax+=pax;
+        if(f.ou==='ОУ'){ intlFlights++; intlPax+=pax; } else { domPax+=pax; }
+        cargoKg+=(f.cargoKg||0)+(f.mailKg||0);
+        if(f.carr) carriers.add(f.carr);
+        if(f.city) cities.add(f.city);
+        if(m>latestM || (m===latestM && (f.day||0)>latestD)){ latestM=m; latestD=f.day||0; }
+      }
+      return {count:list.length,totalPax,intlFlights,intlPax,domPax,
+        cargoTon:cargoKg/1000,carrierCount:carriers.size,cityCount:cities.size,
+        monthCounts,latestM,latestD};
+    };
+    const cur=aggregate(filtered);
+    // "Same period last year" — cap the previous year's data at the same
+    // month/day the primary year's data currently reaches, so a mid-year
+    // snapshot (this feed updates continuously) is compared fairly instead
+    // of a partial year against a complete one.
+    const prevFilteredSamePeriod=prevFlights
+      ? prevFlights.filter(matchFilter).filter(f=>
+          (f.month||1)<cur.latestM || ((f.month||1)===cur.latestM && (f.day||0)<=cur.latestD))
+      : [];
+    const prev=aggregate(prevFilteredSamePeriod);
+
+    const pctDelta=(a,b)=>{
+      if(!b) return {s:'0.0%',dir:'flat'};
+      const d=(a-b)/b*100;
+      return {s:(d>=0?'+':'')+d.toFixed(1)+'%',dir:d>0?'up':(d<0?'down':'flat')};
+    };
+    const compareLabel=prevFlights?'өмнөх оны мөн үетэй харьцуулахад':'харьцуулах өгөгдөл алга';
+    const intlPct=cur.count?(cur.intlFlights/cur.count*100):0;
+    const intlPaxPct=cur.totalPax?(cur.intlPax/cur.totalPax*100):0;
+    const domPaxPct=cur.totalPax?(cur.domPax/cur.totalPax*100):0;
 
     SECTORS.air.kpis=[
-      ['НИЙТ НИСЛЭГ',fmtBig(total),'',flightDelta.s,flightDelta.dir],
-      ['НИЙТ ЗОРЧИГЧ',fmtBig(totalPax),'',paxDelta.s,paxDelta.dir],
-      ['ОУ НИСЛЭГ',fmtBig(intlFlights),intlPct.toFixed(0)+'%',flightDelta.s,flightDelta.dir],
-      ['ДОТООД ЗОРЧИГЧ',fmtBig(domPax),domPaxPct.toFixed(0)+'%',paxDelta.s,paxDelta.dir]
+      ['НИЙТ НИСЛЭГ',fmtCount(cur.count),'',pctDelta(cur.count,prev.count).s,pctDelta(cur.count,prev.count).dir,compareLabel],
+      ['НИЙТ ЗОРЧИГЧ',fmtBig(cur.totalPax),'',pctDelta(cur.totalPax,prev.totalPax).s,pctDelta(cur.totalPax,prev.totalPax).dir,compareLabel],
+      ['ОУ НИСЛЭГ',fmtCount(cur.intlFlights),intlPct.toFixed(1)+'%',pctDelta(cur.intlFlights,prev.intlFlights).s,pctDelta(cur.intlFlights,prev.intlFlights).dir,compareLabel],
+      ['ОУ ЗОРЧИГЧ',fmtBig(cur.intlPax),intlPaxPct.toFixed(1)+'%',pctDelta(cur.intlPax,prev.intlPax).s,pctDelta(cur.intlPax,prev.intlPax).dir,compareLabel],
+      ['ДОТООД ЗОРЧИГЧ',fmtBig(cur.domPax),domPaxPct.toFixed(1)+'%',pctDelta(cur.domPax,prev.domPax).s,pctDelta(cur.domPax,prev.domPax).dir,compareLabel],
+      ['НИЙТ АЧАА',fmtBig(cur.cargoTon),'тонн',pctDelta(cur.cargoTon,prev.cargoTon).s,pctDelta(cur.cargoTon,prev.cargoTon).dir,compareLabel],
+      ['ТЭЭВЭРЛЭГЧ',fmtCount(cur.carrierCount),'',pctDelta(cur.carrierCount,prev.carrierCount).s,pctDelta(cur.carrierCount,prev.carrierCount).dir,compareLabel],
+      ['ХОТ',fmtCount(cur.cityCount),'',pctDelta(cur.cityCount,prev.cityCount).s,pctDelta(cur.cityCount,prev.cityCount).dir,compareLabel]
     ];
-    SECTORS.air.c1d=c1d;
 
+    // Trend chart: keep only months that actually have data — the chart's
+    // own "AI прогноз" feature already draws a forecast tail past the last
+    // real point, so zero-padding the remaining months of an in-progress
+    // year fed a fake cliff-to-zero into that regression instead.
+    const c1dFull=[]; for(let m=1;m<=12;m++) c1dFull.push(cur.monthCounts[m]||0);
+    const lastRealIdx=(()=>{ for(let i=11;i>=0;i--) if(c1dFull[i]>0) return i; return -1; })();
+    SECTORS.air.c1d=lastRealIdx>=0?c1dFull.slice(0,lastRealIdx+1):c1dFull;
+
+    const byCarrier={},byCountry={};
+    for(const f of filtered){
+      if(f.carr) byCarrier[f.carr]=(byCarrier[f.carr]||0)+(f.pax||0);
+      if(f.cntry && f.cntry!=='Монгол') byCountry[f.cntry]=(byCountry[f.cntry]||0)+(f.pax||0);
+    }
     const carrierList=Object.entries(byCarrier).sort((a,b)=>b[1]-a[1]);
     const carrierTotal=carrierList.reduce((s,c)=>s+c[1],0)||1;
     const topCarriers=carrierList.slice(0,4);
@@ -3814,7 +3925,7 @@ class Component extends DCLogic {
 
     RATIO.air={labels:['Олон улсын','Дотоодын'],pct:intlPct};
 
-    const sorted=flights.slice().sort((a,b)=>b.unixtimestamp-a.unixtimestamp).slice(0,20);
+    const sorted=filtered.slice().sort((a,b)=>b.unixtimestamp-a.unixtimestamp).slice(0,20);
     SECTOR_TABLES.air={
       title:'Нислэгүүдийн жагсаалт · бодит цагийн эх сурвалж',
       head:['Нислэг','Тээвэрлэгч','Хот','Улс','Чиг','Зорчигч','Огноо','Төлөв'],
@@ -3826,14 +3937,18 @@ class Component extends DCLogic {
       })
     };
 
-    // This is the table actually shown on the dataset detail page's
-    // "Өгөгдлийн сан" preview (DS_SCHEMA[sector].rows) — separate from
-    // SECTOR_TABLES.air above, which nothing currently renders.
+    // The table actually shown on the dataset detail page's "Өгөгдлийн сан"
+    // preview (DS_SCHEMA[sector].rows) — separate from SECTOR_TABLES.air
+    // above, which nothing currently renders.
     DS_SCHEMA.air.rows=sorted.slice(0,12).map(f=>{
       const mm=String(f.month).padStart(2,'0'), dd=String(f.day).padStart(2,'0');
       const isCharter=f.flightType==='Захиалгат';
       return [year+'-'+mm+'-'+dd,f.flight||'—',f.city||'—',f.pax||0,(isCharter?'warn:':'ok:')+(f.flightType||'Тогтмол')];
     });
+
+    // Filter-chip options are built off the FULL (unfiltered) year so the
+    // list of choices doesn't shrink as other filters get applied.
+    this._airRegions=[...new Set(flights.map(f=>f.region).filter(Boolean))].sort();
   }
   buildTable(){
     const k=this.state.activeSector, t=SECTOR_TABLES[k];
@@ -4060,8 +4175,37 @@ class Component extends DCLogic {
         label:x[1],pick:()=>this.setState({pvStatusFilter:x[0],dsPage:0}),
         style:'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
           +(sf===x[0]?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);')
-      }))
+      })),
+      ...this.buildAirFilters(dsel)
     };
+  }
+  // Filter chips (Он/Төрөл/Чиглэл/Бүс нутгаар) for the live flights feed.
+  // Structured generically — keyed off dsel.sector rather than hardcoded to
+  // 'air' — so wiring another sector to a similarly granular, per-record
+  // live source later only means giving it the same _xRegions/_xYears
+  // instance fields and a matching branch here, not a new UI.
+  buildAirFilters(dsel){
+    if(dsel.sector!=='air' || !this._flightsYears || !this._flightsYears.length) return {isAirLive:false};
+    const chipStyle=(on)=>'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
+      +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);');
+    const year=this.state.airYear;
+    const airYearChips=this._flightsYears.map(y=>({
+      label:String(y),on:y===year,
+      pick:()=>this.selectAirYear(y),
+      style:chipStyle(y===year)+(this.state.airYearLoading?'opacity:.5;pointer-events:none;':'')
+    }));
+    const typeOpts=[['all','Бүгд'],['intl','Олон улсын'],['domestic','Дотоодын']];
+    const airTypeChips=typeOpts.map(o=>({label:o[1],on:this.state.airType===o[0],
+      pick:()=>this.setAirFilter('airType',o[0]),style:chipStyle(this.state.airType===o[0])}));
+    const dirOpts=[['all','Бүгд'],['dep','Явсан'],['arr','Ирсэн']];
+    const airDirChips=dirOpts.map(o=>({label:o[1],on:this.state.airDir===o[0],
+      pick:()=>this.setAirFilter('airDir',o[0]),style:chipStyle(this.state.airDir===o[0])}));
+    const regions=['all'].concat(this._airRegions||[]);
+    const airRegionChips=regions.map(r=>({label:r==='all'?'Бүгд':r,on:this.state.airRegion===r,
+      pick:()=>this.setAirFilter('airRegion',r),style:chipStyle(this.state.airRegion===r)}));
+    return {isAirLive:true,showAirFilters:!!this.state.pvFilterOpen,
+      airYearChips,airTypeChips,airDirChips,airRegionChips,
+      airYearLoading:!!this.state.airYearLoading};
   }
   buildDocDetail(){
     const cat=this.state.docCat, list=DOCS[cat]||[];
@@ -5110,6 +5254,7 @@ class Component extends DCLogic {
       const deltaGlyph = dir==='up' ? '▲' : dir==='down' ? '▼' : '•';
       const conf=[94,88,91,86,83][i%5];
       return {label:k[0],value:k[1],unit:k[2],delta:k[3],dir,deltaColor,deltaGlyph,
+        compareLabel:k[5]||'өмнөх сартай харьцуулбал',
         spark:miniSpark(dir,i),sparkArea:miniSpark(dir,i)+' L120,32 L0,32 Z',
         conf,confWidth:conf+'%',index:String(i+1).padStart(2,'0')};
     });
