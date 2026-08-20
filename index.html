@@ -2427,6 +2427,9 @@
               <path d="{{ cp.d }}" fill="{{ cp.fill }}" stroke="{{ cp.stroke }}" stroke-width="{{ cp.width }}" vector-effect="non-scaling-stroke"></path>
             </sc-for>
           </sc-if>
+          <sc-for list="{{ detail.flowMap.ribbons }}" as="rb" hint-placeholder-count="20">
+            <path d="{{ rb.d }}" fill="{{ rb.color }}" opacity="{{ rb.opacity }}" stroke="none"><title>{{ rb.title }}</title></path>
+          </sc-for>
           <sc-for list="{{ detail.flowMap.arcs }}" as="ar" hint-placeholder-count="20">
             <path d="{{ ar.d }}" fill="none" stroke="{{ ar.stroke }}" stroke-width="{{ ar.width }}" stroke-linecap="round" opacity="0.26" vector-effect="non-scaling-stroke"></path>
           </sc-for>
@@ -2458,7 +2461,16 @@
             <button sc-camel-on-click="{{ detail.flowMap.closeNode }}" style="cursor:pointer;font-family:inherit;width:26px;height:26px;flex-shrink:0;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:12px;">✕</button>
           </div>
         </sc-if>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
+        <sc-if value="{{ detail.flowMap.isWorld }}">
+          <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:16px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">Улсын choropleth (нийт зорчигч):</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">0</span>
+            <span style="width:150px;height:9px;border-radius:5px;border:1px solid var(--line);background:{{ detail.flowMap.choroLegend.gradient }};flex-shrink:0;"></span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);">{{ detail.flowMap.choroLegend.max }}</span>
+            <span style="font-size:11px;color:var(--ink3);">· туузны зузаан = зорчигчийн урсгал</span>
+          </div>
+        </sc-if>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
           <sc-for list="{{ detail.flowMap.legend }}" as="lg" hint-placeholder-count="10">
             <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 9px;white-space:nowrap;">
               <span style="width:9px;height:9px;border-radius:50%;background:{{ lg.color }};flex-shrink:0;"></span>{{ lg.name }}
@@ -5633,6 +5645,24 @@ class Component extends DCLogic {
       const cx=(x1+x2)/2-(y2-y1)*bend, cy=(y1+y2)/2+(x2-x1)*bend;
       return 'M'+x1.toFixed(1)+','+y1.toFixed(1)+' Q'+cx.toFixed(1)+','+cy.toFixed(1)+' '+x2.toFixed(1)+','+y2.toFixed(1);
     };
+    // Sankey маягийн урсгалын тууз: нумын төв шугамыг дагуулан хоёр талд
+    // нь өргөнийг нь шилжүүлж (эхлэлд өргөн, төгсгөлд нарийсгаж) дүүргэсэн
+    // path болгоно. Шугамын ЗУЗААН нь зорчигчийн тоог илэрхийлдэг тул
+    // amCharts-ийн sankey map шиг эзлэхүүн шууд уншигдана.
+    const ribbonPath=(x1,y1,x2,y2,bend,w0,w1)=>{
+      const cx=(x1+x2)/2-(y2-y1)*bend, cy=(y1+y2)/2+(x2-x1)*bend;
+      const N=26, top=[], bot=[];
+      for(let i=0;i<=N;i++){
+        const t=i/N, mt=1-t;
+        const x=mt*mt*x1+2*mt*t*cx+t*t*x2, y=mt*mt*y1+2*mt*t*cy+t*t*y2;
+        const dx=2*mt*(cx-x1)+2*t*(x2-cx), dy=2*mt*(cy-y1)+2*t*(y2-cy);
+        const L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;
+        const h=(w0*mt+w1*t)/2;
+        top.push((x+nx*h).toFixed(1)+','+(y+ny*h).toFixed(1));
+        bot.push((x-nx*h).toFixed(1)+','+(y-ny*h).toFixed(1));
+      }
+      return 'M'+top.join('L')+'L'+bot.reverse().join('L')+'Z';
+    };
     // Градиент нь objectBoundingBox дээр ажиллах тул чиглэлийг 0/1 булангаар
     // өгнө — userSpaceOnUse-гүйгээр УБ-аас очих цэг рүү өнгө шилжинэ.
     const gradDir=(x1,y1,x2,y2)=>({gx1:x2>=x1?'0':'1',gx2:x2>=x1?'1':'0',gy1:y2>=y1?'0':'1',gy2:y2>=y1?'1':'0'});
@@ -5661,6 +5691,17 @@ class Component extends DCLogic {
           gx1:g.gx1,gy1:g.gy1,gx2:g.gx2,gy2:g.gy2,
           width:w,dashWidth:(w*0.62).toFixed(2)});
       });
+      // Sankey тууз — том урсгалыг эхлээд зурж, жижгийг нь дээр нь тавина,
+      // тэгэхгүй бол бага зорчигчтой чиглэлүүд том туузан доор дарагдана.
+      const ribbons=items.filter(it=>!it.atUb)
+        .sort((a,b)=>b.pax-a.pax)
+        .map((it,i)=>{
+          const t=maxPax?Math.sqrt(it.pax/maxPax):0;
+          const w0=1.5+10.5*t;
+          return {d:ribbonPath(ubPt[0],ubPt[1],it.x,it.y,bend,w0,w0*0.42),
+            color:it.color,opacity:(0.26+0.30*t).toFixed(2),
+            title:it.name+' — '+it.pax.toLocaleString('en-US')+' зорчигч'};
+        });
       items.slice().sort((a,b)=>b.pax-a.pax).slice(0,6).forEach(it=>{
         // Дүүргэсэн бүдэг тойрог биш, зөвхөн гадуур цагираг — том бөмбөлгийн
         // хувьд асар том бүдэг толбо болж, газрын зургийг бүрхэхээс сэргийлнэ.
@@ -5670,7 +5711,7 @@ class Component extends DCLogic {
         labels.push({x:(it.x+(right?it.r+px(7):-it.r-px(7))).toFixed(1),y:(it.y+labelFs*0.34).toFixed(1),
           anchor:right?'start':'end',text:it.name,color:labelColor});
       });
-      return {arcs,halos,labels};
+      return {arcs,halos,labels,ribbons};
     };
 
     if(isDomestic){
@@ -5773,14 +5814,32 @@ class Component extends DCLogic {
       });
       this._flowHitCache[hitKey]=hit;
     }
+    // Улсын дүүргэлт нь ангиллын биш ДАРААЛЛЫН (sequential) choropleth:
+    // нэг hue дээр зорчигчийн тооны дагуу гүнзгийрнэ. Ангиллын өнгө нь
+    // бөмбөлөг дээр үлдэх тул хоёр кодчлол зөрчилдөхгүй — газрын зураг
+    // эзлэхүүнийг, бөмбөлөг тухайн улсыг таниулна. sqrt нь цөөн улс
+    // давамгайлахад бусад нь бүгд цайраад алга болохоос сэргийлнэ.
+    const maxCountryPax=countries.reduce((m,c)=>Math.max(m,totals[c]),0);
+    const choroColor=(v)=>{
+      const t=maxCountryPax?Math.sqrt(Math.max(v,0)/maxCountryPax):0;
+      const s=dark?(16+34*t):(22+46*t);
+      const l=dark?(17+24*t):(94-43*t);
+      return 'hsl(212,'+s.toFixed(0)+'%,'+l.toFixed(0)+'%)';
+    };
     const countryPaths=this.worldCountries.map((f,i)=>{
       const d=pathGen(f)||'';
       if(!d) return null;
       const dest=hit[i];
-      return {d,fill:dest?'hsl('+flowHue(dest)+','+(dark?30:34)+'%,'+(dark?25:87)+'%)':landIdle,
+      return {d,fill:dest?choroColor(totals[dest]):landIdle,
         stroke:landStroke,width:dest?'0.9':'0.6'};
     }).filter(Boolean);
-    const maxPax=countries.reduce((m,c)=>Math.max(m,totals[c]),0);
+    const fmtPax=(n)=>n>=1000000?(n/1000000).toFixed(1)+'M':(n>=1000?(n/1000).toFixed(1)+'K':String(Math.round(n)));
+    const choroLegend={
+      max:fmtPax(maxCountryPax),
+      gradient:'linear-gradient(90deg,'+choroColor(0)+','+choroColor(maxCountryPax*0.12)
+        +','+choroColor(maxCountryPax*0.4)+','+choroColor(maxCountryPax)+')'
+    };
+    const maxPax=maxCountryPax;
     const ubProj=proj(UB_COORD)||[W/2,H/2];
     const items=countries.map(c=>{
       const pt=proj(COUNTRY_COORD[c]);
@@ -5798,7 +5857,8 @@ class Component extends DCLogic {
         opacity:sel?'1':'0.86'};
     });
     return {ready:true,isDomestic:false,isWorld:true,viewBox:'0 0 '+W+' '+H,
-      countryPaths,arcs:flow.arcs,halos:flow.halos,labels:flow.labels,nodes,closeNode,
+      countryPaths,arcs:[],ribbons:flow.ribbons,halos:flow.halos,labels:flow.labels,nodes,closeNode,
+      choroLegend,
       oceanA,oceanB,landStroke,ubInk,labelHalo,typeTabs,labelFs,labelHaloW,
       ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
       detail:selected,
