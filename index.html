@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="js/firebase-config.js"></script>
+<script src="js/dataset-views.js"></script>
 <script src="js/vendor/dc-runtime.js"></script>
 </head>
 <body>
@@ -3685,7 +3686,19 @@ const SERVICES=[
 // Шинэ утга нэмэх = (1)-д тоо нэмээд, (2)-т нэг мөр функц бичээд, (3)-т
 // нэрийг нь бичих. Өгөгдөл ачаалагдаагүй, эсвэл mapping зарлаагүй бол
 // DATASETS доторх статик текст хэвээр үлдэнэ.
+// Датасэтийн тогтвортой түлхүүр (үзэлтийн тоолуурын баримтын нэр). Нэр нь
+// өөрчлөгдвөл тоо тэглэгдэх тул салбар+нэрээс гаргаж, ASCII-д буулгана.
+function datasetSlug(d){
+  return d.sector+'__'+String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');
+}
+// Датасэт өөрөө өөрөөр зарлаагүй бол эдгээр холболт автоматаар үйлчилнэ —
+// үзэлтийн тоо бол салбар харгалзахгүй бүх датасэтэд утга учиртай.
+const DATA_BINDING_DEFAULTS={use:'views'};
 const DATA_BINDINGS={
+  // Бүх датасэтэд нээлттэй, салбараас хамааралгүй холболтууд.
+  _common:{
+    views:(s,c)=>({label:'Үзсэн',value:c.views==null?'—':c.views.toLocaleString('en-US')+' удаа'})
+  },
   air:{
     updateFreq:  s=>({label:'Шинэчлэл',       value:'Өдөр бүр'}),
     lastRecord:  s=>({label:'Сүүлийн бичлэг', value:s.lastDate}),
@@ -3703,7 +3716,7 @@ const DATASETS=[
   {sector:'rail',name:'Зорчигчийн галт тэрэгний хуваарь',agency:'УБТЗ',fmt:'CSV, API',badges:['Үнэгүй'],freq:'Улирал бүр',use:'3,410 татсан',desc:'Улсын хэмжээний зорчигчийн галт тэрэгний хуваарь, чиглэл, буудал.'},
   {sector:'rail',name:'Ачаа тээврийн бодит байршил',agency:'МТЗ',fmt:'API',badges:['Premium','Шууд'],freq:'1 мин тутам',use:'SLA-тай',desc:'Ачаа тээврийн галт тэрэгний бодит цагийн байршил, эрчимжсэн хандалттай.'},
   {sector:'air',name:'Агаарын тээврийн статистик',agency:'ИНЕГ',fmt:'Вэбсервис',badges:['Үнэгүй'],freq:'Өдөр бүр',use:'14,200 дуудлага',desc:'Олон улс, дотоодын нислэг, зорчигч, ачааны иж бүрэн статистик.',
-   live:{freq:'lastRecord',use:'monthlyRows'}},
+   live:{freq:'lastRecord'}},
   {sector:'air',name:'Нислэгийн бодит байршил',agency:'ИНЕГ',fmt:'API',badges:['Premium','Шууд'],freq:'Шууд',use:'350,000 дуудлага',desc:'Монголын агаарын зайд байгаа нислэгийн бодит байршил, өндөр, хурд.'},
   {sector:'water',name:'Боомтын ачаа эргэлт',agency:'ЗТЯ',fmt:'CSV',badges:['Үнэгүй'],freq:'Сар бүр',use:'890 татсан',desc:'Идэвхтэй боомтуудын сарын ачаа эргэлтийн дэлгэрэнгүй тайлан.'},
   {sector:'public',name:'Нийтийн тээврийн чиглэл, хуваарь',agency:'НТБГ',fmt:'CSV, GEOJSON',badges:['Үнэгүй'],freq:'Сар бүр',use:'5,680 татсан',desc:'Хотын нийтийн тээврийн бүх чиглэлийн зурвас, зогсоол, хуваарь.'},
@@ -4125,6 +4138,18 @@ class Component extends DCLogic {
   // Идэвхтэй он/сарын интервал. Талбарууд нь чөлөөт текст (гараас бичих
   // үед завсрын утга гарахаас сэргийлж түүхий тэмдэгтээр хадгална) тул
   // энд л нэг удаа тоо болгож, боломжтой оны хүрээнд шахна.
+  // Датасэтийн үзэлтийг бүртгэнэ. Тоо ирэхэд (локал шууд, дундын нь сүлжээний
+  // дараа) дахин render хийхийн тулд нэг удаа subscribe хийж, төлөвийн
+  // тоолуурыг өсгөнө.
+  trackDatasetView(d){
+    const v=window.datasetViews;
+    if(!v||!d) return;
+    if(!this._viewsSubscribed){
+      this._viewsSubscribed=true;
+      v.subscribe(()=>this.setState(s=>({viewsTick:(s.viewsTick||0)+1})));
+    }
+    v.track(datasetSlug(d));
+  }
   airRange(){
     const avail=(this._flightsYears||[]).slice().sort((a,b)=>a-b);
     if(!avail.length) return null;
@@ -5308,7 +5333,7 @@ class Component extends DCLogic {
     const datasetsAll=DATASETS.filter(d=>(filter==='all'||d.sector===filter)&&(!dsListQ||(d.title+' '+d.desc+' '+SECTORS[d.sector].label).toLowerCase().includes(dsListQ))).map(d=>({
       ...d,color:NEON[d.sector],sectorLabel:SECTORS[d.sector].label,glyph:GLYPH[d.sector],
       badgeList:d.badges.map(b=>({label:b,live:b==='Шууд',premium:b==='Premium'})),
-      open:()=>{ this.setState({dsIndex:DATASETS.indexOf(d)}); this.go('detail'); }
+      open:()=>{ this.trackDatasetView(d); this.setState({dsIndex:DATASETS.indexOf(d)}); this.go('detail'); }
     }));
     const DSPER=6;
     const dsPages=Math.max(1,Math.ceil(datasetsAll.length/DSPER));
@@ -5488,11 +5513,17 @@ class Component extends DCLogic {
     // Өгөгдөл ирээгүй, эсвэл mapping байхгүй бол статик утга руу ухарна —
     // хуудас хэзээ ч хоосон талбартай гарахгүй.
     const liveCard=(field,fallbackLabel)=>{
-      const name=dsel.live&&dsel.live[field];
+      const name=(dsel.live&&dsel.live[field])||DATA_BINDING_DEFAULTS[field];
       const stats=this._liveStats&&this._liveStats[dsel.sector];
-      const fn=name&&DATA_BINDINGS[dsel.sector]&&DATA_BINDINGS[dsel.sector][name];
-      if(!fn||!stats) return {label:fallbackLabel,value:dsel[field],live:false};
-      const r=fn(stats);
+      const sectorFns=DATA_BINDINGS[dsel.sector]||{};
+      // Салбарынх нь холболт эхэлж, дараа нь бүх датасэтэд нээлттэй _common.
+      const fn=name&&(sectorFns[name]||DATA_BINDINGS._common[name]);
+      if(!fn) return {label:fallbackLabel,value:dsel[field],live:false};
+      const common=!sectorFns[name];
+      // _common холболтууд салбарын статистикаас хамаардаггүй (жиш. үзэлт).
+      if(!common&&!stats) return {label:fallbackLabel,value:dsel[field],live:false};
+      const ctx={dsel,views:window.datasetViews?window.datasetViews.get(datasetSlug(dsel)):null};
+      const r=fn(stats,ctx);
       return {label:r.label,value:r.value,live:true};
     };
     const freqCard=liveCard('freq','Шинэчлэл'), useCard=liveCard('use','Ашиглалт (сар)');
