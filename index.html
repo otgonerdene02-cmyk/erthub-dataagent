@@ -2461,8 +2461,11 @@
           <sc-for list="{{ detail.flowMap.nodes }}" as="nd" hint-placeholder-count="14">
             <circle sc-camel-on-click="{{ nd.pick }}" cx="{{ nd.cx }}" cy="{{ nd.cy }}" r="{{ nd.r }}" fill="{{ nd.color }}" opacity="{{ nd.opacity }}" stroke="{{ nd.ringStroke }}" stroke-width="{{ nd.ringWidth }}" vector-effect="non-scaling-stroke" style="cursor:pointer;"><title>{{ nd.title }}</title></circle>
           </sc-for>
-          <sc-for list="{{ detail.flowMap.planes }}" as="pl" hint-placeholder-count="20">
-            <path d="{{ pl.shape }}" fill="{{ pl.color }}" stroke="rgba(var(--surface-rgb),.85)" stroke-width="0.7" vector-effect="non-scaling-stroke" style="{{ pl.style }}"></path>
+          <sc-for list="{{ detail.flowMap.flyDots }}" as="fd" hint-placeholder-count="20">
+            <g style="{{ fd.style }}">
+              <circle cx="0" cy="0" r="{{ fd.glowR }}" fill="{{ fd.glow }}" opacity="0.26"></circle>
+              <circle cx="0" cy="0" r="{{ fd.r }}" fill="{{ fd.core }}" stroke="rgba(var(--surface-rgb),.92)" stroke-width="1.1" vector-effect="non-scaling-stroke"></circle>
+            </g>
           </sc-for>
           <sc-if value="{{ detail.flowMap.ubVisible }}">
             <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="15" fill="{{ detail.flowMap.ubInk }}" opacity="0.14" style="transform-box:fill-box;transform-origin:center;animation:pulseGlow 2.8s ease-in-out infinite;"></circle>
@@ -5693,6 +5696,8 @@ class Component extends DCLogic {
     const labelFs=px(12.5), labelHaloW=px(3.4);
     // Намуухан, нэг стандартын өнгө — өмнөх 62% ханалт хэт хурц байсан.
     const nodeColor=(name)=>'hsl('+flowHue(name)+','+(dark?44:47)+'%,'+(dark?60:47)+'%)';
+    // Гүйх цэг нь замаасаа тод байх ёстой — ханалт/гэрлийг нь өсгөнө.
+    const dotColor=(name)=>'hsl('+flowHue(name)+','+(dark?78:72)+'%,'+(dark?66:54)+'%)';
     const selected=this.state.mapSelectedNode;
     const isSelected=(key)=>!!(selected&&selected.key===key);
     const pickNode=(node)=>()=>this.setState(s=>({mapSelectedNode:(s.mapSelectedNode&&s.mapSelectedNode.key===node.key)?null:node}));
@@ -5734,24 +5739,22 @@ class Component extends DCLogic {
       return out;
     };
     const ribbonPath=(x1,y1,x2,y2,bend,w0,w1)=>ribbonFromPts(bezierPts(x1,y1,x2,y2,bend,26),w0,w1);
-    // Маршрутын дагуу нисдэг онгоц. offset-path-д зам, offset-rotate:auto-д
-    // чиглэл өгөөд CSS animation-оор гүйлгэнэ — JS давталт, setState хэрэггүй
-    // тул dc-runtime-ийн re-render мөчлөгт огт нөлөөлөхгүй. Онгоцны дүрсийг
-    // эх цэг дээр төвлүүлж, дэлгэцийн px-ээр (px()) хэмжинэ.
-    const planeFromPts=(pts,color,seed)=>{
+    // Маршрутын дагуу гүйх тод цэг. offset-path-д зам өгөөд CSS animation-оор
+    // хөдөлгөнө — JS давталт, setState хэрэггүй тул dc-runtime-ийн re-render
+    // мөчлөгт огт нөлөөлөхгүй. Гэрэлтүүлэг + цөм хоёрыг нэг <g> дотор тавьж,
+    // хөдөлгөөнийг ГАНЦ элемент дээр өгснөөр хоёр давхарга хэзээ ч
+    // фазаараа салахгүй. Цэг тэгш хэмтэй тул эргэлт хэрэггүй.
+    const flyDotFromPts=(pts,glow,core,seed)=>{
       if(pts.length<2) return null;
       let len=0;
       for(let i=1;i<pts.length;i++) len+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
       if(len<12) return null;
       const line='M'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L');
-      const a=px(6.5), b=px(4.2), tail=px(2.4);
-      // Урт зам удаан нисэх нь мэдрэгдэх хурдыг ойролцоо барина.
+      // Урт зам удаан туулах нь мэдрэгдэх хурдыг ойролцоо барина.
       const dur=Math.max(4,Math.min(13,len/58)).toFixed(1);
       const delay=((seed*0.37)%1*dur).toFixed(2);
-      return {shape:'M'+a.toFixed(1)+',0L'+(-a*0.55).toFixed(1)+','+b.toFixed(1)
-          +'L'+(-tail).toFixed(1)+',0L'+(-a*0.55).toFixed(1)+',-'+b.toFixed(1)+'Z',
-        color,
-        style:"offset-path:path('"+line+"');offset-rotate:auto;offset-distance:0%;"
+      return {glow,core,r:px(3.6).toFixed(2),glowR:px(8).toFixed(2),
+        style:"offset-path:path('"+line+"');offset-rotate:0deg;offset-distance:0%;"
           +"animation:flyPath "+dur+"s linear infinite;animation-delay:-"+delay+"s;"};
     };
     // Градиент нь objectBoundingBox дээр ажиллах тул чиглэлийг 0/1 булангаар
@@ -5784,15 +5787,15 @@ class Component extends DCLogic {
       });
       // Sankey тууз — том урсгалыг эхлээд зурж, жижгийг нь дээр нь тавина,
       // тэгэхгүй бол бага зорчигчтой чиглэлүүд том туузан доор дарагдана.
-      const planes=[];
+      const flyDots=[];
       const ribbons=items.filter(it=>!it.atUb)
         .sort((a,b)=>b.pax-a.pax)
         .map((it,i)=>{
           const t=maxPax?Math.sqrt(it.pax/maxPax):0;
           const w0=1.5+10.5*t;
           const pts=bezierPts(ubPt[0],ubPt[1],it.x,it.y,bend,26);
-          const pl=planeFromPts(pts,it.color,hashHue(it.name));
-          if(pl) planes.push(pl);
+          const pl=flyDotFromPts(pts,it.color,dotColor(it.name),hashHue(it.name));
+          if(pl) flyDots.push(pl);
           return {d:ribbonFromPts(pts,w0,w0*0.42),
             color:it.color,opacity:(0.26+0.30*t).toFixed(2),
             title:it.name+' — '+it.pax.toLocaleString('en-US')+' зорчигч'};
@@ -5806,7 +5809,7 @@ class Component extends DCLogic {
         labels.push({x:(it.x+(right?it.r+px(7):-it.r-px(7))).toFixed(1),y:(it.y+labelFs*0.34).toFixed(1),
           anchor:right?'start':'end',text:it.name,color:labelColor});
       });
-      return {arcs,halos,labels,ribbons,planes};
+      return {arcs,halos,labels,ribbons,flyDots};
     };
 
     if(isDomestic){
@@ -5862,7 +5865,7 @@ class Component extends DCLogic {
           opacity:sel?'1':'0.88'};
       });
       return {ready:true,isDomestic:true,isWorld:false,viewBox:'0 0 '+W+' '+H,
-        regions,arcs:flow.arcs,halos:flow.halos,labels:flow.labels,planes:flow.planes,nodes,closeNode,
+        regions,arcs:flow.arcs,halos:flow.halos,labels:flow.labels,flyDots:flow.flyDots,nodes,closeNode,
         isGlobe:false,ubVisible:true,svgCursor:'default',onGlobeDown:null,
         oceanA,oceanB,landStroke,ubInk,labelHalo,typeTabs,labelFs,labelHaloW,
         ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
@@ -5973,7 +5976,7 @@ class Component extends DCLogic {
       // буулгана.
       const vis=ubVisible?items:[];
       const maxP=vis.reduce((m,it)=>Math.max(m,it.pax),0);
-      const planes=[];
+      const flyDots=[];
       const ribbons=vis.slice().sort((a,b)=>b.pax-a.pax).map(it=>{
         const interp=d3.geoInterpolate(UB_COORD,it.coord);
         const pts=[];
@@ -5985,14 +5988,14 @@ class Component extends DCLogic {
         if(pts.length<2) return null;
         const t=maxP?Math.sqrt(it.pax/maxP):0;
         const w0=1.5+10.5*t;
-        const pl=planeFromPts(pts,it.color,hashHue(it.name));
-        if(pl) planes.push(pl);
+        const pl=flyDotFromPts(pts,it.color,dotColor(it.name),hashHue(it.name));
+        if(pl) flyDots.push(pl);
         return {d:ribbonFromPts(pts,w0,w0*0.42),color:it.color,
           opacity:(0.26+0.30*t).toFixed(2),
           title:it.name+' — '+it.pax.toLocaleString('en-US')+' зорчигч'};
       }).filter(Boolean);
       const base=buildFlow(items,ubProj,0.20);
-      flow={arcs:[],halos:base.halos,labels:base.labels,ribbons,planes};
+      flow={arcs:[],halos:base.halos,labels:base.labels,ribbons,flyDots};
     }else{
       flow=buildFlow(items,ubProj,0.20);
     }
@@ -6012,7 +6015,7 @@ class Component extends DCLogic {
     });
     const zoomBy=(f)=>()=>this.setState(s=>({globeZoom:Math.max(0.7,Math.min(2.6,(s.globeZoom||1)*f))}));
     return {ready:true,isDomestic:false,isWorld:true,viewBox:'0 0 '+W+' '+H,
-      countryPaths,arcs:[],ribbons:flow.ribbons,halos:flow.halos,labels:flow.labels,planes:flow.planes,nodes,closeNode,
+      countryPaths,arcs:[],ribbons:flow.ribbons,halos:flow.halos,labels:flow.labels,flyDots:flow.flyDots,nodes,closeNode,
       choroLegend,projTabs,isGlobe,sphereD,ubVisible,
       globeCx:globeCx.toFixed(1),globeCy:globeCy.toFixed(1),globeR:globeR.toFixed(1),
       zoomIn:zoomBy(1.25),zoomOut:zoomBy(0.8),
