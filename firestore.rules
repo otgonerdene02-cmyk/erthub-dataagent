@@ -1,0 +1,106 @@
+// ErtHub — Cloud Firestore Security Rules
+// ========================================
+// Энэ файлыг Firebase Console → Firestore Database → Rules таб руу бүтнээр нь
+// хуулж Publish дарна. Репод байлгаж буй шалтгаан нь өөрчлөлтийг git-ээр
+// хянах, кодтой нь зэрэгцүүлж уншихад хялбар байх.
+//
+// Үндсэн зарчим:
+//   - Хувь хүний мэдээлэл (профайл) — зөвхөн эзэн нь уншиж, бичнэ.
+//   - Нийтийн контент (сэтгэгдэл, тоолуур) — бүгд уншина, нэвтэрсэн нь бичнэ.
+//   - Нэг хүн нэг үнэлгээ/дагалт өгөхийг баримтын ID = uid-аар хангана.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()    { return request.auth != null; }
+    function isOwner(uid)  { return signedIn() && request.auth.uid == uid; }
+
+    // Нэгтгэсэн тоолуурын талбарууд — өөр талбар бичихийг зөвшөөрөхгүй.
+    function counterKeys() {
+      return ['followerCount', 'ratingSum', 'ratingCount', 'reviewCount'];
+    }
+
+    // ---- Хэрэглэгчийн профайл -------------------------------------------
+    // Регистр, утас зэрэг хувь хүний дата тул НИЙТЭД УНШУУЛАХГҮЙ.
+    // Сэтгэгдэлд харагдах нэрийг энэ бичлэгээс татахгүй — сэтгэгдэл дотроо
+    // `byName`-ээ хуулж хадгалдаг.
+    match /users/{uid} {
+      allow read:          if isOwner(uid);
+      allow create, update: if isOwner(uid)
+                            && request.resource.data.role in ['citizen', 'business', 'dev'];
+      allow delete:        if false;
+    }
+
+    // ---- Объект бүрийн нэгтгэсэн тоо ------------------------------------
+    match /items/{itemId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+                    && request.resource.data.keys().hasOnly(counterKeys());
+
+      allow update: if signedIn()
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(counterKeys());
+
+      allow delete: if false;
+
+      // ---- Үнэлгээ: нэг хэрэглэгч нэг бичлэг ----------------------------
+      // Баримтын ID нь uid тул давхар үнэлгээ өгөх боломжгүй — хоёр дахь
+      // удаагийн үнэлгээ хуучныг нь дарна.
+      match /ratings/{uid} {
+        allow read:  if true;
+        allow write: if isOwner(uid)
+                     && request.resource.data.stars is int
+                     && request.resource.data.stars >= 1
+                     && request.resource.data.stars <= 5;
+      }
+
+      // ---- Сэтгэгдэл ----------------------------------------------------
+      match /reviews/{reviewId} {
+        // ЖИЧ: энд `resource.data.hidden != true` гэж бичиж БОЛОХГҮЙ.
+        // Firestore нь жагсаалтын хүсэлтэд дүрмийг баримт тус бүрд шалгаж,
+        // нэг ч баримт унавал БҮХ хүсэлтийг татгалзана — нуусан сэтгэгдэл
+        // нэг ч гарвал жагсаалт бүхэлдээ ажиллахаа болино.
+        // Тиймээс уншилт нээлттэй, `hidden`-ыг клиент шүүнэ. Сэтгэгдлийг
+        // жинхэнэ утгаар нь арилгах бол баримтыг нь устгана.
+        allow read: if true;
+
+        allow create: if signedIn()
+                      && request.resource.data.uid == request.auth.uid
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 1000
+                      && request.resource.data.hidden == false;
+
+        // Зөвхөн өөрийн сэтгэгдлээ засна/устгана.
+        allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
+      }
+
+      // ---- Дагалт -------------------------------------------------------
+      match /follows/{uid} {
+        allow read:  if true;
+        allow write: if isOwner(uid);
+      }
+    }
+
+    // ---- Датасэтийн үзэлтийн тоолуур ------------------------------------
+    // js/dataset-views.js нь нэвтрээгүй хүнээс ч тоолдог тул энд auth
+    // шаардахгүй. Талбарыг нэгээр л нэмэхийг зөвшөөрнө.
+    //
+    // АНХААР: энэ нь тоог зохиомлоор өсгөх боломжийг нээлттэй үлдээж байна.
+    // Хаах бол App Check нэмэх, эсвэл `signedIn()` нөхцөл нэмнэ.
+    match /datasetViews/{id} {
+      allow read:   if true;
+      allow create: if request.resource.data.count == 1;
+      allow update: if request.resource.data.count == resource.data.count + 1;
+      allow delete: if false;
+    }
+
+    // Бусад бүх зам хаалттай.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
