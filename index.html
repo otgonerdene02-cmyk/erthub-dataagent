@@ -1252,7 +1252,7 @@
         <div style="background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.74));box-shadow:var(--shadow);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);backdrop-filter:blur(18px) saturate(1.3);border-left:3px solid {{ rc.color }};border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;backdrop-filter:blur(10px);">
           <div style="min-width:0;">
             <div style="font-weight:600;font-size:13.5px;color:var(--ink);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rc.title }}</div>
-            <div style="font-size:11px;color:var(--ink3);font-family:'JetBrains Mono',monospace;">{{ rc.agency }} · {{ rc.src }} · {{ rc.date }}</div>
+            <div style="font-size:11px;color:var(--ink3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:6px;min-width:0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rc.agency }} · {{ rc.src }} · {{ rc.date }}</span><sc-if value="{{ rc.live }}"><span title="{{ rc.hint }}" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
           </div>
           <div style="font-size:10.5px;font-weight:600;padding:5px 12px;border-radius:999px;color:{{ rc.color }};background:{{ rc.color }}1c;flex-shrink:0;white-space:nowrap;">{{ rc.label }}</div>
         </div>
@@ -2050,12 +2050,12 @@
       <div style="display:flex;gap:10px;flex-shrink:0;">
         <div style="min-width:118px;background:linear-gradient(155deg,#2E7CF61c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:15px;box-shadow:var(--shadow);padding:15px 17px;">
           <div style="font-size:16px;margin-bottom:8px;">🔄</div>
-          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.freqCard.label }}<sc-if value="{{ detail.freqCard.live }}"><span title="Бодит өгөгдлөөс тооцов" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.freqCard.label }}<sc-if value="{{ detail.freqCard.live }}"><span title="{{ detail.freqCard.hint }}" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
           <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.freqCard.value }}</div>
         </div>
         <div style="min-width:118px;background:linear-gradient(155deg,#7C5CF01c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:15px;box-shadow:var(--shadow);padding:15px 17px;">
           <div style="font-size:16px;margin-bottom:8px;">📈</div>
-          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.useCard.label }}<sc-if value="{{ detail.useCard.live }}"><span title="Бодит өгөгдлөөс тооцов" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.useCard.label }}<sc-if value="{{ detail.useCard.live }}"><span title="{{ detail.useCard.hint }}" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
           <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.useCard.value }}</div>
         </div>
       </div>
@@ -3459,8 +3459,14 @@ function hexToRgb(hex){
   const h=hex.replace('#','');
   return [parseInt(h.substring(0,2),16),parseInt(h.substring(2,4),16),parseInt(h.substring(4,6),16)];
 }
+// Нүүрний "Сүүлд шинэчлэгдсэн өгөгдөл" картын мөрүүд. `dataset` зарласан мөр
+// агентлаг, форматаа DATASETS-ээс уншина (нэг утга хоёр газар давхардаж
+// зөрөхөөс сэргийлнэ) бөгөөд тухайн датасэтийн `source`-ыг өвлөнө — өөрөөр
+// хэлбэл эх сурвалж НЭГ л газар зарлагдана. `bind` нь картын талбар бүрийг
+// METRICS-ийн нэрээр холбоно. Аль нь ч зарлаагүй мөр статик утгаараа үлдэнэ.
 const RECENT = [
-  {title:'Агаарын тээврийн статистик', agency:'ИНЕГ', src:'Вэбсервис', date:'2026-07-30', sector:'air'},
+  {title:'Агаарын тээврийн статистик', agency:'ИНЕГ', src:'Вэбсервис', date:'2026-07-30', sector:'air',
+   dataset:'Агаарын тээврийн статистик', bind:{date:'feedUpdated'}},
   {title:'Улаанбаатарын замын хөдөлгөөний ачаалал', agency:'ЗТХЕГ', src:'Вэбсервис', date:'2026-07-29', sector:'road'},
   {title:'Зорчигчийн галт тэрэгний мэдээ', agency:'УБТЗ', src:'Вэбсервис', date:'2026-07-28', sector:'rail'},
   {title:'Автобусны бодит цагийн байршил', agency:'НТБГ', src:'API', date:'2026-07-27', sector:'public'},
@@ -3674,41 +3680,65 @@ const SERVICES=[
   ['public','U-Money / Ubcard цахим тасалбар','Нийтийн тээврийн цахим карт цэнэглэх, үлдэгдэл шалгах, гүйлгээний түүх.',''],
   ['public','"ЕС", "ТҮР" замын хуудас','Хязгаарласан, хориглосон гудамж зам руу нэвтрэх зөвшөөрлийн хуудас авах.','']
 ];
-// ─── Картын талбар ↔ бодит өгөгдлийн MAPPING ────────────────────────────
-// "Энэ картын энэ утгыг датасэтээс хаанаас ав гэж яаж хэлэх вэ?" — энд
-// ЗАРЛАНА. Гурван хэсэгтэй:
-//   1) applyRealFlightsData() бодит мөрүүдээс this._liveStats[салбар]-ыг
-//      бөглөнө (rows, totalPax, carriers, lastDate, monthSpan, ...).
-//   2) DATA_BINDINGS[салбар][нэр] нь тэр статистикийг картад харагдах
-//      {label, value} хос болгож хөрвүүлнэ.
-//   3) DATASETS доторх датасэт бүр `live:{картынТалбар:'нэр'}`-ээр аль
-//      картын аль талбар аль хөрвүүлэгчийг дуудахыг сонгоно.
-// Шинэ утга нэмэх = (1)-д тоо нэмээд, (2)-т нэг мөр функц бичээд, (3)-т
-// нэрийг нь бичих. Өгөгдөл ачаалагдаагүй, эсвэл mapping зарлаагүй бол
-// DATASETS доторх статик текст хэвээр үлдэнэ.
 // Датасэтийн тогтвортой түлхүүр (үзэлтийн тоолуурын баримтын нэр). Нэр нь
 // өөрчлөгдвөл тоо тэглэгдэх тул салбар+нэрээс гаргаж, ASCII-д буулгана.
 function datasetSlug(d){
   return d.sector+'__'+String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');
 }
-// Датасэт өөрөө өөрөөр зарлаагүй бол эдгээр холболт автоматаар үйлчилнэ —
-// үзэлтийн тоо бол салбар харгалзахгүй бүх датасэтэд утга учиртай.
-const DATA_BINDING_DEFAULTS={use:'views'};
-const DATA_BINDINGS={
-  // Бүх датасэтэд нээлттэй, салбараас хамааралгүй холболтууд.
-  _common:{
-    views:(s,c)=>({label:'Үзсэн',value:c.views==null?'—':c.views.toLocaleString('en-US')+' удаа'})
-  },
-  air:{
-    updateFreq:  s=>({label:'Шинэчлэл',       value:'Өдөр бүр'}),
-    lastRecord:  s=>({label:'Сүүлийн бичлэг', value:s.lastDate}),
-    recordCount: s=>({label:'Бичлэг (нийт)',  value:s.rows.toLocaleString('en-US')}),
-    monthlyRows: s=>({label:'Бичлэг (сар)',   value:Math.round(s.rows/s.monthSpan).toLocaleString('en-US')}),
-    totalPax:    s=>({label:'Нийт зорчигч',   value:s.totalPax.toLocaleString('en-US')}),
-    carriers:    s=>({label:'Тээвэрлэгч',     value:String(s.carriers)}),
-    cities:      s=>({label:'Хот, боомт',     value:String(s.cities)}),
-    coverage:    s=>({label:'Хамрах хугацаа', value:s.yearFrom===s.yearTo?String(s.yearFrom):s.yearFrom+'–'+s.yearTo})
-  }
+// ─── КАРТ ↔ БОДИТ ӨГӨГДЛИЙН НЭГДСЭН ХОЛБООС ─────────────────────────────
+// "Энэ картын энэ утга хаанаас гарах вэ?" гэдгийг ГУРВАН зарлалаар шийднэ.
+// Салбар, датасэт, хуудас харгалзахгүй бүгд ижил замаар явна:
+//
+//   1) SOURCES[эхСурвалж] — feed-ийг татаж, ДАТАСЭТИЙН ТҮВШНИЙ мета болгож
+//      хураана: {rows, updatedAt, updatedAtFull, lastRecord, yearFrom,
+//      yearTo}. Энэ нь шүүлтүүрээс хамааралгүй — датасэт өөрөө юу агуулж
+//      байгааг хэлнэ. Хуудсан дээрх идэвхтэй шүүлтүүрийн тоонууд тусад нь
+//      "view" болж хадгалагдана (setSourceMeta / setSourceView).
+//   2) METRICS[нэр] — мета эсвэл view-г картад харагдах {label, value}
+//      болгоно. Нэг ctx авна: {decl, meta, view, views}.
+//   3) Карт өөрөө — жагсаалтын мөрөндөө `source:'эхСурвалж'` ба
+//      `bind:{картынТалбар:'метрикийнНэр'}` гэж бичнэ. DATASETS ч, RECENT
+//      ч ижил хоёр талбарыг ойлгоно, учир нь хоёулаа НЭГ шийдэгч —
+//      bindCard() — дундуур дамждаг.
+//
+// Цаашид холбохдоо:
+//   • шинэ эх сурвалж → SOURCES-д мөр + loadXxx() метод, төгсгөлд нь
+//                       this.setSourceMeta('нэр',{...}) дуудна;
+//   • шинэ үзүүлэлт   → METRICS-д нэг мөр функц;
+//   • картад холбох   → тухайн мөрдөө source + bind бичих.
+// Метрик утга буцаахгүй бол (өгөгдөл ирээгүй, эсвэл эх сурвалж тэр
+// үзүүлэлтийг агуулдаггүй) карт нь жагсаалт дахь статик текст рүүгээ
+// автоматаар ухарна — хуудас хэзээ ч хоосон талбартай гарахгүй. Бичсэн
+// нэр буруу бол auditBindings() эхлэхэд консолд сануулна.
+// Бүртгэгдсэн бодит эх сурвалжууд. Мөр нэмэхэд componentDidMount доторх
+// loadSources() автоматаар татна — өөр хаана ч гар хүрэх шаардлагагүй.
+const SOURCES={
+  // ИНЕГ-ийн нислэгийн сан (veritech-flights-dashboard-ийн нийтэлдэг JSON).
+  flights:{label:'ИНЕГ · нислэгийн сан', load:app=>app.loadFlightsData()}
+};
+// Карт өөрөө өөрөөр зарлаагүй бол эдгээр метрик автоматаар үйлчилнэ —
+// үзэлтийн тоо бол салбар, эх сурвалж харгалзахгүй бүх датасэтэд утга учиртай.
+const BIND_DEFAULTS={use:'views'};
+const fmtNum=n=>Number(n).toLocaleString('en-US');
+// Нэр бүр НЭГ утга — аль ч карт, аль ч хуудас дуудаж болно. Хоосон/утгагүй
+// буцаавал карт статик текстээ хадгална (bindCard-ыг үз).
+const METRICS={
+  // ── Эх сурвалжаас хамааралгүй ──
+  // Өөрийн гэсэн `hint` буцаасан метрик тайлбараа өөрөө хэлнэ; үлдсэнийг нь
+  // эх сурвалжийн мета тайлбарлана (bindCard → sourceHint).
+  views:      c=>({label:'Үзсэн',           value:c.views==null?'—':fmtNum(c.views)+' удаа',
+                   hint:'Энэ датасэтийн хуудас нээгдсэн тоо'}),
+  // ── Датасэтийн түвшний мета: шүүлтүүр хөдөлсөн ч өөрчлөгдөхгүй ──
+  feedUpdated:c=>({label:'Шинэчлэгдсэн',    value:c.meta&&c.meta.updatedAt}),
+  lastRecord: c=>({label:'Сүүлийн бичлэг',  value:c.meta&&c.meta.lastRecord}),
+  recordCount:c=>({label:'Бичлэг (нийт)',   value:c.meta&&fmtNum(c.meta.rows)}),
+  coverage:   c=>({label:'Хамрах хугацаа',  value:c.meta&&(c.meta.yearFrom===c.meta.yearTo
+                                              ?String(c.meta.yearFrom):c.meta.yearFrom+'–'+c.meta.yearTo)}),
+  // ── Идэвхтэй шүүлтүүрийн зураглал (view): хуудсан дээрх сонголтыг дагана ──
+  monthlyRows:c=>({label:'Бичлэг (сар)',    value:c.view&&fmtNum(Math.round(c.view.rows/c.view.monthSpan))}),
+  totalPax:   c=>({label:'Нийт зорчигч',    value:c.view&&fmtNum(c.view.totalPax)}),
+  carriers:   c=>({label:'Тээвэрлэгч',      value:c.view&&String(c.view.carriers)}),
+  cities:     c=>({label:'Хот, боомт',      value:c.view&&String(c.view.cities)})
 };
 const DATASETS=[
   {sector:'road',name:'Улаанбаатарын замын хөдөлгөөний ачаалал',agency:'ЗТХЕГ',fmt:'API',badges:['Үнэгүй','Шууд'],freq:'20 сек тутам',use:'86,400 дуудлага',desc:'Хотын гол чиглэлүүдийн замын хөдөлгөөний ачааллыг мэдрэгчээс бодит цагаар дамжуулна.'},
@@ -3716,7 +3746,7 @@ const DATASETS=[
   {sector:'rail',name:'Зорчигчийн галт тэрэгний хуваарь',agency:'УБТЗ',fmt:'CSV, API',badges:['Үнэгүй'],freq:'Улирал бүр',use:'3,410 татсан',desc:'Улсын хэмжээний зорчигчийн галт тэрэгний хуваарь, чиглэл, буудал.'},
   {sector:'rail',name:'Ачаа тээврийн бодит байршил',agency:'МТЗ',fmt:'API',badges:['Premium','Шууд'],freq:'1 мин тутам',use:'SLA-тай',desc:'Ачаа тээврийн галт тэрэгний бодит цагийн байршил, эрчимжсэн хандалттай.'},
   {sector:'air',name:'Агаарын тээврийн статистик',agency:'ИНЕГ',fmt:'Вэбсервис',badges:['Үнэгүй'],freq:'Өдөр бүр',use:'14,200 дуудлага',desc:'Олон улс, дотоодын нислэг, зорчигч, ачааны иж бүрэн статистик.',
-   live:{freq:'lastRecord'}},
+   source:'flights',bind:{freq:'lastRecord'}},
   {sector:'air',name:'Нислэгийн бодит байршил',agency:'ИНЕГ',fmt:'API',badges:['Premium','Шууд'],freq:'Шууд',use:'350,000 дуудлага',desc:'Монголын агаарын зайд байгаа нислэгийн бодит байршил, өндөр, хурд.'},
   {sector:'water',name:'Боомтын ачаа эргэлт',agency:'ЗТЯ',fmt:'CSV',badges:['Үнэгүй'],freq:'Сар бүр',use:'890 татсан',desc:'Идэвхтэй боомтуудын сарын ачаа эргэлтийн дэлгэрэнгүй тайлан.'},
   {sector:'public',name:'Нийтийн тээврийн чиглэл, хуваарь',agency:'НТБГ',fmt:'CSV, GEOJSON',badges:['Үнэгүй'],freq:'Сар бүр',use:'5,680 татсан',desc:'Хотын нийтийн тээврийн бүх чиглэлийн зурвас, зогсоол, хуваарь.'},
@@ -3986,7 +4016,8 @@ class Component extends DCLogic {
     if(window.scrollTo) window.scrollTo(0,0);
   }
   componentDidMount(){
-    this.loadGlobe(); this.syncMonths(); this.loadFlightsData(); this.loadMongoliaGeo();
+    this.loadGlobe(); this.syncMonths(); this.loadSources(); this.loadMongoliaGeo();
+    this.auditBindings();
     this._esc=(e)=>{ if(e.key==='Escape') this.escClose(); };
     window.addEventListener('keydown',this._esc);
     this._onResize=()=>this.setState({viewportW:window.innerWidth});
@@ -4092,6 +4123,60 @@ class Component extends DCLogic {
       console.warn('[ErtHub] Mongolia aimag geojson unavailable:',e);
     }
   }
+  // ─── Эх сурвалжийн сан ба картын шийдэгч (дэлгэрэнгүйг SOURCES-ийн
+  // дээрх тайлбараас үз) ───────────────────────────────────────────────
+  // Бүртгэгдсэн эх сурвалж бүрийг зэрэг ачаална. Шинэ feed нэмэхэд энд юу ч
+  // өөрчлөхгүй — SOURCES-д мөр нэмэхэд хангалттай.
+  loadSources(){
+    Object.keys(SOURCES).forEach(id=>{
+      try{ Promise.resolve(SOURCES[id].load(this))
+        .catch(e=>console.warn('[ErtHub] «'+id+'» эх сурвалж ачаалагдсангүй:',e)); }
+      catch(e){ console.warn('[ErtHub] «'+id+'» эх сурвалж ачаалагдсангүй:',e); }
+    });
+  }
+  sourceData(id){ return (this._src||{})[id]||{}; }
+  // meta — датасэтийн түвшний, шүүлтүүрээс хамааралгүй үнэн.
+  setSourceMeta(id,meta){ this._src=this._src||{}; this._src[id]={...this.sourceData(id),meta}; }
+  // view — тухайн үед дэлгэц дээр харагдаж буй шүүлтүүрийн зураглал.
+  setSourceView(id,view){ this._src=this._src||{}; this._src[id]={...this.sourceData(id),view}; }
+  // Карт бүр энэ нэг функцээр холбогдоно: датасэтийн дэлгэрэнгүйн толгой ч,
+  // нүүрний "сүүлд шинэчлэгдсэн" мөр ч, цаашид нэмэгдэх бусад ч. Метрик
+  // утга буцаахгүй бол мөрийн статик текст рүү ухарна.
+  bindCard(decl,field,fallbackLabel){
+    const fallback={label:fallbackLabel,value:decl[field],live:false};
+    const name=(decl.bind&&decl.bind[field])||BIND_DEFAULTS[field];
+    const fn=name&&METRICS[name];
+    if(!fn) return fallback;
+    const src=this.sourceData(decl.source);
+    const r=fn({decl,meta:src.meta,view:src.view,
+      views:(window.datasetViews&&decl.name)?window.datasetViews.get(datasetSlug(decl)):null});
+    if(!r||r.value==null||r.value==='') return fallback;
+    return {label:r.label||fallbackLabel,value:r.value,live:true,
+      hint:r.hint||this.sourceHint(decl.source)||'Бодит өгөгдлөөс тооцов'};
+  }
+  // Ногоон цэгийн тайлбар. Мета нь эх сурвалж болгонд ижил бүтэцтэй тул
+  // энэ текст нэмэгдэх feed бүрд шууд ажиллана.
+  sourceHint(id){
+    const m=this.sourceData(id).meta;
+    if(!m) return '';
+    const out=[];
+    if(m.updatedAtFull) out.push('Эх сурвалж шинэчлэгдсэн: '+m.updatedAtFull);
+    if(m.rows) out.push(fmtNum(m.rows)+' бичлэг'+(m.yearFrom?' ('+m.yearFrom+'–'+m.yearTo+')':''));
+    if(m.lastRecord) out.push('сүүлийн бичлэг '+m.lastRecord);
+    return out.join(' · ');
+  }
+  // Хөгжүүлэлтийн шалгуур: bind/source-д бичсэн нэр үнэхээр байгаа эсэх.
+  // Үсгийн алдаа чимээгүйхэн "статик утга" болж хувирдаг тул консолд хэлнэ.
+  auditBindings(){
+    const check=(list,what)=>list.forEach(d=>{
+      const who=d.name||d.title||'?';
+      if(d.source&&!SOURCES[d.source]) console.warn('[ErtHub] '+what+' «'+who+'»: тодорхойгүй source —',d.source);
+      Object.keys(d.bind||{}).forEach(f=>{
+        if(!METRICS[d.bind[f]]) console.warn('[ErtHub] '+what+' «'+who+'»: тодорхойгүй метрик —',d.bind[f],'('+f+')');
+      });
+    });
+    check(DATASETS,'DATASETS'); check(RECENT,'RECENT');
+  }
   // Live Агаарын тээвэр data — fetched at runtime from the already-published,
   // already-updating JSON of the veritech-flights-dashboard repo (no new
   // workflow/secrets here, we just read what that repo already publishes).
@@ -4117,6 +4202,7 @@ class Component extends DCLogic {
       const year=years[0];
       const flights=await this.fetchFlightsYear(year);
       if(!flights.length) throw new Error('empty flights array');
+      this.setSourceMeta('flights',this.flightsMeta(idx,years,flights));
       if(years[1]) await this.fetchFlightsYear(years[1]).catch(()=>{});
       // Анхны төлөв — хамгийн сүүлийн тайлант он, 1–12 сар бүтнээр.
       this.setState({airYear:year,airYFrom:String(year),airYTo:String(year),
@@ -4124,6 +4210,24 @@ class Component extends DCLogic {
     }catch(e){
       console.warn('[ErtHub] Live flights data unavailable, keeping demo values for Агаарын тээвэр:',e);
     }
+  }
+  // Нислэгийн feed-ийг НИЙТЛЭГ мета бүтэц рүү хөрвүүлнэ (rows, updatedAt,
+  // updatedAtFull, lastRecord, yearFrom, yearTo). Эх сурвалж бүр өөрийн
+  // ийм хөрвүүлэгчтэй байх ба цаашид METRICS нь зөвхөн энэ нийтлэг бүтцийг
+  // мэдэх тул шинэ feed нэмэхэд метрикүүд дахин бичигдэхгүй.
+  flightsMeta(idx,years,newestYearFlights){
+    const list=idx.years||[];
+    const fetched=list.map(y=>y.fetchedAt).filter(Boolean).sort(); // ISO — тэмдэгтийн эрэмбэ = цагийн эрэмбэ
+    const last=fetched[fetched.length-1]||'';
+    const newest=newestYearFlights.reduce((a,f)=>(!a||f.unixtimestamp>a.unixtimestamp)?f:a,null);
+    const pad=n=>String(n).padStart(2,'0');
+    return {
+      rows:list.reduce((a,y)=>a+(y.count||0),0),
+      updatedAt:last.slice(0,10),
+      updatedAtFull:last.slice(0,16).replace('T',' ')+' UTC', // индексийн fetchedAt нь UTC
+      lastRecord:newest?newest.year+'-'+pad(newest.month)+'-'+pad(newest.day):'',
+      yearFrom:years[years.length-1],yearTo:years[0]
+    };
   }
   async fetchFlightsYear(year){
     if(this._flightsCache[year]) return this._flightsCache[year];
@@ -4348,20 +4452,19 @@ class Component extends DCLogic {
     // perf; head/types/notes are rewritten alongside so schema, table and
     // Excel export all stay in lockstep.
     const sortedFull=filtered.slice().sort((a,b)=>b.unixtimestamp-a.unixtimestamp);
-    // Датасэтийн картуудад зориулсан бодит үзүүлэлтүүд. DATA_BINDINGS энэ
-    // объектоос уншина — карт бүр аль хэмжигдэхүүнийг авахаа DATASETS доторх
-    // `live` тохиргоогоор зарлана (доорх тайлбарыг үз).
+    // Идэвхтэй шүүлтүүрийн зураглал — METRICS доторх "view" бүлгийн
+    // үзүүлэлтүүд эндээс уншина. Датасэтийн бүтэн үнэн нь meta-д (flightsMeta)
+    // тусад нь сууна: сонголт солиход мета хөдлөхгүй.
     const ymSet=new Set();
     for(const f of filtered) ymSet.add(f.year+'-'+f.month);
     const newest=sortedFull[0], yrs=[...new Set(filtered.map(f=>f.year))].sort();
-    this._liveStats=this._liveStats||{};
-    this._liveStats.air={
+    this.setSourceView('flights',{
       rows:filtered.length, flights:cur.count, totalPax:cur.totalPax,
       carriers:cur.carrierCount, cities:cur.cityCount, cargoTon:cur.cargoTon,
       monthSpan:Math.max(1,ymSet.size),
       yearFrom:yrs[0]||'', yearTo:yrs[yrs.length-1]||'',
       lastDate:newest?(newest.year+'-'+String(newest.month).padStart(2,'0')+'-'+String(newest.day).padStart(2,'0')):'—'
-    };
+    });
     const valueCols=AIR_COLUMNS.slice(0,-1);
     DS_SCHEMA.air.head=AIR_COLUMNS.map(c=>c[0]);
     DS_SCHEMA.air.types=AIR_COLUMNS.map(c=>c[1]);
@@ -5509,24 +5612,9 @@ class Component extends DCLogic {
       const airCountries=sAir.bars.map(b=>({name:b[0],widthPct:(b[1]/cMax*100).toFixed(0)+'%',value:b[2]}));
       airExtra={isAirDetail:true,airDonut,airCountries,flowMap:this.buildFlowMap()};
     }
-    // DATASETS.live-д зарласан mapping-ийг бодит статистик дээр буулгана.
-    // Өгөгдөл ирээгүй, эсвэл mapping байхгүй бол статик утга руу ухарна —
-    // хуудас хэзээ ч хоосон талбартай гарахгүй.
-    const liveCard=(field,fallbackLabel)=>{
-      const name=(dsel.live&&dsel.live[field])||DATA_BINDING_DEFAULTS[field];
-      const stats=this._liveStats&&this._liveStats[dsel.sector];
-      const sectorFns=DATA_BINDINGS[dsel.sector]||{};
-      // Салбарынх нь холболт эхэлж, дараа нь бүх датасэтэд нээлттэй _common.
-      const fn=name&&(sectorFns[name]||DATA_BINDINGS._common[name]);
-      if(!fn) return {label:fallbackLabel,value:dsel[field],live:false};
-      const common=!sectorFns[name];
-      // _common холболтууд салбарын статистикаас хамаардаггүй (жиш. үзэлт).
-      if(!common&&!stats) return {label:fallbackLabel,value:dsel[field],live:false};
-      const ctx={dsel,views:window.datasetViews?window.datasetViews.get(datasetSlug(dsel)):null};
-      const r=fn(stats,ctx);
-      return {label:r.label,value:r.value,live:true};
-    };
-    const freqCard=liveCard('freq','Шинэчлэл'), useCard=liveCard('use','Ашиглалт (сар)');
+    // Толгойн хоёр карт — нүүрний мөрүүдтэй яг ижил шийдэгчээр (bindCard)
+    // холбогдоно, ялгаа нь зөвхөн аль талбарыг асууж байгаа нь.
+    const freqCard=this.bindCard(dsel,'freq','Шинэчлэл'), useCard=this.bindCard(dsel,'use','Ашиглалт (сар)');
     const detail={
       isAirDetail,...airExtra,
       freqCard,useCard,
@@ -6164,6 +6252,26 @@ class Component extends DCLogic {
         color:busy?'#ff6b7a':'#3ee6a8'};
     });
   }
+  // Нүүрний "Сүүлд шинэчлэгдсэн өгөгдөл" картууд. `dataset` заасан мөр нь
+  // агентлаг, формат, эх сурвалжаа тэр датасэтээсээ өвлөж авна — өөрөөр
+  // хэлбэл холболт нэг л газар (DATASETS дээр) зарлагдаж, нүүр нь зөвхөн
+  // "аль талбарт аль метрик" гэдгээ хэлнэ.
+  buildRecent(){
+    return RECENT.map(r=>{
+      const ds=r.dataset?DATASETS.find(d=>d.sector===r.sector&&d.name===r.dataset):null;
+      const decl={...r,name:ds?ds.name:r.title,source:r.source||(ds&&ds.source)};
+      const card=this.bindCard(decl,'date','Шинэчлэгдсэн');
+      return {...r,
+        agency:ds?ds.agency:r.agency,
+        src:ds?ds.fmt:r.src,
+        date:card.value,
+        live:card.live,
+        hint:card.hint||'',
+        label:SECTORS[r.sector].label,color:NEON[r.sector]};
+    // "Сүүлд шинэчлэгдсэн" гэдэг нь бодит огноон дээр ч үнэн байхын тулд
+    // холболтын дараа дахин эрэмбэлнэ (огноо бүгд YYYY-MM-DD).
+    }).sort((a,b)=>b.date.localeCompare(a.date));
+  }
   buildKpis(kpis,color){
     return kpis.map((k,i)=>{
       const dir=k[4];
@@ -6289,7 +6397,7 @@ class Component extends DCLogic {
       bars:this.buildBars(this.state.f04Sort==='name'?[...s.bars].sort((a,b)=>a[0].localeCompare(b[0])):s.bars),
       status:this.buildStatus(s.bars),
       diverging:buildDiverging(key),
-      recent:RECENT.map(r=>({...r,label:SECTORS[r.sector].label,color:NEON[r.sector]})),
+      recent:this.buildRecent(),
       trend,monthSel:mSel,
       monthReadout:(mfr===1&&mto===12)?('Бүх 12 сар · дундаж '+wavg.toLocaleString()):(mfr+'–'+mto+' сар · дундаж '+wavg.toLocaleString())
     };
