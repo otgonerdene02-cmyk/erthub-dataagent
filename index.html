@@ -11,6 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/dataset-views.js"></script>
+<script src="js/erthub-store.js"></script>
 <script src="js/vendor/dc-runtime.js"></script>
 </head>
 <body>
@@ -2145,7 +2146,12 @@
         </sc-if>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
           <div style="font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">Мэдэгдлийн төрөл</div>
-          <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);white-space:nowrap;">{{ detail.followers }} дагагч</div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);white-space:nowrap;">{{ detail.followers }} дагагч</div>
+            <sc-if value="{{ detail.canFollow }}">
+              <button sc-camel-on-click="{{ detail.toggleFollow }}" style="{{ detail.followBtnStyle }}">{{ detail.followBtnLabel }}</button>
+            </sc-if>
+          </div>
         </div>
         <div style="display:flex;flex-direction:column;">
           <sc-for list="{{ detail.followOpts }}" as="fo" hint-placeholder-count="4">
@@ -2518,28 +2524,53 @@
 
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>Дата чанарын үнэлгээ</div>
-      <div style="display:flex;align-items:center;gap:20px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--line);">
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:46px;font-weight:700;letter-spacing:-.03em;color:{{ detail.dqColor }};line-height:1;">{{ detail.dqTotal }}<span style="font-size:17px;color:var(--ink3);font-weight:500;">/100</span></div>
-        <div>
-          <div style="font-size:15px;font-weight:600;color:{{ detail.dqColor }};margin-bottom:5px;">{{ detail.dqTier }}</div>
-          <div style="display:flex;gap:3px;">
-            <sc-for list="{{ detail.stars }}" as="st" hint-placeholder-count="5">
-              <div style="font-size:16px;line-height:1;color:{{ st.color }};">★</div>
-            </sc-for>
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--line);">
+        <sc-if value="{{ detail.dqKnown }}">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:46px;font-weight:700;letter-spacing:-.03em;color:{{ detail.dqColor }};line-height:1;">{{ detail.dqTotal }}<span style="font-size:17px;color:var(--ink3);font-weight:500;">/100</span></div>
+          <div>
+            <div style="font-size:15px;font-weight:600;color:{{ detail.dqColor }};margin-bottom:5px;">{{ detail.dqTier }}</div>
+            <div style="display:flex;gap:3px;">
+              <sc-for list="{{ detail.stars }}" as="st" hint-placeholder-count="5">
+                <div style="font-size:16px;line-height:1;color:{{ st.color }};">★</div>
+              </sc-for>
+            </div>
           </div>
+        </sc-if>
+        <sc-if value="{{ detail.dqUnknown }}">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;letter-spacing:-.02em;color:var(--ink3);line-height:1.2;">Тодорхойгүй</div>
+          <div style="font-size:12.5px;color:var(--ink3);max-width:46ch;line-height:1.5;text-wrap:pretty;">Энэ датасэтийн үнэлгээнд шаардлагатай эх мэдээлэл бүртгэгдээгүй байна. Дутуу нотолгоон дээр оноо гаргахгүй.</div>
+        </sc-if>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 13px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">Шинэчлэлийн давтамж</span>
+          <span style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;">{{ detail.dqFreqLabel }}</span>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;">
         <sc-for list="{{ detail.dims }}" as="dm" hint-placeholder-count="4">
           <div>
-            <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--ink);margin-bottom:7px;">
-              <span style="text-wrap:pretty;">{{ dm.label }}</span>
-              <span style="font-family:'JetBrains Mono',monospace;font-weight:600;flex-shrink:0;">{{ dm.val }}</span>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--ink);margin-bottom:7px;">
+              <span style="text-wrap:pretty;">{{ dm.label }} <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);">{{ dm.weightLabel }}</span></span>
+              <sc-if value="{{ dm.unknown }}">
+                <span style="flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--ink3);background:var(--surface2);border:1px solid var(--line2);border-radius:999px;padding:3px 9px;white-space:nowrap;">Тодорхойгүй</span>
+              </sc-if>
+              <sc-if value="{{ dm.known }}">
+                <span style="font-family:'JetBrains Mono',monospace;font-weight:600;flex-shrink:0;color:{{ dm.valColor }};">{{ dm.val }}</span>
+              </sc-if>
             </div>
-            <div style="height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;">
+            <div style="height:6px;border-radius:4px;{{ dm.trackStyle }}overflow:hidden;">
               <div style="height:100%;border-radius:4px;background:{{ dm.barColor }};width:{{ dm.width }};"></div>
             </div>
             <div style="font-size:11.5px;color:var(--ink3);margin-top:7px;line-height:1.45;text-wrap:pretty;">{{ dm.note }}</div>
+            <sc-if value="{{ dm.hasDetail }}">
+              <div style="font-size:11.5px;color:var(--ink2);margin-top:5px;line-height:1.45;text-wrap:pretty;">{{ dm.detail }}</div>
+            </sc-if>
+            <sc-for list="{{ dm.items }}" as="ck" hint-placeholder-count="4">
+              <div style="display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:var(--ink2);margin-top:4px;">
+                <span style="color:{{ ck.color }};font-weight:700;flex-shrink:0;">{{ ck.mark }}</span>
+                <span style="flex:1;min-width:0;text-wrap:pretty;">{{ ck.label }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:{{ ck.color }};flex-shrink:0;">{{ ck.pts }}</span>
+              </div>
+            </sc-for>
           </div>
         </sc-for>
       </div>
@@ -3761,7 +3792,16 @@ const DATASETS=[
   {sector:'rail',name:'Зорчигчийн галт тэрэгний хуваарь',agency:'УБТЗ',fmt:'CSV, API',badges:['Үнэгүй'],freq:'Улирал бүр',use:'3,410 татсан',desc:'Улсын хэмжээний зорчигчийн галт тэрэгний хуваарь, чиглэл, буудал.'},
   {sector:'rail',name:'Ачаа тээврийн бодит байршил',agency:'МТЗ',fmt:'API',badges:['Premium','Шууд'],freq:'1 мин тутам',use:'SLA-тай',desc:'Ачаа тээврийн галт тэрэгний бодит цагийн байршил, эрчимжсэн хандалттай.'},
   {sector:'air',name:'Агаарын тээврийн статистик',agency:'ИНЕГ',fmt:'Вэбсервис',badges:['Үнэгүй'],freq:'Өдөр бүр',use:'14,200 дуудлага',desc:'Олон улс, дотоодын нислэг, зорчигч, ачааны иж бүрэн статистик.',
-   source:'flights',bind:{freq:'lastRecord'}},
+   source:'flights',bind:{freq:'lastRecord'},
+   // Одоогоор ЗӨВХӨН энэ датасэтэд бодит нотолгоо цугларсан. Бусад нь `dq`
+   // блокгүй тул DQS-д "Тодорхойгүй" төлөвөөр гарна — тоо зохиохгүй.
+   dq:{freqDays:1,
+       // documented:false — feed нь нээлттэй JSON боловч албан ёсны
+       // хандалтын заавар нийтлэгдээгүй.
+       access:{api:true,bulk:true,machineReadable:true,documented:false},
+       // license:false — лицензийн нөхцөл хаана ч зарлагдаагүй.
+       meta:{fieldDocs:true,agency:true,schedule:true,license:false},
+       openness:'free'}},
   {sector:'air',name:'Нислэгийн бодит байршил',agency:'ИНЕГ',fmt:'API',badges:['Premium','Шууд'],freq:'Шууд',use:'350,000 дуудлага',desc:'Монголын агаарын зайд байгаа нислэгийн бодит байршил, өндөр, хурд.'},
   {sector:'water',name:'Боомтын ачаа эргэлт',agency:'ЗТЯ',fmt:'CSV',badges:['Үнэгүй'],freq:'Сар бүр',use:'890 татсан',desc:'Идэвхтэй боомтуудын сарын ачаа эргэлтийн дэлгэрэнгүй тайлан.'},
   {sector:'public',name:'Нийтийн тээврийн чиглэл, хуваарь',agency:'НТБГ',fmt:'CSV, GEOJSON',badges:['Үнэгүй'],freq:'Сар бүр',use:'5,680 татсан',desc:'Хотын нийтийн тээврийн бүх чиглэлийн зурвас, зогсоол, хуваарь.'},
@@ -3887,15 +3927,108 @@ function pathFor(data,w,h,pad){
   return {line,area};
 }
 
-function dqScore(d){
-  const freqMap={'сек':100,'мин':92,'шууд':100,'өдөр':78,'улирал':45,'сар':62};
-  let fresh=55;
-  for(const k in freqMap){ if(d.freq.toLowerCase().includes(k)){ fresh=freqMap[k]; break; } }
-  const access=/api|вэбсервис/i.test(d.fmt)?96:(/geojson/i.test(d.fmt)?82:68);
-  const fields=[d.agency,d.fmt,d.freq,d.use,d.desc];
-  const meta=Math.round((fields.filter(f=>f&&f.length>2).length/fields.length)*100);
-  const open=d.badges.includes('Premium')?58:94;
-  return {total:Math.round(fresh*.35+access*.25+meta*.25+open*.15),fresh,access,meta,open};
+// ─── Дата чанарын үнэлгээ (DQS) ─────────────────────────────────────────
+// Бүх 5 салбарт ИЖИЛ ажилладаг нэг функц. Гол зарчим: оноог мэдээллээс
+// ТААМАГЛАХГҮЙ. Тухайн үзүүлэлтийг бодох нотолгоо байхгүй бол 0 гэж
+// бичихгүй, `null` буцаана — UI түүнийг "Тодорхойгүй" болгож харуулна.
+// 0 (муу) ба тодорхойгүй (мэдэхгүй) хоёрыг андуурахгүй байх нь чухал.
+//
+// Нотолгоог DATASETS доторх заавал биш `dq:{}` блокоос авна:
+//   dq:{ freqDays:1,                                   // зарласан давтамж
+//        access:{api,bulk,machineReadable,documented},
+//        meta:{fieldDocs,agency,schedule,license},
+//        openness:'open'|'free'|'registration'|'restricted' }
+// Блок байхгүй бол тэр датасэт бүхэлдээ "Тодорхойгүй" төлөвт үлдэнэ.
+const DQ_WEIGHTS={fresh:15,access:25,meta:30,open:30};
+const DQ_ACCESS_SPEC=[
+  ['api','API / endpoint байгаа',40],
+  ['bulk','Bulk татах (CSV/JSON)',25],
+  ['machineReadable','Машинд уншигдах формат (PDF биш)',20],
+  ['documented','Хандах заавар баримтжуулсан',15]
+];
+const DQ_META_SPEC=[
+  ['fieldDocs','Талбар тус бүрийн тайлбар',30],
+  ['agency','Эх сурвалж / хариуцагч байгууллага',25],
+  ['schedule','Шинэчлэлийн хуваарь мэдэгдсэн',25],
+  ['license','Лиценз / нөхцөл тодорхой',20]
+];
+const DQ_OPENNESS={
+  open:        {score:100,label:'Нээлттэй лиценз (CC-BY гэх мэт)'},
+  free:        {score:70, label:'Бүртгэлгүй үнэгүй, лиценз тодорхойгүй'},
+  registration:{score:50, label:'Бүртгүүлэх шаардлагатай, үнэгүй'},
+  restricted:  {score:20, label:'Хязгаарлалттай / зөвшөөрөл шаардсан'}
+};
+// Хүнд ойлгомжтой давтамжийн нэр (зарласан давтамжийг ил харуулах шаардлага).
+function dqFreqLabel(days){
+  if(days==null) return null;
+  if(days<=0.05) return 'Бодит цагийн';
+  if(days<1) return Math.round(days*24)+' цаг тутам';
+  if(days===1) return 'Өдөр бүр';
+  if(days===7) return 'Долоо хоног бүр';
+  if(days>=28&&days<=31) return 'Сар бүр';
+  if(days>=88&&days<=93) return 'Улирал бүр';
+  if(days>=360) return 'Жил бүр';
+  return days+' хоног тутам';
+}
+// Хугацаандаа орсон эсэхээр л онооно — давтамжийн ТӨРЛӨӨР ялгаварлахгүй.
+// Сар бүр шинэчлэгддэг датасэт хугацаандаа байвал өдөр бүрийнхтэй адил 100.
+// Хэтэрсэн үед л 1x→3x хооронд шугаман буурч, 3x-ээс цааш 0.
+function dqFreshness(freqDays,lastDate){
+  if(freqDays==null||!lastDate) return null;
+  const t=Date.parse(lastDate+'T00:00:00+08:00');   // эх сурвалжийн огноо УБ-гийн цагаар
+  if(isNaN(t)) return null;
+  const days=Math.max(0,(Date.now()-t)/86400000);
+  const ratio=days/freqDays;
+  const score=ratio<=1?100:(ratio>=3?0:Math.round(100*(3-ratio)/2));
+  return {score:Math.max(0,Math.min(100,score)),days:Math.round(days),ratio,
+    onTime:ratio<=1,lastDate};
+}
+function dqChecklist(spec,decl){
+  if(!decl) return null;
+  let score=0;
+  const items=spec.map(([k,label,pts])=>{
+    const on=!!decl[k];
+    if(on) score+=pts;
+    return {label,pts,on};
+  });
+  return {score,items};
+}
+// meta — эх сурвалжийн бодит мета (sourceData(id).meta). Шинэлэг байдлыг
+// бодоход л хэрэгтэй: зарласан давтамжийг БОДИТ сүүлийн шинэчлэлтэй жишнэ.
+function dqScore(decl,meta){
+  const cfg=decl.dq||null;
+  const fresh=cfg?dqFreshness(cfg.freqDays,meta&&meta.updatedAt):null;
+  const access=cfg?dqChecklist(DQ_ACCESS_SPEC,cfg.access):null;
+  const metaChk=cfg?dqChecklist(DQ_META_SPEC,cfg.meta):null;
+  const open=(cfg&&DQ_OPENNESS[cfg.openness])||null;
+  const freqLabel=cfg?dqFreqLabel(cfg.freqDays):null;
+  const dims=[
+    {key:'fresh',label:'Шинэлэг байдал',weight:DQ_WEIGHTS.fresh,
+     score:fresh?fresh.score:null,
+     note:'Зарласан давтамждаа багтаж шинэчлэгдсэн эсэх',
+     detail:fresh
+       ?(fresh.onTime
+          ? 'Хугацаандаа — сүүлийн шинэчлэлт '+fresh.lastDate+' ('+fresh.days+' хоногийн өмнө)'
+          : 'Хугацаа хэтэрсэн — зарласан давтамжаас '+fresh.ratio.toFixed(1)+' дахин удаан ('+fresh.days+' хоног)')
+       :'Зарласан давтамж эсвэл бодит шинэчлэлтийн огноо бүртгэгдээгүй'},
+    {key:'access',label:'Хандалтын хялбар байдал',weight:DQ_WEIGHTS.access,
+     score:access?access.score:null,items:access&&access.items,
+     note:'API, bulk татах, машинд уншигдах формат, заавар',
+     detail:access?null:'Хандалтын нөхцөл бүртгэгдээгүй'},
+    {key:'meta',label:'Тодорхойлолтын бүрэн байдал',weight:DQ_WEIGHTS.meta,
+     score:metaChk?metaChk.score:null,items:metaChk&&metaChk.items,
+     note:'Талбарын тайлбар, эх сурвалж, хуваарь, лиценз',
+     detail:metaChk?null:'Тодорхойлолтын мэдээлэл бүртгэгдээгүй'},
+    {key:'open',label:'Нээлттэй байдал',weight:DQ_WEIGHTS.open,
+     score:open?open.score:null,
+     note:'Лиценз, бүртгэл, хандалтын хязгаарлалт',
+     detail:open?open.label:'Лицензийн мэдээлэл бүртгэгдээгүй'}
+  ];
+  // Аль нэг үзүүлэлт тодорхойгүй бол ерөнхий оноог ГАРГАХГҮЙ — дутуу
+  // нотолгоон дээр суурилсан тоо нь байхгүй тооноос ч гажуудуулна.
+  const known=dims.every(d=>d.score!=null);
+  const total=known?Math.round(dims.reduce((a,d)=>a+d.score*d.weight,0)/100):null;
+  return {total,dims,known,freqLabel};
 }
 
 const MONTHS=['1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар','7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
@@ -4021,7 +4154,7 @@ class Component extends DCLogic {
       }catch(e){}
       return 'light';
     })(),
-    authTab:'login', authRole:'citizen', authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', tblQuery:'', tblStatus:'all', tblPage:0, fYear:'2026', fMonth:'Бүгд', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
+    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', tblQuery:'', tblStatus:'all', tblPage:0, fYear:'2026', fMonth:'Бүгд', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
 
   go(id){ this.setState(s=>({page:id,prevPage:s.page})); if(window.scrollTo) window.scrollTo(0,0); }
   goBack(fallback){
@@ -4089,10 +4222,30 @@ class Component extends DCLogic {
         this.setState({authed:!!user,authReady:true,
           authFull:user?(user.displayName||(user.email||'').split('@')[0]):'',
           authEmail:user?(user.email||''):this.state.authEmail});
+        this.syncProfile(user);
       });
     } else {
       this.setState({authReady:true});
     }
+  }
+  // Нэвтэрсэн хэрэглэгчийн профайлыг Firestore-оос уншиж төлөвт тавина.
+  // Google-ээр анх удаа нэвтэрсэн хүнд профайл байхгүй тул хамгийн бага
+  // мэдээлэлтэй бичлэг үүсгэнэ. Бүртгэлийн формоор орсон хүн submitAuth
+  // дотор аль хэдийн бүрэн бичлэг үүсгэсэн байх тул дарж бичихгүй.
+  syncProfile(user){
+    const st=window.erthubStore;
+    if(!user||!st){ this.setState({profile:null}); return; }
+    st.loadProfile().then(p=>{
+      if(p){ this.setState({profile:p}); return null; }
+      const parts=(user.displayName||'').trim().split(/\s+/).filter(Boolean);
+      return st.saveProfile({
+        email:user.email||'',
+        firstName:parts.length>1?parts.slice(1).join(' '):(parts[0]||''),
+        lastName:parts.length>1?parts[0]:'',
+        role:'citizen', phone:'', regNo:'', orgName:'', orgRegNo:'',
+        newsletter:false, createdAt:new Date()
+      }).then(()=>{ this.setState({profile:{role:'citizen'}}); });
+    }).catch(()=>{});
   }
   componentWillUnmount(){ if(this._esc) window.removeEventListener('keydown',this._esc); }
   escClose(){ this.setState({projOpen:-1,subStep:0,reqOpen:false}); }
@@ -4262,6 +4415,58 @@ class Component extends DCLogic {
   // Датасэтийн үзэлтийг бүртгэнэ. Тоо ирэхэд (локал шууд, дундын нь сүлжээний
   // дараа) дахин render хийхийн тулд нэг удаа subscribe хийж, төлөвийн
   // тоолуурыг өсгөнө.
+  // Баримт бичгийн Firestore түлхүүр. DOCS нь массивын массив тул гарчиг нь
+  // цорын ганц тодорхойлогч — гарчиг өөрчлөгдвөл үнэлгээ тасарна
+  // (datasetSlug-тай яг ижил хязгаарлалт).
+  docItemId(cat,title){
+    const st=window.erthubStore;
+    return st?st.itemKey('doc',cat+'-'+title):null;
+  }
+  // Баримт нээгдэхэд үнэлгээ, сэтгэгдлийг Firestore-оос татна. Firestore
+  // идэвхжээгүй бол юу ч хийхгүй — UI нь demo утгууд дээрээ үлдэнэ.
+  loadDocData(cat,title){
+    const st=window.erthubStore;
+    if(!st||!st.available) return;
+    const dkey=cat+':'+title, itemId=this.docItemId(cat,title);
+    if(!itemId) return;
+    Promise.all([st.stats(itemId),st.myRating(itemId),st.listReviews(itemId,50)])
+      .then(([stats,mine,reviews])=>{
+        if(!st.available) return;   // эхний дуудалт дээр л Firestore унтарсныг мэднэ
+        this.setState(s=>({docRemote:Object.assign({},s.docRemote,{
+          [dkey]:{stats:stats,mine:mine||0,reviews:reviews||[]}
+        })}));
+      }).catch(()=>{});
+  }
+  // Датасэтийн дагалтын түлхүүр. datasetSlug нь салбар+нэрээс гардаг тул
+  // үзэлтийн тоолуурын түлхүүртэй нэг эх үүсвэртэй.
+  followItemId(d){
+    const st=window.erthubStore;
+    return (st&&d)?st.itemKey('dataset',datasetSlug(d)):null;
+  }
+  // Дагалтын төлөв, нийт дагагчийн тоог Firestore-оос уншина.
+  loadFollow(d){
+    const st=window.erthubStore, id=this.followItemId(d);
+    if(!st||!st.available||!id) return;
+    Promise.all([st.isFollowing(id),st.stats(id)]).then(([following,stats])=>{
+      if(!st.available) return;
+      this.setState(s=>({dsFollow:Object.assign({},s.dsFollow,{
+        [id]:{following:!!following,count:(stats&&stats.followerCount)||0}
+      })}));
+    }).catch(()=>{});
+  }
+  // Дагах/болих. Баримтын ID нь uid тул нэг хүн нэг л удаа тоологдоно.
+  toggleFollowDataset(d){
+    if(!this.state.authed){ this.setState({loginOpen:true,loginWhy:'Дагахын тулд нэвтэрнэ үү'}); return; }
+    const st=window.erthubStore, id=this.followItemId(d);
+    if(!st||!st.available||!id) return;
+    const cur=(this.state.dsFollow&&this.state.dsFollow[id])||{following:false,count:0};
+    // Сүлжээ ирэхээс өмнө товчийг шууд эргүүлж, хүлээлт мэдрэгдэхгүй болгоно.
+    const next={following:!cur.following,count:Math.max(0,cur.count+(cur.following?-1:1))};
+    this.setState(s=>({dsFollow:Object.assign({},s.dsFollow,{[id]:next}),
+      toast:next.following?'Дагаж эхэллээ':'Дагахаа болилоо'}));
+    this.fadeToast&&this.fadeToast();
+    st.toggleFollow(id).then(()=>this.loadFollow(d)).catch(()=>{});
+  }
   trackDatasetView(d){
     const v=window.datasetViews;
     if(!v||!d) return;
@@ -4625,8 +4830,31 @@ class Component extends DCLogic {
     this.setState({authErr:'',authBusy:true});
     const finish=(user)=>{
       const done=()=>{ this.setState({authBusy:false,authPass:'',authPass2:''}); this.goBack('home'); };
-      if(su&&full&&user&&typeof user.updateProfile==='function') user.updateProfile({displayName:full}).then(done).catch(done);
-      else done();
+      // Бүртгэлийн формын нэмэлт талбарууд (эрх, регистр, утас, байгууллага)
+      // Firebase Auth-д багтдаггүй — Auth нь зөвхөн и-мэйл, нууц үг,
+      // displayName-ыг л мэднэ. Тиймээс users/{uid} профайл руу тусад нь
+      // бичнэ. Firestore идэвхжээгүй бол persistProfile нь null буцаах тул
+      // нэвтрэлт саадгүй үргэлжилнэ.
+      const persistProfile=()=>{
+        const st=window.erthubStore;
+        if(!su||!st||!user) return Promise.resolve(null);
+        const org=s.authRole==='business';
+        return st.saveProfile({
+          email:user.email||em,
+          firstName:(s.authName||'').trim(),
+          lastName:(s.authLast||'').trim(),
+          role:s.authRole||'citizen',
+          phone:(s.authPhone||'').replace(/\D/g,''),
+          regNo:(s.authReg||'').trim().toUpperCase(),
+          orgName:org?(s.authOrg||'').trim():'',
+          orgRegNo:org?(s.authTtd||'').trim():'',
+          newsletter:!!s.authNews,
+          createdAt:new Date()
+        }).catch(()=>null);
+      };
+      if(su&&full&&user&&typeof user.updateProfile==='function'){
+        user.updateProfile({displayName:full}).then(persistProfile).then(done).catch(done);
+      } else persistProfile().then(done).catch(done);
     };
     const onErr=(err)=>{ this.setState({authBusy:false}); fail(mapFirebaseError(err)); };
     if(su){
@@ -4854,13 +5082,17 @@ class Component extends DCLogic {
       ['Салбар',SECTORS[d[0]].label],['Ангилал',(DOC_CATS.find(c=>c[0]===cat)||['','—'])[1]]
     ].map(m=>({l:m[0],v:m[1]}));
     const dkey=cat+':'+d[1];
+    const remoteDoc=(this.state.docRemote&&this.state.docRemote[dkey])||null;
     const ratingsMap=this.state.docRatings||{};
-    const myStars=(ratingsMap[dkey]&&ratingsMap[dkey].mine)||0;
+    const myStars=(remoteDoc&&remoteDoc.mine)||(ratingsMap[dkey]&&ratingsMap[dkey].mine)||0;
     const seedAvg=3.6+((d[1].length*3)%14)/10;
     const extraVotes=(ratingsMap[dkey]&&ratingsMap[dkey].extra)||0;
     const baseCount=18+(d[1].length%23);
-    const totalCount=baseCount+extraVotes;
-    const avg=extraVotes>0?((seedAvg*baseCount+myStars*extraVotes)/totalCount):seedAvg;
+    // Firestore-оос жинхэнэ үнэлгээ ирсэн бол demo тооцоог бүрэн орлоно.
+    const hasReal=!!(remoteDoc&&remoteDoc.stats&&remoteDoc.stats.ratingCount>0);
+    const totalCount=hasReal?remoteDoc.stats.ratingCount:(baseCount+extraVotes);
+    const avg=hasReal?remoteDoc.stats.avgRating
+      :(extraVotes>0?((seedAvg*baseCount+myStars*extraVotes)/totalCount):seedAvg);
     const starsRow=(val,onPick)=>Array.from({length:5},(_,si)=>({
       i:si,filled:si<Math.round(val),
       pick:onPick?()=>onPick(si+1):null,
@@ -4871,7 +5103,10 @@ class Component extends DCLogic {
       {by:'Т.Golearig',stars:4,text:'Судалгааны арга зүй тодорхой, эх сурвалж баттай — ажилдаа ашигласан.'},
       {by:'Н.Сарантуяа',stars:5,text:'Маш дэлгэрэнгүй, статистик хэсэг нь онцгой хэрэгтэй байлаа.'}
     ].filter((_,ri)=>ri<((d[1].length)%2)+1);
-    const reviews=seedReviews.concat(reviewsAll).map(r=>({...r,starsRow:starsRow(r.stars)}));
+    const reviews=(remoteDoc&&remoteDoc.reviews
+      ? remoteDoc.reviews.map(r=>({by:r.byName||'Уншигч',stars:r.stars||0,text:r.text||''}))
+      : seedReviews.concat(reviewsAll)
+    ).map(r=>({...r,starsRow:starsRow(r.stars)}));
     const onDocDraft=(e)=>this.setState({docReviewDraft:e.target.value});
     const rateDoc=(n)=>{
       if(!this.state.authed){ this.setState({loginOpen:true,loginWhy:'Үнэлгээ өгөхийн тулд нэвтэрнэ үү'}); return; }
@@ -4880,6 +5115,11 @@ class Component extends DCLogic {
       rm[dkey]={mine:n,extra:prev.mine?prev.extra:prev.extra+1};
       this.setState({docRatings:rm,toast:'Таны үнэлгээ: '+n+' од'});
       this.fadeToast&&this.fadeToast();
+      // Firestore дээр нэг хүн нэг үнэлгээ — баримтын ID нь uid тул давхардахгүй.
+      const st=window.erthubStore, itemId=this.docItemId(cat,d[1]);
+      if(st&&st.available&&itemId){
+        st.rate(itemId,n).then(()=>this.loadDocData(cat,d[1])).catch(()=>{});
+      }
     };
     const isSaved=!!(this.state.docSaved&&this.state.docSaved[dkey]);
     const toggleSave=()=>{
@@ -4899,6 +5139,15 @@ class Component extends DCLogic {
     const submitDocReview=()=>{
       if(!this.state.authed){ this.setState({loginOpen:true,loginWhy:'Сэтгэгдэл бичихийн тулд нэвтэрнэ үү'}); return; }
       const txt=(this.state.docReviewDraft||'').trim(); if(!txt) return;
+      const st=window.erthubStore, itemId=this.docItemId(cat,d[1]);
+      if(st&&st.available&&itemId){
+        // Бодит горим — Firestore руу бичээд жагсаалтаа дахин татна.
+        st.addReview(itemId,txt,myStars||5,this.state.authFull||'Уншигч')
+          .then(()=>this.loadDocData(cat,d[1])).catch(()=>{});
+        this.setState({docReviewDraft:'',docShareOpen:false,toast:'Сэтгэгдэл нэмэгдлээ'});
+        this.fadeToast&&this.fadeToast();
+        return;
+      }
       const rv=Object.assign({},this.state.docReviews||{});
       rv[dkey]=(rv[dkey]||[]).concat([{by:this.state.authFull||'Уншигч',stars:myStars||5,text:txt}]);
       this.setState({docReviews:rv,docReviewDraft:'', docSaved:null, docShareOpen:false,toast:'Сэтгэгдэл нэмэгдлээ'});
@@ -4924,7 +5173,7 @@ class Component extends DCLogic {
     }));
     const related=list.filter((x,xi)=>xi!==i).slice(0,3).map((x,xi)=>({
       title:x[1],org:x[2],year:x[3],fmt:x[4],color:NEON[x[0]],glyph:GLYPH[x[0]],
-      open:()=>this.setState({docIndex:list.indexOf(x),docTab:'about',docPage:1,docExpand:false})
+      open:()=>{ this.loadDocData(cat,x[1]); this.setState({docIndex:list.indexOf(x),docTab:'about',docPage:1,docExpand:false}); }
     }));
     return {isDocDetail:this.state.page==='doc',
       docDetail:{title:d[1],org:d[2],year:d[3],fmt:d[4],color:NEON[d[0]],glyph:GLYPH[d[0]],
@@ -5453,7 +5702,7 @@ class Component extends DCLogic {
     const datasetsAll=DATASETS.filter(d=>(filter==='all'||d.sector===filter)&&(!dsListQ||(d.title+' '+d.desc+' '+SECTORS[d.sector].label).toLowerCase().includes(dsListQ))).map(d=>({
       ...d,color:NEON[d.sector],sectorLabel:SECTORS[d.sector].label,glyph:GLYPH[d.sector],
       badgeList:d.badges.map(b=>({label:b,live:b==='Шууд',premium:b==='Premium'})),
-      open:()=>{ this.trackDatasetView(d); this.setState({dsIndex:DATASETS.indexOf(d)}); this.go('detail'); }
+      open:()=>{ this.trackDatasetView(d); this.loadFollow(d); this.setState({dsIndex:DATASETS.indexOf(d)}); this.go('detail'); }
     }));
     const DSPER=6;
     const dsPages=Math.max(1,Math.ceil(datasetsAll.length/DSPER));
@@ -5576,7 +5825,7 @@ class Component extends DCLogic {
     const docsAllRaw=(DOCS[dcat]||[]).map((d,di)=>({
       sector:d[0],title:d[1],org:d[2],year:d[3],fmt:d[4],
       color:NEON[d[0]],glyph:GLYPH[d[0]],sectorLabel:SECTORS[d[0]].label,
-      open:()=>{ this.setState({docIndex:di,docTab:'about',docPage:1,docExpand:false}); this.go('doc'); }
+      open:()=>{ this.loadDocData(dcat,d[1]); this.setState({docIndex:di,docTab:'about',docPage:1,docExpand:false}); this.go('doc'); }
     }));
     const docsAll=docsAllRaw.filter(d=>!docQL||(d.title+' '+d.org).toLowerCase().includes(docQL));
     const DPER=6;
@@ -5590,9 +5839,12 @@ class Component extends DCLogic {
     const dcatLabel=(DOC_CATS.find(c=>c[0]===dcat)||['','',0])[1];
     const dsIdx=this.state.dsIndex;
     const dsel=DATASETS[dsIdx]||DATASETS[0];
-    const dq=dqScore(dsel);
+    const dsFollowKey=this.followItemId(dsel);
+    const dsFollowState=(dsFollowKey&&this.state.dsFollow&&this.state.dsFollow[dsFollowKey])||null;
+    const dq=dqScore(dsel,this.sourceData(dsel.source).meta);
     const dsRows=(12000+dsel.name.length*1370).toLocaleString();
-    const dqTier=dq.total>=85?{l:'Маш сайн',c:'#2FA37B'}:(dq.total>=65?{l:'Сайн',c:'#3F6FD8'}:{l:'Дундаж',c:'#B9903A'});
+    const dqTier=!dq.known?{l:'Тодорхойгүй',c:'var(--ink3)'}
+      :(dq.total>=85?{l:'Маш сайн',c:'#2FA37B'}:(dq.total>=65?{l:'Сайн',c:'#3F6FD8'}:{l:'Дундаж',c:'#B9903A'}));
     const dsTrend=buildTrendChart(SECTORS[dsel.sector].c1d);
     const seed=dsel.name.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
     const wpUnitList=['мянган нэгж','мян.тн','мянган хүн','удаа','ГБ'];
@@ -5638,13 +5890,32 @@ class Component extends DCLogic {
       name:dsel.name,desc:dsel.desc,agency:dsel.agency,fmt:dsel.fmt,freq:dsel.freq,use:dsel.use,
       color:NEON[dsel.sector],glyph:GLYPH[dsel.sector],sectorLabel:SECTORS[dsel.sector].label,
       badgeList:dsel.badges.map(b=>({label:b})),wp,
-      dqTotal:dq.total,dqTier:dqTier.l,dqColor:dqTier.c,
-      stars:Array.from({length:5},(_,i)=>({on:i<Math.round(dq.total/20),color:i<Math.round(dq.total/20)?dqTier.c:'var(--line2)'})),
-      dims:[['Шинэлэг байдал',dq.fresh,'Шинэчлэлийн давтамж хэр өндөр вэ'],
-            ['Хандалтын хялбар байдал',dq.access,'API/вэбсервисээр холбогдох боломж'],
-            ['Тодорхойлолтын бүрэн байдал',dq.meta,'Эх сурвалж, формат, тайлбар зэрэг талбар бүрэн бөглөгдсөн эсэх'],
-            ['Нээлттэй байдал',dq.open,'Үнэгүй, хязгаарлалтгүй хандах боломж']]
-        .map(d=>({label:d[0],val:d[1],note:d[2],width:d[1]+'%',barColor:d[1]>=80?'#2FA37B':(d[1]>=60?'#3F6FD8':'#B9903A')})),
+      dqKnown:dq.known,dqUnknown:!dq.known,dqTotal:dq.known?String(dq.total):'Тодорхойгүй',
+      dqTier:dqTier.l,dqColor:dqTier.c,
+      dqFreqLabel:dq.freqLabel||'Бүртгэгдээгүй',
+      // Од нь бүрэн онооноос л гарна — дутуу нотолгоон дээр од өгөхгүй.
+      stars:dq.known?Array.from({length:5},(_,i)=>({
+        color:i<Math.round(dq.total/20)?dqTier.c:'var(--line2)'})):[],
+      dims:dq.dims.map(d=>({
+        label:d.label,note:d.note,
+        weightLabel:d.weight+'%',
+        unknown:d.score==null,known:d.score!=null,
+        val:d.score==null?'Тодорхойгүй':String(d.score),
+        // 0% (муу) ба тодорхойгүй (мэдэхгүй) хоёрыг нүдээр ялгах: эхнийх нь
+        // хоосон өнгөт зураас, хоёр дахь нь зураастай саарал зурвас.
+        width:d.score==null?'0%':d.score+'%',
+        barColor:d.score==null?'transparent':(d.score>=80?'#2FA37B':(d.score>=60?'#3F6FD8':'#B9903A')),
+        trackStyle:d.score==null
+          ? 'background:repeating-linear-gradient(90deg,var(--line2) 0 6px,transparent 6px 12px);'
+          : 'background:var(--surface2);',
+        valColor:d.score==null?'var(--ink3)':'var(--ink)',
+        detail:d.detail||'',
+        hasDetail:!!d.detail,
+        items:(d.items||[]).map(it=>({
+          label:it.label,pts:'+'+it.pts,on:it.on,
+          color:it.on?'#0E8F63':'var(--ink3)',
+          mark:it.on?'✓':'✕'}))
+      })),
       c1:SECTORS[dsel.sector].c1,trend:dsTrend,
       ...this.buildPreview(dsel,dsRows),
       actions:[['api','API холбогдох','{ }'],['follow','Дагах','◎']].map(a=>({
@@ -5682,7 +5953,17 @@ class Component extends DCLogic {
                   ['Аномали илрэх үед','AI модель хэвийн бус хэлбэлзэл олбол сэрэмжлүүлнэ',false],
                   ['Сарын тайлан','Ашиглалт, чанарын оноог сар бүр илгээнэ',false]].map(x=>({l:x[0],d:x[1],on:x[2],
                     pill:x[2]?'Нэмэгдсэн':'Нэмэх',pillStyle:x[2]?'color:#0E8F63;background:#0E8F6318;':'color:var(--ink2);background:var(--surface2);'})),
-      followers:(1200+dsel.name.length*37).toLocaleString(),
+      followers:(dsFollowState&&dsFollowState.count!=null&&dsFollowState.count>0)
+        ? dsFollowState.count.toLocaleString('en-US')
+        : (1200+dsel.name.length*37).toLocaleString(),
+      canFollow:!!(window.erthubStore&&window.erthubStore.available),
+      isFollowing:!!(dsFollowState&&dsFollowState.following),
+      followBtnLabel:(dsFollowState&&dsFollowState.following)?'Дагаж байна':'Дагах',
+      followBtnStyle:'cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;border-radius:999px;padding:7px 16px;white-space:nowrap;transition:.16s var(--ease);'
+        +((dsFollowState&&dsFollowState.following)
+          ?'color:#0E8F63;background:#0E8F6318;border:1px solid #0E8F6340;'
+          :'color:#FFFFFF;background:'+NEON[dsel.sector]+';border:1px solid transparent;'),
+      toggleFollow:()=>this.toggleFollowDataset(dsel),
       changelog:[['2026-08-12','Бодит цагийн урсгалын хоцролт 20 сек болж сайжирлаа'],
                  ['2026-07-30','Мета тайлбар, багануудын нэр стандартчлагдав'],
                  ['2026-06-18','Түүхэн өгөгдөл 2021 он хүртэл нэмэгдэв']].map(x=>({d:x[0],t:x[1]})),
@@ -5756,7 +6037,7 @@ class Component extends DCLogic {
         +((this.state.viewportW||1280)<=480?'font-size:11px;border-radius:9px;padding:7px 9px;':'font-size:12.5px;border-radius:11px;padding:10px 18px;'),
       userName:this.state.authFull||this.state.authName||'Бат-Эрдэнэ Д.',
       userInitial:(this.state.authFull||this.state.authName||'Б')[0],
-      userPlan:({citizen:'Иргэн · Үнэгүй',business:'Бизнес · Үнэгүй',dev:'Хөгжүүлэгч · Үнэгүй'})[this.state.authRole]||'Иргэн · Үнэгүй',
+      userPlan:({citizen:'Иргэн · Үнэгүй',business:'Бизнес · Үнэгүй',dev:'Хөгжүүлэгч · Үнэгүй'})[(this.state.profile&&this.state.profile.role)||this.state.authRole]||'Иргэн · Үнэгүй',
       devContactOpen:!!this.state.devContactOpen,
       closeDevContact:()=>this.setState({devContactOpen:false}),
       goLogin:()=>{ this.setState({authTab:'login',authErr:''}); this.go('auth'); },
