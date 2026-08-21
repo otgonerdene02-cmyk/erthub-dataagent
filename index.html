@@ -3720,6 +3720,21 @@ const SOURCES={
 // үзэлтийн тоо бол салбар, эх сурвалж харгалзахгүй бүх датасэтэд утга учиртай.
 const BIND_DEFAULTS={use:'views'};
 const fmtNum=n=>Number(n).toLocaleString('en-US');
+// Эх сурвалжийн ISO (UTC) хугацааг Улаанбаатарын цагаар харуулна. Портал
+// монгол хэрэглэгчид зориулагдсан тул хөтчийн бүсээс үл хамааран бүгд нэг
+// ижил огноо харах ёстой — 23:01 UTC гэдэг УБ-д аль хэдийн маргааш нь болсон
+// байдаг учир UTC-гээр бичвэл "шинэчлэгдсэн" огноо нэг хоног хоцорч харагдана.
+const UB_TZ='Asia/Ulaanbaatar';
+function ubStamp(iso){
+  if(!iso) return {date:'',full:''};
+  const d=new Date(iso);
+  if(isNaN(d.getTime())) return {date:'',full:''};
+  let s;
+  try{ s=d.toLocaleString('sv-SE',{timeZone:UB_TZ}); }  // sv-SE → "YYYY-MM-DD HH:MM:SS"
+  // Хөтөч цагийн бүсийн санг дэмжихгүй бол: Монгол UTC+8, зуны цаг хэрэглэдэггүй.
+  catch(e){ s=new Date(d.getTime()+8*3600*1000).toISOString().replace('T',' '); }
+  return {date:s.slice(0,10), full:s.slice(0,16)};
+}
 // Нэр бүр НЭГ утга — аль ч карт, аль ч хуудас дуудаж болно. Хоосон/утгагүй
 // буцаавал карт статик текстээ хадгална (bindCard-ыг үз).
 const METRICS={
@@ -4221,10 +4236,12 @@ class Component extends DCLogic {
     const last=fetched[fetched.length-1]||'';
     const newest=newestYearFlights.reduce((a,f)=>(!a||f.unixtimestamp>a.unixtimestamp)?f:a,null);
     const pad=n=>String(n).padStart(2,'0');
+    const stamp=ubStamp(last);   // индексийн fetchedAt нь UTC — УБ-гийн цаг руу хөрвүүлнэ
     return {
       rows:list.reduce((a,y)=>a+(y.count||0),0),
-      updatedAt:last.slice(0,10),
-      updatedAtFull:last.slice(0,16).replace('T',' ')+' UTC', // индексийн fetchedAt нь UTC
+      updatedAt:stamp.date,
+      updatedAtFull:stamp.full+' (Улаанбаатарын цаг)',
+      // Бичлэгийн огноо нь эх сурвалжид аль хэдийн монгол хуанлиар байна.
       lastRecord:newest?newest.year+'-'+pad(newest.month)+'-'+pad(newest.day):'',
       yearFrom:years[years.length-1],yearTo:years[0]
     };
