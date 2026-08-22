@@ -1132,7 +1132,7 @@
       </svg>
     </div>
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;backdrop-filter:blur(14px);display:flex;flex-direction:column;">
-      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>Салбарын харьцаа</div>
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="d05" data-eh-field="title">{{ d05Title }}</span></div>
       <div style="flex:1;display:flex;align-items:center;justify-content:center;">
         <svg sc-camel-view-box="0 0 120 120" style="width:150px;height:150px;">
           <circle cx="60" cy="60" r="46" fill="none" stroke="var(--surface2)" stroke-width="17"></circle>
@@ -4144,7 +4144,7 @@ class Component extends DCLogic {
   state={ authed:false, authBusy:false, authReady:false, mobileNavOpen:false, viewportW:(typeof window!=='undefined'?window.innerWidth:1280),
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12',
-    mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{},
+    mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
     theme:(function(){
       try{
@@ -4165,7 +4165,7 @@ class Component extends DCLogic {
   }
   componentDidMount(){
     this.loadGlobe(); this.syncMonths(); this.loadSources(); this.loadMongoliaGeo();
-    this.auditBindings();
+    this.auditBindings(); this.loadContent();
     this._esc=(e)=>{ if(e.key==='Escape') this.escClose(); };
     window.addEventListener('keydown',this._esc);
     this._onResize=()=>this.setState({viewportW:window.innerWidth});
@@ -4301,6 +4301,32 @@ class Component extends DCLogic {
         .catch(e=>console.warn('[ErtHub] «'+id+'» эх сурвалж ачаалагдсангүй:',e)); }
       catch(e){ console.warn('[ErtHub] «'+id+'» эх сурвалж ачаалагдсангүй:',e); }
     });
+  }
+  // ─── Виджетийн текст (content.json) ────────────────────────────────────
+  // Админ самбараас засварлах гарчиг/дэд гарчиг/нэгж/хөл бичгийг сайт
+  // энэ файлаас уншина. Ачаалагдахгvй бол (файл байхгvй, сүлжээ тасарсан,
+  // JSON эвдэрсэн) `this.content` хоосон vлдэж, `txt()` бvрт fallback
+  // (темплейт дэх анхны утга) хэвээр гарна — хуудас хэзээ ч хоосон
+  // гарчигтай харагдахгvй.
+  async loadContent(){
+    try{
+      const res=await fetch('content.json',{cache:'no-cache'});
+      if(!res.ok) return;
+      const json=await res.json();
+      this.setState({content:json});
+    }catch(e){
+      console.info('[ErtHub] content.json ачаалагдсангvй, темплейтийн анхны текст vлдэнэ:',e.message);
+    }
+  }
+  // Виджет бvр (id) талбар бvрээ (title/sub/unit/foot) энэ нэг функцээр
+  // уншина. Утга алга эсвэл хоосон мөр бол fallback-аа буцаана.
+  txt(id,field,fallback){
+    const w=this.state.content&&this.state.content.widgets&&this.state.content.widgets[id];
+    const v=w&&w[field];
+    // `v` нь `null` ч гарч болно (state.content хараахан ирээгvй vед `&&`
+    // гинжин богино залгалт нь `undefined` биш `null`-ыг vлдээдэг) — иймд
+    // `==` сул тэнцvvлэлтээр хоёуланг нь барина.
+    return (v==null||v==='')?fallback:v;
   }
   sourceData(id){ return (this._src||{})[id]||{}; }
   // meta — датасэтийн түвшний, шүүлтүүрээс хамааралгүй үнэн.
@@ -6666,6 +6692,9 @@ class Component extends DCLogic {
                 :'border:1px solid var(--line);background:var(--surface);opacity:.62;')};
       }),
       activeTint:color+'1f',
+      // Виджетийн текст (content.json → txt()). Одоохондоо зөвхөн d05
+      // (шалгуур виджет) — үлдсэнийг баталгаажсаны дараа нэмнэ.
+      d05Title:this.txt('d05','title','Салбарын харьцаа'),
       sector:s,
       sectorTabs,
       orbitDots,
