@@ -402,9 +402,9 @@
         <div style="position:relative;overflow:hidden;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);box-shadow:var(--shadow);margin-bottom:26px;max-width:520px;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);">
           <div style="position:absolute;top:0;bottom:0;display:flex;align-items:center;gap:34px;white-space:nowrap;padding-left:14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--ink2);animation:tickerScroll 20s linear infinite;">
             <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>AI-ДЭМЖЛЭГТЭЙ ШИНЖИЛГЭЭ</span>
-            <span>48,210 КМ АВТО ЗАМ</span><span>11,979 <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span></span><span>312K <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
+            <span>48,210 КМ АВТО ЗАМ</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>312K <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
             <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>AI-ДЭМЖЛЭГТЭЙ ШИНЖИЛГЭЭ</span>
-            <span>48,210 КМ АВТО ЗАМ</span><span>11,979 <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span></span><span>312K <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
+            <span>48,210 КМ АВТО ЗАМ</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>312K <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
           </div>
         </div>
         <div style="position:relative;">
@@ -4144,7 +4144,7 @@ class Component extends DCLogic {
   state={ authed:false, authBusy:false, authReady:false, mobileNavOpen:false, viewportW:(typeof window!=='undefined'?window.innerWidth:1280),
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12',
-    mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null,
+    mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
     theme:(function(){
       try{
@@ -4165,7 +4165,7 @@ class Component extends DCLogic {
   }
   componentDidMount(){
     this.loadGlobe(); this.syncMonths(); this.loadSources(); this.loadMongoliaGeo();
-    this.auditBindings(); this.loadContent();
+    this.auditBindings(); this.loadContent(); this.loadMetricRegistry();
     this._esc=(e)=>{ if(e.key==='Escape') this.escClose(); };
     window.addEventListener('keydown',this._esc);
     this._onResize=()=>this.setState({viewportW:window.innerWidth});
@@ -4328,6 +4328,37 @@ class Component extends DCLogic {
     // `==` сул тэнцvvлэлтээр хоёуланг нь барина.
     return (v==null||v==='')?fallback:v;
   }
+  // ─── Тоон метрикийн бvртгэл (metric_registry.json → val()) ─────────────
+  // content.json/txt()-тэй яг ижил зарчим, гэхдээ ТЕКСТ биш ТОО-нд
+  // зориулагдсан. Registry нь виджет→метрикийн НЭР зааж өгдөг тайлбар
+  // (metadata) — бодит утгыг ГАРГАДАГГvй. Метрик бvрийн жинхэнэ утгыг val()
+  // доtorh нь "getters" жагсаалтаас (метрикийн нэр → JS функц) уншина.
+  // Одоохондоо ЗӨВХӨН 1 метрик (air.flight_count_last_month) холбогдсон;
+  // H4-т цааш нэмэгдэнэ.
+  async loadMetricRegistry(){
+    try{
+      const res=await fetch('metric_registry.json',{cache:'no-cache'});
+      if(!res.ok) return;
+      const json=await res.json();
+      this.setState({metricRegistry:json});
+    }catch(e){
+      console.info('[ErtHub] metric_registry.json ачаалагдсангvй, статик тоо vлдэнэ:',e.message);
+    }
+  }
+  // Виджет → метрик → бодит утга. Registry ирээгvй, widget/metric
+  // тодорхойлогдоогvй, эсвэл датаг хараахан тооцоолоогvй бол fallback-аа
+  // vнэн зөв тэмдэглэсэн хэвээр буцаана (isFallback:true) — админ самбар
+  // vvнийг шалгаж чадна, гэхдээ хэрэглэгчид харагдахгvй ("11,979" хэвээр).
+  val(widgetId,fallback){
+    const reg=this.state.metricRegistry;
+    const metricId=reg&&reg.widgets&&reg.widgets[widgetId]&&reg.widgets[widgetId].metric;
+    const getters={
+      'air.flight_count_last_month':()=>this._heroFlLastMonth
+    };
+    const live=metricId&&getters[metricId]&&getters[metricId]();
+    if(!live||live.count==null) return {value:fallback,isFallback:true,monthLabel:null};
+    return {value:live.count.toLocaleString('en-US'),isFallback:false,monthLabel:live.monthLabel};
+  }
   sourceData(id){ return (this._src||{})[id]||{}; }
   // meta — датасэтийн түвшний, шүүлтүүрээс хамааралгүй үнэн.
   setSourceMeta(id,meta){ this._src=this._src||{}; this._src[id]={...this.sourceData(id),meta}; }
@@ -4398,6 +4429,7 @@ class Component extends DCLogic {
       if(!flights.length) throw new Error('empty flights array');
       this.setSourceMeta('flights',this.flightsMeta(idx,years,flights));
       if(years[1]) await this.fetchFlightsYear(years[1]).catch(()=>{});
+      this.computeHeroFlightsLastMonth();
       // Анхны төлөв — хамгийн сүүлийн тайлант он, 1–12 сар бүтнээр.
       this.setState({airYear:year,airYFrom:String(year),airYTo:String(year),
         airMFrom:'1',airMTo:'12'},()=>this.recomputeAirData());
@@ -4409,6 +4441,31 @@ class Component extends DCLogic {
   // updatedAtFull, lastRecord, yearFrom, yearTo). Эх сурвалж бүр өөрийн
   // ийм хөрвүүлэгчтэй байх ба цаашид METRICS нь зөвхөн энэ нийтлэг бүтцийг
   // мэдэх тул шинэ feed нэмэхэд метрикүүд дахин бичигдэхгүй.
+  // hero_fl ticker-т зориулсан "сvvлийн БvТЭН сарын нислэг" тоо.
+  // Датасэт хуудасны Он/Сар шvvлтээс БvРЭН тусгаарлагдсан — тэр шvvлтийг
+  // хэрэглэгч юу ч сонгосон хамаагvй, ticker vргэлж ижил, тогтвортой
+  // тоо харуулна. "Одоо" гэдгийг ХЭРЭГЛЭГЧИЙН ХӨТЧИЙН ЦАГААР биш, feed-ийн
+  // ХАМГИЙН СvvЛИЙН бичлэгээр тодорхойлно — ингэснээр feed хэдийд ч
+  // ачаалагдсан vр дvн тогтвортой, туршилтад ч давтагдах боломжтой байна.
+  // Одоогийн сар БИШ, сvvлийн БvТЭН сарыг тоолно (шинэ сарын эхэнд дутуу
+  // тоо гарахаас, мөн жилийн эхэнд бага тоо гарч "эвдэрсэн мэт" харагдахаас
+  // сэргийлнэ) — 1-р сард унавал өмнөх жилийн 12-р сар руу шилжинэ, тэр
+  // жилийн кэш байхгvй бол тооцохгvй (fallback vлдэнэ).
+  computeHeroFlightsLastMonth(){
+    const years=(this._flightsYears||[]).slice().sort((a,b)=>b-a);
+    if(!years.length) return;
+    const latestYear=years[0];
+    const latestFlights=this._flightsCache[latestYear];
+    if(!latestFlights||!latestFlights.length) return;
+    const newest=latestFlights.reduce((a,f)=>(!a||f.unixtimestamp>a.unixtimestamp)?f:a,null);
+    if(!newest) return;
+    let lmYear=newest.year, lmMonth=newest.month-1;
+    if(lmMonth<1){ lmMonth=12; lmYear=newest.year-1; }
+    const src=this._flightsCache[lmYear];
+    if(!src) return;
+    const count=src.filter(f=>f.year===lmYear&&f.month===lmMonth).length;
+    this._heroFlLastMonth={count,year:lmYear,month:lmMonth,monthLabel:MONTHS[lmMonth-1]};
+  }
   flightsMeta(idx,years,newestYearFlights){
     const list=idx.years||[];
     const fetched=list.map(y=>y.fetchedAt).filter(Boolean).sort(); // ISO — тэмдэгтийн эрэмбэ = цагийн эрэмбэ
@@ -6720,6 +6777,17 @@ class Component extends DCLogic {
       // хэсгийг нь txt()-ээр орлуулж, динамик хэсгийг хэвээр vлдээсэн.
       d05Title:this.txt('d05','title','Салбарын харьцаа'),
       heroFlTitle:this.txt('hero_fl','title','НИСЛЭГ / САР'),
+      // H3: тоон утга нь val()-аар metric_registry.json-той холбогддог.
+      // Fallback vед ("11,979") аль сар болохыг мэдэхгvй тул сарын
+      // тэмдэглэгээг ердөө хоосон vлдээнэ — амьд vед л "(N-р сар)" гарна.
+      ...(()=>{
+        const hv=this.val('hero_fl','11,979');
+        return {
+          heroFlValue:hv.value,
+          heroFlFallback:hv.isFallback?'true':'false',
+          heroFlMonthSuffix:hv.isFallback?'':' ('+hv.monthLabel+')'
+        };
+      })(),
       // "ЗОРЧИГЧ / ӨДӖР" (U+04D6) нь эх кодын vсгийн бодит алдаа байсан —
       // зөв нь "ЗОРЧИГЧ / ӨДӨР" (U+04E8). content.json-той хамт fallback-ыг
       // ч зассан тул txt() унших бvрдээ (сvлжээ тасарсан vед ч) зөв vсгээр

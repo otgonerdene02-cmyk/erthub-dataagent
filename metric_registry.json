@@ -1,0 +1,29 @@
+{
+  "$schema": "erthub-metrics/v1",
+  "version": "0.1.0",
+  "updated": "2026-08-24",
+  "note": "H3 шатны хамгийн анхны хэрэгжилт. Зөвхөн hero_fl виджет код дээр бодитоор холбогдсон. Бусад 16 виджет (H2 тайланд бүрэн бүртгэгдсэн) H4-т, зөвшөөрлийн дараа нэг нэгээр нь энд нэмэгдэнэ — өмнө нь нэмэхгүй, учир нь энэ файл ЯГ КОД ХОЛБОГДСОН зүйлийг л мэдэгдэх ёстой.",
+  "widgets": {
+    "hero_fl": {
+      "metric": "air.flight_count_last_month",
+      "sectors": ["air"]
+    }
+  },
+  "metrics": {
+    "air.flight_count_last_month": {
+      "source": "applyRealFlightsData",
+      "dataset": "air_flights",
+      "column": "*",
+      "agg": "COUNT",
+      "filter": "сүүлийн бүтэн сар",
+      "transform": "",
+      "unit": "нислэг",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "Одоогийн сар дутуу тоо өгөх тул сүүлийн бүтэн сарыг тоолно. \"Одоо\" гэдгийг feed-ийн хамгийн сүүлийн бичлэгээр тодорхойлно, хэрэглэгчийн хөтчийн цагаар биш."
+    }
+  },
+  "removed": {
+    "hero.static_flight_count_snapshot": "Зөрчил (conflicts_with air.flight_count) шийдэгдсэн тул устгав — hero_fl одоо шууд air.flight_count_last_month рүү холбогдоно."
+  }
+}
