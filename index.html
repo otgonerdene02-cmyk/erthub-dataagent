@@ -1193,7 +1193,7 @@
           </foreignObject>
         </sc-if>
         <sc-for list="{{ compareLines }}" as="cl" hint-placeholder-count="5">
-          <path d="{{ cl.d }}" fill="none" stroke="{{ cl.color }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="{{ cl.d }}" fill="none" stroke="{{ cl.color }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="{{ cl.dash }}"></path>
           <circle cx="{{ cl.ex }}" cy="{{ cl.ey }}" r="3.4" fill="{{ cl.color }}" stroke="#FFFFFF" stroke-width="1.6"></circle>
           <foreignObject x="{{ cl.endLabelX }}" y="{{ cl.endLabelY }}" width="54" height="14">
             <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;color:{{ cl.color }};white-space:nowrap;">{{ cl.endLabel }}</div>
@@ -1228,11 +1228,12 @@
             </div>
             <div style="text-align:right;">
               <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:{{ cr.chColor }};white-space:nowrap;">{{ cr.chLabel }}</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3);white-space:nowrap;margin-top:3px;">{{ cr.startEnd }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3);white-space:nowrap;margin-top:3px;">{{ cr.startEnd }}<sc-if value="{{ cr.mockTag }}"> · {{ cr.mockTag }}</sc-if></div>
             </div>
           </div>
         </sc-for>
       </div>
+      <sc-if value="{{ showLeadLag }}">
       <div style="margin-top:auto;padding-top:16px;display:flex;flex-direction:column;gap:9px;">
         <div style="display:flex;align-items:center;gap:9px;border-left:3px solid {{ cLeadColor }};padding-left:11px;">
           <div data-eh-card="r06" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ r06Foot }}</div>
@@ -1245,6 +1246,7 @@
           <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:{{ cLagColor }};white-space:nowrap;">{{ cLagCh }}</div>
         </div>
       </div>
+      </sc-if>
     </div>
     </div>
 
@@ -4497,8 +4499,14 @@ class Component extends DCLogic {
   }
   compareWindowNote(){
     const w=this.compareWindow();
-    if(!w.year||w.months>=12) return '';
-    return ' Харьцуулах цонх: '+w.year+' оны 1–'+w.months+' сар. Бүх салбарт дата бүрэн байгаа сүүлийн үе.';
+    // H4b: mock (эх сурвалжгүй) салбар байгаа эсэхийг мөн энд мэдэгдэнэ —
+    // registry-ээс уншина, кодод хатуу бичихгүй.
+    const reg=this.state.metricRegistry;
+    const verified=new Set((reg&&reg.widgets&&reg.widgets.i06&&reg.widgets.i06.sectors)||[]);
+    const hasMock=Object.keys(TREND).some(k=>!verified.has(k));
+    const mockNote=hasMock?' * Түр дата — бодит эх сурвалжид холбогдоогүй.':'';
+    if(!w.year||w.months>=12) return mockNote;
+    return ' Харьцуулах цонх: '+w.year+' оны 1–'+w.months+' сар. Бүх салбарт дата бүрэн байгаа сүүлийн үе.'+mockNote;
   }
   // hero_fl ticker-т зориулсан "сүүлийн БүТЭН сарын нислэг" тоо. Датасэт
   // хуудасны Он/Сар шүүлтээс БүРЭН тусгаарлагдсан — тэр шүүлтийг хэрэглэгч
@@ -5730,6 +5738,15 @@ class Component extends DCLogic {
 
     const off=(this.state.compareOff||'').split(',').filter(Boolean);
     const ckeys=Object.keys(TREND);
+    // H4b: аль салбар "verified" (бодит эх сурвалжтай) болохыг КОДОД
+    // ХАТУУ БИЧИХГҮЙ — metric_registry.json-ий widgets.i06.sectors-аас
+    // уншина (hero_fl/u07/t05-тэй адил зарчим). Registry ачаалагдаагүй
+    // үед хоосон Set (бүгд "түр дата" гэж үзнэ) — үнэн зөв мэдэхгүй үед
+    // хэтрүүлж баталгаажуулснаас илүү аюулгүй тал руугаа алдана.
+    const verifiedSet=new Set(
+      (this.state.metricRegistry&&this.state.metricRegistry.widgets&&
+       this.state.metricRegistry.widgets.i06&&this.state.metricRegistry.widgets.i06.sectors)||[]
+    );
     // Харьцуулах цонх (months) ДИНАМИКААР тооцоологдоно — compareWindow()
     // үз. trendFor(k) нь тухайн салбарын индексийг яг тэр цонхны уртаар
     // (0..months-1) буцаана; air амьд үед бодит тоогоор, эс үгүй бол
@@ -5750,6 +5767,10 @@ class Component extends DCLogic {
     const compareLines=all.map(k=>{
       const t=trendFor(k);
       return {key:k,color:NEON[k],
+        // Mock (эх сурвалжгүй) салбарын шугамыг тасархай зураасаар зурна
+        // — verified (одоогоор зөвхөн air) шугам тасралтгүй хэвээр үлдэж,
+        // хэрэглэгч аль нь бодит, аль нь түр гэдгийг үзэгдэл дээрээ ялгана.
+        dash:verifiedSet.has(k)?'none':'5 4',
         endLabel:Math.round(t[lastIdx]),endLabelY:(Y(t[lastIdx])-6.5).toFixed(1),endLabelX:(pL+lastIdx*stepX+7).toFixed(1),
         d:'M'+t.map((v,i)=>(pL+i*stepX).toFixed(1)+','+Y(v).toFixed(1)).join(' L'),
         ex:(pL+lastIdx*stepX).toFixed(1),ey:Y(t[lastIdx]).toFixed(1)};
@@ -5765,7 +5786,7 @@ class Component extends DCLogic {
     const cRank=ckeys.map(k=>{
       const t=trendFor(k),a=t[0],b=t[lastIdx],ch=(b-a)/a*100;
       return {key:k,label:SECTORS[k].label,glyph:GLYPH[k],color:NEON[k],
-        start:Math.round(a),end:Math.round(b),ch,muted:off.includes(k)};
+        start:Math.round(a),end:Math.round(b),ch,muted:off.includes(k),isMock:!verifiedSet.has(k)};
     }).sort((x,y)=>y.ch-x.ch);
     const cMaxAbs=Math.max.apply(null,cRank.map(r=>Math.abs(r.ch)))||1;
     const compareRank=cRank.map((r,i)=>({
@@ -5774,9 +5795,19 @@ class Component extends DCLogic {
       chLabel:(r.ch>0?'+':'')+r.ch.toFixed(1)+'%',
       chColor:r.ch>0?'#0E8F63':'#C8443A',
       barW:(Math.abs(r.ch)/cMaxAbs*100).toFixed(0)+'%',
-      rowStyle:'display:grid;grid-template-columns:22px 20px minmax(0,1fr) 62px;gap:9px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);opacity:'+(r.muted?'.42':'1')+';transition:.2s var(--ease);'
+      mockTag:r.isMock?'түр дата':'',
+      // Mock мөрийг сааралдуулна (opacity бага) — өнгөт (verified) мөртэй
+      // ойлгомжтой ялгарна. muted (шүүлтээр унтраасан) үед ч бас бууруулна.
+      rowStyle:'display:grid;grid-template-columns:22px 20px minmax(0,1fr) 62px;gap:9px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);opacity:'+(r.muted?'.42':(r.isMock?'.55':'1'))+';transition:.2s var(--ease);'
     }));
-    const cLead=cRank[0], cLag=cRank[cRank.length-1];
+    // "Тэргүүлэгч"/"Хоцрогдож байгаа" шошгыг ЗӨВХӨН verified салбараас
+    // сонгоно (H4b) — mock дата дээр "тэргүүлж байна" гэх нь худал
+    // мэдээлэл. Verified 2-с цөөн бол хоёр шошгыг огт харуулахгүй: нэг
+    // элементийг "тэргүүлэгч" гэж нэрлэх утгагүй.
+    const verifiedRank=cRank.filter(r=>!r.isMock);
+    const showLeadLag=verifiedRank.length>=2;
+    const cLead=verifiedRank[0]||{label:'',ch:0,color:'#828EA8'};
+    const cLag=verifiedRank[verifiedRank.length-1]||{label:'',ch:0,color:'#828EA8'};
     const compareY=[0,0.5,1].map(fr=>({label:Math.round(vmin+rng*fr),y:(pT+(Hh-pT-pB)*(1-fr)).toFixed(1),fy:(pT+(Hh-pT-pB)*(1-fr)-7).toFixed(1)}));
     const compareBaseShow=(100>=vmin&&100<=vmax);
     const compareBaseY=Y(100).toFixed(1);
@@ -5786,13 +5817,14 @@ class Component extends DCLogic {
     const compareX=Array.from({length:tickN},(_,i)=>Math.round(i*tickStep))
       .filter((v,i,arr)=>arr.indexOf(v)===i)
       .map(idx=>({label:(idx+1)+'-р сар',fx:(pL+idx*stepX-20).toFixed(1),fy:(Hh-pB+6).toFixed(1)}));
-    const compareChips=ckeys.map(k=>({key:k,label:SECTORS[k].label,glyph:GLYPH[k],
+    const compareChips=ckeys.map(k=>({key:k,label:SECTORS[k].label+(verifiedSet.has(k)?'':' *'),glyph:GLYPH[k],
       toggle:()=>{ const s=new Set(off); if(s.has(k)) s.delete(k); else s.add(k); this.setState({compareOff:Array.from(s).join(',')}); },
       style:'cursor:pointer;display:flex;align-items:center;gap:7px;border-radius:999px;padding:7px 14px;font-size:12.5px;font-family:inherit;white-space:nowrap;transition:.16s var(--ease);'
         +(off.includes(k)?'border:1px solid var(--line);background:transparent;color:var(--ink3);':'border:1.5px solid '+NEON[k]+';background:'+NEON[k]+'1c;color:var(--ink);font-weight:600;')
     }));
     const compareGeom={axisX1:pL,axisX2:W-pR,axisY:(Hh-pB).toFixed(1),padT:pT};
     const compareLastLabel=cw.lastLabel;
+    const compareHasMock=ckeys.some(k=>!verifiedSet.has(k));
 
     const ai=this.state.aiIndex;
     const aiChips=AI_QA.map((qa,i)=>({q:qa.q,pick:()=>this.askAi(qa.q,i),
@@ -5827,6 +5859,7 @@ class Component extends DCLogic {
       weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,
       weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,
       compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareLastLabel,
+      showLeadLag,compareHasMock,
       f04:{open:!!this.state.f04Open,toggle:()=>this.setState(s=>({f04Open:!s.f04Open})),
         btnStyle:'cursor:pointer;font-family:inherit;width:26px;height:26px;border-radius:8px;flex-shrink:0;font-size:12px;line-height:1;'+(this.state.f04Open?'border:1px solid #7C5CF0;background:#7C5CF01a;color:#7C5CF0;':'border:1px solid var(--line);background:var(--surface);color:var(--ink3);'),
         byValue:()=>this.setState({f04Sort:'value'}),byName:()=>this.setState({f04Sort:'name'}),
