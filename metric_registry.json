@@ -54,6 +54,54 @@
       "sectors": ["air"],
       "note": "i06-тэй ЯГ ижил compareWindow()/trendFor() ашиглана — тэргүүлэгч/хоцрогдогч эрэмбэ мөн адил динамик цонхонд үндэслэнэ."
     },
+    "uk": {
+      "metric": null,
+      "quality": "mock",
+      "would_need": "Порталын датасэт/үйлчилгээ/судалгаа/байгууллагын бодит тоо — динамик тооллого (жиш нь DATASETS.length)",
+      "note": "KPI_UNIFIED (86/28/36/9) хатуу тоо, ямар ч бодит массивтай таарахгүй"
+    },
+    "w2p": {
+      "metric": null,
+      "quality": "mock",
+      "would_need": "7 хоногийн зорчигчийн бодит дата — эх сурвалж тодорхойгүй",
+      "note": "WEEK_DATA.pax бүрэн статик"
+    },
+    "w2pb": {
+      "metric": null,
+      "quality": "mock",
+      "would_need": "7 хоногийн зорчигчийн төрлийн задаргаа — w2p-тэй ижил эх сурвалж хэрэгтэй",
+      "note": "WEEK_DATA.pax дэд задаргаа (donut/share) статик"
+    },
+    "w2px": {
+      "metric": null,
+      "quality": "mock",
+      "would_need": "Салбар бүрийн 7 хоногийн зорчигчийн харьцуулалт — тодорхойгүй",
+      "note": "SECTOR_DELTA.pax бүрэн статик"
+    },
+    "w2c": {
+      "metric": null,
+      "quality": "mock",
+      "would_need": "7 хоногийн ачааны бодит дата — эх сурвалж тодорхойгүй",
+      "note": "WEEK_DATA.cargo бүрэн статик"
+    },
+    "w2cb": {
+      "metric": null,
+      "quality": "mock",
+      "would_need": "7 хоногийн ачааны төрлийн задаргаа — w2c-тэй ижил эх сурвалж хэрэгтэй",
+      "note": "WEEK_DATA.cargo дэд задаргаа (donut/share) статик"
+    },
+    "w2cx": {
+      "metric": null,
+      "quality": "mock",
+      "would_need": "Салбар бүрийн 7 хоногийн ачааны харьцуулалт — тодорхойгүй",
+      "note": "SECTOR_DELTA.cargo бүрэн статик"
+    },
+    "ai08": {
+      "metric": null,
+      "quality": "mock",
+      "would_need": "AI-д холбогдсон датасэтийн бодит тоо — тодорхойгүй",
+      "note": "\"24 датасет холбогдсон\" 3 газарт хатуу бичигдсэн, бодит тоолол алга"
+    },
     "d05": {
       "valid": false,
       "hidden": true,

@@ -1,23 +1,22 @@
 #!/usr/bin/env node
 // Нүүр хуудасны виджет бүр metric_registry.json-д ямар нэг бүртгэлтэй эсэхийг
-// шалгана (verified ч, mock ч — ямар ч төлөвтэй байсан хамаагүй, ЗӨВХӨН
-// БҮРТГЭГДЭЭГҮЙ байх нь алдаа). H4 үед k04/ls код дээр бодитоор холбогдсон
-// хойно registry-д бүртгэхээ мартсан тохиолдол давтагдахаас сэргийлж үүсгэв.
+// шалгана. metric_registry.json ГАНЦААРАА үнэний эх сурвалж — өмнө нь
+// known_incomplete.json гэдэг хоёр дахь файлтай байсан ч энэ нь "хоёр
+// vнэний эх сурвалж" зөрчил vvсгэсэн тул нэгтгэсэн (mock виджет ч энд
+// quality:"mock" гэж шууд бүртгэгдэнэ, тусдаа файл шаардахгүй).
 //
-// Виджетийн "бүрэн жагсаалт" эх сурвалж нь content.json (page:"Нүүр" гэсэн
-// талбараар шүүнэ) — index.html-ээс val()/applyRealFlightsData хэрэглээг
-// автоматаар мэдрэх нь найдвартай бүтэц шинжлэл шаардах тул (олон янзын
+// Виджетийн "бvрэн жагсаалт" эх сурвалж нь content.json (page:"Нvvр" гэсэн
+// талбараар шvvнэ) — index.html-ээс val()/applyRealFlightsData хэрэглээг
+// автоматаар мэдрэх нь найдвартай бvтэц шинжлэл шаардах тул (олон янзын
 // холболтын хэлбэр: val(), SECTORS шууд унших, RECENT+bindCard, TREND+
-// compareWindow) хийгдэхгүй байна — оронд нь "үүрэг хүлээсэн бүх виджет
-// эцэст нь registry-д ямар нэг бичлэгтэй байх ёстой" гэсэн энгийн, гэхдээ
-// бүрэн шалгагдах боломжтой дүрмийг ашиглав.
+// compareWindow) хийгдэхгvй байна.
 //
-// scripts/known_incomplete.json — зориудаар одоохондоо бүртгэгдээгүй
-// (эх сурвалжгүй mock) виджетүүдийн жагсаалт. Дүрэм 3:
-//   1) registry-д байхгүй + known_incomplete-д байхгүй → АЛДАА (exit 1)
-//   2) registry-д байхгүй + known_incomplete-д байгаа   → мэдээлэл (exit 0)
-//   3) known_incomplete-д байгаа + registry-д ч бүртгэгдсэн → АНХААРУУЛГА
-//      (known_incomplete.json-оос хасаагүй нь хуучирсан гэсэн үг)
+// Дvрэм:
+//   1) registry-д огт байхгvй                → АЛДАА (exit 1)
+//   2) registry-д байгаа, quality:"mock"      → мэдээлэл (exit 0)
+//   3) registry-д байгаа, quality:"verified"  → OK (exit 0)
+//   4) registry-д байгаа боловч content.json-ий Нvvр хуудсанд олдохгvй
+//      (хуучирсан бичлэг) → АНХААРУУЛГА (exit 1)
 //
 // Ашиглалт: node scripts/check-registry.js
 'use strict';
@@ -32,58 +31,47 @@ const homeWidgets = Object.entries(content.widgets)
   .filter(([, w]) => w.page === 'Нүүр')
   .map(([id]) => id);
 
-const registryWidgets = Object.keys(registry.widgets || {});
+const widgets = registry.widgets || {};
+const registryWidgets = Object.keys(widgets);
 
-const knownIncompletePath = path.join(__dirname, 'known_incomplete.json');
-const knownIncompleteRaw = fs.existsSync(knownIncompletePath)
-  ? JSON.parse(fs.readFileSync(knownIncompletePath, 'utf8'))
-  : { widgets: {} };
-const knownIncomplete = knownIncompleteRaw.widgets || {};
+// Виджетийн бичлэгийн хэлбэр өөр өөр байж болно (top-level metric+sectors
+// массив; sectors обьект дотор салбар тус бүрийн quality; эсвэл valid:false
+// блоклогдсон) — иймд нэг "quality" шошго тооцоолж мэдээлнэ, гэхдээ
+// шийдвэр (missing эсэх) үүнээс хамаарахгүй.
+function describeQuality(w) {
+  if (w.valid === false) return 'blocked';
+  if (typeof w.quality === 'string') return w.quality;
+  if (w.sectors && !Array.isArray(w.sectors)) {
+    const quals = Object.values(w.sectors).map((s) => s.quality);
+    const verifiedN = quals.filter((q) => q === 'verified').length;
+    return 'mixed (' + verifiedN + '/' + quals.length + ' verified)';
+  }
+  if (w.metric) return 'verified';
+  return 'unknown';
+}
 
-// Бүртгэлийн бүрэн бүтэн байдал: reason/would_need хоосон бол алдаа
-// (тодорхойгүй бол "тодорхойгүй" гэж бичих ёстой, хоосон биш).
-const malformed = Object.entries(knownIncomplete).filter(
-  ([, v]) => !v.reason || !v.would_need
-);
-
-const missingAll = homeWidgets.filter((id) => !registryWidgets.includes(id));
-const missing = missingAll.filter((id) => !(id in knownIncomplete));
-const expectedIncomplete = missingAll.filter((id) => id in knownIncomplete);
+const missing = homeWidgets.filter((id) => !registryWidgets.includes(id));
 const stale = registryWidgets.filter((id) => !homeWidgets.includes(id));
-const nowRegistered = Object.keys(knownIncomplete).filter((id) => registryWidgets.includes(id));
+const present = homeWidgets.filter((id) => registryWidgets.includes(id));
 
 let ok = true;
 
 if (missing.length) {
   ok = false;
   console.error('');
-  console.error('REGISTRY-Д БҮРТГЭГДЭЭГҮЙ, ЗОРИУДААР ҮЛДЭЭГДЭЭГҮЙ ' + missing.length + ' ВИДЖЕТ:');
+  console.error('REGISTRY-Д БҮРТГЭГДЭЭГҮЙ ' + missing.length + ' ВИДЖЕТ:');
   for (const id of missing) console.error('  - ' + id);
   console.error('');
   console.error('Verified эсвэл mock — аль нь ч байсан metric_registry.json-д');
-  console.error('ямар нэг бичлэгтэй байх ёстой, эсвэл зориуд үлдээж байгаа бол');
-  console.error('scripts/known_incomplete.json-д {reason, would_need}-тэй нэм.');
+  console.error('ямар нэг бичлэгтэй байх ёстой (mock бол {"quality":"mock",');
+  console.error('"metric":null,"would_need":"..."}).');
 }
 
-if (malformed.length) {
-  ok = false;
-  console.error('');
-  console.error('known_incomplete.json дутуу бичлэгтэй ' + malformed.length + ':');
-  for (const [id] of malformed) console.error('  - ' + id + ' (reason/would_need дутуу — "тодорхойгүй" гэж ч болно, хоосон болохгүй)');
-}
-
-if (expectedIncomplete.length) {
-  console.log('Мэдэгдэж буй, зориудаар үлдээсэн ' + expectedIncomplete.length + ' виджет (алдаа биш):');
-  for (const id of expectedIncomplete) {
-    console.log('  - ' + id + ': ' + knownIncomplete[id].reason);
+if (present.length) {
+  console.log('Бүртгэгдсэн ' + present.length + ' виджет:');
+  for (const id of present) {
+    console.log('  - ' + id + ': ' + describeQuality(widgets[id]));
   }
-}
-
-if (nowRegistered.length) {
-  ok = false;
-  console.error('');
-  console.error('АНХААРУУЛГА: known_incomplete.json-д байгаа боловч registry-д аль хэдийн бүртгэгдсэн ' + nowRegistered.length + ':');
-  for (const id of nowRegistered) console.error('  - ' + id + ' — known_incomplete.json-оос хас (хуучирсан).');
 }
 
 if (stale.length) {
@@ -96,7 +84,8 @@ if (stale.length) {
 }
 
 if (ok) {
-  console.log('OK: ' + homeWidgets.length + ' Нүүр хуудасны виджет бүгд registry эсвэл known_incomplete.json-д бүртгэлтэй.');
+  console.log('');
+  console.log('OK: ' + homeWidgets.length + ' Нүүр хуудасны виджет бүгд registry-д бүртгэлтэй.');
   process.exit(0);
 } else {
   process.exit(1);
