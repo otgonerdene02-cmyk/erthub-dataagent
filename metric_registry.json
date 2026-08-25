@@ -13,6 +13,11 @@
       "sectors": ["air"],
       "note": "RECENT[0..4]-ийн зөвхөн air мөр (index 0) бодит. Бусад 4 мөр (road/rail/public/water) статик, эх сурвалжгүй тул энд бүртгэгдээгүй."
     },
+    "t05": {
+      "metric": "air.monthly_flight_series",
+      "sectors": ["air"],
+      "note": "sector.c1d-ийг шууд уншина, код өөрчлөлт шаардлагагүй байсан."
+    },
     "d05": {
       "valid": false,
       "hidden": true,
@@ -45,6 +50,18 @@
       "additive": false,
       "quality": "verified",
       "period_note": "flights-index.json-ий fetchedAt талбар — эх сурвалжийн indexer хамгийн сүүлд хэзээ ажилласныг заана. Датаны 'сүүлийн бичлэг' (lastRecord метрик, өөр) биш."
+    },
+    "air.monthly_flight_series": {
+      "source": "applyRealFlightsData",
+      "dataset": "air_flights",
+      "column": "*",
+      "agg": "COUNT_BY_MONTH",
+      "filter": "тухайн жилийн бодит байгаа сарууд",
+      "transform": "",
+      "unit": "нислэг/сар",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "Ирээгүй сарыг 0-ээр биш, огт оруулахгүй (массивын урт хувьсна)."
     }
   },
   "removed": {
