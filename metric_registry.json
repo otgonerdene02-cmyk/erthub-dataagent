@@ -8,6 +8,32 @@
       "metric": "air.flight_count_last_month",
       "sectors": ["air"]
     },
+    "k04": {
+      "sectors": {
+        "air":    { "metric": "air.kpi_set", "quality": "verified" },
+        "road":   { "metric": null, "quality": "mock", "would_need": "Авто замын сүлжээний урт — Замын газрын эх сурвалж" },
+        "rail":   { "metric": null, "quality": "mock", "would_need": "Төмөр замын урт — УБТЗ" },
+        "water":  { "metric": null, "quality": "mock", "would_need": "Усан замын урт — Далайн захиргаа" },
+        "public": { "metric": null, "quality": "mock", "would_need": "Нийтийн тээврийн чиглэлийн тоо — НТГ" }
+      },
+      "note": "SECTORS[activeSector].kpis (8 мөр) — air сонгосон үед бүгд applyRealFlightsData-аас, бусад үед бүгд статик. kpis[0] (НИЙТ НИСЛЭГ) нь hero_fl-тэй яг ижил air.flight_count_last_month; kpis[1-7] нь тухайн үеийн Sector-хуудасны Он/Сар шүүлтээр тодорхойлогдох жилийн эхнээс өнөөдрийг хүртэлх нийлбэр — өөр цонхтой ч тус бүрийн шошго (compareLabel) үнэн зөв тул зөрчилгүй."
+    },
+    "ls": {
+      "sectors": {
+        "air":    { "metric": "air.flight_count_last_month", "quality": "verified" },
+        "road":   { "metric": null, "quality": "mock", "would_need": "Авто замын сүлжээний урт — Замын газрын эх сурвалж" },
+        "rail":   { "metric": null, "quality": "mock", "would_need": "Төмөр замын урт — УБТЗ" },
+        "water":  { "metric": null, "quality": "mock", "would_need": "Усан замын урт — Далайн захиргаа" },
+        "public": { "metric": null, "quality": "mock", "would_need": "Нийтийн тээврийн чиглэлийн тоо — НТГ" }
+      },
+      "note": "livestrip — SECTORS[k].kpis[0] л уншина, k04-ийн kpis[0]-тэй яг ижил (hero_fl-тэй ижил метрик)."
+    },
+    "hero_px": {
+      "sectors": {
+        "public": { "metric": null, "quality": "mock", "would_need": "Нийтийн тээврийн өдрийн зорчигчийн тоо — НТГ-ийн эх сурвалж шаардлагатай, одоогоор алга" }
+      },
+      "note": "312K хатуу статик хэвээр үлдэнэ. hero_px-д БүҮ ХүР гэсэн заавар мөрдөгдсөн — код өөрчлөгдөөгүй."
+    },
     "u07": {
       "metric": "air.feed_updated_at",
       "sectors": ["air"],
@@ -48,6 +74,18 @@
       "additive": false,
       "quality": "verified",
       "period_note": "Одоогийн сар дутуу тоо өгөх тул сүүлийн бүтэн сарыг тоолно. \"Одоо\" гэдгийг feed-ийн хамгийн сүүлийн бичлэгээр тодорхойлно, хэрэглэгчийн хөтчийн цагаар биш."
+    },
+    "air.kpi_set": {
+      "source": "applyRealFlightsData",
+      "dataset": "air_flights",
+      "column": "*",
+      "agg": "MIXED",
+      "filter": "kpis[0]=сүүлийн бүтэн сар; kpis[1-7]=Sector-хуудасны Он/Сар шүүлт (өгөгдмөл: жилийн эхнээс)",
+      "transform": "",
+      "unit": "mixed",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "k04 карт SECTORS.air.kpis 8 мөрийг бүгдийг харуулна. Эх сурвалж нэг ч дотоод хугацааны цонх ялгаатай (доор). Мөр бүр өөрийн compareLabel-аараа үнэн зөв тайлбарлагдсан тул хэрэглэгчид харагдах шошго зөрчилдөхгүй, гэхдээ registry түвшинд бүгд ижил 'verified' гэж энгийнээр бүртгэв — нарийвчилсан мөр тус бүрийн тусдаа метрик H4-ээс хойш шаардлагатай бол нэмж болно."
     },
     "air.feed_updated_at": {
       "source": "flightsMeta",
