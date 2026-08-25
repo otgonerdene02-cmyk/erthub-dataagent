@@ -4441,30 +4441,33 @@ class Component extends DCLogic {
   // updatedAtFull, lastRecord, yearFrom, yearTo). Эх сурвалж бүр өөрийн
   // ийм хөрвүүлэгчтэй байх ба цаашид METRICS нь зөвхөн энэ нийтлэг бүтцийг
   // мэдэх тул шинэ feed нэмэхэд метрикүүд дахин бичигдэхгүй.
-  // hero_fl ticker-т зориулсан "сүүлийн БүТЭН сарын нислэг" тоо.
-  // Датасэт хуудасны Он/Сар шүүлтээс БүРЭН тусгаарлагдсан — тэр шүүлтийг
-  // хэрэглэгч юу ч сонгосон хамаагүй, ticker үргэлж ижил, тогтвортой
-  // тоо харуулна. "Одоо" гэдгийг ХЭРЭГЛЭГЧИЙН ХӨТЧИЙН ЦАГААР биш, feed-ийн
-  // ХАМГИЙН СүүЛИЙН бичлэгээр тодорхойлно — ингэснээр feed хэдийд ч
-  // ачаалагдсан үр дүн тогтвортой, туршилтад ч давтагдах боломжтой байна.
-  // Одоогийн сар БИШ, сүүлийн БүТЭН сарыг тоолно (шинэ сарын эхэнд дутуу
-  // тоо гарахаас, мөн жилийн эхэнд бага тоо гарч "эвдэрсэн мэт" харагдахаас
-  // сэргийлнэ) — 1-р сард унавал өмнөх жилийн 12-р сар руу шилжинэ, тэр
-  // жилийн кэш байхгүй бол тооцохгүй (fallback үлдэнэ).
+  // "Сүүлийн БүТЭН сар" гэдгийг ТУХАЙН ОНЫ (year параметр) өөрийнх нь хамгийн
+  // сүүлийн бичлэгээр тодорхойлно — ХЭРЭГЛЭГЧИЙН ХӨТЧИЙН ЦАГААР биш. Ганц
+  // газар тодорхойлсноор hero_fl ticker (computeHeroFlightsLastMonth) болон
+  // kpis[0] (applyRealFlightsData) хоёул ЯГ НЭГ л цонхны тодорхойлолт ашиглаж,
+  // хооронд нь дахин зөрчил үүсэхээс сэргийлнэ (H3b). 1-р сард унавал өмнөх
+  // жилийн 12-р сар руу шилжинэ; тэр жилийн кэш байхгүй бол null буцаана.
+  lastFullMonthWindow(year){
+    const yearFlights=this._flightsCache[year];
+    if(!yearFlights||!yearFlights.length) return null;
+    const newest=yearFlights.reduce((a,f)=>(!a||f.unixtimestamp>a.unixtimestamp)?f:a,null);
+    if(!newest) return null;
+    let lmYear=newest.year, lmMonth=newest.month-1;
+    if(lmMonth<1){ lmMonth=12; lmYear=newest.year-1; }
+    if(!this._flightsCache[lmYear]) return null;
+    return {lmYear,lmMonth,monthLabel:MONTHS[lmMonth-1]};
+  }
+  // hero_fl ticker-т зориулсан "сүүлийн БүТЭН сарын нислэг" тоо. Датасэт
+  // хуудасны Он/Сар шүүлтээс БүРЭН тусгаарлагдсан — тэр шүүлтийг хэрэглэгч
+  // юу ч сонгосон хамаагүй, ticker үргэлж хамгийн сүүлийн (глобал) жилийн
+  // сүүлийн бүтэн сарын тоог харуулна.
   computeHeroFlightsLastMonth(){
     const years=(this._flightsYears||[]).slice().sort((a,b)=>b-a);
     if(!years.length) return;
-    const latestYear=years[0];
-    const latestFlights=this._flightsCache[latestYear];
-    if(!latestFlights||!latestFlights.length) return;
-    const newest=latestFlights.reduce((a,f)=>(!a||f.unixtimestamp>a.unixtimestamp)?f:a,null);
-    if(!newest) return;
-    let lmYear=newest.year, lmMonth=newest.month-1;
-    if(lmMonth<1){ lmMonth=12; lmYear=newest.year-1; }
-    const src=this._flightsCache[lmYear];
-    if(!src) return;
-    const count=src.filter(f=>f.year===lmYear&&f.month===lmMonth).length;
-    this._heroFlLastMonth={count,year:lmYear,month:lmMonth,monthLabel:MONTHS[lmMonth-1]};
+    const win=this.lastFullMonthWindow(years[0]);
+    if(!win) return;
+    const count=this._flightsCache[win.lmYear].filter(f=>f.year===win.lmYear&&f.month===win.lmMonth).length;
+    this._heroFlLastMonth={count,year:win.lmYear,month:win.lmMonth,monthLabel:win.monthLabel};
   }
   flightsMeta(idx,years,newestYearFlights){
     const list=idx.years||[];
@@ -4690,8 +4693,29 @@ class Component extends DCLogic {
     const intlPaxPct=cur.totalPax?(cur.intlPax/cur.totalPax*100):0;
     const domPaxPct=cur.totalPax?(cur.domPax/cur.totalPax*100):0;
 
+    // H3b: "НИЙТ НИСЛЭГ" (kpis[0][1]) урьд нь сонгосон он/сарын мужийн НИЙЛБЭР
+    // (жишээ нь бүтэн жил сонгосон бол жилийн эхнээс өнөөдрийг хvртэлх нийт)
+    // байсан ч шошго (болон ticker/ls/d05-ийн ижил тоо) "сар" гэж ойлгогддог
+    // байсан тул ticker-тэй ЯГ ИЖИЛ цонх (сүүлийн бүтэн сар) ашиглахаар
+    // болгов — lastFullMonthWindow() нь hero_fl-тэй нэг эх сурвалж. type/dir/
+    // region шүүлт хэвээр үйлчилнэ, гэхдээ он/сарын мужийн слайдер (monthFrom/
+    // monthTo) энэ нэг тоонд НӨЛӨӨЛӨХГvй болно — matchFilter-ийн сар шалгах
+    // хэсгийг зориуд орхисон. c1d/rank/bars-д хvрээгүй, тэдгээр хэвээрээ.
+    const flTypeFilter=(f)=>{
+      if(filters.type==='intl' && f.ou!=='ОУ') return false;
+      if(filters.type==='domestic' && f.ou==='ОУ') return false;
+      if(filters.dir==='dep' && f.dir!=='1') return false;
+      if(filters.dir==='arr' && f.dir!=='0') return false;
+      if(filters.region!=='all' && f.region!==filters.region) return false;
+      return true;
+    };
+    const flWin=this.lastFullMonthWindow(year);
+    const flCount=flWin
+      ? this._flightsCache[flWin.lmYear].filter(f=>f.year===flWin.lmYear&&f.month===flWin.lmMonth&&flTypeFilter(f)).length
+      : cur.count;
+
     SECTORS.air.kpis=[
-      ['НИЙТ НИСЛЭГ',fmtCount(cur.count),'',pctDelta(cur.count,prev.count).s,pctDelta(cur.count,prev.count).dir,compareLabel],
+      ['НИЙТ НИСЛЭГ',fmtCount(flCount),'',pctDelta(cur.count,prev.count).s,pctDelta(cur.count,prev.count).dir,compareLabel],
       ['НИЙТ ЗОРЧИГЧ',fmtBig(cur.totalPax),'',pctDelta(cur.totalPax,prev.totalPax).s,pctDelta(cur.totalPax,prev.totalPax).dir,compareLabel],
       ['ОУ НИСЛЭГ',fmtCount(cur.intlFlights),intlPct.toFixed(1)+'%',pctDelta(cur.intlFlights,prev.intlFlights).s,pctDelta(cur.intlFlights,prev.intlFlights).dir,compareLabel],
       ['ОУ ЗОРЧИГЧ',fmtBig(cur.intlPax),intlPaxPct.toFixed(1)+'%',pctDelta(cur.intlPax,prev.intlPax).s,pctDelta(cur.intlPax,prev.intlPax).dir,compareLabel],
