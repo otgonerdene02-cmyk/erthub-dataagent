@@ -1074,7 +1074,7 @@
         </label>
       </div>
     </sc-if>
-    <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:18px;margin-bottom:50px;align-items:stretch;">
+    <div style="display:grid;grid-template-columns:{{ trendGridCols }};gap:18px;margin-bottom:50px;align-items:stretch;">
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;position:relative;overflow:hidden;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">{{ sector.c1 }}</div>
@@ -1131,6 +1131,11 @@
         </sc-for>
       </svg>
     </div>
+    <!-- d05 донут түр нуугдсан — index.html-ийн FEATURE_FLAGS.d05DonutVisible
+         тайлбарыг үзнэ үү (NEON/GLYPH-ийн доор). Кодыг устгаагүй, зөвхөн
+         sc-if-ээр нуусан тул нэг нэгжтэй метрик олдмогц d05Visible-ыг true
+         болгоод шууд сэргээнэ. -->
+    <sc-if value="{{ d05Visible }}">
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;backdrop-filter:blur(14px);display:flex;flex-direction:column;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="d05" data-eh-field="title">{{ d05Title }}</span></div>
       <div style="flex:1;display:flex;align-items:center;justify-content:center;">
@@ -1154,6 +1159,7 @@
         </sc-for>
       </div>
     </div>
+    </sc-if>
     </div>
 
     <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">06</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">Салбар хоорондын харьцуулалт (индекс, 12 сар)</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
@@ -3391,6 +3397,13 @@
 <script type="text/x-dc" data-dc-script="">
 const NEON = {road:'#8CA9E8',rail:'#B48CFF',air:'#2FE0C4',water:'#4FA8FF',public:'#F2A93B'};
 const GLYPH = {road:'🚗',rail:'🚆',air:'✈️',water:'🚢',public:'🚌'};
+// d05 (Салбарын харьцаа донут) нь өөр нэгжтэй үзүүлэлтүүдийг (км, нислэгийн
+// тоо, чиглэлийн тоо) нэмж хувь бодож байгаа тул математикийн хувьд буруу —
+// metric_registry.json-ий widgets.d05 (valid:false) харна уу. Бүх 5 салбарт
+// нэг нэгжтэй харьцуулж болох метрик олдох хүртэл олон нийтэд харагдахгүй.
+// Сэргээх бол: FEATURE_FLAGS.d05DonutVisible-ыг true болгож, registry дэх
+// d05 тэмдэглэлийг устгана.
+const FEATURE_FLAGS = { d05DonutVisible: false };
 // Улаанбаатараас чиглэсэн зорчигчийн урсгал (bubble map) — жинхэнэ газрын
 // зургийн горим: geo координатууд veritech-flights-dashboard-аас шилжсэн
 // баримтат мэдээлэл (country centroid / нисэх буудлын байршил), Bilgee/
@@ -6818,6 +6831,11 @@ class Component extends DCLogic {
       // — {{ sector.label }}" гэх мэт холимог мөрүүдэд зөвхөн статик ЭХНИЙ
       // хэсгийг нь txt()-ээр орлуулж, динамик хэсгийг хэвээр үлдээсэн.
       d05Title:this.txt('d05','title','Салбарын харьцаа'),
+      // d05 донутыг түр нуусан (FEATURE_FLAGS.d05DonutVisible, тайлбарыг
+      // NEON/GLYPH-ийн доор үз) — trend график ганцаараа үлдэх үед grid-ийг
+      // нэг баганад шилжүүлнэ.
+      d05Visible:FEATURE_FLAGS.d05DonutVisible,
+      trendGridCols:FEATURE_FLAGS.d05DonutVisible?'1.6fr 1fr':'1fr',
       heroFlTitle:this.txt('hero_fl','title','НИСЛЭГ / САР'),
       // H3: тоон утга нь val()-аар metric_registry.json-той холбогддог.
       // Fallback үед ("11,979") аль сар болохыг мэдэхгүй тул сарын

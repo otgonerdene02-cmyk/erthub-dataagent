@@ -10,8 +10,10 @@
     },
     "d05": {
       "valid": false,
+      "hidden": true,
       "invalid_reason": "Салбар хоорондын хувийг өөр нэгжтэй утгуудыг (км, нислэг, чиглэл) нэмж тооцдог. Математикийн хувьд утгагүй.",
-      "blocked_until": "Бүх салбарт нэг нэгжтэй харьцуулж болох метрик бий болтол"
+      "blocked_until": "Бүх салбарт нэг нэгжтэй харьцуулж болох метрик бий болтол",
+      "hidden_note": "index.html-д FEATURE_FLAGS.d05DonutVisible=false-оор нуугдсан (кодыг устгаагүй). Сэргээх бол энд valid:true, hidden:false болгож, index.html-д FEATURE_FLAGS.d05DonutVisible=true болгоно."
     }
   },
   "metrics": {
