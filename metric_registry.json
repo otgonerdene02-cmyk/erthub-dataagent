@@ -18,6 +18,16 @@
       "sectors": ["air"],
       "note": "sector.c1d-ийг шууд уншина, код өөрчлөлт шаардлагагүй байсан."
     },
+    "i06": {
+      "metric": "air.monthly_growth_index",
+      "sectors": ["air"],
+      "note": "TREND.air (статик, SECTORS.air.c1d-ээс бүрэн тусгаарлагдсан хуурамч цуваа) байсныг live индексээр сольсон (H4 3/3). Харьцуулах цонх (compareWindow()) динамик — бүх 5 салбарыг ижил уртаар (одоогоор 1-7 сар) харуулна, road/rail/water/public хэвээр статик."
+    },
+    "r06": {
+      "metric": "air.monthly_growth_index",
+      "sectors": ["air"],
+      "note": "i06-тэй ЯГ ижил compareWindow()/trendFor() ашиглана — тэргүүлэгч/хоцрогдогч эрэмбэ мөн адил динамик цонхонд үндэслэнэ."
+    },
     "d05": {
       "valid": false,
       "hidden": true,
@@ -62,6 +72,18 @@
       "additive": false,
       "quality": "verified",
       "period_note": "Ирээгүй сарыг 0-ээр биш, огт оруулахгүй (массивын урт хувьсна)."
+    },
+    "air.monthly_growth_index": {
+      "source": "compareWindow()",
+      "dataset": "air_flights",
+      "column": "*",
+      "agg": "COUNT_BY_MONTH_INDEXED",
+      "filter": "compareWindow() цонх (бүх салбарт ижил, одоогоор 1-7 сар)",
+      "transform": "index[m] = count[m] / count[0] * 100",
+      "unit": "индекс (1-р сар=100)",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "Sector-хуудасны Он/Сар шүүлтээс ЗОРИУД тусгаарлагдсан — SECTORS.air.c1d биш, шууд _flightsCache-ээс тоолно."
     }
   },
   "removed": {

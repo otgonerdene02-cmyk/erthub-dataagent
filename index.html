@@ -1162,7 +1162,7 @@
     </sc-if>
     </div>
 
-    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">06</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">Салбар хоорондын харьцуулалт (индекс, 12 сар)</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">06</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">Салбар хоорондын харьцуулалт (индекс)</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;display:flex;flex-direction:column;">
@@ -1208,7 +1208,7 @@
       <div style="margin-top:auto;padding-top:18px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);">
         <div data-eh-card="i06" data-eh-field="foot" style="font-size:12.5px;color:var(--ink2);line-height:1.6;max-width:52ch;min-width:0;text-wrap:pretty;">{{ i06Foot }}</div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);border:1px solid var(--line2);border-radius:999px;padding:5px 12px;white-space:nowrap;flex-shrink:0;">
-          <div style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};"></div>сүүлийн цэг = 12-р сар
+          <div style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};"></div>сүүлийн цэг = {{ compareLastLabel }}
         </div>
       </div>
     </div>
@@ -4470,6 +4470,36 @@ class Component extends DCLogic {
     if(!this._flightsCache[lmYear]) return null;
     return {lmYear,lmMonth,monthLabel:MONTHS[lmMonth-1]};
   }
+  // i06/r06 (Салбар хоорондын харьцуулалт индекс) хэдэн сарыг харуулахаа
+  // ДИНАМИКААР шийднэ: бүх 5 салбарын дундаас хамгийн БОГИНО бүрэн-дата
+  // бүхий сарын тоог авна. Одоогоор зөвхөн air амьд (бусад 4 нь statik,
+  // үүрд 12 сартай) тул цонх = air-ийн сүүлийн БүТЭН сар (hero_fl-тэй ЯГ
+  // ижил тодорхойлолт, lastFullMonthWindow ашиглана). Air ачаалагдаагүй
+  // үед 12 (хуучин зан төлөв) буцаана. Ирээдүйд өөр салбар амьд болвол
+  // "12" гэсэн тоог хаана ч дахин бичихгүйгээр энд ганцхан газар өргөжинө.
+  compareWindow(){
+    const years=(this._flightsYears||[]).slice().sort((a,b)=>b-a);
+    const win=years.length?this.lastFullMonthWindow(years[0]):null;
+    const months=win?Math.min(12,win.lmMonth):12;
+    // air-ийн бодит сар бүрийн тоог Sector-хуудасны Он/Сар шүүлтээс
+    // ЗОРИУД тусгаарлана — SECTORS.air.c1d бол тэр шүүлтээс хамаардаг
+    // тул үүнийг энд ашиглавал хэрэглэгч Sector хуудсан дээр шүүлтээ
+    // өөрчлөх бүрд энэ харьцуулалт ч бас гэнэт өөрчлөгдөх эрсдэлтэй.
+    let airCounts=null;
+    if(win){
+      const raw=this._flightsCache[win.lmYear];
+      if(raw&&raw.length){
+        airCounts=new Array(12).fill(0);
+        for(const f of raw){ const m=f.month||1; if(m>=1&&m<=12) airCounts[m-1]++; }
+      }
+    }
+    return {months,year:win?win.lmYear:null,lastLabel:MONTHS[months-1],airCounts};
+  }
+  compareWindowNote(){
+    const w=this.compareWindow();
+    if(!w.year||w.months>=12) return '';
+    return ' Харьцуулах цонх: '+w.year+' оны 1–'+w.months+' сар. Бүх салбарт дата бүрэн байгаа сүүлийн үе.';
+  }
   // hero_fl ticker-т зориулсан "сүүлийн БүТЭН сарын нислэг" тоо. Датасэт
   // хуудасны Он/Сар шүүлтээс БүРЭН тусгаарлагдсан — тэр шүүлтийг хэрэглэгч
   // юу ч сонгосон хамаагүй, ticker үргэлж хамгийн сүүлийн (глобал) жилийн
@@ -5700,16 +5730,30 @@ class Component extends DCLogic {
 
     const off=(this.state.compareOff||'').split(',').filter(Boolean);
     const ckeys=Object.keys(TREND);
+    // Харьцуулах цонх (months) ДИНАМИКААР тооцоологдоно — compareWindow()
+    // үз. trendFor(k) нь тухайн салбарын индексийг яг тэр цонхны уртаар
+    // (0..months-1) буцаана; air амьд үед бодит тоогоор, эс үгүй бол
+    // хуучин статик 12 сарын массиваар (аль аль нь ижил уртад тайрагдана).
+    const cw=this.compareWindow();
+    const months=cw.months, lastIdx=months-1;
+    const airBase=cw.airCounts?(cw.airCounts[0]||1):1;
+    const trendFor=(k)=>{
+      if(k==='air'&&cw.airCounts) return cw.airCounts.slice(0,months).map(v=>v/airBase*100);
+      return TREND[k].slice(0,months);
+    };
     const W=620,Hh=200,pL=40,pR=62,pT=14,pB=26;
     const all=ckeys.filter(k=>!off.includes(k));
-    const vals=all.length?all.flatMap(k=>TREND[k]):[60,130];
+    const vals=all.length?all.flatMap(k=>trendFor(k)):[60,130];
     const vmax=Math.ceil(Math.max.apply(null,vals)/10)*10, vmin=Math.floor(Math.min.apply(null,vals)/10)*10;
-    const rng=(vmax-vmin)||1, stepX=(W-pL-pR)/11;
+    const rng=(vmax-vmin)||1, stepX=(W-pL-pR)/Math.max(1,lastIdx);
     const Y=(v)=>pT+(Hh-pT-pB)*(1-(v-vmin)/rng);
-    const compareLines=all.map(k=>({key:k,color:NEON[k],
-      endLabel:Math.round(TREND[k][11]),endLabelY:(Y(TREND[k][11])-6.5).toFixed(1),endLabelX:(pL+11*stepX+7).toFixed(1),
-      d:'M'+TREND[k].map((v,i)=>(pL+i*stepX).toFixed(1)+','+Y(v).toFixed(1)).join(' L'),
-      ex:(pL+11*stepX).toFixed(1),ey:Y(TREND[k][11]).toFixed(1)}));
+    const compareLines=all.map(k=>{
+      const t=trendFor(k);
+      return {key:k,color:NEON[k],
+        endLabel:Math.round(t[lastIdx]),endLabelY:(Y(t[lastIdx])-6.5).toFixed(1),endLabelX:(pL+lastIdx*stepX+7).toFixed(1),
+        d:'M'+t.map((v,i)=>(pL+i*stepX).toFixed(1)+','+Y(v).toFixed(1)).join(' L'),
+        ex:(pL+lastIdx*stepX).toFixed(1),ey:Y(t[lastIdx]).toFixed(1)};
+    });
     // declutter endpoint labels: keep >=12px apart
     const ordered=compareLines.slice().sort((a,b)=>parseFloat(a.endLabelY)-parseFloat(b.endLabelY));
     let prevY=-99;
@@ -5719,9 +5763,9 @@ class Component extends DCLogic {
       l.endLabelY=y.toFixed(1); prevY=y;
     });
     const cRank=ckeys.map(k=>{
-      const t=TREND[k],a=t[0],b=t[11],ch=(b-a)/a*100;
+      const t=trendFor(k),a=t[0],b=t[lastIdx],ch=(b-a)/a*100;
       return {key:k,label:SECTORS[k].label,glyph:GLYPH[k],color:NEON[k],
-        start:a,end:b,ch,muted:off.includes(k)};
+        start:Math.round(a),end:Math.round(b),ch,muted:off.includes(k)};
     }).sort((x,y)=>y.ch-x.ch);
     const cMaxAbs=Math.max.apply(null,cRank.map(r=>Math.abs(r.ch)))||1;
     const compareRank=cRank.map((r,i)=>({
@@ -5736,13 +5780,19 @@ class Component extends DCLogic {
     const compareY=[0,0.5,1].map(fr=>({label:Math.round(vmin+rng*fr),y:(pT+(Hh-pT-pB)*(1-fr)).toFixed(1),fy:(pT+(Hh-pT-pB)*(1-fr)-7).toFixed(1)}));
     const compareBaseShow=(100>=vmin&&100<=vmax);
     const compareBaseY=Y(100).toFixed(1);
-    const compareX=[0,3,6,9,11].map(i=>({label:(i+1)+'-р сар',fx:(pL+i*stepX-20).toFixed(1),fy:(Hh-pB+6).toFixed(1)}));
+    // 5 тэмдэглэгээ хүртэл жигд тараана, сүүлийн цэгийг үргэлж оруулна.
+    const tickN=Math.min(5,months);
+    const tickStep=tickN>1?lastIdx/(tickN-1):0;
+    const compareX=Array.from({length:tickN},(_,i)=>Math.round(i*tickStep))
+      .filter((v,i,arr)=>arr.indexOf(v)===i)
+      .map(idx=>({label:(idx+1)+'-р сар',fx:(pL+idx*stepX-20).toFixed(1),fy:(Hh-pB+6).toFixed(1)}));
     const compareChips=ckeys.map(k=>({key:k,label:SECTORS[k].label,glyph:GLYPH[k],
       toggle:()=>{ const s=new Set(off); if(s.has(k)) s.delete(k); else s.add(k); this.setState({compareOff:Array.from(s).join(',')}); },
       style:'cursor:pointer;display:flex;align-items:center;gap:7px;border-radius:999px;padding:7px 14px;font-size:12.5px;font-family:inherit;white-space:nowrap;transition:.16s var(--ease);'
         +(off.includes(k)?'border:1px solid var(--line);background:transparent;color:var(--ink3);':'border:1.5px solid '+NEON[k]+';background:'+NEON[k]+'1c;color:var(--ink);font-weight:600;')
     }));
     const compareGeom={axisX1:pL,axisX2:W-pR,axisY:(Hh-pB).toFixed(1),padT:pT};
+    const compareLastLabel=cw.lastLabel;
 
     const ai=this.state.aiIndex;
     const aiChips=AI_QA.map((qa,i)=>({q:qa.q,pick:()=>this.askAi(qa.q,i),
@@ -5776,7 +5826,7 @@ class Component extends DCLogic {
       }),
       weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,
       weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,
-      compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,
+      compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareLastLabel,
       f04:{open:!!this.state.f04Open,toggle:()=>this.setState(s=>({f04Open:!s.f04Open})),
         btnStyle:'cursor:pointer;font-family:inherit;width:26px;height:26px;border-radius:8px;flex-shrink:0;font-size:12px;line-height:1;'+(this.state.f04Open?'border:1px solid #7C5CF0;background:#7C5CF01a;color:#7C5CF0;':'border:1px solid var(--line);background:var(--surface);color:var(--ink3);'),
         byValue:()=>this.setState({f04Sort:'value'}),byName:()=>this.setState({f04Sort:'name'}),
@@ -6875,12 +6925,15 @@ class Component extends DCLogic {
       k04Foot2:this.txt('k04','foot2','AI итгэл'),
       t05Title:this.txt('t05','title','Чиг хандлага'),
       t05Foot:this.txt('t05','foot','Дундаж шугам харуулах'),
-      i06Title:this.txt('i06','title','Салбар хоорондын харьцуулалт (индекс, 12 сар)'),
+      i06Title:this.txt('i06','title','Салбар хоорондын харьцуулалт (индекс)'),
       i06Sub:this.txt('i06','sub','суурь индекс = 100'),
-      i06Foot:this.txt('i06','foot','Индекс 2026 оны 1-р сарыг 100 гэж авсан харьцангуй үзүүлэлт. Салбарын нэр дээр дарж шугамыг нуух, харуулах боломжтой.'),
+      // i06Foot: content.json-ий статик тайлбарын ард харьцуулах цонхыг
+      // (жиш нь "2026 оны 1–7 сар") ДИНАМИКААР залгана — тоог энд хатуу
+      // бичихгүй, buildExtras()-ийн compareWindowNote-оос авна.
+      i06Foot:this.txt('i06','foot','Индекс 2026 оны 1-р сарыг 100 гэж авсан харьцангуй үзүүлэлт. Салбарын нэр дээр дарж шугамыг нуух, харуулах боломжтой.')+this.compareWindowNote(),
       // r06 — мөн 2 тусдаа элемент: foot (1232 "Тэргүүлэгч"),
       // foot2 (1237 "Хоцрогдож байгаа").
-      r06Title:this.txt('r06','title','12 сарын өсөлтийн эрэмбэ'),
+      r06Title:this.txt('r06','title','Сарын өсөлтийн эрэмбэ'),
       r06Foot:this.txt('r06','foot','Тэргүүлэгч'),
       r06Foot2:this.txt('r06','foot2','Хоцрогдож байгаа'),
       u07Title:this.txt('u07','title','Сүүлд шинэчлэгдсэн өгөгдөл'),
