@@ -8,6 +8,11 @@
       "metric": "air.flight_count_last_month",
       "sectors": ["air"]
     },
+    "u07": {
+      "metric": "air.feed_updated_at",
+      "sectors": ["air"],
+      "note": "RECENT[0..4]-ийн зөвхөн air мөр (index 0) бодит. Бусад 4 мөр (road/rail/public/water) статик, эх сурвалжгүй тул энд бүртгэгдээгүй."
+    },
     "d05": {
       "valid": false,
       "hidden": true,
@@ -28,6 +33,18 @@
       "additive": false,
       "quality": "verified",
       "period_note": "Одоогийн сар дутуу тоо өгөх тул сүүлийн бүтэн сарыг тоолно. \"Одоо\" гэдгийг feed-ийн хамгийн сүүлийн бичлэгээр тодорхойлно, хэрэглэгчийн хөтчийн цагаар биш."
+    },
+    "air.feed_updated_at": {
+      "source": "flightsMeta",
+      "dataset": "air_flights_index",
+      "column": "fetchedAt",
+      "agg": "MAX",
+      "filter": "",
+      "transform": "УБ цаг руу хөрвүүлэлт",
+      "unit": "огноо",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "flights-index.json-ий fetchedAt талбар — эх сурвалжийн indexer хамгийн сүүлд хэзээ ажилласныг заана. Датаны 'сүүлийн бичлэг' (lastRecord метрик, өөр) биш."
     }
   },
   "removed": {
