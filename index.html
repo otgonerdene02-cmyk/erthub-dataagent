@@ -4694,13 +4694,13 @@ class Component extends DCLogic {
     const domPaxPct=cur.totalPax?(cur.domPax/cur.totalPax*100):0;
 
     // H3b: "НИЙТ НИСЛЭГ" (kpis[0][1]) урьд нь сонгосон он/сарын мужийн НИЙЛБЭР
-    // (жишээ нь бүтэн жил сонгосон бол жилийн эхнээс өнөөдрийг хvртэлх нийт)
+    // (жишээ нь бүтэн жил сонгосон бол жилийн эхнээс өнөөдрийг хүртэлх нийт)
     // байсан ч шошго (болон ticker/ls/d05-ийн ижил тоо) "сар" гэж ойлгогддог
     // байсан тул ticker-тэй ЯГ ИЖИЛ цонх (сүүлийн бүтэн сар) ашиглахаар
     // болгов — lastFullMonthWindow() нь hero_fl-тэй нэг эх сурвалж. type/dir/
     // region шүүлт хэвээр үйлчилнэ, гэхдээ он/сарын мужийн слайдер (monthFrom/
-    // monthTo) энэ нэг тоонд НӨЛӨӨЛӨХГvй болно — matchFilter-ийн сар шалгах
-    // хэсгийг зориуд орхисон. c1d/rank/bars-д хvрээгүй, тэдгээр хэвээрээ.
+    // monthTo) энэ нэг тоонд НӨЛӨӨЛӨХГүй болно — matchFilter-ийн сар шалгах
+    // хэсгийг зориуд орхисон. c1d/rank/bars-д хүрээгүй, тэдгээр хэвээрээ.
     const flTypeFilter=(f)=>{
       if(filters.type==='intl' && f.ou!=='ОУ') return false;
       if(filters.type==='domestic' && f.ou==='ОУ') return false;
@@ -4713,9 +4713,27 @@ class Component extends DCLogic {
     const flCount=flWin
       ? this._flightsCache[flWin.lmYear].filter(f=>f.year===flWin.lmYear&&f.month===flWin.lmMonth&&flTypeFilter(f)).length
       : cur.count;
+    // H3c: дельта (өсөлт/бууралт %) нь одоо ТОО-той ЯГ ИЖИЛ суурьтай байх
+    // ёстой — өмнөх (H3b хүртэл) хэвээрээ "сарын тоо vs жилийн нийлбэр"
+    // хосолсон үлдвэл нэг картан дээр 2 өөр хугацааны цонх зэрэгцэж
+    // уншигчийг төөрөгдүүлнэ. Иймд сүүлийн БүТЭН сарыг ӨМНӨХ ОНЫ МӨН САРТАЙ
+    // (YoY) харьцуулна — өмнөх сартай (МоМ) биш, учир нь агаарын тээвэр
+    // улирлын хэлбэлзэлтэй (зун үргэлж өндөр) тул MoM харьцуулга бол
+    // улирлын нөлөөг л үзүүлэх болно, жинхэнэ өсөлтийг биш. Өмнөх оны мөн
+    // сарын дата байхгүй бол (cache ачаалагдаагүй) дельтаг ХООСОН үлдээнэ —
+    // буруу тоо харуулахаас илүү сайн.
+    const flPrevWin=flWin?{lmYear:flWin.lmYear-1,lmMonth:flWin.lmMonth}:null;
+    const flPrevSrc=flPrevWin?this._flightsCache[flPrevWin.lmYear]:null;
+    const flPrevCount=flPrevSrc
+      ?flPrevSrc.filter(f=>f.year===flPrevWin.lmYear&&f.month===flPrevWin.lmMonth&&flTypeFilter(f)).length
+      :null;
+    const flDelta=flPrevCount!=null?pctDelta(flCount,flPrevCount):{s:'',dir:'flat'};
+    const flCompareLabel=flPrevCount!=null
+      ?(flWin.monthLabel+' · өмнөх оны мөн сартай ('+MONTHS[flPrevWin.lmMonth-1]+' '+flPrevWin.lmYear+') харьцуулбал')
+      :'харьцуулах өгөгдөл алга (өмнөх оны мөн сарын дата алга)';
 
     SECTORS.air.kpis=[
-      ['НИЙТ НИСЛЭГ',fmtCount(flCount),'',pctDelta(cur.count,prev.count).s,pctDelta(cur.count,prev.count).dir,compareLabel],
+      ['НИЙТ НИСЛЭГ',fmtCount(flCount),'',flDelta.s,flDelta.dir,flCompareLabel],
       ['НИЙТ ЗОРЧИГЧ',fmtBig(cur.totalPax),'',pctDelta(cur.totalPax,prev.totalPax).s,pctDelta(cur.totalPax,prev.totalPax).dir,compareLabel],
       ['ОУ НИСЛЭГ',fmtCount(cur.intlFlights),intlPct.toFixed(1)+'%',pctDelta(cur.intlFlights,prev.intlFlights).s,pctDelta(cur.intlFlights,prev.intlFlights).dir,compareLabel],
       ['ОУ ЗОРЧИГЧ',fmtBig(cur.intlPax),intlPaxPct.toFixed(1)+'%',pctDelta(cur.intlPax,prev.intlPax).s,pctDelta(cur.intlPax,prev.intlPax).dir,compareLabel],
