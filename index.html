@@ -802,7 +802,7 @@
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
         <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekPaxPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2p" data-eh-field="title">{{ w2pTitle }}</span> · {{ weekPaxUnit }}</div></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekPaxPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2p" data-eh-field="title">{{ w2pTitle }}</span>{{ weekPaxMockMark }} · {{ weekPaxUnit }}</div></div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;">{{ weekPaxTotal }}</div>
         </div>
       </div>
@@ -831,9 +831,12 @@
           <div style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;margin-top:7px;padding-left:44px;">{{ weekPaxBase }}</div>
           <div style="display:flex;gap:12px;margin-top:9px;padding-left:44px;">
             <sc-for list="{{ weekPaxBars }}" as="wb" hint-placeholder-count="6">
-              <div style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);">{{ wb.label }}</div>
+              <div style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);{{ wb.dateLabelStyle }}">{{ wb.label }}</div>
             </sc-for>
           </div>
+          <sc-if value="{{ weekPaxMockNote }}">
+          <div style="font-size:9.5px;color:var(--ink3);font-style:italic;margin-top:5px;padding-left:44px;">{{ weekPaxMockNote }}</div>
+          </sc-if>
           <div style="margin-top:22px;">
             <div style="display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--ink2);margin-bottom:8px;">
               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span data-eh-card="w2p" data-eh-field="foot">{{ w2pFoot }}</span> — {{ weekPaxPlan.label }}</span>
@@ -5704,10 +5707,26 @@ class Component extends DCLogic {
       newsQuery:this.state.newsQ||'',onNewsQuery:(e)=>this.setState({newsQ:e.target.value})};
   }
   buildExtras(){
-    const buildWeek=(wt,wd)=>{
+    // H4b/8-widget: w2p/w2c mock эсэхийг registry-ээс уншина (кодод хатуу
+    // бичихгүй). Registry ачаалагдаагүй эсвэл quality!=='verified' үед
+    // ХАМГИЙН АЮУЛГүй тал руу алдаж (i06-той адил зарчим) mock тэмдэглэл
+    // харуулна — зөвхөн ЭНЭ үзүүлэлт бодитоор "verified" болсон үед л
+    // тэмдэглэл автоматаар алга болно.
+    const weekIsMock=(widgetId)=>{
+      const reg=this.state.metricRegistry;
+      const w=reg&&reg.widgets&&reg.widgets[widgetId];
+      return !w||w.quality!=='verified';
+    };
+    const buildWeek=(wt,wd,widgetId)=>{
       const bmax=Math.max.apply(null,wd.bar), bmin=Math.min.apply(null,wd.bar);
       const base=Math.floor((bmin-(bmax-bmin)*0.6)/50)*50, top=Math.ceil((bmax+(bmax-bmin)*0.15)/50)*50;
-      const bars=wd.bar.map((v,i)=>({label:WEEK_LABELS[i],value:v.toLocaleString(),
+      const isMock=weekIsMock(widgetId);
+      // Огнооны шошго (WEEK_LABELS: "11.17" гэх мэт) жил заагаагүй, өдөр
+      // бүр статик тул mock үед харагдацаараа сааруулж "жишиг" гэдгийг
+      // үзэгдэл дээрээ илэрхийлнэ (тайлбар мөрөнд текстээр ч давхар
+      // тэмдэглэнэ).
+      const dateLabelStyle=isMock?'color:var(--ink3);opacity:.55;font-style:italic;':'';
+      const bars=wd.bar.map((v,i)=>({label:WEEK_LABELS[i],value:v.toLocaleString(),dateLabelStyle,
         heightPct:((v-base)/(top-base)*100).toFixed(1)+'%',color:wd.color}));
       const yTicks=[0,0.5,1].map(fr=>({pct:(fr*100).toFixed(1)+'%',label:Math.round(base+fr*(top-base)).toLocaleString()}));
       const avgVal=wd.bar.reduce((a,v)=>a+v,0)/wd.bar.length;
@@ -5732,9 +5751,12 @@ class Component extends DCLogic {
       const plan={label:wd.plan.label,pctLabel:wd.plan.pct.toFixed(1)+'%',width:Math.min(100,wd.plan.pct)+'%',color:wd.color};
       const delta=SECTOR_DELTA[wt].map(d=>({label:SECTORS[d[0]].label,glyph:GLYPH[d[0]],color:NEON[d[0]],value:d[1],unit:d[2],
         delta:(d[3]>0?'+':'')+d[3].toFixed(1)+'%',deltaColor:d[3]<0?'#D2564A':'#2FA37B'}));
-      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,stats,plan,unit:wd.unit,total:wd.total,delta};
+      const dateRange=WEEK_LABELS[0]+'–'+WEEK_LABELS[WEEK_LABELS.length-1];
+      const mockNote=isMock?('Түр дата — '+dateRange+' хугацаа жишиг утга. Бодит эх сурвалжид холбогдоогүй.'):'';
+      const mockMark=isMock?' *':'';
+      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,stats,plan,unit:wd.unit,total:wd.total,delta,mockNote,mockMark};
     };
-    const wPax=buildWeek('pax',WEEK_DATA.pax), wCargo=buildWeek('cargo',WEEK_DATA.cargo);
+    const wPax=buildWeek('pax',WEEK_DATA.pax,'w2p'), wCargo=buildWeek('cargo',WEEK_DATA.cargo,'w2c');
 
     const off=(this.state.compareOff||'').split(',').filter(Boolean);
     const ckeys=Object.keys(TREND);
@@ -5856,7 +5878,7 @@ class Component extends DCLogic {
           deltaColor:/^\+/.test(k[2])?'#0E8F63':'var(--ink3)',
           spark:sp,area:sp+' L120,32 L0,32 Z'};
       }),
-      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,
+      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,weekPaxMockNote:wPax.mockNote,weekPaxMockMark:wPax.mockMark,
       weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,
       compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareLastLabel,
       showLeadLag,compareHasMock,
