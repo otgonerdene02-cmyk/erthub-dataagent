@@ -659,7 +659,7 @@
     </div>
 
     <div style="display:flex;align-items:center;gap:12px;margin-top:34px;margin-bottom:14px;">
-      <div data-eh-card="uk" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ ukTitle }}</div>
+      <div data-eh-card="uk" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ ukTitle }}{{ ukMark }}</div>
       <div style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></div>
       <div data-eh-card="uk" data-eh-field="sub" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">{{ ukSub }}</div>
     </div>
@@ -686,6 +686,9 @@
         </div>
       </sc-for>
     </div>
+    <sc-if value="{{ ukMockNote }}">
+    <div style="font-size:10px;color:var(--ink3);font-style:italic;margin-top:8px;">{{ ukMockNote }}</div>
+    </sc-if>
 
     <div style="display:flex;align-items:center;gap:12px;margin:34px 0 14px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">01</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
@@ -802,7 +805,7 @@
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
         <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekPaxPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2p" data-eh-field="title">{{ w2pTitle }}</span>{{ weekPaxMockMark }} · {{ weekPaxUnit }}</div></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekPaxPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2p" data-eh-field="title">{{ w2pTitle }}</span>{{ w2pMark }} · {{ weekPaxUnit }}</div></div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;">{{ weekPaxTotal }}</div>
         </div>
       </div>
@@ -834,9 +837,6 @@
               <div style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);{{ wb.dateLabelStyle }}">{{ wb.label }}</div>
             </sc-for>
           </div>
-          <sc-if value="{{ weekPaxMockNote }}">
-          <div style="font-size:9.5px;color:var(--ink3);font-style:italic;margin-top:5px;padding-left:44px;">{{ weekPaxMockNote }}</div>
-          </sc-if>
           <div style="margin-top:22px;">
             <div style="display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--ink2);margin-bottom:8px;">
               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span data-eh-card="w2p" data-eh-field="foot">{{ w2pFoot }}</span> — {{ weekPaxPlan.label }}</span>
@@ -849,7 +849,7 @@
         </div>
         <div>
           <div>
-            <div data-eh-card="w2pb" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;">{{ w2pbTitle }}</div>
+            <div data-eh-card="w2pb" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;">{{ w2pbTitle }}{{ w2pbMark }}</div>
             <div style="display:flex;gap:2px;height:26px;border-radius:7px;overflow:hidden;background:var(--surface2);">
               <sc-for list="{{ weekPaxShare }}" as="ws" hint-placeholder-count="3">
                 <div style="width:{{ ws.w }};background:linear-gradient(180deg,{{ ws.color }},{{ ws.color }}b3);min-width:5px;"></div>
@@ -877,15 +877,15 @@
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);">
-        <div data-eh-card="w2px" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2pxTitle }}</div>
+        <div data-eh-card="w2px" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2pxTitle }}{{ w2pxMark }}</div>
         <div data-eh-card="w2px" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ w2pxFoot }}</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:10px;">
         <sc-for list="{{ weekPaxDelta }}" as="dl" hint-placeholder-count="5">
-          <div style="border-left:2px solid {{ dl.color }};padding-left:12px;">
+          <div style="border-left:2px solid {{ dl.color }};padding-left:12px;{{ dl.rowStyle }}">
             <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ dl.glyph }} {{ dl.label }}</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;">{{ dl.value }} <span style="font-size:10px;color:var(--ink3);font-weight:400;">{{ dl.unit }}</span></div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:{{ dl.deltaColor }};margin-top:3px;">{{ dl.delta }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:{{ dl.deltaColor }};margin-top:3px;">{{ dl.delta }}{{ dl.mockTag }}</div>
           </div>
         </sc-for>
       </div>
@@ -893,7 +893,7 @@
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
         <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekCargoPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2c" data-eh-field="title">{{ w2cTitle }}</span> · {{ weekCargoUnit }}</div></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekCargoPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2c" data-eh-field="title">{{ w2cTitle }}</span>{{ w2cMark }} · {{ weekCargoUnit }}</div></div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;">{{ weekCargoTotal }}</div>
         </div>
       </div>
@@ -922,7 +922,7 @@
           <div style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;margin-top:7px;padding-left:44px;">{{ weekCargoBase }}</div>
           <div style="display:flex;gap:12px;margin-top:9px;padding-left:44px;">
             <sc-for list="{{ weekCargoBars }}" as="wb" hint-placeholder-count="6">
-              <div style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);">{{ wb.label }}</div>
+              <div style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);{{ wb.dateLabelStyle }}">{{ wb.label }}</div>
             </sc-for>
           </div>
           <div style="margin-top:22px;">
@@ -937,7 +937,7 @@
         </div>
         <div>
           <div>
-            <div data-eh-card="w2cb" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;">{{ w2cbTitle }}</div>
+            <div data-eh-card="w2cb" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;">{{ w2cbTitle }}{{ w2cbMark }}</div>
             <div style="display:flex;gap:2px;height:26px;border-radius:7px;overflow:hidden;background:var(--surface2);">
               <sc-for list="{{ weekCargoShare }}" as="ws" hint-placeholder-count="3">
                 <div style="width:{{ ws.w }};background:linear-gradient(180deg,{{ ws.color }},{{ ws.color }}b3);min-width:5px;"></div>
@@ -965,19 +965,22 @@
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);">
-        <div data-eh-card="w2cx" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2cxTitle }}</div>
+        <div data-eh-card="w2cx" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2cxTitle }}{{ w2cxMark }}</div>
         <div data-eh-card="w2cx" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ w2cxFoot }}</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:10px;">
         <sc-for list="{{ weekCargoDelta }}" as="dl" hint-placeholder-count="5">
-          <div style="border-left:2px solid {{ dl.color }};padding-left:12px;">
+          <div style="border-left:2px solid {{ dl.color }};padding-left:12px;{{ dl.rowStyle }}">
             <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ dl.glyph }} {{ dl.label }}</div>
             <div style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:var(--ink);line-height:1;">{{ dl.value }}<span style="font-size:10px;color:var(--ink3);font-weight:500;margin-left:3px;">{{ dl.unit }}</span></div>
-            <div style="font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ dl.deltaColor }};margin-top:6px;">{{ dl.delta }}</div>
+            <div style="font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ dl.deltaColor }};margin-top:6px;">{{ dl.delta }}{{ dl.mockTag }}</div>
           </div>
         </sc-for>
       </div>
     </div>
+    <sc-if value="{{ section02MockNote }}">
+    <div style="font-size:10px;color:var(--ink3);font-style:italic;margin:-8px 0 20px;">{{ section02MockNote }}</div>
+    </sc-if>
 
     <div style="margin:0 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#7C5CF0,#7C5CF0bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #7C5CF0cc;">03</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">Коммунитийн онцлох</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
       <button sc-camel-on-click="{{ goCommunity }}" style="cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:600;color:#7C5CF0;background:none;border:none;white-space:nowrap;flex-shrink:0;">Бүгдийг үзэх →</button>
@@ -4511,6 +4514,16 @@ class Component extends DCLogic {
     if(!w.year||w.months>=12) return mockNote;
     return ' Харьцуулах цонх: '+w.year+' оны 1–'+w.months+' сар. Бүх салбарт дата бүрэн байгаа сүүлийн үе.'+mockNote;
   }
+  // Виджет бүр metric_registry.json-д quality:"verified" гэж тодорхой
+  // бичигдээгүй бол mock гэж үзнэ (registry ачаалагдаагүй үед ч мөн адил —
+  // "үнэн зөв мэдэхгүй үед их зүйл мэдэж байна гэж бүү битгий" зарчим,
+  // i06-той адил). Ганц газар тодорхойлсноор бүх mock-тэмдэглэгээ (8+
+  // виджет) ЯГ НЭГ логик ашиглана.
+  isWidgetMock(id){
+    const reg=this.state.metricRegistry;
+    const w=reg&&reg.widgets&&reg.widgets[id];
+    return !w||w.quality!=='verified';
+  }
   // hero_fl ticker-т зориулсан "сүүлийн БүТЭН сарын нислэг" тоо. Датасэт
   // хуудасны Он/Сар шүүлтээс БүРЭН тусгаарлагдсан — тэр шүүлтийг хэрэглэгч
   // юу ч сонгосон хамаагүй, ticker үргэлж хамгийн сүүлийн (глобал) жилийн
@@ -5712,15 +5725,18 @@ class Component extends DCLogic {
     // ХАМГИЙН АЮУЛГүй тал руу алдаж (i06-той адил зарчим) mock тэмдэглэл
     // харуулна — зөвхөн ЭНЭ үзүүлэлт бодитоор "verified" болсон үед л
     // тэмдэглэл автоматаар алга болно.
-    const weekIsMock=(widgetId)=>{
-      const reg=this.state.metricRegistry;
-      const w=reg&&reg.widgets&&reg.widgets[widgetId];
-      return !w||w.quality!=='verified';
-    };
-    const buildWeek=(wt,wd,widgetId)=>{
+    const section02Ids=['w2p','w2pb','w2px','w2c','w2cb','w2cx'];
+    const section02Marks={};
+    section02Ids.forEach(id=>{ section02Marks[id]=this.isWidgetMock(id)?' *':''; });
+    const section02AnyMock=section02Ids.some(id=>this.isWidgetMock(id));
+    const section02DateRange=WEEK_LABELS[0]+'–'+WEEK_LABELS[WEEK_LABELS.length-1];
+    const section02MockNote=section02AnyMock
+      ?('* Түр дата — Долоо хоногийн тайлангийн үзүүлэлтүүд WEEK_DATA/SECTOR_DELTA тогтмол утгаас (жишиг огноо '+section02DateRange+'). Бодит эх сурвалжид холбогдоогүй.')
+      :'';
+    const buildWeek=(wt,wd,widgetId,deltaWidgetId)=>{
       const bmax=Math.max.apply(null,wd.bar), bmin=Math.min.apply(null,wd.bar);
       const base=Math.floor((bmin-(bmax-bmin)*0.6)/50)*50, top=Math.ceil((bmax+(bmax-bmin)*0.15)/50)*50;
-      const isMock=weekIsMock(widgetId);
+      const isMock=this.isWidgetMock(widgetId);
       // Огнооны шошго (WEEK_LABELS: "11.17" гэх мэт) жил заагаагүй, өдөр
       // бүр статик тул mock үед харагдацаараа сааруулж "жишиг" гэдгийг
       // үзэгдэл дээрээ илэрхийлнэ (тайлбар мөрөнд текстээр ч давхар
@@ -5749,14 +5765,17 @@ class Component extends DCLogic {
         pct:(v/shareTot*100).toFixed(1),w:Math.max(v/shareTot*100,1.4).toFixed(2)+'%',value:v.toLocaleString()}));
       const stats=wd.stats.map(s=>({l:s[0],v:s[1],color:s[2]==='pos'?'#2FA37B':(s[2]==='neg'?'#D2564A':'var(--ink)')}));
       const plan={label:wd.plan.label,pctLabel:wd.plan.pct.toFixed(1)+'%',width:Math.min(100,wd.plan.pct)+'%',color:wd.color};
+      // w2px/w2cx (SECTOR_DELTA) бүх 5 мөр адилхан статик — r06-той адил
+      // сааралдуулж, мөр бүрд "түр дата" тэмдэглэнэ (энд ялгаварлах
+      // verified дэд хэсэг алга, тул бүгд ижил боловуулгатай).
+      const deltaIsMock=this.isWidgetMock(deltaWidgetId);
       const delta=SECTOR_DELTA[wt].map(d=>({label:SECTORS[d[0]].label,glyph:GLYPH[d[0]],color:NEON[d[0]],value:d[1],unit:d[2],
-        delta:(d[3]>0?'+':'')+d[3].toFixed(1)+'%',deltaColor:d[3]<0?'#D2564A':'#2FA37B'}));
-      const dateRange=WEEK_LABELS[0]+'–'+WEEK_LABELS[WEEK_LABELS.length-1];
-      const mockNote=isMock?('Түр дата — '+dateRange+' хугацаа жишиг утга. Бодит эх сурвалжид холбогдоогүй.'):'';
-      const mockMark=isMock?' *':'';
-      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,stats,plan,unit:wd.unit,total:wd.total,delta,mockNote,mockMark};
+        delta:(d[3]>0?'+':'')+d[3].toFixed(1)+'%',deltaColor:d[3]<0?'#D2564A':'#2FA37B',
+        rowStyle:deltaIsMock?'opacity:.55;':'',
+        mockTag:deltaIsMock?' · түр дата':''}));
+      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,stats,plan,unit:wd.unit,total:wd.total,delta};
     };
-    const wPax=buildWeek('pax',WEEK_DATA.pax,'w2p'), wCargo=buildWeek('cargo',WEEK_DATA.cargo,'w2c');
+    const wPax=buildWeek('pax',WEEK_DATA.pax,'w2p','w2px'), wCargo=buildWeek('cargo',WEEK_DATA.cargo,'w2c','w2cx');
 
     const off=(this.state.compareOff||'').split(',').filter(Boolean);
     const ckeys=Object.keys(TREND);
@@ -5878,7 +5897,10 @@ class Component extends DCLogic {
           deltaColor:/^\+/.test(k[2])?'#0E8F63':'var(--ink3)',
           spark:sp,area:sp+' L120,32 L0,32 Z'};
       }),
-      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,weekPaxMockNote:wPax.mockNote,weekPaxMockMark:wPax.mockMark,
+      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,
+      section02MockNote,
+      w2pMark:section02Marks.w2p,w2pbMark:section02Marks.w2pb,w2pxMark:section02Marks.w2px,
+      w2cMark:section02Marks.w2c,w2cbMark:section02Marks.w2cb,w2cxMark:section02Marks.w2cx,
       weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,
       compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareLastLabel,
       showLeadLag,compareHasMock,
@@ -6960,6 +6982,10 @@ class Component extends DCLogic {
       heroPxTitle:this.txt('hero_px','title','ЗОРЧИГЧ / ӨДӨР'),
       ukTitle:this.txt('uk','title','Порталын нийт үзүүлэлт'),
       ukSub:this.txt('uk','sub','2026 · III улирал'),
+      // uk-ийн эх сурвалж (KPI_UNIFIED) 02-р хэсгийн WEEK_DATA-с ӨӨР тул
+      // section02MockNote-той хамт нэгтгэхгүй, өөрийн тэмдэг+тайлбартай.
+      ukMark:this.isWidgetMock('uk')?' *':'',
+      ukMockNote:this.isWidgetMock('uk')?'* Түр дата — KPI_UNIFIED тогтмол утга, бодит эх сурвалжид холбогдоогүй.':'',
       lsTitle:this.txt('ls','title','ҮНДСЭН ҮЗҮҮЛЭЛТҮҮД'),
       lsFoot:this.txt('ls','foot','өмнөх сартай харьцуулбал · 12 сарын график'),
       w2pTitle:this.txt('w2p','title','Долоо хоногийн нийт зорчигч тээвэр'),
@@ -6996,7 +7022,8 @@ class Component extends DCLogic {
       // ai08 — "ErtHub-LM" (мөр 1275) брэндийн гарчиг тул content.json-ийн
       // sub-д ОРООГүй; зөвхөн мөр 1276-ийн бодит sub мөрийг холбов.
       ai08Sub:this.txt('ai08','sub','v2.4 · 24 датасет холбогдсон'),
-      ai08Foot:this.txt('ai08','foot','Хариултууд нээлттэй өгөгдлийн сан дээр үндэслэнэ. Албан ёсны шийдвэрт эх сурвалжийг шалгана уу.'),
+      ai08Foot:this.txt('ai08','foot','Хариултууд нээлттэй өгөгдлийн сан дээр үндэслэнэ. Албан ёсны шийдвэрт эх сурвалжийг шалгана уу.')
+        +(this.isWidgetMock('ai08')?' * "24 датасет холбогдсон" гэдэг тоо тогтмол бичигдсэн, бодит тоолол хараахан алга.':''),
       sector:s,
       sectorTabs,
       orbitDots,
