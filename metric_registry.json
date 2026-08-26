@@ -121,11 +121,14 @@
       "note": "\"24 датасет холбогдсон\" 3 газарт хатуу бичигдсэн, бодит тоолол алга"
     },
     "d05": {
-      "valid": false,
-      "hidden": true,
-      "invalid_reason": "Салбар хоорондын хувийг өөр нэгжтэй утгуудыг (км, нислэг, чиглэл) нэмж тооцдог. Математикийн хувьд утгагүй.",
-      "blocked_until": "Бүх салбарт нэг нэгжтэй харьцуулж болох метрик бий болтол",
-      "hidden_note": "index.html-д FEATURE_FLAGS.d05DonutVisible=false-оор нуугдсан (кодыг устгаагүй). Сэргээх бол энд valid:true, hidden:false болгож, index.html-д FEATURE_FLAGS.d05DonutVisible=true болгоно."
+      "sectors": {
+        "air":    { "metric": "air.flight_count_last_month", "quality": "verified" },
+        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Авто замын сүлжээний урттай нэг нэгжид (жиш. хөдөлгөөний ачаалал) харьцуулах бодит метрик" },
+        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Төмөр замын бодит метрик — УБТЗ" },
+        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Усан замын бодит метрик — Далайн захиргаа" },
+        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Нийтийн тээврийн бодит метрик — НТГ" }
+      },
+      "note": "Донутын нийлбэр өөр нэгжтэй утгуудыг (км, нислэг, чиглэл) шууд нэмж тооцдог байсан тул зөвхөн verified (air) салбарыг бодит утгаар, бусдыг 0-ээр авч тооцно — 0+0+0+0+air=air тул air 100% гарна, энэ нь одоогийн бодит холболтын байдал."
     }
   },
   "metrics": {
