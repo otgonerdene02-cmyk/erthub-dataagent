@@ -402,9 +402,9 @@
         <div style="position:relative;overflow:hidden;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);box-shadow:var(--shadow);margin-bottom:26px;max-width:520px;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);">
           <div style="position:absolute;top:0;bottom:0;display:flex;align-items:center;gap:34px;white-space:nowrap;padding-left:14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--ink2);animation:tickerScroll 20s linear infinite;">
             <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>AI-ДЭМЖЛЭГТЭЙ ШИНЖИЛГЭЭ</span>
-            <span>48,210 КМ АВТО ЗАМ</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>312K <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
+            <span>48,210 КМ АВТО ЗАМ</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
             <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>AI-ДЭМЖЛЭГТЭЙ ШИНЖИЛГЭЭ</span>
-            <span>48,210 КМ АВТО ЗАМ</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>312K <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
+            <span>48,210 КМ АВТО ЗАМ</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
           </div>
         </div>
         <div style="position:relative;">
@@ -7102,6 +7102,11 @@ class Component extends DCLogic {
       // ч зассан тул txt() унших бүрдээ (сүлжээ тасарсан үед ч) зөв үсгээр
       // гарна — алдаа автоматаар арилна.
       heroPxTitle:this.txt('hero_px','title','ЗОРЧИГЧ / ӨДӨР'),
+      // H5: hero_px эх сурвалжгүй (registry: widgets.hero_px.sectors.public,
+      // quality!=='verified') тул 0 — K/M форматлагч ("312K" маягийн)
+      // ХЭРЭГЛЭХГүй, цэвэр "0" (w2p/w2c-д олдсон нэгжийн давхар масштабын
+      // алдаанаас сэргийлэх зорилгоор).
+      heroPxValue:this.isWidgetMock('hero_px')?'0':'312K',
       ukTitle:this.txt('uk','title','Порталын нийт үзүүлэлт'),
       ukSub:this.txt('uk','sub','2026 · III улирал'),
       // uk-ийн эх сурвалж (KPI_UNIFIED) 02-р хэсгийн WEEK_DATA-с ӨӨР тул
