@@ -61,10 +61,15 @@
       "note": "KPI_UNIFIED (86/28/36/9) хатуу тоо, ямар ч бодит массивтай таарахгүй"
     },
     "w2p": {
-      "metric": null,
-      "quality": "mock",
-      "would_need": "7 хоногийн зорчигчийн бодит дата — эх сурвалж тодорхойгүй",
-      "note": "WEEK_DATA.pax бүрэн статик"
+      "sectors": {
+        "air":    { "metric": "air.weekly_pax", "quality": "verified" },
+        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн авто замын зорчигчийн бодит дата — эх сурвалж тодорхойгүй" },
+        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн төмөр замын зорчигчийн бодит дата — УБТЗ" },
+        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн усан замын зорчигчийн бодит дата — Далайн захиргаа" },
+        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн нийтийн тээврийн зорчигчийн бодит дата — НТГ" }
+      },
+      "plan": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Долоо хоногийн зорчигчийн улсын төлөвлөгөө — эх сурвалж тодорхойгүй" },
+      "note": "Нийт дүн одоо зөвхөн air.weekly_pax (сүүлийн бүтэн 7 хоног, lastFullWeekWindow). bar/donut/stats хэсэг хэвээр WEEK_DATA статик (энэ H4 үе шатанд өөрчлөгдөөгүй)."
     },
     "w2pb": {
       "metric": null,
@@ -73,16 +78,25 @@
       "note": "WEEK_DATA.pax дэд задаргаа (donut/share) статик"
     },
     "w2px": {
-      "metric": null,
-      "quality": "mock",
-      "would_need": "Салбар бүрийн 7 хоногийн зорчигчийн харьцуулалт — тодорхойгүй",
-      "note": "SECTOR_DELTA.pax бүрэн статик"
+      "sectors": {
+        "air":    { "metric": "air.weekly_pax", "quality": "verified" },
+        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Авто замын 7 хоногийн зорчигчийн харьцуулалт — тодорхойгүй" },
+        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Төмөр замын 7 хоногийн зорчигчийн харьцуулалт — УБТЗ" },
+        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Усан замын 7 хоногийн зорчигчийн харьцуулалт — Далайн захиргаа" },
+        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Нийтийн тээврийн 7 хоногийн зорчигчийн харьцуулалт — НТГ" }
+      },
+      "note": "air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
     },
     "w2c": {
-      "metric": null,
-      "quality": "mock",
-      "would_need": "7 хоногийн ачааны бодит дата — эх сурвалж тодорхойгүй",
-      "note": "WEEK_DATA.cargo бүрэн статик"
+      "sectors": {
+        "air":    { "metric": "air.weekly_cargo", "quality": "verified" },
+        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн авто замын ачааны бодит дата — эх сурвалж тодорхойгүй" },
+        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн төмөр замын ачааны бодит дата — УБТЗ" },
+        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн усан замын ачааны бодит дата — Далайн захиргаа" },
+        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Нийтийн тээврийн ачаа — хамааралгүй сектор" }
+      },
+      "plan": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Долоо хоногийн ачааны улсын төлөвлөгөө — эх сурвалж тодорхойгүй" },
+      "note": "Нийт дүн одоо зөвхөн air.weekly_cargo (сүүлийн бүтэн 7 хоног, lastFullWeekWindow). bar/donut/stats хэсэг хэвээр WEEK_DATA статик (энэ H4 үе шатанд өөрчлөгдөөгүй)."
     },
     "w2cb": {
       "metric": null,
@@ -91,10 +105,14 @@
       "note": "WEEK_DATA.cargo дэд задаргаа (donut/share) статик"
     },
     "w2cx": {
-      "metric": null,
-      "quality": "mock",
-      "would_need": "Салбар бүрийн 7 хоногийн ачааны харьцуулалт — тодорхойгүй",
-      "note": "SECTOR_DELTA.cargo бүрэн статик"
+      "sectors": {
+        "air":    { "metric": "air.weekly_cargo", "quality": "verified" },
+        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Авто замын 7 хоногийн ачааны харьцуулалт — тодорхойгүй" },
+        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Төмөр замын 7 хоногийн ачааны харьцуулалт — УБТЗ" },
+        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Усан замын 7 хоногийн ачааны харьцуулалт — Далайн захиргаа" },
+        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Нийтийн тээврийн ачаа — хамааралгүй сектор" }
+      },
+      "note": "air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
     },
     "ai08": {
       "metric": null,
@@ -170,6 +188,30 @@
       "additive": false,
       "quality": "verified",
       "period_note": "Sector-хуудасны Он/Сар шүүлтээс ЗОРИУД тусгаарлагдсан — SECTORS.air.c1d биш, шууд _flightsCache-ээс тоолно."
+    },
+    "air.weekly_pax": {
+      "source": "weeklyAirStats/weekFlightsSum",
+      "dataset": "air_flights",
+      "column": "pax",
+      "agg": "SUM",
+      "filter": "lastFullWeekWindow(0) — feed-ийн хамгийн сүүлийн бичлэгээс ӨМНӨХ бүтэн 7 хоног",
+      "transform": "",
+      "unit": "хүн",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "Одоогийн (дутуу) өдрийг оруулахгүй, hero_fl-ийн 'сүүлийн бүтэн сар' зарчимтай адил. WoW хувь lastFullWeekWindow(1)-тэй харьцуулна."
+    },
+    "air.weekly_cargo": {
+      "source": "weeklyAirStats/weekFlightsSum",
+      "dataset": "air_flights",
+      "column": "cargo",
+      "agg": "SUM",
+      "filter": "lastFullWeekWindow(0) — feed-ийн хамгийн сүүлийн бичлэгээс ӨМНӨХ бүтэн 7 хоног",
+      "transform": "",
+      "unit": "тонн",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "cargo талбар аль хэдийн тонноор (cargoKg-ийн 1000-д хуваасантай тэнцүү). WoW хувь lastFullWeekWindow(1)-тэй харьцуулна."
     }
   },
   "removed": {

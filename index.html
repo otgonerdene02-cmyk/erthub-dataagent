@@ -807,6 +807,9 @@
         <div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekPaxPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2p" data-eh-field="title">{{ w2pTitle }}</span>{{ w2pMark }} · {{ weekPaxUnit }}</div></div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;">{{ weekPaxTotal }}</div>
+          <sc-if value="{{ weekPaxAirOnlyNote }}">
+          <div style="font-size:10.5px;color:var(--ink3);margin-top:6px;max-width:340px;">{{ weekPaxAirOnlyNote }}</div>
+          </sc-if>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px;align-items:start;">
@@ -895,6 +898,9 @@
         <div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekCargoPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2c" data-eh-field="title">{{ w2cTitle }}</span>{{ w2cMark }} · {{ weekCargoUnit }}</div></div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;">{{ weekCargoTotal }}</div>
+          <sc-if value="{{ weekCargoAirOnlyNote }}">
+          <div style="font-size:10.5px;color:var(--ink3);margin-top:6px;max-width:340px;">{{ weekCargoAirOnlyNote }}</div>
+          </sc-if>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px;align-items:start;">
@@ -4524,6 +4530,80 @@ class Component extends DCLogic {
     const w=reg&&reg.widgets&&reg.widgets[id];
     return !w||w.quality!=='verified';
   }
+  // Салбар тус бүрийн quality/шошгыг registry-ийн widgets.<id>.sectors.<key>-
+  // ээс уншина (k04/ls-тэй ижил бүтэц). "none" — эх сурвалж огт алга, тоог
+  // 0 гэж үзнэ (жинхэнэ 0 биш) — иймд шошгыг ЗААВАЛ хамт харуулна.
+  sectorQuality(widgetId,sectorKey){
+    const reg=this.state.metricRegistry;
+    const w=reg&&reg.widgets&&reg.widgets[widgetId];
+    const s=w&&w.sectors&&w.sectors[sectorKey];
+    if(!s) return {quality:'none',label:'мэдээлэл алга'};
+    return {quality:s.quality||'none',label:s.label||'мэдээлэл алга'};
+  }
+  // Виджетийн "төлөвлөгөө" дэд-үзүүлэлт (жиш. weekPaxPlan) үнэн хэрэгтээ
+  // тусдаа эх сурвалжтай тул sectorQuality-аас тусад нь registry-ийн
+  // widgets.<id>.plan-аас уншина.
+  planQuality(widgetId){
+    const reg=this.state.metricRegistry;
+    const w=reg&&reg.widgets&&reg.widgets[widgetId];
+    const p=w&&w.plan;
+    if(!p) return {quality:'none',label:'мэдээлэл алга'};
+    return {quality:p.quality||'none',label:p.label||'мэдээлэл алга'};
+  }
+  // Сүүлийн БүТЭН 7 хоног (offsetWeeks=0 — хамгийн сүүлийнх, 1 — түүнээс
+  // өмнөх, WoW харьцуулахад) — feed-ийн ХАМГИЙН СүүЛИЙН бичлэгийн ӨДРӨӨС
+  // ӨМНӨХ 7 бүтэн өдөр (өнөөдөр/сүүлийн өдөр дутуу байж болзошгүй тул
+  // тооцохгүй, hero_fl-ийн "сүүлийн бүтэн сар"-тай яг адил зарчим).
+  lastFullWeekWindow(offsetWeeks){
+    offsetWeeks=offsetWeeks||0;
+    const years=(this._flightsYears||[]).slice().sort((a,b)=>b-a);
+    if(!years.length) return null;
+    const latestYear=years[0];
+    const latestData=this._flightsCache[latestYear];
+    if(!latestData||!latestData.length) return null;
+    const newest=latestData.reduce((a,f)=>(!a||f.unixtimestamp>a.unixtimestamp)?f:a,null);
+    if(!newest) return null;
+    const endUtc=Date.UTC(newest.year,(newest.month||1)-1,newest.day||1)-86400000-offsetWeeks*7*86400000;
+    const days=[];
+    for(let i=6;i>=0;i--){
+      const d=new Date(endUtc-i*86400000);
+      days.push({year:d.getUTCFullYear(),month:d.getUTCMonth()+1,day:d.getUTCDate()});
+    }
+    return days;
+  }
+  // Өгөгдсөн 7 өдрийн жагсаалтад тухайн талбарыг нэгтгэнэ. Долоо хоног
+  // жилийн зааг давбал 2 жилийн cache-ээс уншина (аль хэдийн урьдчилан
+  // татагдсан байдаг, loadFlightsData үз). Аль нэг жил cache-д алга бол
+  // null буцаана — үр дүнг "мэдээлэл алга" гэж үзэхийн тулд.
+  weekFlightsSum(days,field){
+    if(!days) return null;
+    const byYear={};
+    days.forEach(d=>{ (byYear[d.year]=byYear[d.year]||[]).push(d.month+'-'+d.day); });
+    let sum=0;
+    for(const y of Object.keys(byYear)){
+      const cache=this._flightsCache[y];
+      if(!cache) return null;
+      const wanted=new Set(byYear[y]);
+      cache.forEach(f=>{ if(wanted.has(f.month+'-'+f.day)) sum+=(f[field]||0); });
+    }
+    return sum;
+  }
+  // w2p/w2c/w2px/w2cx-д зориулсан air-ийн бодит 7 хоногийн нэгдсэн тоо —
+  // Sector-хуудасны шүүлтээс ЗОРИУД тусгаарлагдсан (compareWindow()-той
+  // адил учир шалтгаан).
+  weeklyAirStats(){
+    const curDays=this.lastFullWeekWindow(0);
+    if(!curDays) return null;
+    const pax=this.weekFlightsSum(curDays,'pax');
+    const cargo=this.weekFlightsSum(curDays,'cargo');
+    if(pax==null||cargo==null) return null;
+    const prevDays=this.lastFullWeekWindow(1);
+    const prevPax=prevDays?this.weekFlightsSum(prevDays,'pax'):null;
+    const prevCargo=prevDays?this.weekFlightsSum(prevDays,'cargo'):null;
+    const pctDelta=(a,b)=>(b==null||!b)?null:(a-b)/b*100;
+    return {pax,cargo,paxDeltaPct:pctDelta(pax,prevPax),cargoDeltaPct:pctDelta(cargo,prevCargo),
+      weekStart:curDays[0],weekEnd:curDays[6]};
+  }
   // hero_fl ticker-т зориулсан "сүүлийн БүТЭН сарын нислэг" тоо. Датасэт
   // хуудасны Он/Сар шүүлтээс БүРЭН тусгаарлагдсан — тэр шүүлтийг хэрэглэгч
   // юу ч сонгосон хамаагүй, ticker үргэлж хамгийн сүүлийн (глобал) жилийн
@@ -5725,18 +5805,38 @@ class Component extends DCLogic {
     // ХАМГИЙН АЮУЛГүй тал руу алдаж (i06-той адил зарчим) mock тэмдэглэл
     // харуулна — зөвхөн ЭНЭ үзүүлэлт бодитоор "verified" болсон үед л
     // тэмдэглэл автоматаар алга болно.
-    const section02Ids=['w2p','w2pb','w2px','w2c','w2cb','w2cx'];
-    const section02Marks={};
+    // w2p/w2c/w2px/w2cx нь air-ийн хэсгээрээ үнэндээ холбогдсон тул
+    // блок "*" тэмдэглэлээс хасав — эдгээрийн зохих тэмдэглэл (airOnlyNote,
+    // мөр тус бүрийн "мэдээлэл алга") дээр тусдаа, илүү нарийвчлалтай
+    // харуулагдана. w2pb/w2cb хэвээр бүрэн mock тул энд үлдэнэ.
+    const section02Ids=['w2pb','w2cb'];
+    const section02Marks={w2p:'',w2px:'',w2c:'',w2cx:''};
     section02Ids.forEach(id=>{ section02Marks[id]=this.isWidgetMock(id)?' *':''; });
     const section02AnyMock=section02Ids.some(id=>this.isWidgetMock(id));
     const section02DateRange=WEEK_LABELS[0]+'–'+WEEK_LABELS[WEEK_LABELS.length-1];
     const section02MockNote=section02AnyMock
-      ?('* Түр дата — Долоо хоногийн тайлангийн үзүүлэлтүүд WEEK_DATA/SECTOR_DELTA тогтмол утгаас (жишиг огноо '+section02DateRange+'). Бодит эх сурвалжид холбогдоогүй.')
+      ?('* Түр дата — Төрлийн задаргаа (donut) WEEK_DATA тогтмол утгаас (жишиг огноо '+section02DateRange+'). Бодит эх сурвалжид холбогдоогүй.')
       :'';
+    // w2p/w2c/w2px/w2cx-ийн air-ийн бодит 7 хоногийн тоог НЭГ Л УДАА
+    // тооцоолж, доор дахин ашиглана (hero_fl-ийн val() зарчимтай адил —
+    // ганц эх сурвалж, олон газар).
+    const weeklyAir=this.weeklyAirStats();
+    const fmtWeekVal=(n)=>{
+      if(n>=1000000) return (n/1000000).toFixed(2)+'M';
+      if(n>=1000) return (n/1000).toFixed(1)+'K';
+      const r=Math.round(n*10)/10;
+      return (r%1===0?r.toFixed(0):r.toFixed(1));
+    };
     const buildWeek=(wt,wd,widgetId,deltaWidgetId)=>{
       const bmax=Math.max.apply(null,wd.bar), bmin=Math.min.apply(null,wd.bar);
       const base=Math.floor((bmin-(bmax-bmin)*0.6)/50)*50, top=Math.ceil((bmax+(bmax-bmin)*0.15)/50)*50;
       const isMock=this.isWidgetMock(widgetId);
+      // Air-ийн бодит утга (нийт дүн, w2px/w2cx-ийн air мөр аль аль нь энэ
+      // НЭГ утгыг ашиглана) — эрэлт үед аль ч 4 mock салбарыг 0 гэж үзвэл
+      // нийлбэрт нэмэгдэхгүй тул "Нийт дүн" автоматаар зөвхөн air-ийн
+      // бодит дүн болно.
+      const realVal=weeklyAir?(wt==='pax'?weeklyAir.pax:weeklyAir.cargo):null;
+      const realDeltaPct=weeklyAir?(wt==='pax'?weeklyAir.paxDeltaPct:weeklyAir.cargoDeltaPct):null;
       // Огнооны шошго (WEEK_LABELS: "11.17" гэх мэт) жил заагаагүй, өдөр
       // бүр статик тул mock үед харагдацаараа сааруулж "жишиг" гэдгийг
       // үзэгдэл дээрээ илэрхийлнэ (тайлбар мөрөнд текстээр ч давхар
@@ -5764,16 +5864,53 @@ class Component extends DCLogic {
       const share=wd.donut.data.map((v,i)=>({label:wd.donut.labels[i],color:wd.donut.colors[i],
         pct:(v/shareTot*100).toFixed(1),w:Math.max(v/shareTot*100,1.4).toFixed(2)+'%',value:v.toLocaleString()}));
       const stats=wd.stats.map(s=>({l:s[0],v:s[1],color:s[2]==='pos'?'#2FA37B':(s[2]==='neg'?'#D2564A':'var(--ink)')}));
-      const plan={label:wd.plan.label,pctLabel:wd.plan.pct.toFixed(1)+'%',width:Math.min(100,wd.plan.pct)+'%',color:wd.color};
-      // w2px/w2cx (SECTOR_DELTA) бүх 5 мөр адилхан статик — r06-той адил
-      // сааралдуулж, мөр бүрд "түр дата" тэмдэглэнэ (энд ялгаварлах
-      // verified дэд хэсэг алга, тул бүгд ижил боловуулгатай).
-      const deltaIsMock=this.isWidgetMock(deltaWidgetId);
-      const delta=SECTOR_DELTA[wt].map(d=>({label:SECTORS[d[0]].label,glyph:GLYPH[d[0]],color:NEON[d[0]],value:d[1],unit:d[2],
-        delta:(d[3]>0?'+':'')+d[3].toFixed(1)+'%',deltaColor:d[3]<0?'#D2564A':'#2FA37B',
-        rowStyle:deltaIsMock?'opacity:.55;':'',
-        mockTag:deltaIsMock?' · түр дата':''}));
-      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,stats,plan,unit:wd.unit,total:wd.total,delta};
+      // Төлөвлөгөө (жилийн улсын зорилт) — air-ийн 7 хоногийн бодит тоотой
+      // ямар ч холбоогүй тусдаа эх сурвалж (registry-ийн widgets.<id>.plan).
+      // Эх сурвалж алга үед 0/0 тодорхойгүй тул хувийг ТООЦООХГүй ("—"),
+      // 0%-ийг буруу утгаар бичихгүй; зурвасыг НУУХГүй (хоосон үзүүлнэ —
+      // үүнийг өөрөө "дата алга" гэдгийг харааны хувьд илэрхийлнэ).
+      const planQ=this.planQuality(widgetId);
+      const planNone=planQ.quality!=='verified';
+      const plan=planNone
+        ?{label:planQ.label,pctLabel:'—',width:'0%',color:wd.color}
+        :{label:wd.plan.label,pctLabel:wd.plan.pct.toFixed(1)+'%',width:Math.min(100,wd.plan.pct)+'%',color:wd.color};
+      // w2px/w2cx: air мөр — бодит үнэ (дээрх realVal/realDeltaPct), бусад
+      // 4 мөр — registry-ээс sectorQuality уншиж 0 + "мэдээлэл алга"
+      // (жинхэнэ 0 биш, эх сурвалж алга гэдгийг ил заана).
+      const delta=SECTOR_DELTA[wt].map(d=>{
+        const key=d[0];
+        if(key==='air'){
+          const v=realVal!=null?fmtWeekVal(realVal):d[1];
+          const dPct=realDeltaPct;
+          return {label:SECTORS.air.label,glyph:GLYPH.air,color:NEON.air,value:v,unit:'',
+            delta:dPct!=null?((dPct>0?'+':'')+dPct.toFixed(1)+'%'):'—',
+            deltaColor:dPct!=null?(dPct<0?'#D2564A':'#2FA37B'):'#828EA8',
+            rowStyle:'',mockTag:''};
+        }
+        const q=this.sectorQuality(deltaWidgetId,key);
+        const none=q.quality!=='verified';
+        return {label:SECTORS[key].label,glyph:GLYPH[key],color:NEON[key],
+          value:none?'0':d[1],unit:none?'':d[2],
+          delta:none?'—':((d[3]>0?'+':'')+d[3].toFixed(1)+'%'),
+          deltaColor:none?'#828EA8':(d[3]<0?'#D2564A':'#2FA37B'),
+          rowStyle:'',mockTag:none?(' · '+q.label):''};
+      });
+      // Нийт дүн: 4 mock салбарыг 0 гэж үзвэл нийлбэрт нэмэгдэхгүй тул
+      // энд шууд air-ийн бодит дүнг тавина (0+0+0+0+air.real = air.real).
+      const total=realVal!=null?fmtWeekVal(realVal):wd.total;
+      // Бусад 4 салбар холбогдоогүй байхад л (delta-д "мэдээлэл алга"
+      // тэмдэгтэй мөр байгаа эсэхээр илрүүлнэ) энэ тайлбарыг харуулна —
+      // ирээдүйд бүх салбар холбогдвол автоматаар алга болно.
+      const otherSectorsNone=delta.some(d=>d.mockTag);
+      const airOnlyNote=(realVal!=null&&otherSectorsNone)
+        ?'Зөвхөн агаарын тээврийн эх сурвалж холбогдсон. Бусад салбар холбогдох бүрд нийт дүнд нэмэгдэнэ.'
+        :'';
+      // fmtWeekVal нь K/M-ийг ӨӨРТЭЭ шингээж форматлодог (жиш. "18.4K")
+      // тул wd.unit-ийн "мянган ..." шошгыг хамт үзүүлбэл масштаб ХОЁР
+      // ДАХИН тооцогдох мэт ойлгогдоно — иймд бодит үтгын үед энгийн
+      // нэгж (хүн/тонн) ашиглана, mock үед л хуучин "мянган ..." үлдэнэ.
+      const unit=realVal!=null?(wt==='cargo'?'тонн':'хүн'):wd.unit;
+      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,stats,plan,unit,total,delta,airOnlyNote};
     };
     const wPax=buildWeek('pax',WEEK_DATA.pax,'w2p','w2px'), wCargo=buildWeek('cargo',WEEK_DATA.cargo,'w2c','w2cx');
 
@@ -5897,11 +6034,11 @@ class Component extends DCLogic {
           deltaColor:/^\+/.test(k[2])?'#0E8F63':'var(--ink3)',
           spark:sp,area:sp+' L120,32 L0,32 Z'};
       }),
-      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,
+      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,weekPaxAirOnlyNote:wPax.airOnlyNote,
       section02MockNote,
       w2pMark:section02Marks.w2p,w2pbMark:section02Marks.w2pb,w2pxMark:section02Marks.w2px,
       w2cMark:section02Marks.w2c,w2cbMark:section02Marks.w2cb,w2cxMark:section02Marks.w2cx,
-      weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,
+      weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,weekCargoAirOnlyNote:wCargo.airOnlyNote,
       compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareLastLabel,
       showLeadLag,compareHasMock,
       f04:{open:!!this.state.f04Open,toggle:()=>this.setState(s=>({f04Open:!s.f04Open})),
