@@ -98,6 +98,30 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .dot{width:9px;height:9px;border-radius:50%;flex:none}
 .d-ok{background:var(--ok)} .d-mix{background:var(--warn)} .d-no{background:#fff;border:1.5px solid var(--bad)}
 .d-txt{background:var(--line2)}
+/* таб */
+.tabs{display:flex;padding:0 18px;gap:2px}
+.tab{font-family:var(--mono);font-size:11.5px;padding:9px 15px;border:0;background:none;
+  color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent}
+.tab:hover{color:var(--ink2)}
+.tab.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+.tbadge{background:var(--warn);color:#fff;border-radius:9px;padding:1px 6px;font-size:9px;margin-left:6px}
+.tbadge:empty{display:none}
+/* сайтын текст засварлагч */
+.sgroup{background:var(--card);border:1px solid var(--line);border-radius:11px;
+  padding:15px 17px;margin-bottom:12px}
+.sgroup h3{margin:0 0 3px;font-size:13.5px;font-weight:650;letter-spacing:-.01em}
+.sgroup .where{font-family:var(--mono);font-size:9.5px;color:var(--ink3);margin-bottom:12px}
+.sfield{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;align-items:start;
+  padding:9px 0;border-bottom:1px solid var(--line)}
+.sfield:last-child{border-bottom:0}
+.sfield .lbl{font-size:12px;color:var(--ink2);padding-top:7px;line-height:1.35}
+.sfield .lbl code{font-family:var(--mono);font-size:9.5px;color:var(--ink3);display:block;
+  margin-top:2px;word-break:break-all;line-height:1.35}
+.sfield input,.sfield textarea{width:100%;font-family:var(--mono);font-size:11.5px;padding:7px 9px;
+  border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink);resize:vertical}
+.sfield input:focus,.sfield textarea:focus{outline:2px solid var(--road);outline-offset:1px;border-color:transparent}
+.sfield.dirty input,.sfield.dirty textarea{border-color:var(--warn);background:#FFFDF6}
+@media(max-width:700px){.sfield{grid-template-columns:1fr;gap:4px}.sfield .lbl{padding-top:0}}
 .cd-n{font-size:12.5px;font-weight:580;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cd-t{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .src{font-family:var(--mono);font-size:10px;text-align:right;line-height:1.35;flex:none;white-space:nowrap}
@@ -259,15 +283,19 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 
 <div class="hd">
   <div class="hd-t"><div class="mark">EH</div>
-    <div><div class="sub">Дата удирдлага · нүүр хуудас</div><h1>Агаарын тээврийн виджет холбоос</h1></div>
+    <div><div class="sub">Дата удирдлага · нүүр хуудас</div><h1>Нүүр хуудасны агуулга</h1></div>
     <div class="hd-r">
       <button class="btn sm" id="allBtn">Бүх харагдац</button>
       <a class="btn sm" href="../index.html" target="_blank" rel="noopener">Сайтыг нээх ↗</a></div>
   </div>
+  <div class="tabs">
+    <button class="tab on" data-tab="data">Виджет ба дата</button>
+    <button class="tab" data-tab="site">Сайтын текст<span class="tbadge" id="siteN"></span></button>
+  </div>
 </div>
 
-<div class="grid">
-  <div class="pane l">
+<div class="grid" id="gridWrap">
+  <div class="pane l" id="paneL">
     <input class="srch" id="q" placeholder="Датасэт хайх…" aria-label="Датасэт хайх">
     <p class="ph">Датасэт <span id="dsn" style="font-family:var(--mono)"></span></p>
     <div id="dsList"></div>
@@ -364,7 +392,7 @@ var SWAPPABLE={line:['line','bar'],donut:['donut','bar'],bignum:['bignum','bar']
 
 /* ══════════════════ ТӨЛӨВ ══════════════════ */
 var REG=null, CON=null, REG0=null, CON0=null;
-var S={ds:null,level:'sections',section:null,widget:null,td:null,q:'',
+var S={tab:'data',ds:null,level:'sections',section:null,widget:null,td:null,q:'',
        mo:null,mt:'view',flash:null,viz:{}};
 var LOG=[];   /* энэ сессийн бодит өөрчлөлтийн лог */
 var FEED={state:'idle',err:null,months:[],index:[],weekPax:null,weekCargo:null,
@@ -650,7 +678,86 @@ function widgetDirty(id){
   return regDirtyKeys().concat(conDirtyKeys()).some(function(k){return k.split('|')[0]===id});
 }
 function sectionDirty(sec){return widgetsIn(sec).some(widgetDirty)}
-function dirtyCount(){return regDirtyKeys().length+conDirtyKeys().length}
+function dirtyCount(){return regDirtyKeys().length+conDirtyKeys().length+siteDirtyKeys().length}
+/* content.json өөрчлөгдсөн эсэх — виджетийн текст ЭСВЭЛ site{} */
+function contentDirty(){return conDirtyKeys().length+siteDirtyKeys().length}
+
+/* ══════════════════ САЙТЫН ТЕКСТ (content.json → site{}) ══════════════════
+   Виджет БУС текст: цэс, толгой, hero, хэсгийн гарчиг, хөл г.м.
+   Бүлэг бүрийг ГАЗРЫН НЭРТЭЙГЭЭ хамт үзүүлнэ — засварлагч сайт дээр
+   яг хаана байгааг нь мэдэж байж засна. Метрик/тооцоолол ЭНД БАЙХГҮЙ. */
+var SITE_GROUPS=[
+  {key:'brand',   title:'Брэнд',           where:'Толгой хэсэг · зүүн дээд булан',
+   labels:{mark:'Лого товчлол',name:'Брэнд нэр',tagline:'Лого доод тайлбар'}},
+  {key:'nav',     title:'Үндсэн цэс',      where:'Толгой хэсэг · дээд мөр',
+   labels:{home:'Нүүр',eservices:'Цахим үйлчилгээ',browse:'Нээлттэй өгөгдөл',
+           community:'Коммунити',history:'Салбарын түүх',news:'Мэдээ мэдээлэл'}},
+  {key:'auth',    title:'Нэвтрэлтийн товч',where:'Толгой хэсэг · баруун дээд булан',
+   labels:{login:'Нэвтрэх товч',signup:'Бүртгүүлэх товч',signout:'Гарах товч'}},
+  {key:'hero',    title:'Hero · баннер',   where:'Хуудасны дээд том хэсэг',
+   labels:{title_line1:'Гол гарчиг · 1-р мөр',title_line2:'Гол гарчиг · 2-р мөр',
+           lead:'Тайлбар өгүүлбэр',search_placeholder:'Хайлтын талбарын сануулга',
+           search_button:'Хайх товч',motto:'Уриа'}},
+  {key:'sections',title:'Хэсгийн гарчиг',  where:'Дугаарласан хэсгийн толгой (01/02/03/06)',
+   labels:{'sec-01':'01 · гарчиг','sec-02':'02 · гарчиг','sec-03':'03 · гарчиг','sec-06':'06 · гарчиг'}},
+  {key:'filter',  title:'Шүүлтийн хэсэг',  where:'01-р хэсэг',
+   labels:{button:'Шүүлт товч',sector:'Салбарын шошго',interval:'Хугацааны шошго'}},
+  {key:'community',title:'Коммунити',      where:'03-р хэсэг',
+   labels:{see_all:'Бүгдийг үзэх холбоос',top_seen:'Хамгийн их харагдсан гарчиг',
+           top_prop:'Хурдан өсөж буй санал гарчиг',open:'Нээх холбоос'}},
+  {key:'ai',      title:'AI туслах',       where:'08-р хэсэг',
+   labels:{model:'Загварын нэр',placeholder:'Асуултын талбарын сануулга',ask:'Асуух товч'}},
+  {key:'footer',  title:'Хөл хэсэг',       where:'Хуудасны хамгийн доод мөр',
+   labels:{copyright:'Эрхийн мэдэгдэл'}},
+  {key:'a11y',    title:'Хандах боломж',   where:'aria-label — дэлгэц уншигчид зориулсан',
+   labels:{menu:'Цэсний товч',filter:'Шүүлтийн товч',close:'Хаах товч'}}
+];
+/* hero.ticker / hero.diagram нь үүрлэсэн тул тусад нь */
+var SITE_NESTED=[
+  {path:['hero','ticker'], title:'Hero · гүйдэг мөр', where:'Hero дээд ирмэг — код 2 газар ашиглана',
+   labels:{ai:'AI мөр',road:'Авто замын мөр',live:'Шууд мэдээллийн мөр'}},
+  {path:['hero','diagram'],title:'Hero · AI CORE диаграм', where:'Hero баруун тал',
+   labels:{core:'Төвийн шошго',core_sub:'Төвийн дэд шошго'}},
+  {path:['hero','diagram','orbit_gov'],   title:'Диаграм · Төрийн байгууллага', where:'Hero диаграм',
+   labels:{title:'Гарчиг',sub:'Дэд бичиг'}},
+  {path:['hero','diagram','orbit_public'],title:'Диаграм · Иргэд', where:'Hero диаграм',
+   labels:{title:'Гарчиг',sub:'Дэд бичиг'}},
+  {path:['hero','diagram','orbit_media'], title:'Диаграм · Олон нийт', where:'Hero диаграм',
+   labels:{title:'Гарчиг',sub:'Дэд бичиг'}}
+];
+var LONG_FIELDS={lead:1,copyright:1,top_seen:1,top_prop:1,'sec-01':1,'sec-06':1};
+
+function siteGet(p){var c=CON.site;for(var i=0;i<p.length;i++){if(!c)return undefined;c=c[p[i]]}return c}
+function siteGet0(p){var c=CON0.site;for(var i=0;i<p.length;i++){if(!c)return undefined;c=c[p[i]]}return c}
+function siteSet(p,v){
+  var c=CON.site;
+  for(var i=0;i<p.length-1;i++) c=c[p[i]];
+  c[p[p.length-1]]=v;
+}
+/* Бүх засварлах талбарын зам — dirty тооллого, зурагт хоёуланд нь */
+function sitePaths(){
+  var out=[];
+  SITE_GROUPS.forEach(function(g){
+    Object.keys(g.labels).forEach(function(k){
+      if(siteGet([g.key,k])!==undefined) out.push([g.key,k]);
+    });
+  });
+  SITE_NESTED.forEach(function(g){
+    Object.keys(g.labels).forEach(function(k){
+      if(siteGet(g.path.concat(k))!==undefined) out.push(g.path.concat(k));
+    });
+  });
+  /* chips — массив */
+  var ch=siteGet(['hero','diagram','chips']);
+  if(Array.isArray(ch)) ch.forEach(function(_,i){out.push(['hero','diagram','chips',String(i)])});
+  return out;
+}
+function siteDirtyKeys(){
+  if(!CON||!CON.site) return [];
+  return sitePaths().filter(function(p){
+    return String(siteGet(p)==null?'':siteGet(p))!==String(siteGet0(p)==null?'':siteGet0(p));
+  }).map(function(p){return 'site:'+p.join('.')});
+}
 
 /* ══════════════════ УРЬДЧИЛАН ХАРАХ КАРТ ══════════════════
    Виджет бүрийг САЙТ ДЭЭРХ ЖИНХЭНЭ ХЭЛБЭРЭЭР нь зурна. Өнгө, фонт нь
@@ -881,6 +988,69 @@ function crumb(){
       '<div><i style="background:var(--bad)"></i><b>'+t.no+'</b> холбогдоогүй</div>'+
       (t.txt?'<div><i style="background:var(--line2)"></i><b>'+t.txt+'</b> зөвхөн текст</div>':'')+
     '</div></div>';
+}
+
+/* ══════════════════ САЙТЫН ТЕКСТ — ЗУРАГЧ ══════════════════ */
+function siteField(p,label){
+  var v=siteGet(p); if(v===undefined) return '';
+  var key=p.join('.'), dirty=String(v)!==String(siteGet0(p)==null?'':siteGet0(p));
+  var last=p[p.length-1];
+  var long=LONG_FIELDS[last]||String(v).length>70;
+  return '<div class="sfield'+(dirty?' dirty':'')+'">'+
+    '<div class="lbl">'+esc(label)+(dirty?' <b class="dt">өөрчлөгдсөн</b>':'')+
+      '<code>site.'+esc(key)+'</code></div>'+
+    (long
+      ? '<textarea data-sf="'+esc(key)+'" rows="'+(String(v).length>140?4:2)+'">'+esc(v)+'</textarea>'
+      : '<input data-sf="'+esc(key)+'" value="'+esc(v)+'">')+
+    '</div>';
+}
+function lvSite(){
+  if(!CON.site) return '<div class="empty">content.json-д <code>site</code> блок алга</div>';
+  var q=(S.q||'').trim().toLowerCase();
+  var match=function(label,p){
+    if(!q) return true;
+    return (label+' '+p.join('.')+' '+String(siteGet(p)||'')).toLowerCase().indexOf(q)>=0;
+  };
+  var html='', shown=0;
+
+  SITE_GROUPS.concat([]).forEach(function(g){
+    var rows='';
+    Object.keys(g.labels).forEach(function(k){
+      var p=[g.key,k];
+      if(siteGet(p)===undefined||!match(g.labels[k],p)) return;
+      rows+=siteField(p,g.labels[k]); shown++;
+    });
+    if(rows) html+='<div class="sgroup"><h3>'+esc(g.title)+'</h3>'+
+      '<div class="where">'+esc(g.where)+'</div>'+rows+'</div>';
+  });
+  SITE_NESTED.forEach(function(g){
+    var rows='';
+    Object.keys(g.labels).forEach(function(k){
+      var p=g.path.concat(k);
+      if(siteGet(p)===undefined||!match(g.labels[k],p)) return;
+      rows+=siteField(p,g.labels[k]); shown++;
+    });
+    if(rows) html+='<div class="sgroup"><h3>'+esc(g.title)+'</h3>'+
+      '<div class="where">'+esc(g.where)+'</div>'+rows+'</div>';
+  });
+  /* chips — массив тул тусад нь */
+  var ch=siteGet(['hero','diagram','chips']);
+  if(Array.isArray(ch)){
+    var rows='';
+    ch.forEach(function(_,i){
+      var p=['hero','diagram','chips',String(i)];
+      if(!match('Чип '+(i+1),p)) return;
+      rows+=siteField(p,'Чип '+(i+1)); shown++;
+    });
+    if(rows) html+='<div class="sgroup"><h3>Hero · чип</h3>'+
+      '<div class="where">Hero диаграмын доод эгнээ</div>'+rows+'</div>';
+  }
+
+  if(!shown) return '<div class="empty">"'+esc(S.q)+'" — тохирох текст олдсонгүй</div>';
+  return '<p class="ph">Сайтын текст · content.json → site '+
+    '<span style="font-family:var(--mono)">'+shown+'</span></p>'+html+
+    '<p class="pvnote">Эдгээр нь виджетийн БУС текст. 04/05/07/08 хэсгийн гарчиг энд байхгүй — '+
+    'тэдгээр виджетээсээ гарчигаа авдаг тул давхардуулбал хоёр эх сурвалж үүснэ.</p>';
 }
 
 /* ══════════════════ БҮХ ХАРАГДАЦ ══════════════════
@@ -1192,11 +1362,32 @@ function gotoWidget(id,mode){
 /* ══════════════════ ЗУРАЛТ ══════════════════ */
 function render(){
   if(!REG||!CON)return;
-  rDs();
-  $('cov').innerHTML=crumb();
-  $('body').innerHTML=S.level==='all'?lvAll():S.level==='edit'?lvEdit()
-    :S.level==='widgets'?lvWidgets():lvSections();
-  $('allBtn').textContent=S.level==='all'?'Хэсгээр нь':'Бүх харагдац';
+  /* Табын харагдац: "Сайтын текст" нь датасэт/зам мөр/хамралтын зурвасыг
+     хэрэглэхгүй тул зүүн багана болон толгойн хэсгийг нуулгана. */
+  var isSite=S.tab==='site';
+  document.querySelectorAll('.tab').forEach(function(b){
+    b.classList.toggle('on',b.dataset.tab===S.tab)});
+  $('paneL').style.display=isSite?'none':'';
+  $('gridWrap').style.gridTemplateColumns=isSite?'minmax(0,1fr)':'';
+  $('allBtn').style.display=isSite?'none':'';
+  $('siteN').textContent=siteDirtyKeys().length||'';
+  if(isSite){
+    /* Хайлтын талбарыг #cov-д байрлуулна — #body дахин зурагдахад
+       устахгүй тул бичиж байхад фокус алдагдахгүй. */
+    if(!$('qsite')){
+      $('cov').innerHTML='<div class="cov" style="padding:12px 14px">'+
+        '<input class="srch" id="qsite" style="margin:0" placeholder="Текст хайх… (шошго, зам, утга)" '+
+        'aria-label="Сайтын текст хайх" value="'+esc(S.q||'')+'"></div>';
+    }
+    $('body').innerHTML=lvSite();
+  }else{
+    if($('qsite')) $('cov').innerHTML='';
+    rDs();
+    $('cov').innerHTML=crumb();
+    $('body').innerHTML=S.level==='all'?lvAll():S.level==='edit'?lvEdit()
+      :S.level==='widgets'?lvWidgets():lvSections();
+    $('allBtn').textContent=S.level==='all'?'Хэсгээр нь':'Бүх харагдац';
+  }
   var n=dirtyCount();
   $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> өөрчлөлт хадгалагдаагүй'):'Өөрчлөлт алга';
   $('expBtn').disabled=n===0;
@@ -1212,6 +1403,12 @@ function toast(t){
 /* ══════════════════ ҮЙЛДЭЛ ══════════════════ */
 document.addEventListener('click',function(e){
   var t=e.target, el;
+  if((el=t.closest&&t.closest('[data-tab]'))){
+    if(S.tab===el.dataset.tab) return;
+    S.tab=el.dataset.tab;S.q='';
+    if($('q')) $('q').value='';
+    $('cov').innerHTML='';           /* хуучин табын хайлт/зам мөрийг арилгана */
+    render();return}
   if((el=t.closest&&t.closest('[data-ds]'))){
     var k=el.dataset.ds;
     S.ds=(S.ds===k)?null:k;S.level='sections';S.section=null;S.td=null;
@@ -1302,6 +1499,22 @@ document.addEventListener('change',function(e){
 
 document.addEventListener('input',function(e){
   var el=e.target;
+  /* Сайтын текстийн талбар — бичих бүрд CON руу шууд тусгана. Бүтэн дахин
+     зурвал курсор алдагдах тул зөвхөн тухайн мөрийн тэмдэглэгээг шинэчилнэ. */
+  var sf=el.closest&&el.closest('[data-sf]');
+  if(sf){
+    var p=sf.dataset.sf.split('.');
+    siteSet(p,sf.value);
+    var row=sf.closest('.sfield');
+    var d=String(sf.value)!==String(siteGet0(p)==null?'':siteGet0(p));
+    if(row) row.classList.toggle('dirty',d);
+    var n=dirtyCount();
+    $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> өөрчлөлт хадгалагдаагүй'):'Өөрчлөлт алга';
+    $('expBtn').disabled=n===0; $('revBtn').disabled=n===0;
+    $('siteN').textContent=siteDirtyKeys().length||'';
+    return;
+  }
+  if(el.id==='qsite'){S.q=el.value.trim().toLowerCase();$('body').innerHTML=lvSite();return}
   if(el===$('q')){S.q=el.value.trim().toLowerCase();rDs();return}
   var tf=el.closest&&el.closest('[data-tf]');
   if(!tf)return;
@@ -1329,7 +1542,7 @@ function download(obj,name){
 $('expBtn').addEventListener('click',function(){
   var today=new Date().toISOString().slice(0,10), files=[];
   if(regDirtyKeys().length){REG.updated=today;download(REG,'metric_registry.json');files.push('metric_registry.json')}
-  if(conDirtyKeys().length){CON.updated=today;download(CON,'content.json');files.push('content.json')}
+  if(contentDirty()){CON.updated=today;download(CON,'content.json');files.push('content.json')}
   toast('Татагдлаа: '+files.join(' + ')+' — репод хуулж commit хийнэ үү');
 });
 $('allBtn').addEventListener('click',function(){
