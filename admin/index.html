@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ErtHub · Агаарын тээврийн виджет холбоос</title>
+<style>
+:root{
+  --ink:#131A2E;--ink2:#3A4460;--ink3:#7A85A3;--ink4:#A7B0C6;
+  --paper:#EEF1F8;--card:#fff;--line:#E2E7F2;--line2:#CBD3E6;
+  --air:#22C3A6;--road:#5B7CF0;--rail:#9B7BF0;--sea:#3D9BF5;--transit:#EF9B2F;
+  --ok:#0FA968;--warn:#E0910A;--bad:#E0453D;--zero:#8A93AB;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+.hd{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.hd-t{display:flex;align-items:center;gap:13px;padding:11px 18px}
+.mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--road),var(--air));display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:700;font-size:11px;flex:none}
+.hd h1{font-size:14.5px;margin:0;font-weight:650;letter-spacing:-.01em}
+.hd .sub{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3)}
+.hd-r{margin-left:auto;display:flex;align-items:center;gap:9px}
+
+.grid{display:grid;grid-template-columns:288px minmax(0,1fr);gap:1px;background:var(--line);min-height:calc(100vh - 52px)}
+.pane{background:var(--paper);padding:14px;overflow-y:auto;min-width:0}
+.pane.r{background:#F5F7FC;padding:16px 18px 90px}
+.ph{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin:0 0 9px;display:flex;align-items:center;gap:8px}
+.ph::after{content:"";flex:1;height:1px;background:var(--line2)}
+.btn{font-family:var(--mono);font-size:11px;padding:7px 13px;border-radius:7px;border:1px solid var(--line2);background:var(--card);color:var(--ink2);cursor:pointer}
+.btn:hover{border-color:var(--ink3)}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.pri:hover{background:#000}
+.btn.sm{font-size:10px;padding:5px 10px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── зүүн: датасэт ── */
+.srch{width:100%;font-family:var(--mono);font-size:11.5px;padding:7px 10px;border:1px solid var(--line2);border-radius:7px;background:var(--card);margin-bottom:9px;color:var(--ink)}
+.srch:focus{outline:2px solid var(--road);outline-offset:1px;border-color:transparent}
+.dsi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:5px;cursor:pointer;display:grid;grid-template-columns:8px 1fr auto;gap:9px;align-items:start;text-align:left;width:100%;font-family:var(--sans)}
+.dsi:hover{background:#F7F9FF}
+.dsi.on{background:#EDF2FF;border-color:#BFD0FA;box-shadow:inset 3px 0 0 var(--road)}
+.dsi-i{width:8px;height:8px;border-radius:2px;margin-top:5px}
+.dsi-n{font-size:12px;font-weight:600;line-height:1.3;color:var(--ink)}
+.dsi-a{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:2px}
+.dsi-s{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:4px}
+.st{width:15px;height:15px;border-radius:50%;display:grid;place-items:center;font-size:9px;color:#fff;flex:none;margin-top:2px}
+.st.ok{background:var(--ok)} .st.mix{background:var(--warn)} .st.no{background:var(--line2);color:var(--ink3)}
+
+/* ── төлөв ── */
+.state{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:22px 24px;margin-bottom:15px}
+.state.err{border-color:#F5C9C6;background:#FEF7F6}
+.state h2{margin:0 0 6px;font-size:15px;font-weight:650}
+.state p{margin:0 0 8px;font-size:12.5px;color:var(--ink2);line-height:1.65}
+.state code{font-family:var(--mono);font-size:11px;background:#F2F5FC;border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--line2);border-top-color:var(--road);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ── зам мөр ── */
+.cov{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:15px 17px;margin-bottom:15px}
+.crumbnav{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;margin-bottom:8px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.cb{font-family:var(--sans);font-size:13.5px;font-weight:600;letter-spacing:-.01em;
+  background:#F2F5FC;border:1px solid var(--line2);padding:4px 11px;border-radius:7px;
+  color:var(--road);cursor:pointer;white-space:nowrap;transition:.13s}
+.cb:hover{background:#E4ECFF;border-color:var(--road);color:#2E4FC4}
+.cb:focus-visible{outline:2px solid var(--road);outline-offset:2px}
+.cb.on{color:var(--ink);cursor:default;background:var(--card);border-color:var(--line);font-weight:650}
+.cb.on:hover{background:var(--card);border-color:var(--line);color:var(--ink)}
+.cbs{color:var(--ink4);font-size:13px;flex:none}
+.cov .m{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-bottom:12px}
+.bar{height:8px;border-radius:5px;background:var(--line);overflow:hidden;display:flex;margin-bottom:10px}
+.bar.sm{height:6px;margin-bottom:9px}
+.bar span{display:block;height:100%;transition:width .3s}
+.lg{display:flex;gap:16px;font-family:var(--mono);font-size:10.5px;flex-wrap:wrap}
+.lg div{display:flex;align-items:center;gap:6px;color:var(--ink3)}
+.lg i{width:8px;height:8px;border-radius:2px;flex:none}
+.lg b{color:var(--ink);font-size:12px}
+
+/* ── түвшин 1 ── */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.pcard{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px 15px;cursor:pointer;font-family:var(--sans);display:flex;flex-direction:column;gap:7px;transition:.13s}
+.pcard:hover{border-color:var(--road);box-shadow:0 3px 14px rgba(19,26,46,.07)}
+.pc-t{font-size:14px;font-weight:650;color:var(--ink);letter-spacing:-.01em}
+.pc-n{font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
+.pc-w{display:flex;flex-direction:column;gap:2px;font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
+.pc-w span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-w .mo2{color:var(--ink4)}
+.pc-go{font-family:var(--mono);font-size:10px;color:var(--road);margin-top:3px;font-weight:600}
+
+/* ── түвшин 2 ── */
+.cd{background:var(--card);border:1px solid var(--line);border-radius:9px;margin-bottom:5px}
+.cd-h{display:grid;grid-template-columns:9px minmax(0,1fr) auto auto 14px;gap:10px;align-items:center;padding:10px 12px}
+.cd-h>div{min-width:0}
+.cd-open{cursor:pointer}
+.cd-open:hover{background:#F8FAFF;border-radius:8px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.d-ok{background:var(--ok)} .d-mix{background:var(--warn)} .d-no{background:#fff;border:1.5px solid var(--bad)}
+.d-txt{background:var(--line2)}
+.cd-n{font-size:12.5px;font-weight:580;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd-t{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src{font-family:var(--mono);font-size:10px;text-align:right;line-height:1.35;flex:none;white-space:nowrap}
+.src b{color:var(--ink);display:block;font-weight:600}
+.src i{color:var(--ink3);font-size:9px;font-style:normal}
+.src.no b{color:var(--bad)}
+.cv{color:var(--line2);font-size:12px;text-align:center}
+.ico{display:flex;gap:3px;flex:none}
+.ib{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink3);cursor:pointer;font-size:12px;line-height:1;display:grid;place-items:center;padding:0}
+.ib:hover{border-color:var(--road);color:var(--road);background:#F5F8FF}
+.ib:focus-visible{outline:2px solid var(--road);outline-offset:1px}
+
+/* ── түвшин 3 ── */
+.edit2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:18px;align-items:start}
+.e-pv{position:sticky;top:70px}
+.e-fm{min-width:0}
+.f label{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.f select,.f input,.f textarea{width:100%;font-family:var(--mono);font-size:11.5px;padding:7px 9px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink);resize:vertical}
+.f select:focus,.f input:focus,.f textarea:focus{outline:2px solid var(--road);outline-offset:1px;border-color:transparent}
+.f select option:disabled{color:#98A2BA}
+.acts{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.dt{color:var(--warn);font-weight:600;letter-spacing:0;text-transform:none;font-size:9px;margin-left:5px}
+.sedit{border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-bottom:9px;background:var(--card)}
+.sedit-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12.5px;font-weight:600;flex-wrap:wrap}
+.secrow-i{width:9px;height:9px;border-radius:2px;flex:none}
+.badge{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;padding:2.5px 7px;border-radius:4px;font-weight:600;white-space:nowrap}
+.b-ok{background:#E4F7EE;color:#0B7A4B}
+.b-warn{background:#FDF1DC;color:#9A6205}
+.b-zero{background:#EDEFF5;color:#5E677E}
+.acc{font-family:var(--mono);font-size:9.5px;color:var(--ink3);background:#F2F5FC;border-radius:6px;padding:7px 9px;line-height:1.6}
+.acc b{color:var(--ink2)}
+.mecalc{font-family:var(--mono);font-size:10px;color:var(--ink3);line-height:1.7}
+.mecalc code{background:#F2F5FC;border:1px solid var(--line);border-radius:4px;padding:1px 6px;color:var(--ink2)}
+.mecalc b{color:var(--ink)}
+.warnbox{background:#FFFAF0;border:1px solid #F0DDB0;border-radius:8px;padding:11px 13px;margin-bottom:11px;font-size:11.5px;line-height:1.55;color:var(--ink2)}
+.warnbox b{color:#8A5D06;display:block;margin-bottom:4px}
+.pvnote{font-size:11.5px;color:var(--ink3);line-height:1.55;margin:9px 0 0}
+
+/* ── сайтын харагдац (бодит CSS токен) ── */
+.sitepv{background:#E6EDF7;border-radius:12px;padding:16px;margin-bottom:10px}
+.sp-card{background:rgba(255,255,255,.82);border:1px solid rgba(20,32,58,.09);border-radius:14px;padding:15px 16px}
+.sp-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:13px}
+.sp-g{font-size:14px}
+.sp-top .ed[data-ed="title"]{font-family:'Space Grotesk',system-ui,sans-serif;font-size:15px;font-weight:650;color:#0C1428;letter-spacing:-.01em}
+.sp-sub{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#7D8CA8;border-left:1px solid rgba(20,32,58,.16);padding-left:8px}
+.sp-body{display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+.sp-val{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:26px;font-weight:600;color:#0C1428;letter-spacing:-.02em;line-height:1.05}
+.sp-u{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;color:#7D8CA8;margin-left:7px;font-weight:400;letter-spacing:.04em}
+.sp-foot{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;color:#7D8CA8;line-height:1.6;margin-top:12px;padding-top:10px;border-top:1px solid rgba(20,32,58,.09)}
+.ed{cursor:pointer;border-radius:4px;outline:1px dashed transparent;outline-offset:2px;transition:.12s}
+.ed:hover{outline-color:var(--sc);background:rgba(47,224,196,.1)}
+.ed.empty{color:#A7B0C6;font-style:italic}
+.secrow{display:grid;grid-template-columns:9px 1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(20,32,58,.09);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px}
+.secrow:last-child{border-bottom:0}
+.secrow-n{color:#465575}
+.secrow-v{font-weight:600;color:#0C1428;text-align:right}
+.secrow.z .secrow-v{color:var(--zero);font-weight:500}
+/* preview картын дотоод элементүүд — өнгө, фонт нь сайтын токеноос */
+.sitepv.mini{padding:9px;margin:0;border-radius:9px}
+.sitepv.mini .sp-card{padding:9px 10px;border-radius:10px}
+.sitepv.mini .sp-top{margin-bottom:7px;gap:6px}
+.sitepv.mini .sp-top .ed[data-ed="title"]{font-size:11px}
+.sitepv.mini .sp-sub{font-size:8px;padding-left:6px}
+.sitepv.mini .sp-foot{font-size:8px;margin-top:7px;padding-top:6px}
+.pvrow{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:9.5px;color:#465575;padding:2px 0}
+.pvrow i{width:7px;height:7px;border-radius:2px;flex:none}
+.pvrow span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pvrow b{color:#0C1428;font-weight:600;white-space:nowrap}
+.pvax{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:8.5px;color:#7D8CA8;margin-top:5px}
+.pvempty{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;color:#A7B0C6;
+  padding:10px 0;text-align:center;border:1px dashed rgba(20,32,58,.14);border-radius:6px}
+.pvkpi{display:flex;gap:7px;flex-wrap:wrap}
+.pvk{padding:3px 0 3px 7px;min-width:52px}
+.pvk .l{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:7.5px;
+  letter-spacing:.05em;text-transform:uppercase;color:#7D8CA8;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:74px}
+.pvk .v{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;font-weight:600;color:#0C1428}
+.pvfeed{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:8px;color:#7D8CA8;
+  margin-left:auto;white-space:nowrap}
+.pvfeed.err{color:#C0453D}
+.vizsel{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+.vizsel label{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.vizsel select{width:auto;font-family:var(--mono);font-size:11px;padding:5px 8px;
+  border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink)}
+/* жагсаалтын мөр — preview-тэй болсон тул хоёр мөрт болгоно */
+.cd-pv{grid-column:1/-1;margin-top:8px}
+.txtonly{background:#F2F5FC;border:1px dashed var(--line2);border-radius:8px;
+  padding:10px 12px;margin-bottom:11px;font-size:11.5px;color:var(--ink2);line-height:1.55}
+.txtonly b{color:var(--ink);display:block;margin-bottom:3px}
+/* бүх харагдац */
+.allgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:11px}
+.allcard{background:var(--card);border:1px solid var(--line);border-radius:11px;
+  padding:11px;cursor:pointer;transition:.13s}
+.allcard:hover{border-color:var(--road);box-shadow:0 3px 14px rgba(19,26,46,.08)}
+.allhead{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.allid{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2)}
+.allsec{font-family:var(--mono);font-size:8.5px;color:var(--ink3);margin-left:auto;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
+@media(max-width:640px){.allgrid{grid-template-columns:1fr}}
+
+/* ── модаль ── */
+.scrim{position:fixed;inset:0;background:rgba(19,26,46,.4);opacity:0;pointer-events:none;transition:.2s;z-index:50}
+.scrim.on{opacity:1;pointer-events:auto}
+.mo{position:fixed;top:50%;left:50%;transform:translate(-50%,-46%) scale(.98);width:min(660px,94vw);max-height:88vh;background:var(--card);border-radius:14px;box-shadow:0 26px 70px rgba(19,26,46,.3);z-index:60;opacity:0;pointer-events:none;transition:.2s;display:flex;flex-direction:column}
+.mo.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.mo-h{padding:16px 18px 0;position:relative}
+.mo-h .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)}
+.mo-h h3{margin:5px 0 2px;font-size:16px;font-weight:650;letter-spacing:-.01em;padding-right:34px}
+.mo-h .s{font-family:var(--mono);font-size:10px;color:var(--ink3)}
+.mo-x{position:absolute;top:14px;right:16px;width:27px;height:27px;border-radius:7px;border:1px solid var(--line2);background:var(--card);cursor:pointer;color:var(--ink2);font-size:14px;line-height:1}
+.mo-x:hover{border-color:var(--ink3)}
+.mo-t{display:flex;padding:13px 18px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.mt{font-family:var(--mono);font-size:10.5px;padding:7px 12px;border:0;background:none;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent}
+.mt:hover{color:var(--ink2)}
+.mt.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+.mo-b{padding:16px 18px 20px;overflow-y:auto;flex:1}
+.loc{display:grid;grid-template-columns:112px 1fr;gap:9px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.loc:last-of-type{border-bottom:0}
+.loc dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);padding-top:2px}
+.loc dd{margin:0;font-family:var(--mono);font-size:11.5px;word-break:break-word}
+.use{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.utag{font-family:var(--mono);font-size:10px;background:#F2F5FC;border:1px solid var(--line);border-radius:5px;padding:4px 9px;color:var(--ink2);cursor:pointer;text-align:left}
+.utag:hover{border-color:var(--road);color:var(--road);background:#F5F8FF}
+.hist .h{display:grid;grid-template-columns:96px 1fr;gap:11px;padding:9px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px}
+.hist .h:last-child{border-bottom:0}
+.hist .h time{color:var(--ink3)}
+.hist .h span{color:var(--ink2)}
+.urlbox{font-family:var(--mono);font-size:10.5px;background:#F2F5FC;border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin:8px 0;word-break:break-all;user-select:all;color:var(--ink2)}
+.empty{text-align:center;padding:26px 16px;border:1px dashed var(--line2);border-radius:10px;color:var(--ink3);font-size:12.5px}
+
+/* ── экспорт ── */
+.expbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line2);padding:11px 18px;display:none;align-items:center;gap:12px;flex-wrap:wrap;z-index:25;box-shadow:0 -3px 14px rgba(19,26,46,.06)}
+.expbar .d{font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
+.expbar .d b{color:var(--warn)}
+.toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--ink);color:#fff;font-family:var(--mono);font-size:11.5px;padding:10px 18px;border-radius:9px;box-shadow:0 8px 26px rgba(19,26,46,.28);opacity:0;transition:.24s;z-index:70;pointer-events:none;max-width:92vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.cd.flash{animation:fl 1.1s ease}
+@keyframes fl{0%,100%{box-shadow:0 0 0 0 rgba(91,124,240,0)}25%{box-shadow:0 0 0 4px rgba(91,124,240,.35)}}
+
+@media(max-width:980px){.edit2{grid-template-columns:1fr}.e-pv{position:static}}
+@media(max-width:860px){
+  .grid{grid-template-columns:1fr;min-height:0}
+  .pane.l{border-bottom:1px solid var(--line)}
+  .pane.r{padding:14px 12px 110px}
+  .src{display:none}
+  .cd-h{grid-template-columns:9px minmax(0,1fr) auto 14px}
+  .pgrid{grid-template-columns:1fr}
+  .ib{width:30px;height:30px}
+  .mo{top:auto;bottom:0;left:0;transform:translateY(100%);width:100%;max-height:92vh;border-radius:14px 14px 0 0}
+  .mo.on{transform:translateY(0)}
+  .loc{grid-template-columns:1fr;gap:2px}
+  .hist .h{grid-template-columns:1fr;gap:2px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-t"><div class="mark">EH</div>
+    <div><div class="sub">Дата удирдлага · нүүр хуудас</div><h1>Агаарын тээврийн виджет холбоос</h1></div>
+    <div class="hd-r">
+      <button class="btn sm" id="allBtn">Бүх харагдац</button>
+      <a class="btn sm" href="../index.html" target="_blank" rel="noopener">Сайтыг нээх ↗</a></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="pane l">
+    <input class="srch" id="q" placeholder="Датасэт хайх…" aria-label="Датасэт хайх">
+    <p class="ph">Датасэт <span id="dsn" style="font-family:var(--mono)"></span></p>
+    <div id="dsList"></div>
+    <p class="pvnote" style="margin-top:12px">Датасэт нь <code style="font-size:10px">metric_registry.json</code>-ий
+      метрик бүрийн <code style="font-size:10px">dataset</code> талбараас автоматаар гарна — шинэ эх сурвалж
+      нэмэгдмэгц энд өөрөө гарч ирнэ.</p>
+  </div>
+  <div class="pane r">
+    <div id="state"></div>
+    <div id="cov"></div>
+    <div id="body"></div>
+  </div>
+</div>
+
+<div class="expbar" id="expbar">
+  <button class="btn pri" id="expBtn" disabled>Экспортлох</button>
+  <button class="btn sm" id="revBtn" disabled>Бүх өөрчлөлтийг буцаах</button>
+  <span class="d" id="dirtyMsg">Өөрчлөлт алга</span>
+  <span class="d" style="margin-left:auto">Файл руу шууд бичихгүй — татаж аваад commit хийнэ</span>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="mo" id="mo" role="dialog" aria-modal="true" aria-labelledby="moN">
+  <div class="mo-h"><button class="mo-x" id="moX" aria-label="Хаах">✕</button>
+    <div class="k" id="moK"></div><h3 id="moN"></h3><div class="s" id="moS"></div></div>
+  <div class="mo-t" id="moT"></div>
+  <div class="mo-b" id="moB"></div>
+</aside>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ══════════════════════════════════════════════════════════════
+   ХАМРАХ ХҮРЭЭ — зөвхөн нүүр хуудасны агаарын тээвэртэй холбоотой
+   15 виджет. uk (порталын мета-тоо, тээвэртэй хамааралгүй), мөн
+   Датасэт / Салбарын дэлгэрэнгүй хуудсууд ЭНД ХАМРАГДАХГҮЙ.
+   ══════════════════════════════════════════════════════════════ */
+var SCOPE=['hero_fl','hero_px','ls','w2p','w2pb','w2px','w2c','w2cb','w2cx',
+           'k04','t05','d05','i06','r06','u07'];
+
+/* Сайтын эх кодоос авсан БОДИТ токен (index.html: NEON, GLYPH, rootStyle) */
+var NEON={road:'#8CA9E8',rail:'#B48CFF',air:'#2FE0C4',water:'#4FA8FF',public:'#F2A93B'};
+var GLYPH={road:'🚗',rail:'🚆',air:'✈️',water:'🚢',public:'🚌'};
+var SECN={air:'Агаарын тээвэр',road:'Авто зам',rail:'Төмөр зам',
+          water:'Ус, далайн тээвэр',public:'Нийтийн тээвэр',plan:'Төлөвлөгөө'};
+/* Хэсгийн нэр — index.html-ийн бодит хэсгийн гарчгаас */
+var SECTIONS={'hero':'Hero ticker','portal-kpi':'Порталын нийт үзүүлэлт',
+  'sec-01':'01 · Үндсэн үзүүлэлтүүд',
+  'sec-02':'02 · Долоо хоногийн тайлан','sec-04':'04 · Түлхүүр үзүүлэлт',
+  'sec-05':'05 · Чиг хандлага','sec-06':'06 · Салбар хоорондын харьцуулалт',
+  'sec-07':'07 · Сүүлд шинэчлэгдсэн өгөгдөл'};
+/* Датасэтийн танилцуулах нэр — index.html-ийн DATASETS бичлэгээс.
+   Түлхүүр нь registry-ийн metrics[*].dataset утга. Тааруулалт олдохгүй бол
+   түлхүүрийг өөрийг нь харуулна (шинэ датасэт нэмэгдэхэд ч ажиллана). */
+var DSMETA={
+  air_flights:      {n:'Агаарын тээврийн статистик', a:'ИНЕГ · Вэбсервис', s:'air'},
+  air_flights_index:{n:'Нислэгийн индекс (feed мета)', a:'ИНЕГ · Вэбсервис', s:'air'}
+};
+/* Слот бүр ЮУ ХАРУУЛДАГ, түүнээсээ шалтгаалан ямар нэгж шаардахыг энд
+   тунхаглана. Одоогийн холбоосоос НЬ УНШИХГҮЙ — эс тэгвэл "одоо юу
+   холбогдсон, тэрийг л зөвшөөрнө" гэсэн битүү давталт үүсч, сонголт
+   утгагүй болно (слотын шаардлага бол виджетийн харагдацын шинж чанар,
+   холбоосын биш).
+     k04.air — 8 мөрт KPI багц, мөр бүр өөр нэгжтэй тул "mixed"
+     ls.air  — зөвхөн kpis[0] (нислэгийн тоо) уншина тул "нислэг" */
+var FIXED_UNIT={
+  'hero_fl.':'нислэг','t05.':'нислэг/сар','u07.':'огноо',
+  'i06.':'индекс (1-р сар=100)','r06.':'индекс (1-р сар=100)',
+  'k04.air':'mixed','k04.road':'км','k04.rail':'км','k04.water':'км','k04.public':'чиглэл',
+  'ls.air':'нислэг', 'ls.road':'км', 'ls.rail':'км', 'ls.water':'км', 'ls.public':'чиглэл',
+  'hero_px.public':'хүн'
+};
+var SUM_WIDGETS={d05:1,w2p:1,w2px:1,w2c:1,w2cx:1};
+var DERIVES_FROM={w2pb:'w2p',w2cb:'w2c'};
+var KIND={hero_fl:'тоолуур',hero_px:'тоолуур',ls:'KPI мөр',w2p:'том тоо',w2pb:'задаргаа',
+  w2px:'харьцуулалт',w2c:'том тоо',w2cb:'задаргаа',w2cx:'харьцуулалт',k04:'KPI',
+  t05:'график',d05:'донут',i06:'график',r06:'жагсаалт',u07:'жагсаалт'};
+var FL={title:'Гарчиг',sub:'Дэд гарчиг',unit:'Нэгжийн шошго',foot:'Хөл бичиг',foot2:'Хөл бичиг 2'};
+var BASE='../index.html';
+/* ЗӨВХӨН ТЕКСТ засах виджет — метрик холбохгүй. uk бол порталын мета-тоо
+   (датасэт/үйлчилгээ/судалгааны тоо), тээврийн үзүүлэлт биш тул метрик
+   холбох хамрах хүрээнд ОРОХГҮЙ; гэхдээ нэршлээ засах хэрэгцээ бодит. */
+var TEXT_ONLY={uk:1};
+var ALL_IDS=SCOPE.concat(Object.keys(TEXT_ONLY));
+/* Урьдчилан харах картын төрөл — сайт дээр ЯГ ЮУ харагддагаар нь */
+var PKIND={hero_fl:'counter',hero_px:'counter',ls:'kpi',k04:'kpi',uk:'kpi',
+  t05:'line',i06:'line',d05:'donut',w2pb:'donut',w2cb:'donut',
+  w2px:'sectors',w2cx:'sectors',w2p:'bignum',w2c:'bignum',
+  r06:'list',u07:'list'};
+/* Хэрэглэгч солиж болох чартын хэлбэр (зөвхөн утга алдагдахгүй хосууд) */
+var SWAPPABLE={line:['line','bar'],donut:['donut','bar'],bignum:['bignum','bar']};
+
+/* ══════════════════ ТӨЛӨВ ══════════════════ */
+var REG=null, CON=null, REG0=null, CON0=null;
+var S={ds:null,level:'sections',section:null,widget:null,td:null,q:'',
+       mo:null,mt:'view',flash:null,viz:{}};
+var LOG=[];   /* энэ сессийн бодит өөрчлөлтийн лог */
+var FEED={state:'idle',err:null,months:[],index:[],weekPax:null,weekCargo:null,
+          lastMonthCount:null,fetchedAt:null,lastLabel:''};
+
+var $=function(i){return document.getElementById(i)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var clone=function(o){return JSON.parse(JSON.stringify(o))};
+var now=function(){var d=new Date();
+  return (d.getMonth()+1)+'-'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+
+    ':'+String(d.getMinutes()).padStart(2,'0')};
+function log(id,x){LOG.unshift({t:now(),id:id,x:x})}
+
+/* ══════════════════ БОДИТ FEED ══════════════════
+   Урьдчилан харах картыг ЖИНХЭНЭ дата цэгээр зурахын тулд сайт өөрөө
+   уншдаг ЯГ ТЭР эх сурвалжийг уншина. Тооцоололыг ЭНД ЗОХИОХГҮЙ —
+   metric_registry.json-д метрик бүрийн agg / filter / transform аль
+   хэдийн бичигдсэн тул ЗӨВХӨН ТЭР ТОДОРХОЙЛОЛТЫГ гүйцэтгэнэ. Registry
+   өөрчлөгдвөл урьдчилан харах нь автоматаар дагаж өөрчлөгдөнө.
+   Feed унших боломжгүй бол ТОО ЗОХИОХГҮЙ — бүтцийг нь харуулаад
+   "дата ачаалагдаагүй" гэж ил хэлнэ. */
+var FEED_BASE='https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/';
+var MONTHS=['1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар',
+  '7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
+function rowsOf(j){return Array.isArray(j)?j:(j&&j.flights)||[]}
+function loadFeed(){
+  FEED.state='loading';
+  return fetch(FEED_BASE+'flights-index.json',{cache:'no-store'})
+    .then(function(r){if(!r.ok)throw new Error('flights-index HTTP '+r.status);return r.json()})
+    .then(function(idx){
+      var years=(idx.years||[]).map(function(y){return y.year}).sort(function(a,b){return b-a});
+      if(!years.length) throw new Error('feed-д жил алга');
+      FEED.fetchedAt=(idx.years[0]||{}).fetchedAt||null;
+      var want=[years[0]];
+      if(years[1]) want.push(years[1]);   /* 7 хоногийн цонх жилийн зааг давж болно */
+      return Promise.all(want.map(function(y){
+        return fetch(FEED_BASE+'flights-'+y+'.json',{cache:'no-store'})
+          .then(function(r){if(!r.ok)throw new Error('flights-'+y+' HTTP '+r.status);return r.json()})
+          .then(function(j){return {year:y,rows:rowsOf(j)}});
+      }));
+    })
+    .then(function(packs){
+      var byYear={};packs.forEach(function(p){byYear[p.year]=p.rows});
+      var latest=packs[0];
+      computeSeries(byYear,latest);
+      FEED.state='ready';
+    })
+    .catch(function(e){FEED.state='error';FEED.err=e.message});
+}
+function computeSeries(byYear,latest){
+  var rows=latest.rows;
+  /* air.monthly_flight_series — agg:COUNT_BY_MONTH, "тухайн жилийн бодит
+     байгаа сарууд" (ирээгүй сарыг 0-ээр биш, огт оруулахгүй) */
+  var cnt=new Array(12).fill(0), seen=new Array(12).fill(false);
+  rows.forEach(function(f){var m=(f.month||0)-1;if(m>=0&&m<12){cnt[m]++;seen[m]=true}});
+  var months=[];
+  for(var i=0;i<12;i++) if(seen[i]) months.push({m:i,label:MONTHS[i],v:cnt[i]});
+  FEED.months=months;
+  FEED.lastLabel=months.length?months[months.length-1].label:'';
+  /* air.monthly_growth_index — transform: index[m]=count[m]/count[0]*100 */
+  var base=months.length?months[0].v||1:1;
+  FEED.index=months.map(function(x){return {m:x.m,label:x.label,v:x.v/base*100}});
+  /* air.flight_count_last_month — filter: "сүүлийн бүтэн сар".
+     Хамгийн сүүлийн бичлэгийн сар дутуу байж болзошгүй тул түүнээс
+     ӨМНӨХ сарыг авна (index.html-ийн lastFullMonthWindow-той нэг зарчим). */
+  var newest=rows.reduce(function(a,f){return (!a||f.unixtimestamp>a.unixtimestamp)?f:a},null);
+  if(newest){
+    var lm=(newest.month||1)-1;           /* 0..11 — сүүлийн бичлэгийн сар */
+    var full=lm-1;                        /* түүнээс өмнөх бүтэн сар */
+    FEED.lastMonthCount = full>=0 ? cnt[full] : null;
+    FEED.lastMonthLabel = full>=0 ? MONTHS[full] : '';
+    /* air.weekly_pax / air.weekly_cargo — filter: сүүлийн бичлэгийн
+       ӨДРӨӨС ӨМНӨХ бүтэн 7 хоног (lastFullWeekWindow(0)) */
+    var end=Date.UTC(newest.year,(newest.month||1)-1,newest.day||1)-86400000;
+    var want={};
+    for(var d=6;d>=0;d--){
+      var dt=new Date(end-d*86400000);
+      want[dt.getUTCFullYear()+'-'+(dt.getUTCMonth()+1)+'-'+dt.getUTCDate()]=1;
+    }
+    var px=0,cg=0,hit=0;
+    Object.keys(byYear).forEach(function(y){
+      byYear[y].forEach(function(f){
+        if(want[f.year+'-'+f.month+'-'+f.day]){px+=(f.pax||0);cg+=(f.cargo||0);hit++}
+      });
+    });
+    FEED.weekPax=hit?px:null;
+    FEED.weekCargo=hit?cg:null;
+  }
+}
+/* Метрикийн БОДИТ утга — зөвхөн registry-д тодорхойлолт нь байгаа
+   метрикүүдэд. Мэдэхгүй метрикт null буцаана (тоо зохиохгүй). */
+function metricValue(mk){
+  if(FEED.state!=='ready') return null;
+  switch(mk){
+    case 'air.flight_count_last_month': return FEED.lastMonthCount;
+    case 'air.weekly_pax':   return FEED.weekPax;
+    case 'air.weekly_cargo': return FEED.weekCargo;
+    case 'air.feed_updated_at': return FEED.fetchedAt;
+    case 'air.kpi_set': return FEED.lastMonthCount;
+    default: return null;
+  }
+}
+function metricSeries(mk){
+  if(FEED.state!=='ready') return null;
+  if(mk==='air.monthly_flight_series') return FEED.months;
+  if(mk==='air.monthly_growth_index')  return FEED.index;
+  return null;
+}
+var nf=function(n){
+  if(n==null||isNaN(n)) return null;
+  return Number(n).toLocaleString('en-US',{maximumFractionDigits:1});
+};
+
+/* ══════════════════ REGISTRY БҮТЭЦ ══════════════════ */
+/* metric_registry.json-д 3 хэлбэрийн бичлэг зэрэг оршдог:
+   (a) хавтгай verified {metric,sectors:[..]}
+   (b) хавтгай mock     {metric:null,quality:"mock",would_need}
+   (c) салбарын обьект  {sectors:{key:{...}}, plan?:{...}}
+   Слотыг нэг хэлбэрт хөрвүүлж, дараагийн бүх код нэг бүтэцтэй ажиллана. */
+function slotsOf(id){
+  var w=REG.widgets[id], out=[];
+  if(w.sectors && !Array.isArray(w.sectors)){
+    Object.keys(w.sectors).forEach(function(k){out.push({key:k,path:['sectors',k]})});
+    if(w.plan) out.push({key:'plan',path:['plan']});
+  } else out.push({key:null,path:[]});
+  return out;
+}
+function slotVal(id,path){
+  var cur=REG.widgets[id];
+  for(var i=0;i<path.length;i++) cur=cur[path[i]];
+  return cur;
+}
+function qualityOf(sv){
+  if(!sv) return 'none';
+  if(typeof sv.quality==='string') return sv.quality;
+  return sv.metric?'verified':'mock';
+}
+function statOf(id){
+  if(TEXT_ONLY[id]) return 'txt';   /* метрик холбохгүй тул хамрахгүй */
+  var sl=slotsOf(id),v=0;
+  sl.forEach(function(s){if(qualityOf(slotVal(id,s.path))==='verified')v++});
+  return v===sl.length?'ok':(v>0?'mix':'no');
+}
+function boundMetrics(id){
+  if(TEXT_ONLY[id]) return [];
+  var out=[];
+  slotsOf(id).forEach(function(s){var m=slotVal(id,s.path).metric;if(m)out.push(m)});
+  return out;
+}
+function unitOf(mk){var m=mk&&REG.metrics[mk];return m?m.unit:null}
+
+/* ── Датасэт: registry-ийн metrics[*].dataset-аас автоматаар ── */
+function datasets(){
+  var seen=[],k;
+  Object.keys(REG.metrics).forEach(function(mk){
+    k=REG.metrics[mk].dataset;
+    if(k&&seen.indexOf(k)<0)seen.push(k);
+  });
+  return seen;
+}
+function metricsOfDs(ds){
+  return Object.keys(REG.metrics).filter(function(mk){return REG.metrics[mk].dataset===ds});
+}
+/* Виджет энэ датасэтэд "хамаарна" гэдэг нь: одоо холбогдсон метрик нь
+   тухайн датасэтийнх, ЭСВЭЛ тухайн датасэтийн ямар нэг метрик энэ
+   виджетэд сонгогдох боломжтой (why()===null). */
+function widgetsOfDs(ds){
+  var mset=metricsOfDs(ds);
+  return SCOPE.filter(function(id){
+    var bound=boundMetrics(id);
+    if(bound.some(function(mk){return mset.indexOf(mk)>=0})) return true;
+    return slotsOf(id).some(function(s){
+      var ru=requiredUnit(id,s.key);
+      return mset.some(function(mk){return why(mk,ru)===null});
+    });
+  });
+}
+
+function requiredUnit(id,sectorKey){
+  /* w2pb/w2cb: sectors талбаргүй ХАВТГАЙ бичлэгтэй ч утгын хувьд w2p/w2c-ийн
+     ДЭД задаргаа — иймд доорх (sectorKey===null) салааны ӨМНӨ энд барина. */
+  if(DERIVES_FROM[id]) return requiredUnit(DERIVES_FROM[id],'air');
+  var fk=id+'.'+(sectorKey||'');
+  if(FIXED_UNIT[fk]) return FIXED_UNIT[fk];
+  if(sectorKey===null) return unitOf(REG.widgets[id].metric);
+  if(SUM_WIDGETS[id]){
+    /* Нийлбэр төрөл: бүх салбар ЯГ НЭГ нэгжтэй байх ёстой. Шаардах нэгжийг
+       гараар бичихгүй, аль хэдийн холбогдсон салбарын нэгжээс ДИНАМИКААР
+       авна (d05-ийн анхны алдаа яг нэгж холилдохоос үүссэн). */
+    var sec=REG.widgets[id].sectors||{},k;
+    for(k in sec){var u=unitOf(sec[k].metric);if(u)return u}
+    return null;
+  }
+  return null;
+}
+function why(mk,reqUnit){
+  if(!mk) return null;
+  var m=REG.metrics[mk];
+  if(!m) return 'метрик тодорхойлолт олдсонгүй';
+  if(m.quality!=='verified') return 'метрик өөрөө verified биш';
+  if(reqUnit==null) return null;
+  if(m.unit!==reqUnit) return 'нэгж үл нийцнэ: "'+m.unit+'" ≠ "'+reqUnit+'"';
+  return null;
+}
+/* Нийлбэрийн (grain) анхааруулга — dbt MetricFlow-ийн grain validation
+   зарчмаас. additive:false метрик 2+ салбарт холбогдвол нийт дүн утгагүй
+   болно — d05-ийн анхны алдаа яг энэ. Хориглохгүй, зөвхөн анхааруулна. */
+function grainWarn(id){
+  if(!SUM_WIDGETS[id]) return null;
+  var b=boundMetrics(id);
+  if(b.length<2) return null;
+  var na=b.filter(function(mk){var m=REG.metrics[mk];return m&&m.additive===false});
+  if(!na.length) return null;
+  return b.length+' салбар холбогдсон боловч '+na.length+' метрик нь registry-д '+
+    'additive:false гэж бичигдсэн — эдгээрийг нэг дүнд нэмэх нь математикийн '+
+    'хувьд зөв эсэхийг эхлээд баталгаажуулна уу.';
+}
+
+/* ══════════════════ ТЕКСТ (content.json) ══════════════════ */
+function textFields(id){
+  var c=CON.widgets[id]||{};
+  return Object.keys(FL).filter(function(f){return f in c});
+}
+function curText(id,f){var c=CON.widgets[id]||{};return c[f]==null?'':c[f]}
+function dirtyTextFields(id){
+  if(!S.td)return [];
+  return textFields(id).filter(function(f){return S.td[f]!==curText(id,f)});
+}
+function resetTd(id){S.td={};textFields(id).forEach(function(f){S.td[f]=curText(id,f)})}
+
+/* ══════════════════ БҮЛЭГЛЭЛТ ══════════════════ */
+function anchorOf(id){var c=CON.widgets[id];return (c&&c.anchor)||'hero'}
+/* Датасэт сонгоогүй үед uk-г ч жагсаана (текст засах хэрэгцээ бодит).
+   Датасэт сонгосон үед uk ОРОХГҮЙ — тэр ямар ч метрик датасэттэй
+   холбоогүй тул хамаарал нь худал болно. */
+function scopeIds(){return S.ds?widgetsOfDs(S.ds):ALL_IDS}
+function sectionKeys(){
+  var seen=[];
+  scopeIds().forEach(function(id){var k=anchorOf(id);if(seen.indexOf(k)<0)seen.push(k)});
+  return seen;
+}
+function widgetsIn(sec){return scopeIds().filter(function(id){return anchorOf(id)===sec})}
+/* txt (метрик холбохгүй) виджетийг хамралтын тоололд оруулахгүй —
+   эс тэгвэл "холбогдоогүй" гэж худал тоологдоно. */
+function tally(ids){
+  var t={ok:0,mix:0,no:0,txt:0};
+  ids.forEach(function(id){t[statOf(id)]++});
+  return t;
+}
+function miniBar(t,n){
+  var p=function(x){return n?(100*x/n).toFixed(2)+'%':'0%'};
+  return '<div class="bar sm"><span style="width:'+p(t.ok)+';background:var(--ok)"></span>'+
+    '<span style="width:'+p(t.mix)+';background:var(--warn)"></span>'+
+    '<span style="width:'+p(t.no)+';background:var(--bad)"></span></div>';
+}
+/* "Өөрчлөгдсөн" гэдгийг ХҮРЭЛЦЭХ бүрд тоолохгүй, ачаалсан файлтай нь
+   ЖИНХЭНЭЭР харьцуулж тодорхойлно. Ингэснээр салгаад буцааж ижил утгаар
+   холбосон тохиолдол (файл эцсийн дүнд өөрчлөгдөөгүй) худал "өөрчлөгдсөн"
+   гэж тоологдохгүй — экспорт яг юу бичихийг тоо нь үнэн харуулна. */
+function regDirtyKeys(){
+  var out=[];
+  SCOPE.forEach(function(id){
+    slotsOf(id).forEach(function(s){
+      var a=slotVal(id,s.path), b=REG0.widgets[id];
+      s.path.forEach(function(p){b=b&&b[p]});
+      if(JSON.stringify(a)!==JSON.stringify(b)) out.push(id+'|'+s.path.join(','));
+    });
+  });
+  return out;
+}
+function conDirtyKeys(){
+  var out=[];
+  ALL_IDS.forEach(function(id){
+    textFields(id).forEach(function(f){
+      var b=CON0.widgets[id]?CON0.widgets[id][f]:undefined;
+      if((CON.widgets[id][f]||'')!==(b||'')) out.push(id+'|'+f);
+    });
+  });
+  return out;
+}
+function widgetDirty(id){
+  return regDirtyKeys().concat(conDirtyKeys()).some(function(k){return k.split('|')[0]===id});
+}
+function sectionDirty(sec){return widgetsIn(sec).some(widgetDirty)}
+function dirtyCount(){return regDirtyKeys().length+conDirtyKeys().length}
+
+/* ══════════════════ УРЬДЧИЛАН ХАРАХ КАРТ ══════════════════
+   Виджет бүрийг САЙТ ДЭЭРХ ЖИНХЭНЭ ХЭЛБЭРЭЭР нь зурна. Өнгө, фонт нь
+   index.html-ийн бодит токеноос (NEON палитр, Space Grotesk / JetBrains
+   Mono) — энд хатуу бичихгүй. Дата цэг нь бодит feed-ээс; feed
+   ачаалаагүй бол тоо ЗОХИОХГҮЙ, бүтцийг нь харуулаад ил хэлнэ. */
+function vizOf(id){return S.viz[id]||PKIND[id]||'counter'}
+function svgLine(pts,color,w,h,asBar){
+  if(!pts||pts.length<2) return '';
+  var mx=Math.max.apply(null,pts.map(function(p){return p.v}));
+  var mn=Math.min.apply(null,pts.map(function(p){return p.v}));
+  var rng=(mx-mn)||1, pad=4;
+  var X=function(i){return pad+i*(w-pad*2)/(pts.length-1)};
+  var Y=function(v){return h-pad-((v-mn)/rng)*(h-pad*2)};
+  if(asBar){
+    var bw=Math.max(2,(w-pad*2)/pts.length-2);
+    return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:'+h+'px;display:block">'+
+      pts.map(function(p,i){
+        var bh=Math.max(1,h-pad-Y(p.v));
+        return '<rect x="'+(X(i)-bw/2).toFixed(1)+'" y="'+Y(p.v).toFixed(1)+'" width="'+bw.toFixed(1)+
+          '" height="'+bh.toFixed(1)+'" rx="1.5" fill="'+color+'" opacity=".85"></rect>'}).join('')+
+      '</svg>';
+  }
+  var d='M'+pts.map(function(p,i){return X(i).toFixed(1)+','+Y(p.v).toFixed(1)}).join(' L');
+  var area=d+' L'+X(pts.length-1).toFixed(1)+','+(h-pad)+' L'+X(0).toFixed(1)+','+(h-pad)+' Z';
+  return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:'+h+'px;display:block">'+
+    '<path d="'+area+'" fill="'+color+'" opacity=".14"></path>'+
+    '<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="1.8" '+
+      'stroke-linecap="round" stroke-linejoin="round"></path>'+
+    '<circle cx="'+X(pts.length-1).toFixed(1)+'" cy="'+Y(pts[pts.length-1].v).toFixed(1)+
+      '" r="2.6" fill="'+color+'"></circle></svg>';
+}
+function svgDonut(parts,size){
+  var tot=parts.reduce(function(a,p){return a+p.v},0);
+  var r=size/2-7, c=2*Math.PI*r, acc=0;
+  var segs=parts.map(function(p){
+    var pct=tot?p.v/tot*100:0;
+    var s='<circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="'+p.c+
+      '" stroke-width="9" stroke-dasharray="'+(pct/100*c).toFixed(1)+' '+c.toFixed(1)+
+      '" stroke-dashoffset="'+(-acc/100*c).toFixed(1)+'" transform="rotate(-90 '+
+      (size/2)+' '+(size/2)+')"></circle>';
+    acc+=pct;return s;
+  }).join('');
+  return '<svg viewBox="0 0 '+size+' '+size+'" style="width:'+size+'px;height:'+size+'px;display:block">'+
+    '<circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="rgba(20,32,58,.08)" stroke-width="9"></circle>'+
+    segs+'</svg>';
+}
+function svgBarsH(parts,w){
+  var mx=Math.max.apply(null,parts.map(function(p){return p.v}))||1;
+  return parts.map(function(p){
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+      '<span style="flex:1;height:7px;border-radius:4px;background:rgba(20,32,58,.07);overflow:hidden">'+
+      '<span style="display:block;height:100%;border-radius:4px;background:'+p.c+
+        ';width:'+(p.v/mx*100).toFixed(1)+'%"></span></span>'+
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8.5px;color:#7D8CA8;min-width:44px;text-align:right">'+
+        esc(p.n)+'</span></div>';
+  }).join('');
+}
+/* Слот бүрийн бодит "юу харагдах вэ" — verified бол утга, none бол 0 */
+function sectorParts(id){
+  return slotsOf(id).filter(function(s){return s.key&&s.key!=='plan'}).map(function(s){
+    var sv=slotVal(id,s.path), q=qualityOf(sv);
+    var v=q==='verified'?(metricValue(sv.metric)||0):0;
+    return {k:s.key,n:SECN[s.key]||s.key,c:NEON[s.key]||'#8A93AB',v:v,q:q,
+      label:q==='none'?(sv.label||'мэдээлэл алга'):(q==='mock'?'түр дата':'')};
+  });
+}
+function headMetric(id){
+  var sl=slotsOf(id);
+  for(var i=0;i<sl.length;i++){
+    var sv=slotVal(id,sl[i].path);
+    if(sv.metric) return sv.metric;
+  }
+  return null;
+}
+function feedNote(){
+  if(FEED.state==='ready') return '';
+  if(FEED.state==='loading') return '<span class="pvfeed">дата ачаалж байна…</span>';
+  if(FEED.state==='error') return '<span class="pvfeed err">дата ачаалагдаагүй</span>';
+  return '';
+}
+/* previewFor(id, mini) — mini=true бол жагсаалтын жижиг хувилбар */
+function previewFor(id,mini){
+  var kind=vizOf(id), c=CON.widgets[id]||{};
+  var title=(S.widget===id&&S.td&&S.td.title!=null)?S.td.title:(c.title||id);
+  var sub  =(S.widget===id&&S.td&&S.td.sub!=null)?S.td.sub:(c.sub||'');
+  var foot =(S.widget===id&&S.td&&S.td.foot!=null)?S.td.foot:(c.foot||'');
+  var mk=TEXT_ONLY[id]?null:headMetric(id);
+  var accent=NEON.air, body='';
+  var W=mini?190:300, H=mini?34:56;
+
+  if(kind==='counter'){
+    var v=mk?metricValue(mk):null;
+    var unit=TEXT_ONLY[id]?'':(requiredUnit(id,slotsOf(id)[0].key)||'');
+    body='<div class="sp-body"><div class="sp-val" style="font-size:'+(mini?18:26)+'px">'+
+      (v==null?'<span style="color:#A7B0C6">0</span>':esc(nf(v)))+
+      '<span class="sp-u">'+esc(unit)+'</span></div></div>';
+  } else if(kind==='line'||((kind==='bignum'||kind==='donut')&&vizOf(id)==='bar'&&false)){
+    var ser=mk?metricSeries(mk):null;
+    body=ser&&ser.length>1
+      ? svgLine(ser,accent,W,H,false)+
+        '<div class="pvax">'+esc(ser[0].label)+' — '+esc(ser[ser.length-1].label)+
+        ' · '+ser.length+' цэг</div>'
+      : '<div class="pvempty">'+(FEED.state==='ready'?'цуваа алга':'дата ачаалагдаагүй')+'</div>';
+  } else if(kind==='bar'){
+    var ser2=mk?metricSeries(mk):null;
+    body=ser2&&ser2.length>1
+      ? svgLine(ser2,accent,W,H,true)+'<div class="pvax">'+ser2.length+' цэг · багана</div>'
+      : '<div class="pvempty">дата алга</div>';
+  } else if(kind==='donut'){
+    var parts=sectorParts(id);
+    if(!parts.length){ /* w2pb/w2cb — хавтгай виджет, эх виджетийнхээ бүтцийг өвлөнө */
+      var src=DERIVES_FROM[id]; parts=src?sectorParts(src):[];
+    }
+    var tot=parts.reduce(function(a,p){return a+p.v},0);
+    var top=parts.slice().sort(function(a,b){return b.v-a.v})[0];
+    body='<div style="display:flex;align-items:center;gap:'+(mini?9:14)+'px">'+
+      svgDonut(parts.length?parts:[{v:1,c:'rgba(20,32,58,.12)'}],mini?42:70)+
+      '<div style="min-width:0;flex:1">'+parts.slice(0,mini?3:5).map(function(p){
+        var pct=tot?(p.v/tot*100):0;
+        return '<div class="pvrow"><i style="background:'+p.c+'"></i>'+
+          '<span>'+esc(p.n)+'</span><b>'+pct.toFixed(0)+'%</b></div>'}).join('')+
+      '</div></div>';
+  } else if(kind==='sectors'){
+    var ps=sectorParts(id);
+    body=ps.slice(0,mini?3:5).map(function(p){
+      return '<div class="pvrow"><i style="background:'+p.c+'"></i><span>'+esc(p.n)+'</span>'+
+        '<b'+(p.q!=='verified'?' style="color:#A7B0C6;font-weight:500"':'')+'>'+
+        (p.q==='verified'?esc(nf(p.v)||'0'):'0')+'</b></div>'}).join('')+
+      (ps.length>(mini?3:5)?'<div class="pvax">+'+(ps.length-(mini?3:5))+' салбар</div>':'');
+  } else if(kind==='bignum'){
+    var pv=sectorParts(id), tv=pv.reduce(function(a,p){return a+p.v},0);
+    var un=requiredUnit(id,'air')||'';
+    body='<div class="sp-body"><div class="sp-val" style="font-size:'+(mini?18:26)+'px">'+
+      (tv?esc(nf(tv)):'<span style="color:#A7B0C6">0</span>')+
+      '<span class="sp-u">'+esc(un)+'</span></div></div>'+
+      svgBarsH(pv.slice(0,mini?3:5),W);
+  } else if(kind==='kpi'){
+    var kp=TEXT_ONLY[id]
+      ? [{n:'мета',c:NEON.road,v:0,q:'txt'}]   /* uk — метрик холбоогүй, зөвхөн бүтэц */
+      : sectorParts(id);
+    body='<div class="pvkpi">'+kp.slice(0,mini?3:5).map(function(p){
+      return '<div class="pvk" style="border-left:2px solid '+p.c+'">'+
+        '<div class="l">'+esc(p.n)+'</div><div class="v"'+
+        (p.q!=='verified'?' style="color:#A7B0C6"':'')+'>'+
+        (p.q==='verified'?esc(nf(p.v)||'0'):(p.q==='txt'?'—':'0'))+'</div></div>'}).join('')+'</div>';
+  } else { /* list */
+    var ls2=mk?metricSeries(mk):null;
+    var rows= ls2&&ls2.length
+      ? ls2.slice(-(mini?2:3)).reverse().map(function(x){
+          return '<div class="pvrow"><i style="background:'+accent+'"></i><span>'+esc(x.label)+
+            '</span><b>'+esc(nf(x.v))+'</b></div>'}).join('')
+      : (mk==='air.feed_updated_at'&&FEED.fetchedAt
+          ? '<div class="pvrow"><i style="background:'+accent+'"></i><span>Агаарын тээвэр</span><b>'+
+            esc(String(FEED.fetchedAt).slice(0,10))+'</b></div>'
+          : '<div class="pvempty">дата алга</div>');
+    body=rows;
+  }
+
+  return '<div class="sitepv'+(mini?' mini':'')+'" style="--sc:'+accent+'"><div class="sp-card">'+
+    '<div class="sp-top"><span class="sp-g">'+GLYPH.air+'</span>'+
+      '<span class="ed" data-ed="title">'+esc(title)+'</span>'+
+      (sub?'<span class="ed sp-sub" data-ed="sub">'+esc(sub)+'</span>'
+          :(!mini&&('sub' in c)?'<span class="ed sp-sub empty" data-ed="sub">+ дэд гарчиг</span>':''))+
+      feedNote()+
+    '</div>'+body+
+    (foot?'<div class="ed sp-foot" data-ed="foot">'+esc(foot)+'</div>'
+        :(!mini&&('foot' in c)?'<div class="ed sp-foot empty" data-ed="foot">+ хөл бичиг</div>':''))+
+  '</div></div>';
+}
+
+/* ══════════════════ ЗҮҮН БАГАНА ══════════════════ */
+function dsLabel(k){return (DSMETA[k]&&DSMETA[k].n)||k}
+function dsAgency(k){return (DSMETA[k]&&DSMETA[k].a)||'эх сурвалж тодорхойгүй'}
+function dsColor(k){return NEON[(DSMETA[k]&&DSMETA[k].s)||'air']}
+function rDs(){
+  var all=datasets();
+  var list=all.filter(function(k){
+    if(!S.q)return true;
+    return (dsLabel(k)+' '+dsAgency(k)+' '+k).toLowerCase().indexOf(S.q)>=0;
+  });
+  $('dsn').textContent=list.length+'/'+all.length;
+  $('dsList').innerHTML=list.map(function(k){
+    var ids=widgetsOfDs(k), t=tally(ids);
+    var cls=t.ok===ids.length&&ids.length?'ok':(t.ok?'mix':'no');
+    var gl={ok:'✓',mix:'!',no:'✕'}[cls];
+    return '<button class="dsi '+(k===S.ds?'on':'')+'" data-ds="'+esc(k)+'">'+
+      '<span class="dsi-i" style="background:'+dsColor(k)+'"></span>'+
+      '<span><span class="dsi-n">'+esc(dsLabel(k))+'</span>'+
+        '<span class="dsi-a" style="display:block">'+esc(dsAgency(k))+'</span>'+
+        '<span class="dsi-s" style="display:block">'+metricsOfDs(k).length+' метрик · '+
+          t.ok+'/'+ids.length+' виджет</span></span>'+
+      '<span class="st '+cls+'">'+gl+'</span></button>';
+  }).join('')||'<div class="empty" style="padding:18px">Тохирох датасэт олдсонгүй</div>';
+}
+
+/* ══════════════════ ЗАМ МӨР ══════════════════ */
+function crumb(){
+  var ids=scopeIds(), t=tally(ids);
+  var bits=[];
+  bits.push('<button class="cb'+(S.level==='sections'&&!S.ds?' on':'')+'" data-lv="all">Бүх датасэт</button>');
+  if(S.ds){
+    bits.push('<span class="cbs">›</span><button class="cb'+(S.level==='sections'?' on':'')+
+      '" data-lv="sections">'+esc(dsLabel(S.ds))+'</button>');
+  }
+  if(S.level==='all'){
+    bits.push('<span class="cbs">›</span><button class="cb on">Бүх харагдац</button>');
+  }
+  if(S.level!=='sections'&&S.level!=='all'){
+    if(!S.ds) bits.push('<span class="cbs">›</span><button class="cb" data-lv="sections">Нүүр хуудас</button>');
+    bits.push('<span class="cbs">›</span><button class="cb'+(S.level==='widgets'?' on':'')+
+      '" data-lv="widgets">'+esc(SECTIONS[S.section]||S.section)+'</button>');
+  }
+  if(S.level==='edit')
+    bits.push('<span class="cbs">›</span><button class="cb on" data-lv="edit">'+
+      esc(curText(S.widget,'title')||S.widget)+'</button>');
+  var metricN=t.ok+t.mix+t.no;   /* txt виджет хамралтад ороогүй */
+  return '<div class="cov"><div class="crumbnav">'+bits.join('')+'</div>'+
+    '<div class="m">'+(S.ds?esc(dsAgency(S.ds))+' · ':'')+ids.length+' виджет · '+
+      (S.ds?metricsOfDs(S.ds).length:Object.keys(REG.metrics).length)+' метрик'+
+      (FEED.state==='ready'?' · дата '+esc(String(FEED.fetchedAt||'').slice(0,10))
+        :FEED.state==='loading'?' · дата ачаалж байна…'
+        :FEED.state==='error'?' · дата ачаалагдаагүй':'')+'</div>'+
+    miniBar(t,metricN)+
+    '<div class="lg">'+
+      '<div><i style="background:var(--ok)"></i><b>'+t.ok+'</b> бүрэн холбогдсон</div>'+
+      '<div><i style="background:var(--warn)"></i><b>'+t.mix+'</b> хэсэгчлэн</div>'+
+      '<div><i style="background:var(--bad)"></i><b>'+t.no+'</b> холбогдоогүй</div>'+
+      (t.txt?'<div><i style="background:var(--line2)"></i><b>'+t.txt+'</b> зөвхөн текст</div>':'')+
+    '</div></div>';
+}
+
+/* ══════════════════ БҮХ ХАРАГДАЦ ══════════════════
+   16 виджетийн preview-г нэг дэлгэцэд. Хоёр зорилготой: (1) нүүр хуудас
+   бүхэлдээ ямар харагдахыг нэг харцаар шалгах, (2) виджет бүр зөв
+   зурагдаж байгааг нүдээр батлах. Карт дээр дарж шууд засварт орно. */
+function lvAll(){
+  var ids=scopeIds();
+  return '<p class="ph">Бүх виджетийн харагдац <span style="font-family:var(--mono)">'+
+    ids.length+'</span></p>'+
+    '<div class="allgrid">'+ids.map(function(id){
+      var st=statOf(id);
+      return '<div class="allcard" data-widget="'+esc(id)+'">'+
+        '<div class="allhead"><span class="dot d-'+st+'"></span>'+
+        '<span class="allid">'+esc(id)+'</span>'+
+        '<span class="allsec">'+esc(SECTIONS[anchorOf(id)]||anchorOf(id))+'</span></div>'+
+        previewFor(id,true)+'</div>';
+    }).join('')+'</div>';
+}
+
+/* ══════════════════ ТҮВШИН 1 ══════════════════ */
+function lvSections(){
+  var keys=sectionKeys();
+  if(!keys.length) return '<div class="empty">Энэ датасэтэд хамаарах виджет алга</div>';
+  return '<p class="ph">Нүүр хуудасны хэсгүүд</p><div class="pgrid">'+
+    keys.map(function(sec){
+      var list=widgetsIn(sec),t=tally(list);
+      return '<button class="pcard" data-section="'+esc(sec)+'">'+
+        '<div class="pc-t">'+esc(SECTIONS[sec]||sec)+'</div>'+
+        '<div class="pc-n">'+list.length+' виджет'+
+          (t.ok<list.length?' · '+(list.length-t.ok)+' анхаарах':'')+
+          (sectionDirty(sec)?' · <b style="color:var(--warn)">хадгалаагүй</b>':'')+'</div>'+
+        miniBar(t,list.length)+
+        '<div class="pc-w">'+list.slice(0,4).map(function(id){
+          return '<span>'+esc(curText(id,'title')||id)+'</span>'}).join('')+
+          (list.length>4?'<span class="mo2">+'+(list.length-4)+'</span>':'')+'</div>'+
+        '<span class="pc-go">Нээх →</span></button>';
+    }).join('')+'</div>';
+}
+
+/* ══════════════════ ТҮВШИН 2 ══════════════════ */
+var ICONS={
+  view:'◧', text:'✎', loc:'⌖', hist:'↻'
+};
+function iconBar(id){
+  return '<div class="ico">'+
+    '<button class="ib" data-mo="view|'+id+'" title="Харагдац — сайт дээрх урьдчилан харах" aria-label="Харагдац">'+ICONS.view+'</button>'+
+    '<button class="ib" data-goedit="'+id+'|text" title="Текст — гарчиг, хөл бичиг засах" aria-label="Текст">'+ICONS.text+'</button>'+
+    '<button class="ib" data-mo="loc|'+id+'" title="Байршил — хуудас, anchor, ижил метрик ашигладаг виджет" aria-label="Байршил">'+ICONS.loc+'</button>'+
+    '<button class="ib" data-mo="hist|'+id+'" title="Түүх — энэ сессийн өөрчлөлт" aria-label="Түүх">'+ICONS.hist+'</button>'+
+  '</div>';
+}
+function lvWidgets(){
+  var list=widgetsIn(S.section);
+  return '<p class="ph">'+esc(SECTIONS[S.section]||S.section)+
+    ' — виджетүүд <span style="font-family:var(--mono)">'+list.length+'</span></p>'+
+    list.map(function(id){
+      var st=statOf(id), txt=!!TEXT_ONLY[id];
+      var sl=txt?[]:slotsOf(id), b=txt?[]:boundMetrics(id);
+      var ru=txt?null:requiredUnit(id,sl[0].key);
+      var src=txt
+        ? '<div class="src"><b>текст</b><i>метрик холбохгүй</i></div>'
+        : (b.length
+          ? '<div class="src"><b>'+esc(b[0])+'</b><i>'+b.length+'/'+sl.length+' слот · '+esc(ru||'?')+'</i></div>'
+          : '<div class="src no"><b>холбогдоогүй</b><i>'+sl.length+' слот</i></div>');
+      return '<div class="cd'+(S.flash===id?' flash':'')+'" data-cd="'+esc(id)+'"><div class="cd-h">'+
+        '<span class="dot d-'+st+'"></span>'+
+        '<div class="cd-open" data-widget="'+esc(id)+'" role="button" tabindex="0">'+
+          '<div class="cd-n">'+esc(curText(id,'title')||id)+
+            (widgetDirty(id)?' <b class="dt">хадгалаагүй</b>':'')+'</div>'+
+          '<div class="cd-t">'+esc(KIND[id]||'')+' · '+esc(id)+
+            ' · '+(txt?'зөвхөн текст':'хүлээж авна: '+esc(ru||'нэгж тодорхойгүй'))+'</div></div>'+
+        src+iconBar(id)+
+        '<span class="cv" data-widget="'+esc(id)+'" style="cursor:pointer">›</span>'+
+        /* Жагсаалтаас НЭРЭЭР нь биш, ЗУРГААР нь таних — сайт дээрх
+           жинхэнэ харагдацаар нь жижиг preview */
+        '<div class="cd-pv" data-widget="'+esc(id)+'" style="cursor:pointer">'+
+          previewFor(id,true)+'</div>'+
+        '</div></div>';
+    }).join('');
+}
+
+/* ══════════════════ ТҮВШИН 3 ══════════════════ */
+/* metric_registry.json БОДИТ ТООН СНАПШОТ хадгалдаггүй (утгыг index.html
+   ажиллах үедээ flights JSON-оос тооцоолдог) — иймд энд зохиомол тоо
+   ГАРГАХГҮЙ, зөвхөн үнэн төлөвийг харуулна. */
+function slotDisplay(sv,q){
+  if(q==='verified') return {v:'амьд утга',cls:'',badge:'<span class="badge b-ok">амьд · вэб сервис</span>'};
+  if(q==='none')     return {v:'0',cls:'z',badge:'<span class="badge b-zero">'+esc(sv.label||'мэдээлэл алга')+'</span>'};
+  return {v:'—',cls:'z',badge:'<span class="badge b-warn">түр дата</span>'};
+}
+function metricSelect(id,path,sectorKey){
+  var sv=slotVal(id,path), ru=requiredUnit(id,sectorKey);
+  var opts=['<option value="">— холбоогүй —</option>'];
+  Object.keys(REG.metrics).forEach(function(mk){
+    var w=why(mk,ru), m=REG.metrics[mk], cur=(sv.metric===mk);
+    /* ОДООГИЙН холбоосыг ХЭЗЭЭ Ч disabled болгохгүй — эс тэгвэл select
+       өөрийнхөө сонгосон утгыг харуулж чадахгүй, "боломжгүй төлөв" гарна.
+       Дүрэм зөрчсөн бол доор тусад нь анхааруулга үзүүлнэ. */
+    opts.push('<option value="'+esc(mk)+'"'+(cur?' selected':'')+(w&&!cur?' disabled':'')+'>'+
+      esc(mk)+' · '+esc(m.unit)+(w?' — '+(cur?'⚠ ':'')+esc(w):'')+'</option>');
+  });
+  return '<select data-slot="'+esc(id)+'|'+path.join(',')+'|'+esc(sectorKey||'')+'">'+opts.join('')+'</select>';
+}
+/* Одоо холбогдсон метрик слотын дүрэм зөрчиж байгаа эсэх */
+function bindingWarn(id){
+  var out=[];
+  slotsOf(id).forEach(function(s){
+    var sv=slotVal(id,s.path);
+    if(!sv.metric)return;
+    var w=why(sv.metric,requiredUnit(id,s.key));
+    if(w) out.push((SECN[s.key]||s.key||'метрик')+': '+w);
+  });
+  return out.length?out:null;
+}
+function calcLine(mk){
+  var m=REG.metrics[mk];if(!m)return '';
+  return '<div class="mecalc">Тооцоолол <code>'+esc(m.agg)+'('+esc(m.column)+')'+
+    (m.transform?' '+esc(m.transform):'')+'</code> → <b>'+esc(m.unit)+'</b><br>'+
+    'Датасэт <code>'+esc(m.dataset)+'</code> · эх сурвалж <code>'+esc(m.source)+'</code><br>'+
+    'Шүүлт <code>'+esc(m.filter||'—')+'</code></div>';
+}
+/* Засварын хэсгийн урьдчилан харах — жагсаалттай ЯГ НЭГ рендерер ашиглана
+   (previewFor), иймд метрик сольсон даруйд график ХЭЛБЭР нь өөрөө
+   шинэчлэгдэнэ. Доор нь слот тус бүрийн чанарын мөр нэмж харуулна. */
+function sitePreview(id){
+  var head=previewFor(id,false);
+  if(TEXT_ONLY[id]) return head;
+  var rows=slotsOf(id).map(function(s){
+    var sv=slotVal(id,s.path),q=qualityOf(sv),d=slotDisplay(sv,q);
+    return '<div class="secrow '+d.cls+'">'+
+      '<span class="secrow-i" style="background:'+(NEON[s.key]||'#8A93AB')+'"></span>'+
+      '<span class="secrow-n">'+esc(SECN[s.key]||s.key||'ганц метрик')+'</span>'+
+      '<span class="secrow-v">'+esc(d.v)+'</span>'+d.badge+'</div>';
+  }).join('');
+  return head+'<div class="sitepv" style="padding:12px 16px"><div class="sp-card">'+
+    '<div class="pvax" style="margin:0 0 6px">Слотын чанар</div>'+rows+'</div></div>';
+}
+/* Чартын хэлбэр солих — утга алдагдахгүй хосуудад л санал болгоно */
+function vizSelect(id){
+  var base=PKIND[id], opts=SWAPPABLE[base];
+  if(!opts) return '';
+  var NAMES={line:'Шугаман',bar:'Багана',donut:'Донут',bignum:'Том тоо'};
+  return '<div class="vizsel"><label>Харагдацын хэлбэр</label><select data-viz="'+esc(id)+'">'+
+    opts.map(function(o){return '<option value="'+o+'"'+(vizOf(id)===o?' selected':'')+'>'+
+      NAMES[o]+'</option>'}).join('')+'</select>'+
+    '<span class="pvax" style="margin:0">зөвхөн урьдчилан харахад — сайтад хадгалагдахгүй</span></div>';
+}
+function textForm(id){
+  var fields=textFields(id), d=dirtyTextFields(id);
+  if(!fields.length) return '';
+  return '<p class="ph" style="margin:18px 0 9px">Текст · content.json</p>'+
+    fields.map(function(f){
+      var v=S.td[f]==null?'':S.td[f];
+      return '<div class="f" style="margin-bottom:9px"><label>'+esc(FL[f]||f)+
+        (d.indexOf(f)>=0?' <b class="dt">өөрчлөгдсөн</b>':'')+'</label>'+
+        ((f==='foot'||f==='foot2')
+          ? '<textarea data-tf="'+f+'" rows="3">'+esc(v)+'</textarea>'
+          : '<input data-tf="'+f+'" value="'+esc(v)+'">')+'</div>';
+    }).join('')+
+    '<div class="acts"><button class="btn pri sm" data-tsave="1"'+(d.length?'':' disabled')+'>'+
+      'Хэрэглэх'+(d.length?' ('+d.length+')':'')+'</button>'+
+      '<button class="btn sm" data-tcancel="1"'+(d.length?'':' disabled')+'>Болих</button>'+
+      '<button class="btn sm" data-mo="loc|'+id+'">'+ICONS.loc+' Байршил</button>'+
+      '<button class="btn sm" data-mo="hist|'+id+'">'+ICONS.hist+' Түүх</button></div>';
+}
+function lvEdit(){
+  var id=S.widget;
+  if(!S.td) resetTd(id);
+  /* uk — метрик холбохгүй, ЗӨВХӨН нэршил засах горим. Хамрах хүрээ
+     өргөсөөгүй: метрик холболт энд байхгүй, зөвхөн content.json-ий текст. */
+  if(TEXT_ONLY[id]){
+    return '<div class="edit2"><div class="e-pv">'+
+      '<p class="ph">Сайт дээрх харагдац</p>'+previewFor(id,false)+
+      '<p class="pvnote">Өнгө, фонт нь сайтын эх кодын токеноос. Текст дээр дарж талбар руу шилжинэ.</p>'+
+      '</div><div class="e-fm">'+
+      '<div class="txtonly"><b>Зөвхөн нэршил засах горим</b>'+
+        'Энэ виджет порталын мета-үзүүлэлт (датасэт, үйлчилгээ, судалгааны тоо) харуулдаг — '+
+        'тээврийн салбарын метрик биш. Иймд метрик холбох хэсэггүй, зөвхөн '+
+        '<code>content.json</code>-ий текст засварлана.</div>'+
+      textForm(id)+'</div></div>';
+  }
+  var gw=grainWarn(id), bw=bindingWarn(id);
+  var slotForm=slotsOf(id).map(function(s){
+    var sv=slotVal(id,s.path),q=qualityOf(sv);
+    var head=s.key===null?'<b>Метрик</b>'
+      :'<span class="secrow-i" style="background:'+(NEON[s.key]||'#8A93AB')+'"></span><b>'+
+        esc(SECN[s.key]||s.key)+'</b>';
+    var badge=q==='verified'?'<span class="badge b-ok">амьд</span>'
+      :q==='none'?'<span class="badge b-zero">'+esc(sv.label||'мэдээлэл алга')+'</span>'
+      :'<span class="badge b-warn">эх сурвалж алга</span>';
+    return '<div class="sedit"><div class="sedit-h">'+head+badge+'</div>'+
+      '<div class="f" style="margin-bottom:8px"><label>Метрик · шаардах нэгж: '+
+        esc(requiredUnit(id,s.key)||'тодорхойгүй')+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
+      (sv.metric?calcLine(sv.metric)
+        :(sv.would_need?'<div class="acc"><b>Шаардлагатай:</b> '+esc(sv.would_need)+'</div>':''))+
+      '</div>';
+  }).join('');
+  return '<div class="edit2"><div class="e-pv">'+
+    '<p class="ph">Сайт дээрх харагдац</p>'+vizSelect(id)+sitePreview(id)+
+    '<p class="pvnote">Өнгө, фонт нь сайтын эх кодын токеноос; дата цэг нь сайт өөрөө уншдаг '+
+      'вэб сервисээс, <code>metric_registry.json</code>-д бичигдсэн agg/filter/transform-оор '+
+      'тооцоолов. Метрик сольсон даруйд график шууд шинэчлэгдэнэ.</p></div><div class="e-fm">'+
+    (bw?'<div class="warnbox"><b>Одоогийн холбоос дүрэм зөрчиж байна</b>'+
+        esc(bw.join(' · '))+'</div>':'')+
+    (gw?'<div class="warnbox"><b>Нийлбэрийн анхааруулга</b>'+esc(gw)+'</div>':'')+
+    '<p class="ph">Эх сурвалж</p>'+slotForm+textForm(id)+'</div></div>';
+}
+
+/* ══════════════════ МОДАЛЬ ══════════════════ */
+function usersOfMetric(mk,exceptId){
+  var out=[];
+  Object.keys(REG.widgets).forEach(function(wid){
+    if(wid===exceptId)return;
+    var w=REG.widgets[wid],hit=null;
+    if(w.sectors&&!Array.isArray(w.sectors)){
+      Object.keys(w.sectors).forEach(function(k){if(w.sectors[k].metric===mk)hit=k});
+      if(w.plan&&w.plan.metric===mk)hit='plan';
+    } else if(w.metric===mk) hit='—';
+    if(hit) out.push({id:wid,slot:hit,inScope:SCOPE.indexOf(wid)>=0});
+  });
+  return out;
+}
+function moLoc(id){
+  var c=CON.widgets[id]||{}, b=boundMetrics(id);
+  var url=BASE+'#'+anchorOf(id);
+  var rows='<dl style="margin:0">'+
+    '<div class="loc"><dt>Хуудас</dt><dd>'+esc(c.page||'—')+'</dd></div>'+
+    '<div class="loc"><dt>Хэсэг</dt><dd>'+esc(SECTIONS[anchorOf(id)]||anchorOf(id))+'</dd></div>'+
+    '<div class="loc"><dt>Anchor</dt><dd>#'+esc(anchorOf(id))+'</dd></div>'+
+    '<div class="loc"><dt>Виджетийн ID</dt><dd>'+esc(id)+'</dd></div>'+
+    '<div class="loc"><dt>Слот</dt><dd>'+slotsOf(id).map(function(s){
+        return esc(SECN[s.key]||s.key||'ганц метрик')}).join(', ')+'</dd></div>'+
+    '</dl>'+
+    '<p class="ph" style="margin:16px 0 6px">Сайт дээрх шууд холбоос</p>'+
+    '<div class="urlbox">'+esc(url)+'</div>'+
+    '<div class="acts"><a class="btn sm" href="'+esc(url)+'" target="_blank" rel="noopener">Сайт дээр нээх ↗</a></div>';
+  if(c._note) rows+='<p class="ph" style="margin:16px 0 6px">content.json тэмдэглэл</p>'+
+    '<div class="acc">'+esc(c._note)+'</div>';
+  if(REG.widgets[id].note) rows+='<p class="ph" style="margin:16px 0 6px">registry тэмдэглэл</p>'+
+    '<div class="acc">'+esc(REG.widgets[id].note)+'</div>';
+
+  rows+='<p class="ph" style="margin:16px 0 6px">Ижил метрик ашигладаг виджет</p>';
+  if(!b.length){
+    rows+='<div class="empty">Энэ виджет одоогоор ямар ч метрикт холбогдоогүй</div>';
+  }else{
+    b.forEach(function(mk){
+      var u=usersOfMetric(mk,id);
+      rows+='<div class="mecalc" style="margin-bottom:5px"><code>'+esc(mk)+'</code></div>';
+      rows+= u.length
+        ? '<div class="use">'+u.map(function(x){
+            return '<button class="utag" data-goto="'+esc(x.id)+'"'+(x.inScope?'':' disabled title="Хамрах хүрээнээс гадуур"')+'>'+
+              esc(curText(x.id,'title')||x.id)+' · '+esc(x.slot)+(x.inScope?' →':' (хүрээнээс гадуур)')+'</button>'}).join('')+'</div>'
+        : '<div class="empty" style="padding:14px">Өөр виджет энэ метрикийг ашиглахгүй байна</div>';
+    });
+  }
+  return rows;
+}
+function moHist(id){
+  var mine=LOG.filter(function(l){return l.id===id});
+  var head='<div class="acc" style="margin-bottom:12px">Файлууд өөрчлөлтийн түүх хадгалдаггүй тул '+
+    'энд <b>ЭНЭ СЕССИЙН</b> бодит өөрчлөлт л харагдана. Экспортлосны дараа git түүх нь бүрэн бичлэг болно.</div>'+
+    '<dl style="margin:0 0 14px">'+
+    '<div class="loc"><dt>registry шинэчлэгдсэн</dt><dd>'+esc(REG.updated||'—')+'</dd></div>'+
+    '<div class="loc"><dt>content шинэчлэгдсэн</dt><dd>'+esc(CON.updated||'—')+'</dd></div></dl>';
+  if(!mine.length) return head+'<div class="empty">Энэ виджетэд өөрчлөлт хийгээгүй байна</div>';
+  return head+'<div class="hist">'+mine.map(function(l){
+    return '<div class="h"><time>'+esc(l.t)+'</time><span>'+esc(l.x)+'</span></div>'}).join('')+'</div>';
+}
+function rMo(){
+  if(!S.mo)return;
+  var id=S.mo;
+  $('moK').textContent=(CON.widgets[id]&&CON.widgets[id].page||'Нүүр')+' · '+id;
+  $('moN').textContent=curText(id,'title')||id;
+  $('moS').textContent=(KIND[id]||'')+' · '+slotsOf(id).length+' слот · '+
+    (boundMetrics(id).length)+' холбогдсон';
+  var tabs=[['view','Харагдац'],['loc','Байршил'],['hist','Түүх']];
+  $('moT').innerHTML=tabs.map(function(t){
+    return '<button class="mt'+(S.mt===t[0]?' on':'')+'" data-mt="'+t[0]+'">'+t[1]+'</button>'}).join('');
+  if(S.mt==='view'){
+    if(!S.td||S.widget!==id){S.widget=id;resetTd(id)}
+    $('moB').innerHTML=sitePreview(id)+
+      '<p class="pvnote">Энэ бол сайтын бодит CSS токеноор хийсэн урьдчилан харах — '+
+      'жинхэнэ хуудас биш. Засах бол доорх товчийг дарна уу.</p>'+
+      '<div class="acts" style="margin-top:12px">'+
+      '<button class="btn pri sm" data-goedit="'+id+'|full">Энэ виджетийг засах →</button></div>';
+  } else if(S.mt==='loc'){ $('moB').innerHTML=moLoc(id); }
+  else { $('moB').innerHTML=moHist(id); }
+}
+function openMo(tab,id){S.mo=id;S.mt=tab;rMo();
+  $('mo').classList.add('on');$('scrim').classList.add('on');$('moX').focus()}
+function closeMo(){S.mo=null;$('mo').classList.remove('on');$('scrim').classList.remove('on')}
+
+/* ══════════════════ ШИЛЖИЛТ ══════════════════ */
+function gotoWidget(id,mode){
+  if(SCOPE.indexOf(id)<0){toast('Энэ виджет хамрах хүрээнээс гадуур');return}
+  /* Тухайн виджет одоогийн датасэтийн шүүлтэд багтахгүй бол шүүлтийг
+     автоматаар тайлна — эс тэгвэл шилжсэн ч жагсаалтад харагдахгүй. */
+  if(S.ds&&widgetsOfDs(S.ds).indexOf(id)<0) S.ds=null;
+  S.section=anchorOf(id);S.widget=id;S.level='edit';resetTd(id);
+  closeMo();render();
+  if(mode==='text'){
+    var el=document.querySelector('[data-tf="title"]');
+    if(el){el.focus();el.select&&el.select()}
+  }
+  toast('Шилжлээ: '+(curText(id,'title')||id));
+}
+
+/* ══════════════════ ЗУРАЛТ ══════════════════ */
+function render(){
+  if(!REG||!CON)return;
+  rDs();
+  $('cov').innerHTML=crumb();
+  $('body').innerHTML=S.level==='all'?lvAll():S.level==='edit'?lvEdit()
+    :S.level==='widgets'?lvWidgets():lvSections();
+  $('allBtn').textContent=S.level==='all'?'Хэсгээр нь':'Бүх харагдац';
+  var n=dirtyCount();
+  $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> өөрчлөлт хадгалагдаагүй'):'Өөрчлөлт алга';
+  $('expBtn').disabled=n===0;
+  $('revBtn').disabled=n===0;
+  if(S.flash) setTimeout(function(){S.flash=null},1200);
+}
+var tT;
+function toast(t){
+  var e=$('toast');e.textContent=t;e.classList.add('on');
+  clearTimeout(tT);tT=setTimeout(function(){e.classList.remove('on')},2300);
+}
+
+/* ══════════════════ ҮЙЛДЭЛ ══════════════════ */
+document.addEventListener('click',function(e){
+  var t=e.target, el;
+  if((el=t.closest&&t.closest('[data-ds]'))){
+    var k=el.dataset.ds;
+    S.ds=(S.ds===k)?null:k;S.level='sections';S.section=null;S.td=null;
+    render();toast(S.ds?dsLabel(S.ds):'Бүх датасэт');return}
+  if((el=t.closest&&t.closest('[data-lv]'))){
+    var lv=el.dataset.lv;
+    if(lv==='all'){S.ds=null;S.level='sections';S.section=null;S.td=null}
+    else if(lv==='sections'){S.level='sections';S.section=null;S.td=null}
+    else if(lv==='widgets'){S.level='widgets';S.td=null}
+    render();return}
+  if((el=t.closest&&t.closest('[data-section]'))){
+    S.section=el.dataset.section;S.level='widgets';S.td=null;render();return}
+  if((el=t.closest&&t.closest('[data-mo]'))){
+    var p=el.dataset.mo.split('|');openMo(p[0],p[1]);return}
+  if((el=t.closest&&t.closest('[data-goedit]'))){
+    var g=el.dataset.goedit.split('|');gotoWidget(g[0],g[1]);return}
+  if((el=t.closest&&t.closest('[data-goto]'))){
+    if(el.disabled)return;
+    var gid=el.dataset.goto;S.flash=gid;gotoWidget(gid,'full');return}
+  if((el=t.closest&&t.closest('[data-widget]'))){
+    S.widget=el.dataset.widget;
+    /* "Бүх харагдац"-аас шууд орж болно — тэнд S.section тодорхойгүй тул
+       виджетийн өөрийнх нь anchor-оос сэргээнэ, эс тэгвэл зам мөрийн
+       хэсгийн нэр хоосон гарна. */
+    S.section=anchorOf(S.widget);
+    S.level='edit';S.td=null;render();return}
+  if((el=t.closest&&t.closest('[data-mt]'))){S.mt=el.dataset.mt;rMo();return}
+  if(t===$('moX')||t===$('scrim')){closeMo();return}
+  if((el=t.closest&&t.closest('[data-ed]'))){
+    var f=el.dataset.ed;
+    if(S.mo){closeMo();gotoWidget(S.mo,'full')}
+    var i=document.querySelector('[data-tf="'+f+'"]');
+    if(i){i.focus();i.select&&i.select();toast(FL[f]+' талбар идэвхжлээ')}return}
+  if(t.closest&&t.closest('[data-tsave]')){
+    var id=S.widget,d=dirtyTextFields(id);
+    if(!d.length)return;
+    d.forEach(function(f){
+      log(id,FL[f]+': "'+curText(id,f)+'" → "'+S.td[f]+'"');
+      CON.widgets[id][f]=S.td[f]});
+    render();toast(d.length+' текст талбар хэрэглэгдлээ');return}
+  if(t.closest&&t.closest('[data-tcancel]')){
+    resetTd(S.widget);render();toast('Текстийн өөрчлөлт цуцлагдлаа');return}
+});
+
+/* Гар талбараар (Enter/Space) виджет нээх */
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    if(S.mo){closeMo();return}
+    if(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+    if(S.level==='edit'){S.level='widgets';S.td=null;render()}
+    else if(S.level==='widgets'){S.level='sections';S.section=null;render()}
+    return}
+  if((e.key==='Enter'||e.key===' ')&&document.activeElement&&
+      document.activeElement.matches&&document.activeElement.matches('.cd-open')){
+    e.preventDefault();document.activeElement.click()}
+});
+
+document.addEventListener('change',function(e){
+  var vz=e.target.closest&&e.target.closest('[data-viz]');
+  if(vz){S.viz[vz.dataset.viz]=vz.value;render();
+    toast('Харагдацын хэлбэр: '+vz.value);return}
+  var sel=e.target.closest&&e.target.closest('[data-slot]');
+  if(!sel)return;
+  var p=sel.dataset.slot.split('|'), id=p[0], path=p[1]?p[1].split(','):[], mk=sel.value||null;
+  var sv=slotVal(id,path), ov=REG0.widgets[id];
+  path.forEach(function(x){ov=ov&&ov[x]});
+  var before=sv.metric;
+  sv.metric=mk;
+  if(mk){
+    /* quality-г ЗӨВХӨН анхнаасаа байсан слотод бичнэ. hero_fl/t05 мэтийн
+       хуучин хавтгай бичлэгт quality талбар огт байдаггүй (metric байгаа нь
+       өөрөө verified гэсэн үг) — шинээр нэмбэл экспортын diff шаардлагагүй
+       мөрөөр бохирдож, git дээр шүүх нь хүндэрнэ. */
+    if(ov&&('quality' in ov)) sv.quality='verified';
+    else if('quality' in sv) delete sv.quality;
+    /* would_need / label нь ЗӨВХӨН холбогдоогүй слотод утгатай — холбогдсон
+       хойно үлдээвэл registry дотор хуучирсан, төөрөгдүүлэх мөр үлдэнэ. */
+    if('would_need' in sv) delete sv.would_need;
+    if('label' in sv) delete sv.label;
+  }else{
+    sv.quality=(ov&&ov.quality==='none')?'none':'mock';
+    if(ov&&ov.would_need) sv.would_need=ov.would_need;
+    if(ov&&ov.label) sv.label=ov.label;
+  }
+  log(id,(p[2]||'метрик')+': '+(before||'—')+' → '+(mk||'—'));
+  render();toast(mk?('Холбогдлоо: '+mk):'Холбоос салгагдлаа');
+});
+
+document.addEventListener('input',function(e){
+  var el=e.target;
+  if(el===$('q')){S.q=el.value.trim().toLowerCase();rDs();return}
+  var tf=el.closest&&el.closest('[data-tf]');
+  if(!tf)return;
+  S.td[tf.dataset.tf]=tf.value;
+  /* Зөвхөн товчийг шинэчилнэ — бүтэн дахин зурвал курсор алдагдана */
+  var d=dirtyTextFields(S.widget);
+  var sv=document.querySelector('[data-tsave]'), cn=document.querySelector('[data-tcancel]');
+  if(sv){sv.disabled=!d.length;sv.textContent='Хэрэглэх'+(d.length?' ('+d.length+')':'')}
+  if(cn)cn.disabled=!d.length;
+});
+
+/* Хадгалагдаагүй өөрчлөлттэй үед хуудас хаахаас сэргийлнэ — экспорт бол
+   ганц хадгалалтын зам тул хамгаалалтгүй бол ажил бүрмөсөн алдагдана. */
+window.addEventListener('beforeunload',function(e){
+  if(dirtyCount()===0)return;
+  e.preventDefault();e.returnValue='';
+});
+
+function download(obj,name){
+  var blob=new Blob([JSON.stringify(obj,null,2)+'\n'],{type:'application/json'});
+  var url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},1500);
+}
+$('expBtn').addEventListener('click',function(){
+  var today=new Date().toISOString().slice(0,10), files=[];
+  if(regDirtyKeys().length){REG.updated=today;download(REG,'metric_registry.json');files.push('metric_registry.json')}
+  if(conDirtyKeys().length){CON.updated=today;download(CON,'content.json');files.push('content.json')}
+  toast('Татагдлаа: '+files.join(' + ')+' — репод хуулж commit хийнэ үү');
+});
+$('allBtn').addEventListener('click',function(){
+  S.level=(S.level==='all')?'sections':'all';S.section=null;S.td=null;render();
+});
+$('revBtn').addEventListener('click',function(){
+  REG=clone(REG0);CON=clone(CON0);S.td=null;LOG=[];
+  render();toast('Бүх өөрчлөлт буцаагдлаа');
+});
+
+/* ══════════════════ АЧААЛАХ ══════════════════ */
+function showState(html,cls){$('state').innerHTML='<div class="state '+(cls||'')+'">'+html+'</div>'}
+showState('<h2><span class="spin"></span>Ачааллаж байна</h2>'+
+  '<p><code>../metric_registry.json</code> ба <code>../content.json</code> уншиж байна…</p>');
+function getJson(u){
+  return fetch(u,{cache:'no-store'}).then(function(r){
+    if(!r.ok)throw new Error(u+' → HTTP '+r.status);
+    return r.json()});
+}
+Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
+.then(function(r){
+  REG=r[0];CON=r[1];REG0=clone(REG);CON0=clone(CON);
+  var missing=SCOPE.filter(function(id){return !REG.widgets[id]||!CON.widgets[id]})
+    .concat(Object.keys(TEXT_ONLY).filter(function(id){return !CON.widgets[id]}));
+  if(missing.length){
+    showState('<h2>Бүртгэлгүй виджет олдлоо</h2><p>Дараах '+missing.length+
+      ' виджет registry эсвэл content.json-д алга: <code>'+esc(missing.join(', '))+
+      '</code></p><p>Файлыг шалгаад дахин ачаална уу — зохиомол утгаар нөхөхгүй.</p>','err');
+    return}
+  $('state').innerHTML='';
+  $('expbar').style.display='flex';
+  render();
+  /* Урьдчилан харах картыг ЖИНХЭНЭ дата цэгээр зурахын тулд сайт өөрөө
+     уншдаг feed-ийг ачаална. Амжилтгүй ч гэсэн хэрэгсэл БҮРЭН ажиллана —
+     preview зөвхөн бүтцээ харуулж, "дата ачаалагдаагүй" гэж ил хэлнэ. */
+  loadFeed().then(render);
+})
+.catch(function(err){
+  showState('<h2>Файл уншиж чадсангүй</h2><p>'+esc(err.message)+'</p>'+
+    '<p>Энэ хэрэгсэл <b>локал HTTP сервер</b> шаардана. Файлыг давхар товшиж '+
+    '(<code>file://</code>) нээвэл хөтөч <code>fetch</code>-ийг блоклоно.</p>'+
+    '<p>Репозиторийн үндсэн хавтаснаас: <code>python -m http.server 8080</code> '+
+    'ажиллуулаад <code>http://localhost:8080/admin/index.html</code> хаягаар нээнэ үү.</p>','err');
+});
+
+})();
+</script>
+</body>
+</html>
