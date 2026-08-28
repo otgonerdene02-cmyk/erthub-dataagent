@@ -222,6 +222,13 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .allsec{font-family:var(--mono);font-size:8.5px;color:var(--ink3);margin-left:auto;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
 @media(max-width:640px){.allgrid{grid-template-columns:1fr}}
+/* хайлт + шүүлт */
+.fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.fbar .srch{flex:1;min-width:200px;margin:0}
+.fbar select{font-family:var(--mono);font-size:11px;padding:7px 9px;border:1px solid var(--line2);
+  border-radius:7px;background:var(--card);color:var(--ink2);cursor:pointer}
+.fbar select:focus{outline:2px solid var(--road);outline-offset:1px}
+@media(max-width:640px){.fbar{flex-direction:column;align-items:stretch}.fbar select{width:100%}}
 
 /* ── модаль ── */
 .scrim{position:fixed;inset:0;background:rgba(19,26,46,.4);opacity:0;pointer-events:none;transition:.2s;z-index:50}
@@ -306,6 +313,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
   <div class="pane r">
     <div id="state"></div>
     <div id="cov"></div>
+    <div id="fbar"></div>
     <div id="body"></div>
   </div>
 </div>
@@ -393,7 +401,12 @@ var SWAPPABLE={line:['line','bar'],donut:['donut','bar'],bignum:['bignum','bar']
 /* ══════════════════ ТӨЛӨВ ══════════════════ */
 var REG=null, CON=null, REG0=null, CON0=null;
 var S={tab:'data',ds:null,level:'sections',section:null,widget:null,td:null,q:'',
-       mo:null,mt:'view',flash:null,viz:{}};
+       mo:null,mt:'view',flash:null,viz:{},
+       /* виджет жагсаалтын хайлт+шүүлт (lvWidgets, lvAll хоёуланд) */
+       wq:'',wQuality:'all',wPage:'all',wViz:'all'};
+/* Дүрслэлийн төрлийн монгол нэр — шүүлтийн сонголт, PKIND-ийн түлхүүрээр */
+var VIZNAME={counter:'Тоолуур',kpi:'KPI',line:'График',donut:'Донут',
+  sectors:'Салбарын жагсаалт',bignum:'Том тоо',list:'Жагсаалт'};
 var LOG=[];   /* энэ сессийн бодит өөрчлөлтийн лог */
 var FEED={state:'idle',err:null,months:[],index:[],weekPax:null,weekCargo:null,
           lastMonthCount:null,fetchedAt:null,lastLabel:''};
@@ -1053,14 +1066,79 @@ function lvSite(){
     'тэдгээр виджетээсээ гарчигаа авдаг тул давхардуулбал хоёр эх сурвалж үүснэ.</p>';
 }
 
+/* ══════════════════ ХАЙЛТ + ШҮҮЛТ ══════════════════
+   "Датасэт" табын виджет жагсаалт (lvWidgets) ба "Бүх харагдац" (lvAll)
+   хоёуланд ХАМТ ажиллана. Бүх нөхцөл AND логикоор нэгддэг —
+   filterWidgets() нэг цэгээс дуудагдана, хоёр дахин бичихгүй. */
+function widgetQualityBucket(id){
+  var st=statOf(id);
+  if(st==='ok') return 'verified';
+  if(st==='mix'||st==='no') return 'mock';
+  return 'txt';   /* uk — метрик огт хамааралгүй, аль ч шүүлтэд тооцохгүй */
+}
+function filterWidgets(ids){
+  var q=(S.wq||'').trim().toLowerCase();
+  return ids.filter(function(id){
+    if(S.wQuality!=='all' && widgetQualityBucket(id)!==S.wQuality) return false;
+    if(S.wPage!=='all' && anchorOf(id)!==S.wPage) return false;
+    if(S.wViz!=='all' && (PKIND[id]||'')!==S.wViz) return false;
+    if(!q) return true;
+    var hay=[curText(id,'title')||'', id, SECTIONS[anchorOf(id)]||anchorOf(id)]
+      .concat(TEXT_ONLY[id]?[]:boundMetrics(id)).join(' ').toLowerCase();
+    return hay.indexOf(q)>=0;
+  });
+}
+function pageOptions(ids){
+  var seen=[];
+  ids.forEach(function(id){var k=anchorOf(id);if(seen.indexOf(k)<0)seen.push(k)});
+  return seen;
+}
+function vizOptions(ids){
+  var seen=[];
+  ids.forEach(function(id){var k=PKIND[id];if(k&&seen.indexOf(k)<0)seen.push(k)});
+  return seen;
+}
+function filterBar(scopeIdsForOptions){
+  var pages=pageOptions(scopeIdsForOptions), vizs=vizOptions(scopeIdsForOptions);
+  return '<div class="fbar">'+
+    '<input class="srch" id="wq" style="margin:0" placeholder="Хайх… (гарчиг, метрик, хуудас)" '+
+      'aria-label="Виджет хайх" value="'+esc(S.wq||'')+'">'+
+    '<select id="fQuality" aria-label="Chanar шүүлт">'+
+      '<option value="all"'+(S.wQuality==='all'?' selected':'')+'>Chanar: Бүгд</option>'+
+      '<option value="verified"'+(S.wQuality==='verified'?' selected':'')+'>Verified</option>'+
+      '<option value="mock"'+(S.wQuality==='mock'?' selected':'')+'>Mock</option>'+
+    '</select>'+
+    '<select id="fPage" aria-label="Хуудас шүүлт">'+
+      '<option value="all"'+(S.wPage==='all'?' selected':'')+'>Хуудас: Бүгд</option>'+
+      pages.map(function(k){return '<option value="'+esc(k)+'"'+(S.wPage===k?' selected':'')+'>'+
+        esc(SECTIONS[k]||k)+'</option>'}).join('')+
+    '</select>'+
+    '<select id="fViz" aria-label="Дүрслэлийн төрөл шүүлт">'+
+      '<option value="all"'+(S.wViz==='all'?' selected':'')+'>Төрөл: Бүгд</option>'+
+      vizs.map(function(k){return '<option value="'+esc(k)+'"'+(S.wViz===k?' selected':'')+'>'+
+        esc(VIZNAME[k]||k)+'</option>'}).join('')+
+    '</select>'+
+  '</div>';
+}
+function emptyFilterMsg(){
+  return '<div class="empty">Тохирох зүйл олдсонгүй — хайлт/шүүлтээ өөрчилнө үү.'+
+    '<div style="margin-top:10px"><button class="btn sm" id="fClear">Шүүлт цэвэрлэх</button></div></div>';
+}
+
 /* ══════════════════ БҮХ ХАРАГДАЦ ══════════════════
    16 виджетийн preview-г нэг дэлгэцэд. Хоёр зорилготой: (1) нүүр хуудас
    бүхэлдээ ямар харагдахыг нэг харцаар шалгах, (2) виджет бүр зөв
    зурагдаж байгааг нүдээр батлах. Карт дээр дарж шууд засварт орно. */
+function currentListScope(){
+  if(S.level==='all') return scopeIds();
+  if(S.level==='widgets') return widgetsIn(S.section);
+  return [];
+}
 function lvAll(){
-  var ids=scopeIds();
+  var all=scopeIds(), ids=filterWidgets(all);
+  if(!ids.length) return emptyFilterMsg();
   return '<p class="ph">Бүх виджетийн харагдац <span style="font-family:var(--mono)">'+
-    ids.length+'</span></p>'+
+    ids.length+(ids.length!==all.length?' / '+all.length:'')+'</span></p>'+
     '<div class="allgrid">'+ids.map(function(id){
       var st=statOf(id);
       return '<div class="allcard" data-widget="'+esc(id)+'">'+
@@ -1104,9 +1182,11 @@ function iconBar(id){
   '</div>';
 }
 function lvWidgets(){
-  var list=widgetsIn(S.section);
+  var all=widgetsIn(S.section), list=filterWidgets(all);
+  if(!list.length) return emptyFilterMsg();
   return '<p class="ph">'+esc(SECTIONS[S.section]||S.section)+
-    ' — виджетүүд <span style="font-family:var(--mono)">'+list.length+'</span></p>'+
+    ' — виджетүүд <span style="font-family:var(--mono)">'+
+    list.length+(list.length!==all.length?' / '+all.length:'')+'</span></p>'+
     list.map(function(id){
       var st=statOf(id), txt=!!TEXT_ONLY[id];
       var sl=txt?[]:slotsOf(id), b=txt?[]:boundMetrics(id);
@@ -1372,6 +1452,9 @@ function render(){
   $('allBtn').style.display=isSite?'none':'';
   $('siteN').textContent=siteDirtyKeys().length||'';
   if(isSite){
+    /* "Виджет ба дата" табын хайх/шүүх мөр энд хамаарахгүй тул арилгана —
+       эс тэгвэл өмнөх табаас үлдсэн #fbar энд ч харагдана. */
+    $('fbar').innerHTML='';
     /* Хайлтын талбарыг #cov-д байрлуулна — #body дахин зурагдахад
        устахгүй тул бичиж байхад фокус алдагдахгүй. */
     if(!$('qsite')){
@@ -1384,8 +1467,12 @@ function render(){
     if($('qsite')) $('cov').innerHTML='';
     rDs();
     $('cov').innerHTML=crumb();
-    $('body').innerHTML=S.level==='all'?lvAll():S.level==='edit'?lvEdit()
-      :S.level==='widgets'?lvWidgets():lvSections();
+    /* Хайх/шүүх мөр ЗӨВХӨН виджет жагсаалт харуулдаг 2 түвшинд (widgets,
+       all). #fbar нь #body-с тусдаа тул шүүлт өөрчлөгдөх бүрд #body-г
+       дахин зурсан ч хайлтын input фокус алдагдахгүй. */
+    var showBar=S.level==='widgets'||S.level==='all';
+    $('fbar').innerHTML=showBar?filterBar(currentListScope()):'';
+    renderBody();
     $('allBtn').textContent=S.level==='all'?'Хэсгээр нь':'Бүх харагдац';
   }
   var n=dirtyCount();
@@ -1393,6 +1480,12 @@ function render(){
   $('expBtn').disabled=n===0;
   $('revBtn').disabled=n===0;
   if(S.flash) setTimeout(function(){S.flash=null},1200);
+}
+/* Зөвхөн #body-г шинэчилнэ — #fbar-д хүрэхгүй тул хайлтын input/шүүлтийн
+   select бичиж/сонгож байх үед фокус алдагдахгүй. */
+function renderBody(){
+  $('body').innerHTML=S.level==='all'?lvAll():S.level==='edit'?lvEdit()
+    :S.level==='widgets'?lvWidgets():lvSections();
 }
 var tT;
 function toast(t){
@@ -1403,6 +1496,8 @@ function toast(t){
 /* ══════════════════ ҮЙЛДЭЛ ══════════════════ */
 document.addEventListener('click',function(e){
   var t=e.target, el;
+  if(t.id==='fClear'){
+    S.wq='';S.wQuality='all';S.wPage='all';S.wViz='all';render();return}
   if((el=t.closest&&t.closest('[data-tab]'))){
     if(S.tab===el.dataset.tab) return;
     S.tab=el.dataset.tab;S.q='';
@@ -1467,6 +1562,10 @@ document.addEventListener('keydown',function(e){
 });
 
 document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.id==='fQuality'){S.wQuality=t.value;renderBody();return}
+  if(t.id==='fPage'){S.wPage=t.value;renderBody();return}
+  if(t.id==='fViz'){S.wViz=t.value;renderBody();return}
   var vz=e.target.closest&&e.target.closest('[data-viz]');
   if(vz){S.viz[vz.dataset.viz]=vz.value;render();
     toast('Харагдацын хэлбэр: '+vz.value);return}
@@ -1515,6 +1614,7 @@ document.addEventListener('input',function(e){
     return;
   }
   if(el.id==='qsite'){S.q=el.value.trim().toLowerCase();$('body').innerHTML=lvSite();return}
+  if(el.id==='wq'){S.wq=el.value;renderBody();return}
   if(el===$('q')){S.q=el.value.trim().toLowerCase();rDs();return}
   var tf=el.closest&&el.closest('[data-tf]');
   if(!tf)return;
