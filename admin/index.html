@@ -65,6 +65,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
   background:#F2F5FC;border:1px solid var(--line2);padding:4px 11px;border-radius:7px;
   color:var(--road);cursor:pointer;white-space:nowrap;transition:.13s}
 .cb:hover{background:#E4ECFF;border-color:var(--road);color:#2E4FC4}
+/* "← Буцах" — зам мөрийн хэсгүүдээс ЯЛГАРНА (энэ бол байрлал биш, үйлдэл) */
+.cbback{background:var(--card);border-color:var(--line2);color:var(--ink2);
+  margin-right:4px;flex-shrink:0}
+.cbback:hover{background:var(--road);border-color:var(--road);color:#fff}
 .cb:focus-visible{outline:2px solid var(--road);outline-offset:2px}
 .cb.on{color:var(--ink);cursor:default;background:var(--card);border-color:var(--line);font-weight:650}
 .cb.on:hover{background:var(--card);border-color:var(--line);color:var(--ink)}
@@ -220,8 +224,9 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .pvsc{border-left:2px solid;padding:3px 0 3px 5px;min-width:0}
 .pvsc .l{font-family:var(--mono);font-size:7px;color:#8494B0;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
-.pvsc .v{font-family:var(--mono);font-size:11px;font-weight:600;color:#0C1428;margin-top:1px}
+.pvsc .v{font-family:'JetBrains Mono',var(--mono);font-size:11px;font-weight:600;color:#0C1428;margin-top:1px}
 .pvsc.z .v{color:#A7B0C6}
+.pvsc .sp{margin-top:3px;opacity:.9}
 /* 8 KPI сүлжээ (k04) — сайт дээр 4×2 */
 .pvgrid8{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
 .pvgc{background:rgba(20,32,58,.04);border-radius:4px;padding:4px 5px;min-width:0}
@@ -251,7 +256,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
   padding:10px 12px;margin-bottom:11px;font-size:11.5px;color:var(--ink2);line-height:1.55}
 .txtonly b{color:var(--ink);display:block;margin-bottom:3px}
 /* бүх харагдац */
-.allgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:11px}
+/* align-items:start — виджет бүр ӨӨРИЙН байгалийн өндрөөр харагдана.
+   Өмнө нь grid мөр бүрийг тэгшилдэг байсан тул бүх карт ИЖИЛ ӨНДӨРТЭЙ
+   болж, "бүгд адилхан" мэт харагдаж байв. */
+.allgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:11px;align-items:start}
 .allcard{background:var(--card);border:1px solid var(--line);border-radius:11px;
   padding:11px;cursor:pointer;transition:.13s}
 .allcard:hover{border-color:var(--road);box-shadow:0 3px 14px rgba(19,26,46,.08)}
@@ -480,6 +488,7 @@ var VIZNAME={counter:'Тоолуур',kpi:'KPI',line:'График',donut:'До�
   sectors:'Салбарын жагсаалт',bignum:'Том тоо',list:'Жагсаалт'};
 var LOG=[];   /* энэ сессийн бодит өөрчлөлтийн лог */
 var FEED={state:'idle',err:null,months:[],index:[],weekPax:null,weekCargo:null,
+          dayPax:null,dayCargo:null,
           lastMonthCount:null,fetchedAt:null,lastLabel:''};
 
 var $=function(i){return document.getElementById(i)};
@@ -565,6 +574,25 @@ function computeSeries(byYear,latest){
     });
     FEED.weekPax=hit?px:null;
     FEED.weekCargo=hit?cg:null;
+    /* w2p/w2c-ийн 7 ХОНОГИЙН ӨДӨР ТУТМЫН багана — index.html дээр H5-д
+       бодит өдрийн дүнгээр зурдаг болсон тул урьдчилан харах нь ч ЯГ ТЭР
+       өдрүүдийг харуулна (зохиомол тоо ашиглахгүй). */
+    var dk=[], dp={}, dc={};
+    for(var dd=6;dd>=0;dd--){
+      var t=new Date(end-dd*86400000);
+      var kk=t.getUTCFullYear()+'-'+(t.getUTCMonth()+1)+'-'+t.getUTCDate();
+      var p2=function(n){return String(n).padStart(2,'0')};
+      dk.push({k:kk,label:p2(t.getUTCMonth()+1)+'.'+p2(t.getUTCDate())});
+      dp[kk]=0; dc[kk]=0;
+    }
+    Object.keys(byYear).forEach(function(y){
+      byYear[y].forEach(function(f){
+        var kk=f.year+'-'+f.month+'-'+f.day;
+        if(kk in dp){ dp[kk]+=(f.pax||0); dc[kk]+=(f.cargo||0); }
+      });
+    });
+    FEED.dayPax  = hit?dk.map(function(x){return {label:x.label,v:dp[x.k]}}):null;
+    FEED.dayCargo= hit?dk.map(function(x){return {label:x.label,v:dc[x.k]}}):null;
   }
 }
 /* Метрикийн БОДИТ утга — зөвхөн registry-д тодорхойлолт нь байгаа
@@ -839,9 +867,13 @@ function sitePaths(){
       if(siteGet(g.path.concat(k))!==undefined) out.push(g.path.concat(k));
     });
   });
-  /* chips — массив */
+  /* chips / chip_bodies — массив */
   var ch=siteGet(['hero','diagram','chips']);
   if(Array.isArray(ch)) ch.forEach(function(_,i){out.push(['hero','diagram','chips',String(i)])});
+  var cb=siteGet(['hero','diagram','chip_bodies']);
+  if(Array.isArray(cb)) cb.forEach(function(_,i){out.push(['hero','diagram','chip_bodies',String(i)])});
+  var mo=siteGet(['months']);
+  if(Array.isArray(mo)) mo.forEach(function(_,i){out.push(['months',String(i)])});
   return out;
 }
 function siteDirtyKeys(){
@@ -984,9 +1016,22 @@ function previewFor(id,mini){
       (v==null?'<span style="color:#A7B0C6">0</span>':esc(nf(v)))+
       '<span class="sp-u">'+esc(unit)+'</span></div></div>';
   } else if(kind==='strip5'){
-    /* ls — сайт дээр 5 салбар ЗЭРЭГЦЭЭ нэг өргөн зурвас болж харагдана */
+    /* ls — сайт дээр 5 салбар ЗЭРЭГЦЭЭ нэг өргөн зурвас, тус бүр доороо
+       спарклайнтай. Verified салбарын спарклайн нь БОДИТ сарын цуваанаас
+       (air.monthly_flight_series), бусад нь хавтгай 0 шугам — сайт дээр
+       яг ижил зарчмаар зурагддаг. */
+    var ser5=metricSeries('air.monthly_flight_series');
     body='<div class="pvstrip">'+sectorParts(id).slice(0,5).map(function(p){
-      return partCell(p,'pvsc')}).join('')+'</div>';
+      var on=p.q==='verified';
+      var spark=(on&&ser5&&ser5.length>1)
+        ? svgLine(ser5,p.c,44,14,false)
+        : '<svg viewBox="0 0 44 14" style="width:100%;height:14px;display:block">'+
+          '<line x1="2" y1="11" x2="42" y2="11" stroke="#C6CEDD" stroke-width="1.4" stroke-linecap="round"></line></svg>';
+      return '<div class="pvsc'+(on?'':' z')+'" style="border-left-color:'+p.c+'">'+
+        '<div class="l">'+esc(p.n)+'</div>'+
+        '<div class="v">'+(on?esc(nf(p.v)||'0'):'0')+'</div>'+
+        '<div class="sp">'+spark+'</div></div>';
+    }).join('')+'</div>';
   } else if(kind==='cols5'){
     /* w2px/w2cx — 5 баганат салбар хоорондын харьцуулалт */
     body='<div class="pvstrip">'+sectorParts(id).slice(0,5).map(function(p){
@@ -1035,12 +1080,21 @@ function previewFor(id,mini){
           '<span>'+esc(p.n)+'</span><b>'+pct.toFixed(0)+'%</b></div>'}).join('')+
       '</div></div>';
   } else if(kind==='bignum'){
+    /* w2p/w2c — сайт дээр ТОМ ТОО + доор нь 7 хоногийн БОСОО баганан
+       график. Өдрийн бодит дүнг FEED.dayPax/dayCargo-оос авна (сайтын
+       weeklyAirStats-тай ижил цонх), байхгүй үед л салбарын зурвас руу
+       ухарна. */
     var pv=sectorParts(id), tv2=pv.reduce(function(a,p){return a+p.v},0);
     var un=requiredUnit(id,'air')||'';
+    var days=(headMetric(id)==='air.weekly_cargo')?FEED.dayCargo:FEED.dayPax;
+    var chart=(days&&days.length>1)
+      ? svgLine(days,accent,W,mini?26:40,true)+
+        '<div class="pvax">'+esc(days[0].label)+' — '+esc(days[days.length-1].label)+
+        ' · 7 хоногийн өдөр тутам</div>'
+      : svgBarsH(pv.slice(0,mini?3:5),W);
     body='<div class="sp-body"><div class="sp-val" style="font-size:'+(mini?18:26)+'px">'+
       (tv2?esc(nf(tv2)):'<span style="color:#A7B0C6">0</span>')+
-      '<span class="sp-u">'+esc(un)+'</span></div></div>'+
-      svgBarsH(pv.slice(0,mini?3:5),W);
+      '<span class="sp-u">'+esc(un)+'</span></div></div>'+chart;
   } else if(kind==='rank'){
     /* r06 — эрэмбэлсэн мөр + харьцангуй урттай зурвас.
        r06-ийн registry бичлэг ХАВТГАЙ (sectors:['air']) тул sectorParts()
@@ -1137,7 +1191,10 @@ function crumb(){
     bits.push('<span class="cbs">›</span><button class="cb on" data-lv="edit">'+
       esc(curText(S.widget,'title')||S.widget)+'</button>');
   var metricN=t.ok+t.mix+t.no;   /* txt виджет хамралтад ороогүй */
-  return '<div class="cov"><div class="crumbnav">'+bits.join('')+'</div>'+
+  var back=canGoBack()
+    ? '<button class="cb cbback" data-back="1" title="Буцах (Esc эсвэл хөтчийн Back)">← Буцах</button>'
+    : '';
+  return '<div class="cov"><div class="crumbnav">'+back+bits.join('')+'</div>'+
     '<div class="m">'+(S.ds?esc(dsAgency(S.ds))+' · ':'')+ids.length+' виджет · '+
       (S.ds?metricsOfDs(S.ds).length:Object.keys(REG.metrics).length)+' метрик'+
       (FEED.state==='ready'?' · дата '+esc(String(FEED.fetchedAt||'').slice(0,10))
@@ -1195,17 +1252,31 @@ function lvSite(){
     if(rows) html+='<div class="sgroup"><h3>'+esc(g.title)+'</h3>'+
       '<div class="where">'+esc(g.where)+'</div>'+rows+'</div>';
   });
-  /* chips — массив тул тусад нь */
+  /* chips — массив тул тусад нь. Чип бүр ГАРЧИГ + ТАЙЛБАР хоёртой
+     (index.html-ийн bridgeLegend title/body) тул хоёуланг нь харуулна. */
   var ch=siteGet(['hero','diagram','chips']);
   if(Array.isArray(ch)){
     var rows='';
     ch.forEach(function(_,i){
-      var p=['hero','diagram','chips',String(i)];
-      if(!match('Чип '+(i+1),p)) return;
-      rows+=siteField(p,'Чип '+(i+1)); shown++;
+      var p=['hero','diagram','chips',String(i)], lb='Чип '+(i+1)+' · гарчиг';
+      if(match(lb,p)){ rows+=siteField(p,lb); shown++; }
+      var pb=['hero','diagram','chip_bodies',String(i)], lbb='Чип '+(i+1)+' · тайлбар';
+      if(siteGet(pb)!==undefined && match(lbb,pb)){ rows+=siteField(pb,lbb); shown++; }
     });
     if(rows) html+='<div class="sgroup"><h3>Hero · чип</h3>'+
       '<div class="where">Hero диаграмын доод эгнээ</div>'+rows+'</div>';
+  }
+  /* months — 01-р хэсгийн хугацааны шүүлтийн сарын шошго (2 сонголтод адил) */
+  var mo=siteGet(['months']);
+  if(Array.isArray(mo)){
+    var mr='';
+    mo.forEach(function(_,i){
+      var p=['months',String(i)], lb=(i+1)+'-р сарын шошго';
+      if(!match(lb,p)) return;
+      mr+=siteField(p,lb); shown++;
+    });
+    if(mr) html+='<div class="sgroup"><h3>Сарын шошго</h3>'+
+      '<div class="where">01-р хэсэг · хугацааны шүүлтийн 2 сонголтод адил</div>'+mr+'</div>';
   }
 
   if(!shown) return '<div class="empty">"'+esc(S.q)+'" — тохирох текст олдсонгүй</div>';
@@ -1595,8 +1666,48 @@ function gotoWidget(id,mode){
 }
 
 /* ══════════════════ ЗУРАЛТ ══════════════════ */
+/* ══════════════════ НАВИГАЦИЙН ТҮҮХ ══════════════════
+   Виджет рүү орсны дараа буцах цорын ганц арга нь зам мөр дээр дарах
+   байсан — хөтчийн Back товч бүтэн хуудсыг орхидог, "Буцах" товч
+   байхгүй байв. Одоо ДӨРВӨН зам (зам мөр, ← Буцах товч, хөтчийн Back,
+   Esc) БҮГД нэг механизмаар ажиллана. */
+function navSnapshot(){
+  return {tab:S.tab,ds:S.ds,level:S.level,section:S.section,widget:S.widget};
+}
+function navKey(){var s=navSnapshot();return [s.tab,s.ds,s.level,s.section,s.widget].join('|')}
+var navLast=null, navSuppress=false;
+function navSync(){
+  var k=navKey();
+  if(k===navLast) return;             /* төлөв өөрчлөгдөөгүй — бичлэг нэмэхгүй */
+  var first=(navLast===null);
+  navLast=k;
+  if(navSuppress) return;             /* popstate-аас ирсэн — дахин бүү бич */
+  try{ history[first?'replaceState':'pushState'](navSnapshot(),''); }catch(e){}
+}
+/* Одоогийн байрлалаас буцах боломжтой юу */
+function canGoBack(){
+  return S.tab==='site'||S.level==='edit'||S.level==='widgets'||S.level==='all'||!!S.ds;
+}
+function goBack(){
+  if(S.tab==='site'){ S.tab='data'; }
+  else if(S.level==='edit'){ S.level='widgets'; S.td=null; }
+  else if(S.level==='widgets'){ S.level='sections'; S.section=null; S.td=null; }
+  else if(S.level==='all'){ S.level='sections'; S.section=null; S.td=null; }
+  else if(S.ds){ S.ds=null; S.level='sections'; S.section=null; S.td=null; }
+  else return false;
+  render(); return true;
+}
+window.addEventListener('popstate',function(e){
+  if(!e.state||!REG||!CON) return;
+  navSuppress=true;
+  S.tab=e.state.tab; S.ds=e.state.ds; S.level=e.state.level;
+  S.section=e.state.section; S.widget=e.state.widget; S.td=null;
+  render();
+  navSuppress=false;
+});
 function render(){
   if(!REG||!CON)return;
+  navSync();
   /* Табын харагдац: "Сайтын текст" нь датасэт/зам мөр/хамралтын зурвасыг
      хэрэглэхгүй тул зүүн багана болон толгойн хэсгийг нуулгана. */
   var isSite=S.tab==='site';
@@ -1614,8 +1725,10 @@ function render(){
        устахгүй тул бичиж байхад фокус алдагдахгүй. */
     if(!$('qsite')){
       $('cov').innerHTML='<div class="cov" style="padding:12px 14px">'+
-        '<input class="srch" id="qsite" style="margin:0" placeholder="Текст хайх… (шошго, зам, утга)" '+
-        'aria-label="Сайтын текст хайх" value="'+esc(S.q||'')+'"></div>';
+        '<div style="display:flex;gap:8px;align-items:center">'+
+        '<button class="cb cbback" data-back="1" title="Буцах (Esc)">← Буцах</button>'+
+        '<input class="srch" id="qsite" style="margin:0;flex:1" placeholder="Текст хайх… (шошго, зам, утга)" '+
+        'aria-label="Сайтын текст хайх" value="'+esc(S.q||'')+'"></div></div>';
     }
     $('body').innerHTML=lvSite();
   }else{
@@ -1663,6 +1776,7 @@ document.addEventListener('click',function(e){
     var k=el.dataset.ds;
     S.ds=(S.ds===k)?null:k;S.level='sections';S.section=null;S.td=null;
     render();toast(S.ds?dsLabel(S.ds):'Бүх датасэт');return}
+  if(t.closest&&t.closest('[data-back]')){ goBack(); return }
   if((el=t.closest&&t.closest('[data-lv]'))){
     var lv=el.dataset.lv;
     if(lv==='all'){S.ds=null;S.level='sections';S.section=null;S.td=null}
@@ -1708,8 +1822,8 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     if(S.mo){closeMo();return}
     if(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
-    if(S.level==='edit'){S.level='widgets';S.td=null;render()}
-    else if(S.level==='widgets'){S.level='sections';S.section=null;render()}
+    /* "← Буцах" товч, хөтчийн Back-тай ЯГ ижил зам — нэг л goBack() */
+    goBack();
     return}
   if((e.key==='Enter'||e.key===' ')&&document.activeElement&&
       document.activeElement.matches&&document.activeElement.matches('.cd-open')){

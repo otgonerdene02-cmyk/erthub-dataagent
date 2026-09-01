@@ -49,10 +49,10 @@
   <div class="eh-header" style="position:sticky;top:0;z-index:50;background:rgba(241,246,252,.78);backdrop-filter:blur(18px) saturate(140%);border-bottom:1px solid var(--line);">
     <div style="max-width:1240px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
       <div style="display:flex;align-items:center;gap:11px;flex-shrink:0;">
-        <div style="width:38px;height:38px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,{{ activeColor }},#3355ff);box-shadow:0 0 22px -4px {{ activeColor }};display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;letter-spacing:.02em;color:#0d1524;">ЗТЯ</div>
+        <div style="width:38px;height:38px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,{{ activeColor }},#3355ff);box-shadow:0 0 22px -4px {{ activeColor }};display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;letter-spacing:.02em;color:#0d1524;">{{ sBrandMark }}</div>
         <div style="flex-shrink:0;">
-          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;line-height:1;white-space:nowrap;">ErtHub</div>
-          <div style="font-size:10px;color:var(--ink3);letter-spacing:.1em;margin-top:3px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;white-space:nowrap;">Зам, тээврийн яам</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;line-height:1;white-space:nowrap;">{{ sBrandName }}</div>
+          <div style="font-size:10px;color:var(--ink3);letter-spacing:.1em;margin-top:3px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;white-space:nowrap;">{{ sBrandTagline }}</div>
         </div>
       </div>
       <div style="flex:1;"></div>
@@ -69,17 +69,17 @@
               <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;margin-top:2px;">{{ userPlan }}</div>
             </div>
           </div>
-          <button sc-camel-on-click="{{ onSignOut }}" style="cursor:pointer;font-family:inherit;font-size:12px;color:var(--ink3);background:none;border:1px solid var(--line);border-radius:10px;padding:8px 13px;white-space:nowrap;transition:.16s var(--ease);" style-hover="color:var(--ink);border-color:var(--line2);">Гарах</button>
+          <button sc-camel-on-click="{{ onSignOut }}" style="cursor:pointer;font-family:inherit;font-size:12px;color:var(--ink3);background:none;border:1px solid var(--line);border-radius:10px;padding:8px 13px;white-space:nowrap;transition:.16s var(--ease);" style-hover="color:var(--ink);border-color:var(--line2);">{{ sAuthSignout }}</button>
         </div>
       </sc-if>
       <sc-if value="{{ notAuthed }}" hint-placeholder-val="{{ true }}">
         <div class="eh-auth-group" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          <button sc-camel-on-click="{{ goLogin }}" style="{{ loginBtnStyle }}" style-hover="color:var(--ink);border-color:var(--line2);">Нэвтрэх</button>
-          <button sc-camel-on-click="{{ goSignup }}" style="{{ signupBtnStyle }}" style-hover="transform:translateY(-1px);">Бүртгүүлэх</button>
+          <button sc-camel-on-click="{{ goLogin }}" style="{{ loginBtnStyle }}" style-hover="color:var(--ink);border-color:var(--line2);">{{ sAuthLogin }}</button>
+          <button sc-camel-on-click="{{ goSignup }}" style="{{ signupBtnStyle }}" style-hover="transform:translateY(-1px);">{{ sAuthSignup }}</button>
         </div>
       </sc-if>
       <button sc-camel-on-click="{{ toggleTheme }}" aria-label="{{ themeLabel }}" title="{{ themeLabel }}" style="{{ themeToggleHeaderStyle }}" style-hover="border-color:var(--line2);">{{ themeIcon }}</button>
-      <button class="eh-nav-toggle" sc-camel-on-click="{{ toggleMobileNav }}" aria-label="Цэс" style="display:none;cursor:pointer;font-family:inherit;width:38px;height:38px;flex-shrink:0;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:17px;line-height:1;">{{ mobileNavIcon }}</button>
+      <button class="eh-nav-toggle" sc-camel-on-click="{{ toggleMobileNav }}" aria-label="{{ sA11yMenu }}" style="display:none;cursor:pointer;font-family:inherit;width:38px;height:38px;flex-shrink:0;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:17px;line-height:1;">{{ mobileNavIcon }}</button>
     </div>
     <div class="eh-nav-desktop" style="max-width:1240px;margin:0 auto;padding:0 24px;">
       <div style="display:flex;align-items:center;gap:4px;height:44px;border-top:1px solid var(--line);">
@@ -126,7 +126,7 @@
 
   <sc-if value="{{ cDetailOpen }}">
       <div style="position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:28px;">
-        <button sc-camel-on-click="{{ cDetail.close }}" aria-label="Хаах" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
+        <button sc-camel-on-click="{{ cDetail.close }}" aria-label="{{ sA11yClose }}" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
         <div style="position:relative;z-index:1;width:100%;max-width:760px;max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,rgba(var(--surface-rgb),.985),rgba(var(--surface-rgb),.95));border:1px solid var(--line);border-radius:22px;box-shadow:0 40px 90px -30px rgba(12,20,40,.6);">
           <div style="position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:20px 26px;border-bottom:1px solid var(--line);background:rgba(var(--surface-rgb),.94);backdrop-filter:blur(12px);border-radius:22px 22px 0 0;">
             <div style="font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:{{ cDetail.kindColor }};background:{{ cDetail.kindColor }}1c;border-radius:6px;padding:5px 10px;white-space:nowrap;">{{ cDetail.kindLabel }}</div>
@@ -252,7 +252,7 @@
 
   <sc-if value="{{ loginOpen }}">
       <div style="position:fixed;inset:0;z-index:96;display:flex;align-items:center;justify-content:center;padding:28px;">
-        <button sc-camel-on-click="{{ closeLogin }}" aria-label="Хаах" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
+        <button sc-camel-on-click="{{ closeLogin }}" aria-label="{{ sA11yClose }}" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
         <div style="position:relative;z-index:1;width:100%;max-width:420px;background:linear-gradient(180deg,rgba(var(--surface-rgb),.985),rgba(var(--surface-rgb),.95));border:1px solid var(--line);border-radius:20px;box-shadow:0 40px 90px -30px rgba(12,20,40,.6);padding:28px;">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
             <div style="width:36px;height:36px;border-radius:12px;background:#7C5CF01f;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">▲</div>
@@ -274,7 +274,7 @@
 
   <sc-if value="{{ subOpen }}">
       <div style="position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:28px;">
-        <button sc-camel-on-click="{{ closeSubmit }}" aria-label="Хаах" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
+        <button sc-camel-on-click="{{ closeSubmit }}" aria-label="{{ sA11yClose }}" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
         <div style="position:relative;z-index:1;width:100%;max-width:620px;max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,rgba(var(--surface-rgb),.985),rgba(var(--surface-rgb),.95));border:1px solid var(--line);border-radius:22px;box-shadow:0 40px 90px -30px rgba(12,20,40,.6);">
           <div style="display:flex;align-items:center;gap:12px;padding:20px 26px;border-bottom:1px solid var(--line);">
             <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;letter-spacing:-.018em;">Бүтээл оруулах</div>
@@ -352,7 +352,7 @@
 
   <sc-if value="{{ reqOpen }}">
       <div style="position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:28px;">
-        <button sc-camel-on-click="{{ closeReq }}" aria-label="Хаах" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
+        <button sc-camel-on-click="{{ closeReq }}" aria-label="{{ sA11yClose }}" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
         <div style="position:relative;z-index:1;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,rgba(var(--surface-rgb),.985),rgba(var(--surface-rgb),.95));border:1px solid var(--line);border-radius:22px;box-shadow:0 40px 90px -30px rgba(12,20,40,.6);">
           <div style="display:flex;align-items:center;gap:12px;padding:20px 26px;border-bottom:1px solid var(--line);">
             <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;letter-spacing:-.018em;">Өгөгдлийн хүсэлт</div>
@@ -401,27 +401,27 @@
       <div style="position:relative;z-index:1;min-width:0;padding:44px 8px 44px 44px;">
         <div style="position:relative;overflow:hidden;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);box-shadow:var(--shadow);margin-bottom:26px;max-width:520px;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);">
           <div style="position:absolute;top:0;bottom:0;display:flex;align-items:center;gap:34px;white-space:nowrap;padding-left:14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--ink2);animation:tickerScroll 20s linear infinite;">
-            <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>AI-ДЭМЖЛЭГТЭЙ ШИНЖИЛГЭЭ</span>
-            <span>48,210 КМ АВТО ЗАМ</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
-            <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>AI-ДЭМЖЛЭГТЭЙ ШИНЖИЛГЭЭ</span>
-            <span>48,210 КМ АВТО ЗАМ</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>ШУУД МЭДЭЭЛЭЛ 24/7</span>
+            <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>{{ sTickAi }}</span>
+            <span>{{ sTickRoad }}</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>{{ sTickLive }}</span>
+            <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>{{ sTickAi }}</span>
+            <span>{{ sTickRoad }}</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>{{ sTickLive }}</span>
           </div>
         </div>
         <div style="position:relative;">
           <div style="display:none;"></div>
           <h1 style="position:relative;z-index:1;font-family:'Space Grotesk',sans-serif;font-size:58px;font-weight:700;line-height:1.03;letter-spacing:-.028em;margin:0;">
-            Монголын зам, тээврийн<br>
-            <span style="color:{{ heroAccentColor }};">мэдээллийн импульс</span>
+            {{ sHeroT1 }}<br>
+            <span style="color:{{ heroAccentColor }};">{{ sHeroT2 }}</span>
           </h1>
           <div style="position:relative;z-index:1;width:78px;height:5px;border-radius:3px;background:linear-gradient(90deg,#2B4E9B,{{ activeColor }});margin:14px 0 22px;"></div>
         </div>
-        <p style="font-size:15.5px;color:var(--ink2);margin:0 0 26px;max-width:52ch;">Авто зам, төмөр зам, агаар, ус болон нийтийн тээврийн бүх салбарын нээлттэй өгөгдлийг нэг дор — шинжилгээ, чиг хандлага, түлхүүр үзүүлэлтүүд.</p>
+        <p style="font-size:15.5px;color:var(--ink2);margin:0 0 26px;max-width:52ch;">{{ sHeroLead }}</p>
         <div style="display:flex;gap:10px;max-width:540px;margin-bottom:28px;">
           <div style="flex:1;height:54px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);display:flex;align-items:center;gap:11px;padding:0 18px;">
             <span style="font-size:15px;opacity:.6;flex-shrink:0;">⌕</span>
-            <input type="text" value="{{ homeQuery }}" sc-camel-on-input="{{ onHomeQuery }}" sc-camel-on-key-down="{{ onHomeQueryKey }}" placeholder="Өгөгдөл хайх…" style="flex:1;min-width:0;height:100%;border:none;background:transparent;font-family:inherit;font-size:14.5px;color:var(--ink);outline:none;">
+            <input type="text" value="{{ homeQuery }}" sc-camel-on-input="{{ onHomeQuery }}" sc-camel-on-key-down="{{ onHomeQueryKey }}" placeholder="{{ sHeroSearchPh }}" style="flex:1;min-width:0;height:100%;border:none;background:transparent;font-family:inherit;font-size:14.5px;color:var(--ink);outline:none;">
           </div>
-          <button sc-camel-on-click="{{ onHomeSearch }}" style="cursor:pointer;font-family:inherit;border:none;height:54px;padding:0 30px;border-radius:14px;background:linear-gradient(135deg,#2B4E9B,#16306B);color:#fff;font-weight:700;font-size:14.5px;display:flex;align-items:center;box-shadow:0 12px 28px -10px rgba(43,78,155,.7);white-space:nowrap;">Хайх</button>
+          <button sc-camel-on-click="{{ onHomeSearch }}" style="cursor:pointer;font-family:inherit;border:none;height:54px;padding:0 30px;border-radius:14px;background:linear-gradient(135deg,#2B4E9B,#16306B);color:#fff;font-weight:700;font-size:14.5px;display:flex;align-items:center;box-shadow:0 12px 28px -10px rgba(43,78,155,.7);white-space:nowrap;">{{ sHeroSearchBtn }}</button>
         </div>
       </div>
 
@@ -431,7 +431,7 @@
 
           <div style="position:relative;display:flex;align-items:center;gap:9px;margin-bottom:6px;">
             <div style="width:6px;height:6px;border-radius:50%;background:#0E8F63;animation:pulseGlow 2.2s infinite;flex-shrink:0;"></div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">Нэг эх үүсвэр · нэг стандарт · AI</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ sHeroMotto }}</div>
           </div>
 
           <div style="position:relative;">
@@ -574,7 +574,7 @@
               </g>
               <g fill="#04283C" font-family="'Space Grotesk',sans-serif">
                 <text x="350" y="306" text-anchor="middle" font-size="27" font-weight="700" letter-spacing="-.8">ErtHub</text>
-                <text x="350" y="327" text-anchor="middle" font-size="14" font-family="monospace" letter-spacing="1.4" opacity=".72">AI CORE</text>
+                <text x="350" y="327" text-anchor="middle" font-size="14" font-family="monospace" letter-spacing="1.4" opacity=".72">{{ sDiagCore }}</text>
               </g>
             </g>
 
@@ -593,7 +593,7 @@
                 <circle cx="350" cy="177" r="2.6" opacity=".7" style="animation:netPulse 4s ease-in-out infinite .6s;"></circle>
               </g>
               <g font-family="monospace" font-size="15" fill="#14708C" opacity=".9" letter-spacing="1.6">
-                <text x="350" y="154" text-anchor="middle">AI ШИНЖИЛГЭЭ</text>
+                <text x="350" y="154" text-anchor="middle">{{ sDiagCoreSub }}</text>
               </g>
             </g>
 
@@ -634,16 +634,16 @@
 
           <div style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px 2px 14px;border-top:1px solid var(--line);margin-top:6px;">
             <div style="min-width:0;border-left:2.5px solid #2B4E9B;padding-left:10px;">
-              <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;"><span style="margin-top:3px;width:7px;height:7px;border-radius:2px;background:#2B4E9B;flex-shrink:0;"></span><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);font-weight:700;line-height:1.3;min-width:0;">Төрийн байгууллага</span></div>
-              <div style="font-size:11px;color:var(--ink2);line-height:1.4;">Шийдвэр · бодлого</div>
+              <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;"><span style="margin-top:3px;width:7px;height:7px;border-radius:2px;background:#2B4E9B;flex-shrink:0;"></span><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);font-weight:700;line-height:1.3;min-width:0;">{{ sOrbGovT }}</span></div>
+              <div style="font-size:11px;color:var(--ink2);line-height:1.4;">{{ sOrbGovS }}</div>
             </div>
             <div style="min-width:0;border-left:2.5px solid #0E8F73;padding-left:10px;">
-              <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;"><span style="margin-top:3px;width:7px;height:7px;border-radius:2px;background:#0E8F73;flex-shrink:0;"></span><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#0C7A62;font-weight:700;line-height:1.3;min-width:0;">Иргэд</span></div>
-              <div style="font-size:11px;color:var(--ink2);line-height:1.4;">Санал · хяналт</div>
+              <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;"><span style="margin-top:3px;width:7px;height:7px;border-radius:2px;background:#0E8F73;flex-shrink:0;"></span><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#0C7A62;font-weight:700;line-height:1.3;min-width:0;">{{ sOrbPubT }}</span></div>
+              <div style="font-size:11px;color:var(--ink2);line-height:1.4;">{{ sOrbPubS }}</div>
             </div>
             <div style="min-width:0;border-left:2.5px solid #6B4FD8;padding-left:10px;">
-              <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;"><span style="margin-top:3px;width:7px;height:7px;border-radius:2px;background:#6B4FD8;flex-shrink:0;"></span><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);font-weight:700;line-height:1.3;min-width:0;">Олон нийт · хэвлэл</span></div>
-              <div style="font-size:11px;color:var(--ink2);line-height:1.4;">Судалгаа · тайлан</div>
+              <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;"><span style="margin-top:3px;width:7px;height:7px;border-radius:2px;background:#6B4FD8;flex-shrink:0;"></span><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);font-weight:700;line-height:1.3;min-width:0;">{{ sOrbMedT }}</span></div>
+              <div style="font-size:11px;color:var(--ink2);line-height:1.4;">{{ sOrbMedS }}</div>
             </div>
           </div>
           <div style="position:relative;display:flex;gap:8px;flex-wrap:wrap;">
@@ -690,13 +690,13 @@
     <div style="font-size:10px;color:var(--ink3);font-style:italic;margin-top:8px;">{{ ukMockNote }}</div>
     </sc-if>
 
-    <div style="display:flex;align-items:center;gap:12px;margin:34px 0 14px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">01</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div style="display:flex;align-items:center;gap:12px;margin:34px 0 14px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">01</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec01 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.74));border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);border-radius:18px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:16px 20px;position:sticky;top:60px;z-index:6;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <button sc-camel-on-click="{{ toggleFilter }}" style="{{ filterToggleStyle }}" title="Шүүлт">
+        <button sc-camel-on-click="{{ toggleFilter }}" style="{{ filterToggleStyle }}" title="{{ sFilterBtn }}">
           <span style="font-size:14px;line-height:1;">⚙</span>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;">Шүүлт</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;">{{ sFilterBtn }}</span>
         </button>
         <sc-for list="{{ sectorIcons }}" as="ic" hint-placeholder-count="5">
           <button sc-camel-on-click="{{ ic.select }}" style="{{ ic.style }}" title="{{ ic.label }}">{{ ic.glyph }}</button>
@@ -706,7 +706,7 @@
       </div>
       <sc-if value="{{ filterOpen }}">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 0;margin-top:14px;border-top:1px solid var(--line);">
-        <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.09em;font-family:'JetBrains Mono',monospace;white-space:nowrap;flex-shrink:0;padding-right:12px;border-right:1px solid var(--line);">Салбар</div>
+        <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.09em;font-family:'JetBrains Mono',monospace;white-space:nowrap;flex-shrink:0;padding-right:12px;border-right:1px solid var(--line);">{{ sFilterSector }}</div>
         <sc-for list="{{ sectorTabs }}" as="tab" hint-placeholder-count="5">
           <button sc-camel-on-click="{{ tab.select }}" style="{{ tab.style }}">
             <div style="width:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;filter:saturate(1.1);">{{ tab.glyph }}</div>
@@ -716,37 +716,37 @@
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line);">
         <div style="display:flex;align-items:center;gap:9px;padding-right:14px;border-right:1px solid var(--line);flex-shrink:0;">
-          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.09em;font-family:'JetBrains Mono',monospace;white-space:nowrap;">Хугацааны интервал</div>
+          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.09em;font-family:'JetBrains Mono',monospace;white-space:nowrap;">{{ sFilterInterval }}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
           <sc-raw-select ref="{{ fromRef }}" sc-camel-on-change="{{ onFrom }}" style="height:38px;border:1px solid var(--line2);border-radius:10px;background:rgba(var(--ink-rgb),.05);box-shadow:inset 0 1px 3px rgba(12,20,40,.07);color:var(--ink);font-family:inherit;font-size:12.5px;padding:0 11px;outline:none;cursor:pointer;">
-              <option value="1">1-р сар</option>
-              <option value="2">2-р сар</option>
-              <option value="3">3-р сар</option>
-              <option value="4">4-р сар</option>
-              <option value="5">5-р сар</option>
-              <option value="6">6-р сар</option>
-              <option value="7">7-р сар</option>
-              <option value="8">8-р сар</option>
-              <option value="9">9-р сар</option>
-              <option value="10">10-р сар</option>
-              <option value="11">11-р сар</option>
-              <option value="12">12-р сар</option>
+              <option value="1">{{ sMonth1 }}</option>
+              <option value="2">{{ sMonth2 }}</option>
+              <option value="3">{{ sMonth3 }}</option>
+              <option value="4">{{ sMonth4 }}</option>
+              <option value="5">{{ sMonth5 }}</option>
+              <option value="6">{{ sMonth6 }}</option>
+              <option value="7">{{ sMonth7 }}</option>
+              <option value="8">{{ sMonth8 }}</option>
+              <option value="9">{{ sMonth9 }}</option>
+              <option value="10">{{ sMonth10 }}</option>
+              <option value="11">{{ sMonth11 }}</option>
+              <option value="12">{{ sMonth12 }}</option>
           </sc-raw-select>
           <span style="color:var(--ink3);font-size:13px;">—</span>
           <sc-raw-select ref="{{ toRef }}" sc-camel-on-change="{{ onTo }}" style="height:38px;border:1px solid var(--line2);border-radius:10px;background:rgba(var(--ink-rgb),.05);box-shadow:inset 0 1px 3px rgba(12,20,40,.07);color:var(--ink);font-family:inherit;font-size:12.5px;padding:0 11px;outline:none;cursor:pointer;">
-              <option value="1">1-р сар</option>
-              <option value="2">2-р сар</option>
-              <option value="3">3-р сар</option>
-              <option value="4">4-р сар</option>
-              <option value="5">5-р сар</option>
-              <option value="6">6-р сар</option>
-              <option value="7">7-р сар</option>
-              <option value="8">8-р сар</option>
-              <option value="9">9-р сар</option>
-              <option value="10">10-р сар</option>
-              <option value="11">11-р сар</option>
-              <option value="12">12-р сар</option>
+              <option value="1">{{ sMonth1 }}</option>
+              <option value="2">{{ sMonth2 }}</option>
+              <option value="3">{{ sMonth3 }}</option>
+              <option value="4">{{ sMonth4 }}</option>
+              <option value="5">{{ sMonth5 }}</option>
+              <option value="6">{{ sMonth6 }}</option>
+              <option value="7">{{ sMonth7 }}</option>
+              <option value="8">{{ sMonth8 }}</option>
+              <option value="9">{{ sMonth9 }}</option>
+              <option value="10">{{ sMonth10 }}</option>
+              <option value="11">{{ sMonth11 }}</option>
+              <option value="12">{{ sMonth12 }}</option>
           </sc-raw-select>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -800,7 +800,7 @@
 
   <div style="max-width:1240px;margin:0 auto;padding:30px 24px 0;position:relative;">
 
-    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#1B7FA6,#1B7FA6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #1B7FA6cc;">02</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">Долоо хоногийн тайлан</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#1B7FA6,#1B7FA6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #1B7FA6cc;">02</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec02 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
@@ -988,13 +988,13 @@
     <div style="font-size:10px;color:var(--ink3);font-style:italic;margin:-8px 0 20px;">{{ section02MockNote }}</div>
     </sc-if>
 
-    <div style="margin:0 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#7C5CF0,#7C5CF0bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #7C5CF0cc;">03</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">Коммунитийн онцлох</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
-      <button sc-camel-on-click="{{ goCommunity }}" style="cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:600;color:#7C5CF0;background:none;border:none;white-space:nowrap;flex-shrink:0;">Бүгдийг үзэх →</button>
+    <div style="margin:0 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#7C5CF0,#7C5CF0bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #7C5CF0cc;">03</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec03 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+      <button sc-camel-on-click="{{ goCommunity }}" style="cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:600;color:#7C5CF0;background:none;border:none;white-space:nowrap;flex-shrink:0;">{{ sCommSeeAll }}</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px;">
       <button sc-camel-on-click="{{ spotlightProject.open }}" style="text-align:left;cursor:pointer;font-family:inherit;position:relative;overflow:hidden;background:linear-gradient(155deg,{{ spotlightProject.color }}1c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;transition:.2s var(--ease);" style-hover="box-shadow:var(--shadow-lg);transform:translateY(-3px);">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#7C5CF0;background:#7C5CF01c;border-radius:999px;padding:4px 10px;letter-spacing:.04em;">🔥 ЭНЭ ДОЛОО ХОНОГТ ХАМГИЙН ИХ ХАРАГДСАН</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#7C5CF0;background:#7C5CF01c;border-radius:999px;padding:4px 10px;letter-spacing:.04em;">{{ sCommTopSeen }}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <div style="width:34px;height:34px;border-radius:10px;background:{{ spotlightProject.color }}26;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">{{ spotlightProject.glyph }}</div>
@@ -1007,12 +1007,12 @@
         <div style="display:flex;gap:16px;padding-top:12px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);">
           <div>👁 {{ spotlightProject.views }}</div>
           <div>♥ {{ spotlightProject.likes }}</div>
-          <div style="margin-left:auto;color:var(--ink);font-weight:600;">Нээх →</div>
+          <div style="margin-left:auto;color:var(--ink);font-weight:600;">{{ sCommOpen }}</div>
         </div>
       </button>
       <button sc-camel-on-click="{{ spotlightPolicy.open }}" style="text-align:left;cursor:pointer;font-family:inherit;position:relative;overflow:hidden;background:linear-gradient(155deg,{{ spotlightPolicy.color }}1c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;transition:.2s var(--ease);" style-hover="box-shadow:var(--shadow-lg);transform:translateY(-3px);">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#B9903A;background:#B9903A1c;border-radius:999px;padding:4px 10px;letter-spacing:.04em;">📣 ДЭМЖЛЭГ ХАМГИЙН ХУРДАН ӨСӨЖ БУЙ САНАЛ</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:#B9903A;background:#B9903A1c;border-radius:999px;padding:4px 10px;letter-spacing:.04em;">{{ sCommTopProp }}</div>
         </div>
         <div style="font-size:15.5px;font-weight:700;color:var(--ink);line-height:1.35;margin-bottom:10px;text-wrap:pretty;">{{ spotlightPolicy.title }}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin-bottom:14px;">{{ spotlightPolicy.by }} · {{ spotlightPolicy.stage }}</div>
@@ -1021,7 +1021,7 @@
         </div>
         <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);">
           <div>{{ spotlightPolicy.support }} / {{ spotlightPolicy.goal }} дэмжигч</div>
-          <div style="color:var(--ink);font-weight:600;">Нээх →</div>
+          <div style="color:var(--ink);font-weight:600;">{{ sCommOpen }}</div>
         </div>
       </button>
     </div>
@@ -1076,7 +1076,7 @@
     
 
     <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
-      <button sc-camel-on-click="{{ f05.toggle }}" aria-label="Шүүлт" style="{{ f05.btnStyle }}">⚗</button>
+      <button sc-camel-on-click="{{ f05.toggle }}" aria-label="{{ sA11yFilter }}" style="{{ f05.btnStyle }}">⚗</button>
     </div>
     <sc-if value="{{ f05.open }}">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;font-size:11.5px;color:var(--ink2);">
@@ -1177,13 +1177,13 @@
     </div>
     </div>
 
-    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">06</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">Салбар хоорондын харьцуулалт (индекс)</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">06</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec06 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
         <div data-eh-card="i06" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);flex:1;">{{ i06Title }}</div>
-        <button sc-camel-on-click="{{ f07.toggle }}" aria-label="Шүүлт" style="{{ f07.btnStyle }}">⚗</button>
+        <button sc-camel-on-click="{{ f07.toggle }}" aria-label="{{ sA11yFilter }}" style="{{ f07.btnStyle }}">⚗</button>
       </div>
       <sc-if value="{{ f07.open }}">
       <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;">
@@ -1271,6 +1271,9 @@
 
     <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">07</div><span data-eh-card="u07" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ u07Title }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
+    <sc-if value="{{ u07Sub }}">
+      <div data-eh-card="u07" data-eh-field="sub" style="font-size:12px;color:var(--ink2);margin:-6px 0 12px;">{{ u07Sub }}</div>
+    </sc-if>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px;margin-bottom:50px;">
       <sc-for list="{{ recent }}" as="rc" hint-placeholder-count="5">
         <div style="background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.74));box-shadow:var(--shadow);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);backdrop-filter:blur(18px) saturate(1.3);border-left:3px solid {{ rc.color }};border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;backdrop-filter:blur(10px);">
@@ -1295,7 +1298,7 @@
           <div style="width:11px;height:11px;border-radius:3px;background:#FFFFFF;opacity:.92;animation:pulseGlow 2.4s infinite;"></div>
         </div>
         <div style="min-width:0;">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:15.5px;font-weight:700;color:#FFFFFF;letter-spacing:-.015em;">ErtHub-LM</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:15.5px;font-weight:700;color:#FFFFFF;letter-spacing:-.015em;">{{ sAiModel }}</div>
           <div data-eh-card="ai08" data-eh-field="sub" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:rgba(199,213,232,.6);margin-top:3px;">{{ ai08Sub }}</div>
         </div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#9FE8C9;border:1px solid rgba(159,232,201,.28);background:rgba(15,163,127,.14);border-radius:999px;padding:5px 12px;white-space:nowrap;flex-shrink:0;">
@@ -1341,8 +1344,8 @@
           </sc-for>
         </div>
         <div style="display:flex;gap:10px;align-items:center;background:rgba(var(--surface-rgb),.07);border:1px solid rgba(var(--surface-rgb),.15);border-radius:15px;padding:7px 8px 7px 18px;">
-          <input type="text" value="{{ aiInput }}" sc-camel-on-input="{{ onAiInput }}" sc-camel-on-key-down="{{ onAiKey }}" placeholder="Салбарын өгөгдлөөс асуулт бичих…" style="flex:1;min-width:0;height:40px;border:none;background:transparent;font-family:inherit;font-size:14px;color:#FFFFFF;outline:none;">
-          <button sc-camel-on-click="{{ aiSend }}" style="cursor:pointer;font-family:inherit;flex-shrink:0;display:flex;align-items:center;gap:9px;border:none;border-radius:11px;padding:12px 20px;font-size:13.5px;font-weight:600;color:#FFFFFF;background:linear-gradient(135deg,#7C5CF0,#4A32C0);box-shadow:0 10px 24px -10px #7C5CF0;transition:.18s var(--ease);" style-hover="transform:translateY(-1px);box-shadow:0 14px 30px -10px #7C5CF0;">Асуух <span style="opacity:.8;">↵</span></button>
+          <input type="text" value="{{ aiInput }}" sc-camel-on-input="{{ onAiInput }}" sc-camel-on-key-down="{{ onAiKey }}" placeholder="{{ sAiPlaceholder }}" style="flex:1;min-width:0;height:40px;border:none;background:transparent;font-family:inherit;font-size:14px;color:#FFFFFF;outline:none;">
+          <button sc-camel-on-click="{{ aiSend }}" style="cursor:pointer;font-family:inherit;flex-shrink:0;display:flex;align-items:center;gap:9px;border:none;border-radius:11px;padding:12px 20px;font-size:13.5px;font-weight:600;color:#FFFFFF;background:linear-gradient(135deg,#7C5CF0,#4A32C0);box-shadow:0 10px 24px -10px #7C5CF0;transition:.18s var(--ease);" style-hover="transform:translateY(-1px);box-shadow:0 14px 30px -10px #7C5CF0;">{{ sAiAsk }} <span style="opacity:.8;">↵</span></button>
         </div>
         <div data-eh-card="ai08" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(199,213,232,.42);margin-top:11px;line-height:1.5;">{{ ai08Foot }}</div>
       </div>
@@ -1620,7 +1623,7 @@
           <div style="font-size:13px;color:var(--ink2);line-height:1.55;text-wrap:pretty;">{{ sv.desc }}</div>
           <div style="margin-top:auto;padding-top:14px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;">
             <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ sv.color }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">{{ sv.stat }}</div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap;">Нээх →</div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap;">{{ sCommOpen }}</div>
           </div>
         </div>
       </sc-for>
@@ -2162,8 +2165,8 @@
               <div style="font-size:12.5px;color:var(--ink2);line-height:1.55;text-wrap:pretty;">Мэдэгдэл, хадгалсан сан, API түлхүүр зэрэг нь бүртгэлтэй хэрэглэгчид зориулсан.</div>
             </div>
             <div style="display:flex;gap:9px;flex-shrink:0;">
-              <button sc-camel-on-click="{{ goLogin }}" style="cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink2);background:var(--surface);border:1px solid var(--line2);border-radius:11px;padding:11px 18px;white-space:nowrap;">Нэвтрэх</button>
-              <button sc-camel-on-click="{{ goSignup }}" style="cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,{{ activeColor }},#2E5CE6);border:none;border-radius:11px;padding:11px 18px;white-space:nowrap;box-shadow:0 10px 24px -10px {{ activeColor }};">Бүртгүүлэх</button>
+              <button sc-camel-on-click="{{ goLogin }}" style="cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink2);background:var(--surface);border:1px solid var(--line2);border-radius:11px;padding:11px 18px;white-space:nowrap;">{{ sAuthLogin }}</button>
+              <button sc-camel-on-click="{{ goSignup }}" style="cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,{{ activeColor }},#2E5CE6);border:none;border-radius:11px;padding:11px 18px;white-space:nowrap;box-shadow:0 10px 24px -10px {{ activeColor }};">{{ sAuthSignup }}</button>
             </div>
           </div>
         </sc-if>
@@ -3111,7 +3114,7 @@
 
     <sc-if value="{{ histDetailOpen }}">
       <div style="position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:28px;">
-        <button sc-camel-on-click="{{ histDetail.close }}" aria-label="Хаах" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
+        <button sc-camel-on-click="{{ histDetail.close }}" aria-label="{{ sA11yClose }}" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.52);backdrop-filter:blur(6px);"></button>
         <div style="position:relative;z-index:1;width:100%;max-width:560px;max-height:82vh;overflow-y:auto;background:linear-gradient(180deg,rgba(var(--surface-rgb),.985),rgba(var(--surface-rgb),.95));border:1px solid var(--line);border-radius:20px;box-shadow:0 40px 90px -30px rgba(12,20,40,.6);padding:28px 30px;">
           <div style="display:flex;align-items:center;gap:11px;margin-bottom:18px;">
             <div style="width:36px;height:36px;border-radius:11px;background:{{ histDetail.color }}1c;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">{{ histDetail.glyph }}</div>
@@ -3178,7 +3181,7 @@
 
     <sc-if value="{{ peopleDetailOpen }}">
       <div style="position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:28px;">
-        <button sc-camel-on-click="{{ peopleDetail.close }}" aria-label="Хаах" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.55);backdrop-filter:blur(7px);"></button>
+        <button sc-camel-on-click="{{ peopleDetail.close }}" aria-label="{{ sA11yClose }}" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.55);backdrop-filter:blur(7px);"></button>
         <div style="position:relative;z-index:1;width:100%;max-width:640px;max-height:86vh;overflow-y:auto;background:linear-gradient(180deg,rgba(var(--surface-rgb),.99),rgba(var(--surface-rgb),.96));border:1px solid var(--line);border-radius:24px;box-shadow:0 50px 110px -30px rgba(12,20,40,.65);">
           <div style="position:relative;overflow:hidden;border-radius:24px 24px 0 0;padding:32px 34px 26px;background:linear-gradient(135deg,{{ peopleDetail.accent }}22 0%,rgba(var(--surface-rgb),.9) 55%,rgba(var(--surface-rgb),.78) 100%);">
             <div style="position:absolute;right:-60px;top:-70px;width:220px;height:220px;border-radius:50%;filter:blur(50px);opacity:.4;background:radial-gradient(circle,{{ peopleDetail.accent }}99,transparent 70%);"></div>
@@ -3370,7 +3373,7 @@
 
     <sc-if value="{{ newsDetailOpen }}">
       <div style="position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:28px;">
-        <button sc-camel-on-click="{{ newsDetail.close }}" aria-label="Хаах" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.55);backdrop-filter:blur(7px);"></button>
+        <button sc-camel-on-click="{{ newsDetail.close }}" aria-label="{{ sA11yClose }}" style="position:absolute;inset:0;border:none;padding:0;cursor:pointer;background:rgba(12,20,40,.55);backdrop-filter:blur(7px);"></button>
         <div style="position:relative;z-index:1;width:100%;max-width:760px;max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,rgba(var(--surface-rgb),.99),rgba(var(--surface-rgb),.96));border:1px solid var(--line);border-radius:24px;box-shadow:0 50px 110px -30px rgba(12,20,40,.65);">
           <div style="position:relative;overflow:hidden;border-radius:24px 24px 0 0;padding:34px 38px 26px;background:linear-gradient(135deg,{{ newsDetail.color }}22 0%,rgba(var(--surface-rgb),.9) 55%,rgba(var(--surface-rgb),.78) 100%);">
             <div style="position:absolute;right:-60px;top:-70px;width:230px;height:230px;border-radius:50%;filter:blur(50px);opacity:.4;background:radial-gradient(circle,{{ newsDetail.color }}99,transparent 70%);"></div>
@@ -3398,7 +3401,7 @@
   </sc-if>
 
   <div style="max-width:1240px;margin:0 auto;padding:0 24px 40px;border-top:1px solid var(--line);position:relative;">
-    <div style="padding-top:22px;font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;">ErtHub — Монгол Улсын зам, тээврийн нэгдсэн мэдээллийн төв</div>
+    <div style="padding-top:22px;font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;">{{ sFooter }}</div>
   </div>
 </div>
 
@@ -4343,6 +4346,21 @@ class Component extends DCLogic {
   }
   // Виджет бүр (id) талбар бүрээ (title/sub/unit/foot) энэ нэг функцээр
   // уншина. Утга алга эсвэл хоосон мөр бол fallback-аа буцаана.
+  // Сайтын ЕРӨНХИЙ текст (виджет БУС) — content.json-ий site{} блокоос
+  // цэгээр заасан замаар уншина: stxt('nav.home','Нүүр').
+  // T2/T3-д site{} бүртгэл үүссэн боловч index.html түүнийг УНШИХГҮЙ
+  // байсан тул admin-аас засаад экспортлосон ч сайтад ОРДОГГҮЙ байв —
+  // энэ метод тэр тасалдлыг барьж байна.
+  stxt(path,fallback){
+    const site=this.state.content&&this.state.content.site;
+    if(!site) return fallback;
+    let cur=site;
+    for(const k of String(path).split('.')){
+      if(cur==null||typeof cur!=='object') return fallback;
+      cur=cur[k];
+    }
+    return (cur==null||cur==='')?fallback:cur;
+  }
   txt(id,field,fallback){
     const w=this.state.content&&this.state.content.widgets&&this.state.content.widgets[id];
     const v=w&&w[field];
@@ -5952,7 +5970,12 @@ class Component extends DCLogic {
       // тул wd.unit-ийн "мянган ..." шошгыг хамт үзүүлбэл масштаб ХОЁР
       // ДАХИН тооцогдох мэт ойлгогдоно — иймд бодит үтгын үед энгийн
       // нэгж (хүн/тонн) ашиглана, mock үед л хуучин "мянган ..." үлдэнэ.
-      const unit=realVal!=null?(wt==='cargo'?'тонн':'хүн'):wd.unit;
+      // Нэгжийн шошго: admin-аар content.json-д ГАРААР бичсэн утга байвал
+      // ТЭР нь давуу эрхтэй — эс тэгвэл "Нэгжийн шошго" талбар admin дээр
+      // харагдаж байгаа мөртөө сайтад ОРДОГГүй "үхмэл талбар" болно.
+      // Хоосон үед л код өөрөө тооцоолно (бодит дата үед хүн/тонн).
+      const unitTxt=this.txt(widgetId,'unit','');
+      const unit=unitTxt||(realVal!=null?(wt==='cargo'?'тонн':'хүн'):wd.unit);
       return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,stats,plan,unit,total,delta,airOnlyNote};
     };
     const wPax=buildWeek('pax',WEEK_DATA.pax,'w2p','w2px'), wCargo=buildWeek('cargo',WEEK_DATA.cargo,'w2c','w2cx');
@@ -6126,8 +6149,11 @@ class Component extends DCLogic {
   buildPageVals(){
     const page=this.state.page;
     const keys=Object.keys(SECTORS);
+    // Цэсний шошгыг content.json-ий site.nav-аас уншина (PAGES-ийн label
+    // нь зөвхөн нөөц утга). Ингэснээр admin-ы "Сайтын текст" таб цэсийг
+    // ҮНЭХЭЭР удирдана.
     const navItems=PAGES.map(p=>({
-      id:p.id,label:p.label,
+      id:p.id,label:this.stxt('nav.'+p.id,p.label),
       go:()=>this.go(p.id),
       goClose:()=>{ this.go(p.id); this.setState({mobileNavOpen:false}); },
       style:'background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;padding:8px 14px;border-radius:9px;white-space:nowrap;flex-shrink:0;transition:.16s var(--ease);'
@@ -6451,7 +6477,60 @@ class Component extends DCLogic {
       datasets:DATASETS.filter(d=>d.sector===ak).map(d=>({...d,color:NEON[ak],fmtLabel:d.fmt,badgeLine:d.badges.join(' · ')})),
       services:SERVICES.filter(s=>s[0]===ak).map(s=>({name:s[1],desc:s[2],hits:s[3]}))
     };
-    return {page,navItems,services,chips,datasets,projects,policies,requests,historyItems,histChips,histEmpty,histCount,histTabs,peopleCats,people,docCats,docs,dcatLabel,docPages,docListPrev,docListNext,docListPageLabel,docListShowPager,
+    // ── Сайтын ерөнхий текст (content.json → site{}). Толгой, цэс, hero,
+    //    хөл хэсэг зэрэг виджет БУС бүх текст эндээс тэжээгдэнэ. Нөөц утга
+    //    нь темплейтэд өмнө нь хатуу бичигдсэн байсан ЯГ ТЭР мөр — fetch
+    //    амжилтгүй үед харагдац өөрчлөгдөхгүй. ──
+    const siteVals={
+      sBrandMark:this.stxt('brand.mark','ЗТЯ'),
+      sBrandName:this.stxt('brand.name','ErtHub'),
+      sBrandTagline:this.stxt('brand.tagline','Зам, тээврийн яам'),
+      sAuthLogin:this.stxt('auth.login','Нэвтрэх'),
+      sAuthSignup:this.stxt('auth.signup','Бүртгүүлэх'),
+      sAuthSignout:this.stxt('auth.signout','Гарах'),
+      sHeroT1:this.stxt('hero.title_line1','Монголын зам, тээврийн'),
+      sHeroT2:this.stxt('hero.title_line2','мэдээллийн импульс'),
+      sHeroLead:this.stxt('hero.lead','Авто зам, төмөр зам, агаар, ус болон нийтийн тээврийн бүх салбарын нээлттэй өгөгдлийг нэг дор — шинжилгээ, чиг хандлага, түлхүүр үзүүлэлтүүд.'),
+      sHeroSearchPh:this.stxt('hero.search_placeholder','Өгөгдөл хайх…'),
+      sHeroSearchBtn:this.stxt('hero.search_button','Хайх'),
+      sHeroMotto:this.stxt('hero.motto','Нэг эх үүсвэр · нэг стандарт · AI'),
+      sTickAi:this.stxt('hero.ticker.ai','AI-ДЭМЖЛЭГТЭЙ ШИНЖИЛГЭЭ'),
+      sTickRoad:this.stxt('hero.ticker.road','48,210 КМ АВТО ЗАМ'),
+      sTickLive:this.stxt('hero.ticker.live','ШУУД МЭДЭЭЛЭЛ 24/7'),
+      sDiagCore:this.stxt('hero.diagram.core','AI CORE'),
+      sDiagCoreSub:this.stxt('hero.diagram.core_sub','AI ШИНЖИЛГЭЭ'),
+      sOrbGovT:this.stxt('hero.diagram.orbit_gov.title','Төрийн байгууллага'),
+      sOrbGovS:this.stxt('hero.diagram.orbit_gov.sub','Шийдвэр · бодлого'),
+      sOrbPubT:this.stxt('hero.diagram.orbit_public.title','Иргэд'),
+      sOrbPubS:this.stxt('hero.diagram.orbit_public.sub','Санал · хяналт'),
+      sOrbMedT:this.stxt('hero.diagram.orbit_media.title','Олон нийт · хэвлэл'),
+      sOrbMedS:this.stxt('hero.diagram.orbit_media.sub','Судалгаа · тайлан'),
+      sChip0:this.stxt('hero.diagram.chips.0','ИРГЭДИЙН ДУУ ХООЛОЙ'),
+      sChip1:this.stxt('hero.diagram.chips.1','НЭЭЛТТЭЙ ӨГӨГДӨЛ'),
+      sChip2:this.stxt('hero.diagram.chips.2','ШИЛЭН ИЛ ТОД'),
+      sSec01:this.stxt('sections.sec-01','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
+      sSec02:this.stxt('sections.sec-02','Долоо хоногийн тайлан'),
+      sSec03:this.stxt('sections.sec-03','Коммунитийн онцлох'),
+      sSec06:this.stxt('sections.sec-06','Салбар хоорондын харьцуулалт (индекс)'),
+      sFilterBtn:this.stxt('filter.button','Шүүлт'),
+      sFilterSector:this.stxt('filter.sector','Салбар'),
+      sFilterInterval:this.stxt('filter.interval','Хугацааны интервал'),
+      sCommSeeAll:this.stxt('community.see_all','Бүгдийг үзэх →'),
+      sCommTopSeen:this.stxt('community.top_seen','🔥 ЭНЭ ДОЛОО ХОНОГТ ХАМГИЙН ИХ ХАРАГДСАН'),
+      sCommTopProp:this.stxt('community.top_prop','📣 ДЭМЖЛЭГ ХАМГИЙН ХУРДАН ӨСӨЖ БУЙ САНАЛ'),
+      sCommOpen:this.stxt('community.open','Нээх →'),
+      sAiModel:this.stxt('ai.model','ErtHub-LM'),
+      sAiPlaceholder:this.stxt('ai.placeholder','Салбарын өгөгдлөөс асуулт бичих…'),
+      sAiAsk:this.stxt('ai.ask','Асуух'),
+      sFooter:this.stxt('footer.copyright','ErtHub — Монгол Улсын зам, тээврийн нэгдсэн мэдээллийн төв'),
+      sA11yMenu:this.stxt('a11y.menu','Цэс'),
+      sA11yFilter:this.stxt('a11y.filter','Шүүлт'),
+      sA11yClose:this.stxt('a11y.close','Хаах')
+    };
+    // Сарын шошго — 01-р хэсгийн хугацааны шүүлтийн ХОЁР сонголтод адил
+    // утга (site.months, 12 мөр). Хатуу бичигдсэн байсныг бүртгэлд оруулав.
+    for(let m=1;m<=12;m++) siteVals['sMonth'+m]=this.stxt('months.'+(m-1),m+'-р сар');
+    return {...siteVals,page,navItems,services,chips,datasets,projects,policies,requests,historyItems,histChips,histEmpty,histCount,histTabs,peopleCats,people,docCats,docs,dcatLabel,docPages,docListPrev,docListNext,docListPageLabel,docListShowPager,
       docQuery:this.state.docQ||'',onDocQuery:(e)=>this.setState({docQ:e.target.value,docListPage:0}),docListEmpty:docsAll.length===0,
       peopleDetailOpen:!!peopleDetail,peopleDetail,
       peopleQuery:this.state.peopleQuery||'',
@@ -7032,10 +7111,19 @@ class Component extends DCLogic {
   // хэлбэл холболт нэг л газар (DATASETS дээр) зарлагдаж, нүүр нь зөвхөн
   // "аль талбарт аль метрик" гэдгээ хэлнэ.
   buildRecent(){
+    // u07-ийн бодит огноо metric_registry-гээс ХАМААРНА. Өмнө нь bindCard
+    // нь RECENT-ийн дотоод bind:{date:'feedUpdated'}-ыг л уншдаг байсан
+    // тул admin дээр u07-ийн метрикийг САЛГАСАН ч сайтад огт нөлөөлдөггүй
+    // байв (admin "холбоогүй" гэж, сайт амьд огноо гэж — хоёр өөр үнэн).
+    const reg=this.state.metricRegistry;
+    const u07=reg&&reg.widgets&&reg.widgets.u07;
+    const u07Bound=!!(u07&&u07.metric);
     return RECENT.map(r=>{
       const ds=r.dataset?DATASETS.find(d=>d.sector===r.sector&&d.name===r.dataset):null;
       const decl={...r,name:ds?ds.name:r.title,source:r.source||(ds&&ds.source)};
-      const card=this.bindCard(decl,'date','Шинэчлэгдсэн');
+      const card=u07Bound
+        ? this.bindCard(decl,'date','Шинэчлэгдсэн')
+        : {label:'Шинэчлэгдсэн',value:r.date,live:false};
       // H5 (нэмэлт): card.live=false үед card.value нь RECENT тогтмол
       // массивын ЗОХИОМОЛ огноо (жиш. "2026-07-29") — жинхэнэ огноо мэт
       // харагдана. Ногоон цэг аль хэдийн live/үгүй-г ялгадаг байсан ч
@@ -7165,10 +7253,15 @@ class Component extends DCLogic {
     return {
       nowLabel:'2026-08-12',
       activeColor:color,
+      // Hero-гийн 3 чипийн гарчиг content.json → site.hero.diagram.chips-ээс.
+      // Тайлбар (body) мөн засварлагдана — site.hero.diagram.chip_bodies.
       bridgeLegend:[
-        {mark:'▲',color:'#6B4FD8',title:'Иргэдийн дуу хоолой',body:'Санал, хүсэлт дээшээ бодлого болж хүрдэг'},
-        {mark:'▼',color:'#0E8F73',title:'Нээлттэй өгөгдөл',body:'Яамны бодит цагийн тоо иргэн бүрт нэг стандартаар'},
-        {mark:'◆',color:'#2B6FD8',title:'Шилэн ил тод',body:'Ижил эх үүсвэр, ижил тоо — хэн ч шалгаж болно'}
+        {mark:'▲',color:'#6B4FD8',title:this.stxt('hero.diagram.chips.0','Иргэдийн дуу хоолой'),
+         body:this.stxt('hero.diagram.chip_bodies.0','Санал, хүсэлт дээшээ бодлого болж хүрдэг')},
+        {mark:'▼',color:'#0E8F73',title:this.stxt('hero.diagram.chips.1','Нээлттэй өгөгдөл'),
+         body:this.stxt('hero.diagram.chip_bodies.1','Яамны бодит цагийн тоо иргэн бүрт нэг стандартаар')},
+        {mark:'◆',color:'#2B6FD8',title:this.stxt('hero.diagram.chips.2','Шилэн ил тод'),
+         body:this.stxt('hero.diagram.chip_bodies.2','Ижил эх үүсвэр, ижил тоо — хэн ч шалгаж болно')}
       ],
       filterOpen:!!this.state.filterOpen,
       toggleFilter:()=>this.setState(s=>({filterOpen:!s.filterOpen})),
@@ -7252,6 +7345,9 @@ class Component extends DCLogic {
       r06Foot:this.txt('r06','foot','Тэргүүлэгч'),
       r06Foot2:this.txt('r06','foot2','Хоцрогдож байгаа'),
       u07Title:this.txt('u07','title','Сүүлд шинэчлэгдсэн өгөгдөл'),
+      // u07-ийн "Дэд гарчиг" талбар admin дээр байсан ч сайтад ХААНА Ч
+      // зурагддаггүй байсан (үхмэл талбар) — одоо гарчгийн доор гарна.
+      u07Sub:this.txt('u07','sub',''),
       ai08Title:this.txt('ai08','title','ErtHub AI-аас асуух'),
       // ai08 — "ErtHub-LM" (мөр 1275) брэндийн гарчиг тул content.json-ийн
       // sub-д ОРООГүй; зөвхөн мөр 1276-ийн бодит sub мөрийг холбов.
