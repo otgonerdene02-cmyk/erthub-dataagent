@@ -1,57 +1,110 @@
 {
   "$schema": "erthub-metrics/v1",
   "version": "0.1.0",
-  "updated": "2026-08-24",
+  "updated": "2026-09-01",
   "note": "H3 шатны хамгийн анхны хэрэгжилт. Зөвхөн hero_fl виджет код дээр бодитоор холбогдсон. Бусад 16 виджет (H2 тайланд бүрэн бүртгэгдсэн) H4-т, зөвшөөрлийн дараа нэг нэгээр нь энд нэмэгдэнэ — өмнө нь нэмэхгүй, учир нь энэ файл ЯГ КОД ХОЛБОГДСОН зүйлийг л мэдэгдэх ёстой.",
   "widgets": {
     "hero_fl": {
-      "metric": "air.flight_count_last_month",
-      "sectors": ["air"]
+      "metric": null,
+      "sectors": [
+        "air"
+      ],
+      "quality": "mock"
     },
     "k04": {
       "sectors": {
-        "air":    { "metric": "air.kpi_set", "quality": "verified" },
-        "road":   { "metric": null, "quality": "mock", "would_need": "Авто замын сүлжээний урт — Замын газрын эх сурвалж" },
-        "rail":   { "metric": null, "quality": "mock", "would_need": "Төмөр замын урт — УБТЗ" },
-        "water":  { "metric": null, "quality": "mock", "would_need": "Усан замын урт — Далайн захиргаа" },
-        "public": { "metric": null, "quality": "mock", "would_need": "Нийтийн тээврийн чиглэлийн тоо — НТГ" }
+        "air": {
+          "metric": "air.kpi_set",
+          "quality": "verified"
+        },
+        "road": {
+          "metric": null,
+          "quality": "mock",
+          "would_need": "Авто замын сүлжээний урт — Замын газрын эх сурвалж"
+        },
+        "rail": {
+          "metric": null,
+          "quality": "mock",
+          "would_need": "Төмөр замын урт — УБТЗ"
+        },
+        "water": {
+          "metric": null,
+          "quality": "mock",
+          "would_need": "Усан замын урт — Далайн захиргаа"
+        },
+        "public": {
+          "metric": null,
+          "quality": "mock",
+          "would_need": "Нийтийн тээврийн чиглэлийн тоо — НТГ"
+        }
       },
       "note": "SECTORS[activeSector].kpis (8 мөр) — air сонгосон үед бүгд applyRealFlightsData-аас, бусад үед бүгд статик. kpis[0] (НИЙТ НИСЛЭГ) нь hero_fl-тэй яг ижил air.flight_count_last_month; kpis[1-7] нь тухайн үеийн Sector-хуудасны Он/Сар шүүлтээр тодорхойлогдох жилийн эхнээс өнөөдрийг хүртэлх нийлбэр — өөр цонхтой ч тус бүрийн шошго (compareLabel) үнэн зөв тул зөрчилгүй."
     },
     "ls": {
       "sectors": {
-        "air":    { "metric": "air.flight_count_last_month", "quality": "verified" },
-        "road":   { "metric": null, "quality": "mock", "would_need": "Авто замын сүлжээний урт — Замын газрын эх сурвалж" },
-        "rail":   { "metric": null, "quality": "mock", "would_need": "Төмөр замын урт — УБТЗ" },
-        "water":  { "metric": null, "quality": "mock", "would_need": "Усан замын урт — Далайн захиргаа" },
-        "public": { "metric": null, "quality": "mock", "would_need": "Нийтийн тээврийн чиглэлийн тоо — НТГ" }
+        "air": {
+          "metric": "air.flight_count_last_month",
+          "quality": "verified"
+        },
+        "road": {
+          "metric": null,
+          "quality": "mock",
+          "would_need": "Авто замын сүлжээний урт — Замын газрын эх сурвалж"
+        },
+        "rail": {
+          "metric": null,
+          "quality": "mock",
+          "would_need": "Төмөр замын урт — УБТЗ"
+        },
+        "water": {
+          "metric": null,
+          "quality": "mock",
+          "would_need": "Усан замын урт — Далайн захиргаа"
+        },
+        "public": {
+          "metric": null,
+          "quality": "mock",
+          "would_need": "Нийтийн тээврийн чиглэлийн тоо — НТГ"
+        }
       },
       "note": "livestrip — SECTORS[k].kpis[0] л уншина, k04-ийн kpis[0]-тэй яг ижил (hero_fl-тэй ижил метрик)."
     },
     "hero_px": {
       "sectors": {
-        "public": { "metric": null, "quality": "mock", "would_need": "Нийтийн тээврийн өдрийн зорчигчийн тоо — НТГ-ийн эх сурвалж шаардлагатай, одоогоор алга" }
+        "public": {
+          "metric": null,
+          "quality": "mock",
+          "would_need": "Нийтийн тээврийн өдрийн зорчигчийн тоо — НТГ-ийн эх сурвалж шаардлагатай, одоогоор алга"
+        }
       },
       "note": "312K хатуу статик хэвээр үлдэнэ. hero_px-д БүҮ ХүР гэсэн заавар мөрдөгдсөн — код өөрчлөгдөөгүй."
     },
     "u07": {
       "metric": "air.feed_updated_at",
-      "sectors": ["air"],
+      "sectors": [
+        "air"
+      ],
       "note": "RECENT[0..4]-ийн зөвхөн air мөр (index 0) бодит. Бусад 4 мөр (road/rail/public/water) статик, эх сурвалжгүй тул энд бүртгэгдээгүй."
     },
     "t05": {
       "metric": "air.monthly_flight_series",
-      "sectors": ["air"],
+      "sectors": [
+        "air"
+      ],
       "note": "sector.c1d-ийг шууд уншина, код өөрчлөлт шаардлагагүй байсан."
     },
     "i06": {
       "metric": "air.monthly_growth_index",
-      "sectors": ["air"],
+      "sectors": [
+        "air"
+      ],
       "note": "TREND.air (статик, SECTORS.air.c1d-ээс бүрэн тусгаарлагдсан хуурамч цуваа) байсныг live индексээр сольсон (H4 3/3). Харьцуулах цонх (compareWindow()) динамик — бүх 5 салбарыг ижил уртаар (одоогоор 1-7 сар) харуулна. road/rail/water/public verified бус тул 0 (хавтгай шугам) — тусгай стиль (тасархай, саарал) байхгүй, ердийн шугам (H5)."
     },
     "r06": {
       "metric": "air.monthly_growth_index",
-      "sectors": ["air"],
+      "sectors": [
+        "air"
+      ],
       "note": "i06-тэй ЯГ ижил compareWindow()/trendFor() ашиглана. road/rail/water/public 0 тул эхлэл утга (a=0) — 0-той харьцуулж хувь тооцохгүй, '—' харуулна (NaN-аас сэргийлнэ). Тэргүүлэгч/хоцрогдогч шошго зөвхөн verified (air) салбар дундаас; verified 2-с цөөн үед (одоогоор ганц) огт харуулахгүй."
     },
     "uk": {
@@ -62,55 +115,175 @@
     },
     "w2p": {
       "sectors": {
-        "air":    { "metric": "air.weekly_pax", "quality": "verified" },
-        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн авто замын зорчигчийн бодит дата — эх сурвалж тодорхойгүй" },
-        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн төмөр замын зорчигчийн бодит дата — УБТЗ" },
-        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн усан замын зорчигчийн бодит дата — Далайн захиргаа" },
-        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн нийтийн тээврийн зорчигчийн бодит дата — НТГ" }
+        "air": {
+          "metric": "air.weekly_pax",
+          "quality": "verified"
+        },
+        "road": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "7 хоногийн авто замын зорчигчийн бодит дата — эх сурвалж тодорхойгүй"
+        },
+        "rail": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "7 хоногийн төмөр замын зорчигчийн бодит дата — УБТЗ"
+        },
+        "water": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "7 хоногийн усан замын зорчигчийн бодит дата — Далайн захиргаа"
+        },
+        "public": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "7 хоногийн нийтийн тээврийн зорчигчийн бодит дата — НТГ"
+        }
       },
-      "plan": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Долоо хоногийн зорчигчийн улсын төлөвлөгөө — эх сурвалж тодорхойгүй" },
-      "note": "Нийт дүн одоо зөвхөн air.weekly_pax (сүүлийн бүтэн 7 хоног, lastFullWeekWindow). bar/donut/stats хэсэг хэвээр WEEK_DATA статик (энэ H4 үе шатанд өөрчлөгдөөгүй)."
+      "plan": {
+        "metric": null,
+        "quality": "none",
+        "label": "мэдээлэл алга",
+        "would_need": "Долоо хоногийн зорчигчийн улсын төлөвлөгөө — эх сурвалж тодорхойгүй"
+      },
+      "note": "Нийт дүн болон 7 хоногийн өдөр тутмын багана (bar) аль аль нь air.weekly_pax-тай ЯГ ижил эх сурвалжаас (weeklyAirStats/weekFlightsSum, өдөр тус бүрээр) тооцогдоно (H5). Доод статистикийн 'Өмнөх 7 хоног' мөр мөн realDeltaPct-тэй адил бодит хувь; 'Оны эхнээс'/'Өмнөх оны мөн үе'/'Тээвэрлэгч' одоогоор эх сурвалжгүй тул 0/'—' + мэдээлэл алга."
     },
     "w2pb": {
-      "metric": null,
-      "quality": "mock",
-      "would_need": "7 хоногийн зорчигчийн төрлийн задаргаа — w2p-тэй ижил эх сурвалж хэрэгтэй",
-      "note": "WEEK_DATA.pax дэд задаргаа (donut/share) статик"
+      "sectors": {
+        "air": {
+          "metric": "air.weekly_pax",
+          "quality": "verified"
+        },
+        "other": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "7 хоногийн зорчигчийн төрлийн (авто/төмөр зам/нийтийн) задаргаа — w2p-тэй ижил эх сурвалж хэрэгтэй"
+        }
+      },
+      "note": "Төрлийн хуваарь донут — index0 (Агаарын тээвэр) сегмент w2p-ийн ЯГ ТЭР air.weekly_pax утгатай холбогдсон (H5). Бусад 2 сегмент (Авто/Нийтийн, Төмөр зам) 0 тул air 100% гарна."
     },
     "w2px": {
       "sectors": {
-        "air":    { "metric": "air.weekly_pax", "quality": "verified" },
-        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Авто замын 7 хоногийн зорчигчийн харьцуулалт — тодорхойгүй" },
-        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Төмөр замын 7 хоногийн зорчигчийн харьцуулалт — УБТЗ" },
-        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Усан замын 7 хоногийн зорчигчийн харьцуулалт — Далайн захиргаа" },
-        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Нийтийн тээврийн 7 хоногийн зорчигчийн харьцуулалт — НТГ" }
+        "air": {
+          "metric": "air.weekly_pax",
+          "quality": "verified"
+        },
+        "road": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Авто замын 7 хоногийн зорчигчийн харьцуулалт — тодорхойгүй"
+        },
+        "rail": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Төмөр замын 7 хоногийн зорчигчийн харьцуулалт — УБТЗ"
+        },
+        "water": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Усан замын 7 хоногийн зорчигчийн харьцуулалт — Далайн захиргаа"
+        },
+        "public": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Нийтийн тээврийн 7 хоногийн зорчигчийн харьцуулалт — НТГ"
+        }
       },
       "note": "air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
     },
     "w2c": {
       "sectors": {
-        "air":    { "metric": "air.weekly_cargo", "quality": "verified" },
-        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн авто замын ачааны бодит дата — эх сурвалж тодорхойгүй" },
-        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн төмөр замын ачааны бодит дата — УБТЗ" },
-        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "7 хоногийн усан замын ачааны бодит дата — Далайн захиргаа" },
-        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Нийтийн тээврийн ачаа — хамааралгүй сектор" }
+        "air": {
+          "metric": "air.weekly_cargo",
+          "quality": "verified"
+        },
+        "road": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "7 хоногийн авто замын ачааны бодит дата — эх сурвалж тодорхойгүй"
+        },
+        "rail": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "7 хоногийн төмөр замын ачааны бодит дата — УБТЗ"
+        },
+        "water": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "7 хоногийн усан замын ачааны бодит дата — Далайн захиргаа"
+        },
+        "public": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Нийтийн тээврийн ачаа — хамааралгүй сектор"
+        }
       },
-      "plan": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Долоо хоногийн ачааны улсын төлөвлөгөө — эх сурвалж тодорхойгүй" },
-      "note": "Нийт дүн одоо зөвхөн air.weekly_cargo (сүүлийн бүтэн 7 хоног, lastFullWeekWindow). bar/donut/stats хэсэг хэвээр WEEK_DATA статик (энэ H4 үе шатанд өөрчлөгдөөгүй)."
+      "plan": {
+        "metric": null,
+        "quality": "none",
+        "label": "мэдээлэл алга",
+        "would_need": "Долоо хоногийн ачааны улсын төлөвлөгөө — эх сурвалж тодорхойгүй"
+      },
+      "note": "Нийт дүн болон 7 хоногийн өдөр тутмын багана (bar) аль аль нь air.weekly_cargo-той ЯГ ижил эх сурвалжаас (weeklyAirStats/weekFlightsSum, өдөр тус бүрээр) тооцогдоно (H5). Доод статистикийн 'Өмнөх 7 хоног' мөр мөн realDeltaPct-тэй адил бодит хувь; 'Оны эхнээс'/'Өмнөх оны мөн үе'/'Чиглэл' одоогоор эх сурвалжгүй тул 0/'—' + мэдээлэл алга."
     },
     "w2cb": {
-      "metric": null,
-      "quality": "mock",
-      "would_need": "7 хоногийн ачааны төрлийн задаргаа — w2c-тэй ижил эх сурвалж хэрэгтэй",
-      "note": "WEEK_DATA.cargo дэд задаргаа (donut/share) статик"
+      "sectors": {
+        "air": {
+          "metric": "air.weekly_cargo",
+          "quality": "verified"
+        },
+        "other": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "7 хоногийн ачааны төрлийн (авто/төмөр зам/нийтийн) задаргаа — w2c-тэй ижил эх сурвалж хэрэгтэй"
+        }
+      },
+      "note": "Төрлийн хуваарь донут — index0 (Агаарын тээвэр) сегмент w2c-ийн ЯГ ТЭР air.weekly_cargo утгатай холбогдсон (H5). Бусад 2 сегмент (Авто/Нийтийн, Төмөр зам) 0 тул air 100% гарна."
     },
     "w2cx": {
       "sectors": {
-        "air":    { "metric": "air.weekly_cargo", "quality": "verified" },
-        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Авто замын 7 хоногийн ачааны харьцуулалт — тодорхойгүй" },
-        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Төмөр замын 7 хоногийн ачааны харьцуулалт — УБТЗ" },
-        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Усан замын 7 хоногийн ачааны харьцуулалт — Далайн захиргаа" },
-        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Нийтийн тээврийн ачаа — хамааралгүй сектор" }
+        "air": {
+          "metric": "air.weekly_cargo",
+          "quality": "verified"
+        },
+        "road": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Авто замын 7 хоногийн ачааны харьцуулалт — тодорхойгүй"
+        },
+        "rail": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Төмөр замын 7 хоногийн ачааны харьцуулалт — УБТЗ"
+        },
+        "water": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Усан замын 7 хоногийн ачааны харьцуулалт — Далайн захиргаа"
+        },
+        "public": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Нийтийн тээврийн ачаа — хамааралгүй сектор"
+        }
       },
       "note": "air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
     },
@@ -122,11 +295,34 @@
     },
     "d05": {
       "sectors": {
-        "air":    { "metric": "air.flight_count_last_month", "quality": "verified" },
-        "road":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Авто замын сүлжээний урттай нэг нэгжид (жиш. хөдөлгөөний ачаалал) харьцуулах бодит метрик" },
-        "rail":   { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Төмөр замын бодит метрик — УБТЗ" },
-        "water":  { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Усан замын бодит метрик — Далайн захиргаа" },
-        "public": { "metric": null, "quality": "none", "label": "мэдээлэл алга", "would_need": "Нийтийн тээврийн бодит метрик — НТГ" }
+        "air": {
+          "metric": "air.flight_count_last_month",
+          "quality": "verified"
+        },
+        "road": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Авто замын сүлжээний урттай нэг нэгжид (жиш. хөдөлгөөний ачаалал) харьцуулах бодит метрик"
+        },
+        "rail": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Төмөр замын бодит метрик — УБТЗ"
+        },
+        "water": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Усан замын бодит метрик — Далайн захиргаа"
+        },
+        "public": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Нийтийн тээврийн бодит метрик — НТГ"
+        }
       },
       "note": "Донутын нийлбэр өөр нэгжтэй утгуудыг (км, нислэг, чиглэл) шууд нэмж тооцдог байсан тул зөвхөн verified (air) салбарыг бодит утгаар, бусдыг 0-ээр авч тооцно — 0+0+0+0+air=air тул air 100% гарна, энэ нь одоогийн бодит холболтын байдал."
     }
