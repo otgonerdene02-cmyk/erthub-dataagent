@@ -873,7 +873,7 @@
             <sc-for list="{{ weekPaxStats }}" as="ws" hint-placeholder-count="4">
               <div>
                 <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;">{{ ws.l }}</div>
-                <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ ws.color }};">{{ ws.v }}</div>
+                <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ ws.color }};">{{ ws.v }}<span style="font-size:10px;font-weight:500;color:var(--ink3);">{{ ws.mockTag }}</span></div>
               </div>
             </sc-for>
           </div>
@@ -964,7 +964,7 @@
             <sc-for list="{{ weekCargoStats }}" as="ws" hint-placeholder-count="4">
               <div>
                 <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;">{{ ws.l }}</div>
-                <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ ws.color }};">{{ ws.v }}</div>
+                <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ ws.color }};">{{ ws.v }}<span style="font-size:10px;font-weight:500;color:var(--ink3);">{{ ws.mockTag }}</span></div>
               </div>
             </sc-for>
           </div>
@@ -1092,7 +1092,8 @@
         <div style="font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">{{ sector.c1 }}</div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);border:1px solid var(--line2);border-radius:999px;padding:4px 11px;white-space:nowrap;">
           <div style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};animation:pulseGlow 2.2s infinite;"></div>
-          {{ trend.fcLabel.text }} · <span style="color:var(--ink2);font-weight:600;">{{ trend.fcDeltaLabel }}</span>
+          <sc-if value="{{ trend.showForecast }}">{{ trend.fcLabel.text }} · <span style="color:var(--ink2);font-weight:600;">{{ trend.fcDeltaLabel }}</span></sc-if>
+          <sc-if value="{{ trend.dataNote }}"><span style="color:var(--ink2);font-weight:600;">{{ trend.dataNote }}</span></sc-if>
         </div>
       </div>
       <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:210px;display:block;">
@@ -1124,18 +1125,26 @@
             <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);transform:translateY(-14px);">{{ trend.avgLabel }}</div>
           </foreignObject>
         </sc-if>
+        <sc-if value="{{ trend.showForecast }}">
         <path d="{{ trend.band }}" fill="{{ activeColor }}" fill-opacity="0.13" stroke="none"></path>
+        </sc-if>
         <path d="{{ trend.area }}" fill="url(#trendfill)" stroke="none"></path>
+        <sc-if value="{{ trend.showForecast }}">
         <line x1="{{ trend.fcSplitX }}" y1="{{ trend.padT }}" x2="{{ trend.fcSplitX }}" y2="{{ trend.axisY }}" stroke="var(--line2)" stroke-width="1" stroke-dasharray="2 4"></line>
+        </sc-if>
         <path d="{{ trend.line }}" fill="none" stroke="url(#trendstroke)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" filter="url(#trendglow)"></path>
+        <sc-if value="{{ trend.showForecast }}">
         <path d="{{ trend.fline }}" fill="none" stroke="{{ activeColor }}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="6 5" style="animation:dashFlow 1.6s linear infinite;"></path>
+        </sc-if>
         <sc-for list="{{ trend.dotPts }}" as="dp" hint-placeholder-count="12">
           <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="var(--surface)" stroke="{{ activeColor }}" stroke-width="1.6"></circle>
         </sc-for>
+        <sc-if value="{{ trend.showForecast }}">
         <circle cx="{{ trend.peak.cx }}" cy="{{ trend.peak.cy }}" r="4.5" fill="{{ activeColor }}"></circle>
         <foreignObject x="{{ trend.peak.lx }}" y="{{ trend.peak.ly }}" width="120" height="32">
           <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;line-height:1.4;color:var(--ink2);background:var(--surface);border:1px solid var(--line2);border-radius:7px;padding:5px 8px;box-shadow:var(--shadow);display:inline-block;white-space:nowrap;">{{ trend.peak.label }}<br><span style="color:var(--ink);font-weight:600;">{{ trend.peak.value }}</span></div>
         </foreignObject>
+        </sc-if>
         <sc-for list="{{ trend.xTicks }}" as="xt" hint-placeholder-count="6">
           <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14">
             <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;">{{ xt.label }}</div>
@@ -4521,6 +4530,24 @@ class Component extends DCLogic {
     if(!s) return {quality:'none',label:'мэдээлэл алга'};
     return {quality:s.quality||'none',label:s.label||'мэдээлэл алга'};
   }
+  // Registry-ийн widgets.<id>.sectors ХОЁР ӨӨР хэлбэртэй байж болно:
+  // (a) объект {air:{quality:'verified'},road:{quality:'mock'},...} —
+  //     k04/ls/d05/w2p гэх мэт, sectorQuality() үүнийг барина;
+  // (b) хавтгай массив ['air'] — hero_fl/t05/i06/u07 гэх мэт, "энэ виджет
+  //     ЗӨВХӨН эдгээр салбарт verified" гэсэн энгийн жагсаалт. sectorQuality()
+  //     массивт key-object мэт хандвал үргэлж undefined буцаах тул (жишээ
+  //     нь t05.sectors=['air']-д sectorQuality('t05','air') ч 'none' гэж
+  //     буруу дүгнэнэ) — иймд хоёр хэлбэрийг ХАМТ зөв барих энэ функцийг
+  //     тусад нь бичив. t05-ийн "05" хэсэгт (сектор солиход харагдах график)
+  //     ашиглана.
+  sectorVerified(widgetId,sectorKey){
+    const reg=this.state.metricRegistry;
+    const w=reg&&reg.widgets&&reg.widgets[widgetId];
+    if(!w) return false;
+    if(Array.isArray(w.sectors)) return w.sectors.indexOf(sectorKey)>=0;
+    const s=w.sectors&&w.sectors[sectorKey];
+    return !!(s&&s.quality==='verified');
+  }
   // Виджетийн "төлөвлөгөө" дэд-үзүүлэлт (жиш. weekPaxPlan) үнэн хэрэгтээ
   // тусдаа эх сурвалжтай тул sectorQuality-аас тусад нь registry-ийн
   // widgets.<id>.plan-аас уншина.
@@ -4582,8 +4609,14 @@ class Component extends DCLogic {
     const prevPax=prevDays?this.weekFlightsSum(prevDays,'pax'):null;
     const prevCargo=prevDays?this.weekFlightsSum(prevDays,'cargo'):null;
     const pctDelta=(a,b)=>(b==null||!b)?null:(a-b)/b*100;
+    // H5 (нэмэлт): w2p/w2c-ийн өдөр тутмын багана (7 хоног) ХУУЧИНДАА
+    // WEEK_DATA-ийн зохиомол статик массив ашигладаг байсан — эдгээрийг
+    // ЯГ ТЭР curDays-аар өдөр тус бүрээр нь бодитоор тооцоолж сольж байна.
+    const dailyPax=curDays.map(d=>this.weekFlightsSum([d],'pax'));
+    const dailyCargo=curDays.map(d=>this.weekFlightsSum([d],'cargo'));
+    const dailyLabels=curDays.map(d=>String(d.month).padStart(2,'0')+'.'+String(d.day).padStart(2,'0'));
     return {pax,cargo,paxDeltaPct:pctDelta(pax,prevPax),cargoDeltaPct:pctDelta(cargo,prevCargo),
-      weekStart:curDays[0],weekEnd:curDays[6]};
+      weekStart:curDays[0],weekEnd:curDays[6],dailyPax,dailyCargo,dailyLabels};
   }
   // hero_fl ticker-т зориулсан "сүүлийн БүТЭН сарын нислэг" тоо. Датасэт
   // хуудасны Он/Сар шүүлтээс БүРЭН тусгаарлагдсан — тэр шүүлтийг хэрэглэгч
@@ -5786,13 +5819,13 @@ class Component extends DCLogic {
     // ХАМГИЙН АЮУЛГүй тал руу алдаж (i06-той адил зарчим) mock тэмдэглэл
     // харуулна — зөвхөн ЭНЭ үзүүлэлт бодитоор "verified" болсон үед л
     // тэмдэглэл автоматаар алга болно.
-    // w2p/w2c/w2px/w2cx нь air-ийн хэсгээрээ үнэндээ холбогдсон тул
-    // блок "*" тэмдэглэлээс хасав — эдгээрийн зохих тэмдэглэл (airOnlyNote,
-    // мөр тус бүрийн "мэдээлэл алга") дээр тусдаа, илүү нарийвчлалтай
-    // харуулагдана. w2pb/w2cb хэвээр бүрэн mock тул энд үлдэнэ.
-    const section02Ids=['w2pb','w2cb'];
-    const section02Marks={w2p:'',w2px:'',w2c:'',w2cx:''};
-    section02Ids.forEach(id=>{ section02Marks[id]=this.isWidgetMock(id)?' *':''; });
+    // w2p/w2c/w2px/w2cx АЛЬ АЛЬ нь air-ийн хэсгээрээ үнэндээ холбогдсон.
+    // H5 (нэмэлт): w2pb/w2cb-ийн донутын index0 (Агаарын тээвэр) сегмент
+    // ч мөн адил realVal-тай холбогдсон болсон тул эдгээр ч "бүрэн mock"
+    // биш болов — блок "*" тэмдэглэл/тайлбарыг бүгдээс нь хасав (хоосон
+    // массив үлдээснээр доорх section02MockNote автоматаар '' болно).
+    const section02Ids=[];
+    const section02Marks={w2p:'',w2px:'',w2c:'',w2cx:'',w2pb:'',w2cb:''};
     const section02AnyMock=section02Ids.some(id=>this.isWidgetMock(id));
     const section02DateRange=WEEK_LABELS[0]+'–'+WEEK_LABELS[WEEK_LABELS.length-1];
     const section02MockNote=section02AnyMock
@@ -5809,42 +5842,71 @@ class Component extends DCLogic {
       return (r%1===0?r.toFixed(0):r.toFixed(1));
     };
     const buildWeek=(wt,wd,widgetId,deltaWidgetId)=>{
-      const bmax=Math.max.apply(null,wd.bar), bmin=Math.min.apply(null,wd.bar);
-      const base=Math.floor((bmin-(bmax-bmin)*0.6)/50)*50, top=Math.ceil((bmax+(bmax-bmin)*0.15)/50)*50;
-      const isMock=this.isWidgetMock(widgetId);
       // Air-ийн бодит утга (нийт дүн, w2px/w2cx-ийн air мөр аль аль нь энэ
       // НЭГ утгыг ашиглана) — эрэлт үед аль ч 4 mock салбарыг 0 гэж үзвэл
       // нийлбэрт нэмэгдэхгүй тул "Нийт дүн" автоматаар зөвхөн air-ийн
       // бодит дүн болно.
       const realVal=weeklyAir?(wt==='pax'?weeklyAir.pax:weeklyAir.cargo):null;
       const realDeltaPct=weeklyAir?(wt==='pax'?weeklyAir.paxDeltaPct:weeklyAir.cargoDeltaPct):null;
+      // H5 (нэмэлт): 7 хоногийн өдөр тутмын багана ХУУЧИНДАА wd.bar
+      // (WEEK_DATA-ийн статик зохиомол массив) ашигладаг байсан. Air-ийн
+      // бодит долоо хоног холбогдсон үед weeklyAirStats()-ийн өдөр тус
+      // бүрийн бодит нийлбэрийг ашиглана (бусад 4 салбар 0 тул нийт
+      // дүнтэй адил зарчмаар "нийт багана" = зөвхөн air-ийн бодит дүн).
+      const realDaily=weeklyAir?(wt==='pax'?weeklyAir.dailyPax:weeklyAir.dailyCargo):null;
+      const barVals=realDaily||wd.bar;
+      const barLabels=realDaily?weeklyAir.dailyLabels:WEEK_LABELS;
+      const bmax=Math.max.apply(null,barVals), bmin=Math.min.apply(null,barVals);
+      const base=Math.floor((bmin-(bmax-bmin)*0.6)/50)*50, top=Math.ceil((bmax+(bmax-bmin)*0.15)/50)*50;
       // Огнооны шошго (WEEK_LABELS: "11.17" гэх мэт) жил заагаагүй, өдөр
       // бүр статик тул mock үед харагдацаараа сааруулж "жишиг" гэдгийг
       // үзэгдэл дээрээ илэрхийлнэ (тайлбар мөрөнд текстээр ч давхар
-      // тэмдэглэнэ).
-      const dateLabelStyle=isMock?'color:var(--ink3);opacity:.55;font-style:italic;':'';
-      const bars=wd.bar.map((v,i)=>({label:WEEK_LABELS[i],value:v.toLocaleString(),dateLabelStyle,
-        heightPct:((v-base)/(top-base)*100).toFixed(1)+'%',color:wd.color}));
+      // тэмдэглэнэ). Бодит өдрийн багана холбогдсон үед энгийн стиль.
+      const dateLabelStyle=realDaily?'':'color:var(--ink3);opacity:.55;font-style:italic;';
+      const bars=barVals.map((v,i)=>({label:barLabels[i],value:v.toLocaleString(),dateLabelStyle,
+        heightPct:(top===base?50:(v-base)/(top-base)*100).toFixed(1)+'%',color:wd.color}));
       const yTicks=[0,0.5,1].map(fr=>({pct:(fr*100).toFixed(1)+'%',label:Math.round(base+fr*(top-base)).toLocaleString()}));
-      const avgVal=wd.bar.reduce((a,v)=>a+v,0)/wd.bar.length;
-      const avgRef={pct:((avgVal-base)/(top-base)*100).toFixed(1)+'%',label:'дундаж '+Math.round(avgVal).toLocaleString()};
-      const bestI=wd.bar.indexOf(bmax);
+      const avgVal=barVals.reduce((a,v)=>a+v,0)/barVals.length;
+      const avgRef={pct:(top===base?50:(avgVal-base)/(top-base)*100).toFixed(1)+'%',label:'дундаж '+Math.round(avgVal).toLocaleString()};
+      const bestI=barVals.indexOf(bmax);
       const barsMarked=bars.map((b,i)=>Object.assign({},b,{isPeak:i===bestI,
         valueStyle:'font-family:\'JetBrains Mono\',monospace;font-size:10.5px;white-space:nowrap;flex-shrink:0;position:relative;z-index:1;'
           +(i===bestI?'color:var(--ink);font-weight:700;':'color:var(--ink2);')}));
       const wbase='Шугам тус бүр дээрх тоо = 7 хоногийн нийт '+wd.unit+' · тэнхлэг '+base.toLocaleString()+'-с эхэлнэ';
-      const dtot=wd.donut.data.reduce((a,b)=>a+b,0)||1;
+      // H5 (нэмэлт): w2pb/w2cb-ийн "Төрлийн хуваарь" донут — index 0
+      // ("Агаарын тээвэр") ХУУЧИН WEEK_DATA статик тоо (жиш. 32.2) ашигладаг
+      // байсан нь дээрх realVal-аас ХОЛ зөрдөг (өөр эх сурвалж мэт) байсан.
+      // Индекс 0-г realVal-тай АДИЛХАН болгож, бусад 2 сегментийг (Авто/
+      // Нийтийн, Төмөр зам — бүрэн зохиомол статик) 0 болгоно — d05-тэй
+      // яг ижил зарчим: 0+0+air=air тул air 100% гарна.
+      const donutValues=wd.donut.data.map((v,i)=>i===0?(realVal!=null?realVal:0):0);
+      const dtot=donutValues.reduce((a,b)=>a+b,0)||1;
       const circ=2*Math.PI*44; let acc=0;
-      const donut=wd.donut.data.map((v,i)=>{
+      const donut=donutValues.map((v,i)=>{
         const pct=v/dtot*100;
         const seg={label:wd.donut.labels[i],color:wd.donut.colors[i],pct:pct.toFixed(1),
-          dash:(pct/100*circ).toFixed(1)+' '+circ.toFixed(1),offset:(-acc/100*circ).toFixed(1),value:v.toLocaleString()};
+          dash:(pct/100*circ).toFixed(1)+' '+circ.toFixed(1),offset:(-acc/100*circ).toFixed(1),
+          value:i===0?fmtWeekVal(v):'0'};
         acc+=pct; return seg;
       });
       const shareTot=dtot;
-      const share=wd.donut.data.map((v,i)=>({label:wd.donut.labels[i],color:wd.donut.colors[i],
-        pct:(v/shareTot*100).toFixed(1),w:Math.max(v/shareTot*100,1.4).toFixed(2)+'%',value:v.toLocaleString()}));
-      const stats=wd.stats.map(s=>({l:s[0],v:s[1],color:s[2]==='pos'?'#2FA37B':(s[2]==='neg'?'#D2564A':'var(--ink)')}));
+      const share=donutValues.map((v,i)=>({label:wd.donut.labels[i],color:wd.donut.colors[i],
+        pct:(v/shareTot*100).toFixed(1),w:Math.max(v/shareTot*100,1.4).toFixed(2)+'%',
+        value:i===0?fmtWeekVal(v):'0'}));
+      // H5 (нэмэлт): "Оны эхнээс/Өмнөх оны мөн үе/Тээвэрлэгч(Чиглэл)" 4
+      // статистикийн 3 нь одоогоор ямар ч эх сурвалжтай холбогдоогүй
+      // WEEK_DATA-ийн статик тоо — 0/"—" + шошготой үзүүлнэ. "Өмнөх 7
+      // хоног" нь дээр аль хэдийн тооцсон realDeltaPct-тэй ЯГ ижил
+      // үзүүлэлт тул mock тоог давхардуулахгүй, боломжтой үед бодит утгыг
+      // шууд ашиглана.
+      const stats=wd.stats.map((s,i)=>{
+        const isPct=/%$/.test(s[1]);
+        if(i===1&&realDeltaPct!=null){
+          return {l:s[0],v:(realDeltaPct>0?'+':'')+realDeltaPct.toFixed(1)+'%',
+            color:realDeltaPct<0?'#D2564A':'#2FA37B',mockTag:''};
+        }
+        return {l:s[0],v:isPct?'—':'0',color:'#828EA8',mockTag:' · мэдээлэл алга'};
+      });
       // Төлөвлөгөө (жилийн улсын зорилт) — air-ийн 7 хоногийн бодит тоотой
       // ямар ч холбоогүй тусдаа эх сурвалж (registry-ийн widgets.<id>.plan).
       // Эх сурвалж алга үед 0/0 тодорхойгүй тул хувийг ТООЦООХГүй ("—"),
@@ -5960,7 +6022,10 @@ class Component extends DCLogic {
       chLabel:r.ch==null?'—':((r.ch>0?'+':'')+r.ch.toFixed(1)+'%'),
       chColor:r.ch==null?'#828EA8':(r.ch>0?'#0E8F63':'#C8443A'),
       barW:(Math.abs(r.ch||0)/cMaxAbs*100).toFixed(0)+'%',
-      mockTag:'',
+      // H5 (нэмэлт): verified бус мөрийг (start=end=0, chLabel='—') ил
+      // тайлбарлана — template-д аль хэдийн бэлэн байсан боловч энд хоосон
+      // байсан слот.
+      mockTag:verifiedSet.has(r.key)?'':'мэдээлэл алга',
       rowStyle:'display:grid;grid-template-columns:22px 20px minmax(0,1fr) 62px;gap:9px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);opacity:'+(r.muted?'.42':'1')+';transition:.2s var(--ease);'
     }));
     // "Тэргүүлэгч"/"Хоцрогдож байгаа" шошгыг ЗӨВХӨН verified салбараас
@@ -6971,26 +7036,45 @@ class Component extends DCLogic {
       const ds=r.dataset?DATASETS.find(d=>d.sector===r.sector&&d.name===r.dataset):null;
       const decl={...r,name:ds?ds.name:r.title,source:r.source||(ds&&ds.source)};
       const card=this.bindCard(decl,'date','Шинэчлэгдсэн');
+      // H5 (нэмэлт): card.live=false үед card.value нь RECENT тогтмол
+      // массивын ЗОХИОМОЛ огноо (жиш. "2026-07-29") — жинхэнэ огноо мэт
+      // харагдана. Ногоон цэг аль хэдийн live/үгүй-г ялгадаг байсан ч
+      // текстээр ил заагаагүй тул сая үзүүлдэг байсан. sortKey-д жинхэнэ
+      // (эсвэл статик) огноог хадгалж, ЭРЭМБЭ хэвээр тогтвортой үлдэнэ —
+      // зөвхөн ХАРАГДАХ текстийг "мэдээлэл алга" болгоно.
       return {...r,
         agency:ds?ds.agency:r.agency,
         src:ds?ds.fmt:r.src,
-        date:card.value,
+        sortKey:card.value,
+        date:card.live?card.value:'мэдээлэл алга',
         live:card.live,
         hint:card.hint||'',
         label:SECTORS[r.sector].label,color:NEON[r.sector]};
     // "Сүүлд шинэчлэгдсэн" гэдэг нь бодит огноон дээр ч үнэн байхын тулд
     // холболтын дараа дахин эрэмбэлнэ (огноо бүгд YYYY-MM-DD).
-    }).sort((a,b)=>b.date.localeCompare(a.date));
+    }).sort((a,b)=>b.sortKey.localeCompare(a.sortKey));
   }
-  buildKpis(kpis,color){
+  // H5 (нэмэлт): "04" хэсэг идэвхтэй салбарын 4 (эсвэл air-ийн бодит үед 8)
+  // KPI картыг үзүүлдэг. verified=false үед (registry: k04.sectors.<key>)
+  // эдгээр нь SECTORS тогтмол статик тоо тул үнэ дүн/хувь/спарк бүгд
+  // ls-тэй ижил зарчмаар 0/"—"/хавтгай шугам болно. "AI ИТГЭЛ" (conf%)
+  // хэвээр үлдэнэ — энэ нь үргэлж чимэглэлийн шинжтэй тоо, air үед ч
+  // бодит тоо БИШ (өөрчлөлт шаардлагагүй).
+  buildKpis(kpis,color,verified){
+    const flatSpark=pathFor(new Array(10).fill(0),120,32,3).line;
     return kpis.map((k,i)=>{
-      const dir=k[4];
-      const deltaColor = dir==='up' ? '#0E8F63' : dir==='down' ? '#C8443A' : '#6B7896';
-      const deltaGlyph = dir==='up' ? '▲' : dir==='down' ? '▼' : '•';
+      const dir=verified?k[4]:'flat';
+      const deltaColor = verified?(dir==='up'?'#0E8F63':dir==='down'?'#C8443A':'#6B7896'):'#828EA8';
+      const deltaGlyph = verified?(dir==='up'?'▲':dir==='down'?'▼':'•'):'';
       const conf=[94,88,91,86,83][i%5];
-      return {label:k[0],value:k[1],unit:k[2],delta:k[3],dir,deltaColor,deltaGlyph,
-        compareLabel:k[5]||'өмнөх сартай харьцуулбал',
-        spark:miniSpark(dir,i),sparkArea:miniSpark(dir,i)+' L120,32 L0,32 Z',
+      const spark=verified?miniSpark(dir,i):flatSpark;
+      return {label:k[0],
+        value:verified?k[1]:'0',
+        unit:k[2],
+        delta:verified?k[3]:'—',
+        dir,deltaColor,deltaGlyph,
+        compareLabel:verified?(k[5]||'өмнөх сартай харьцуулбал'):'мэдээлэл алга',
+        spark,sparkArea:spark+' L120,32 L0,32 Z',
         conf,confWidth:conf+'%',index:String(i+1).padStart(2,'0')};
     });
   }
@@ -7019,7 +7103,19 @@ class Component extends DCLogic {
     });
     const mfr=this.state.mFrom||1, mto=this.state.mTo||12;
     const win=s.c1d.slice(mfr-1,mto);
-    const trend=buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0);
+    // H5 (нэмэлт): "05" хэсэг идэвхтэй салбарын c1d-г шууд зурдаг байсан ч
+    // энэ массив зөвхөн air-д бодит (registry: t05.sectors=['air']) —
+    // бусад 4 салбарт SECTORS тогтмол статик тоо тул шошгогүй харуулбал
+    // ai08/w2p-тэй адил алдаа. Verified үед хэвийн (forecast/оргилтой)
+    // график, үгүй үед зөвхөн хавтгай 0 шугам зурж, AI прогноз/оргил
+    // тэмдэглэгээг (утгагүй болдог тул) нуун, тэдгээрийн оронд "мэдээлэл
+    // алга" гэсэн тэмдэглэгээ үзүүлнэ.
+    const t05Verified=this.sectorVerified('t05',key);
+    const trend=t05Verified
+      ? buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0)
+      : Object.assign(buildTrendChart(new Array(12).fill(0),0),
+          {showForecast:false,dataNote:'мэдээлэл алга'});
+    if(t05Verified) trend.showForecast=true;
     const wsum=win.reduce((a,b)=>a+b,0), wavg=win.length?Math.round(wsum/win.length):0;
     const mSel={cx:0,cy:0,value:'',label:'',has:false};
     const particles=Array.from({length:14},(_,i)=>{
@@ -7033,19 +7129,30 @@ class Component extends DCLogic {
         +`background:radial-gradient(circle,${c}cc,${c}00 72%);filter:blur(.5px);`
         +`transform:translateZ(${depth}px);animation:floatZ ${dur}s ease-in-out infinite;animation-delay:${(i*0.6).toFixed(1)}s;`};
     });
+    // H5 (нэмэлт): livestrip нь 5 салбарыг үргэлж ЗЭРЭГ харуулдаг тул
+    // activeSector сонголтоос үл хамааран салбар БүРИЙН verified эсэхийг
+    // бие даан шалгана — registry-ээс (кодод хатуу бүү бич). Air-аас бусад
+    // 4 нь SECTORS тогтмол статик тоо (48,210 км гэх мэт) тул үнэн шошгогүй
+    // үзүүлбэл буруу мэдээлэл болно (энэ session-ий d05/w2p-тэй ижил дүрэм).
+    const flatSpark=pathFor(new Array(10).fill(0),120,32,3).line;
     const livestrip=keys.map(k=>{
       const sk=SECTORS[k];
       const on=k===key, dir=sk.kpis[0][4];
-      return {key:k,label:sk.label,value:sk.kpis[0][1],unit:sk.kpis[0][2],color:NEON[k],on,
+      const q=this.sectorQuality('ls',k), verified=q.quality==='verified';
+      return {key:k,label:sk.label,
+        value:verified?sk.kpis[0][1]:'0',
+        unit:sk.kpis[0][2],color:verified?NEON[k]:'#828EA8',on,
         select:()=>this.setState({activeSector:k}),
-        glyph:GLYPH[k],metric:sk.kpis[0][0],delta:sk.kpis[0][3],
+        glyph:GLYPH[k],
+        metric:verified?sk.kpis[0][0]:(sk.kpis[0][0]+' · '+q.label),
+        delta:verified?sk.kpis[0][3]:'—',
         short:{road:'Авто зам',rail:'Төмөр зам',air:'Агаар',water:'Усан замын',public:'Нийтийн'}[k],
-        deltaColor:dir==='up'?'#0E8F63':(dir==='down'?'#C8443A':'#6B7896'),
-        spark:miniSpark(dir,k.length),
+        deltaColor:verified?(dir==='up'?'#0E8F63':(dir==='down'?'#C8443A':'#6B7896')):'#828EA8',
+        spark:verified?miniSpark(dir,k.length):flatSpark,
         cellStyle:'position:relative;display:flex;flex-direction:column;gap:0;align-items:stretch;text-align:left;background:'
           +(on?NEON[k]+'12':'transparent')+';border:none;border-radius:14px;cursor:pointer;font-family:inherit;padding:15px 10px 12px 13px;transition:.18s var(--ease);',
         railStyle:'position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:2px;background:'+(on?NEON[k]:'transparent')+';',
-        valueStyle:'font-family:\'Space Grotesk\',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.025em;line-height:1;color:var(--ink);'};
+        valueStyle:'font-family:\'Space Grotesk\',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.025em;line-height:1;color:'+(verified?'var(--ink)':'var(--ink3)')+';'};
     });
     const ratio=RATIO[key];
     const ratioCirc=2*Math.PI*44;
@@ -7175,14 +7282,17 @@ class Component extends DCLogic {
       ratioLabels:ratio.labels,
       ratioPct:ratio.pct.toFixed(1)+'%',
       ratioDasharray:ratioDash.toFixed(1)+' '+ratioCirc.toFixed(1),
-      kpis:this.buildKpis(s.kpis,color),
+      kpis:this.buildKpis(s.kpis,color,this.sectorVerified('k04',key)),
       rings:this.buildRings(s.rank),
       bars:this.buildBars(this.state.f04Sort==='name'?[...s.bars].sort((a,b)=>a[0].localeCompare(b[0])):s.bars),
       status:this.buildStatus(s.bars),
       diverging:buildDiverging(key),
       recent:this.buildRecent(),
       trend,monthSel:mSel,
-      monthReadout:(mfr===1&&mto===12)?('Бүх 12 сар · дундаж '+wavg.toLocaleString()):(mfr+'–'+mto+' сар · дундаж '+wavg.toLocaleString())
+      // monthReadout нь t05-ийн ЯГ ТЭР win/wavg-г ашигладаг тул t05Verified
+      // худал үед мөн адил "0 · мэдээлэл алга" шошготой байх ёстой.
+      monthReadout:(t05Verified?(mfr===1&&mto===12?'Бүх 12 сар':(mfr+'–'+mto+' сар')):'Бүх 12 сар')
+        +' · дундаж '+(t05Verified?wavg.toLocaleString():'0 · мэдээлэл алга')
     };
   }
 }
