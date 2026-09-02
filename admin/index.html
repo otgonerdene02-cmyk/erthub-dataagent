@@ -128,6 +128,16 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 @media(max-width:700px){.sfield{grid-template-columns:1fr;gap:4px}.sfield .lbl{padding-top:0}}
 .cd-n{font-size:12.5px;font-weight:580;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cd-t{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Байршлын зам — сайтаас виджет олоод админтай тулгахад */
+.cd-path{font-family:var(--mono);font-size:8.5px;color:#8494B0;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Динамик гарчгийн тэмдэглэгээ */
+.dyn{font-family:var(--mono);font-size:8.5px;font-weight:500;color:#8494B0;
+  background:rgba(20,32,58,.06);border-radius:4px;padding:1px 5px;white-space:nowrap}
+/* Засварын дэлгэц дэх байршлын зам */
+.pathbar{font-family:var(--mono);font-size:10px;color:var(--ink2);background:#EEF3FC;
+  border:1px solid var(--line);border-radius:8px;padding:7px 11px;margin-bottom:10px;
+  overflow-x:auto;white-space:nowrap}
 .src{font-family:var(--mono);font-size:10px;text-align:right;line-height:1.35;flex:none;white-space:nowrap}
 .src b{color:var(--ink);display:block;font-weight:600}
 .src i{color:var(--ink3);font-size:9px;font-style:normal}
@@ -413,14 +423,27 @@ var SECTIONS={'hero':'Hero · гүйдэг мөр','portal-kpi':'Порталы�
   'sec-07':'Сүүлд шинэчлэгдсэн өгөгдөл'};
 /* Хэсгийн гарчгийг сайт ЭНЭ виджетийн нэрнээс уншина */
 var SEC_FROM={'portal-kpi':'uk','sec-04':'k04','sec-05':'t05','sec-07':'u07'};
-/* Гарчгийн ард сайт дээр нэмэгддэг динамик хэсэг (идэвхтэй салбараас) */
-var SEC_SUFFIX={'sec-04':' — <идэвхтэй салбар>','sec-05':' — <үзүүлэлт>'};
+/* Гарчгийн ард сайт дээр нэмэгддэг хэсэг. Энд САЙТЫН АНХНЫ ТӨЛӨВИЙН ЯГ
+   ТЭР бичиглэлийг тавина. Өмнө нь өнцгөн хаалттай ТЕМПЛЕЙТИЙН
+   placeholder бичигдсэн байсан нь сайт дээр ХЭЗЭЭ Ч харагддаггүй текст
+   тул админ сайттай тулгаж чаддаггүй байв. Динамик болохыг өнцгөн
+   хаалтаар БИШ, тусад нь "(динамик)" тэмдэглэгээгээр илэрхийлнэ. */
+var SEC_SUFFIX={'sec-04':' — Авто зам','sec-05':' — Сарын дундаж ачаалал (мянга)'};
+/* Эдгээрийн ард ирэх хэсэг сонгосон салбараас хамаарч өөрчлөгддөг —
+   дээрх нь ЗӨВХӨН анхны төлөвийн утга. */
+var SEC_DYN={'sec-04':1,'sec-05':1};
+function sectionDynNote(key){return SEC_DYN[key]?'(динамик)':''}
 var SEC_NUM={'sec-01':'01','sec-02':'02','sec-04':'04','sec-05':'05',
              'sec-06':'06','sec-07':'07'};
 function sectionLabel(key){
   var from=SEC_FROM[key];
   var base=(from&&curText(from,'title'))||SECTIONS[key]||key;
   return (SEC_NUM[key]?SEC_NUM[key]+' · ':'')+base+(SEC_SUFFIX[key]||'');
+}
+/* Виджетийн БАЙРШЛЫН ЗАМ — "Нүүр → 01 · … → ҮНДСЭН ҮЗҮҮЛЭЛТҮҮД".
+   Сайтаас виджет хайж олоод админ дээрх мөртэй тулгахад хэрэгтэй. */
+function widgetPath(id){
+  return 'Нүүр → '+sectionLabel(anchorOf(id))+' → '+(curText(id,'title')||id);
 }
 /* Датасэтийн танилцуулах нэр — index.html-ийн DATASETS бичлэгээс.
    Түлхүүр нь registry-ийн metrics[*].dataset утга. Тааруулалт олдохгүй бол
@@ -829,6 +852,10 @@ var SITE_GROUPS=[
    labels:{model:'Загварын нэр',placeholder:'Асуултын талбарын сануулга',ask:'Асуух товч'}},
   {key:'footer',  title:'Хөл хэсэг',       where:'Хуудасны хамгийн доод мөр',
    labels:{copyright:'Эрхийн мэдэгдэл'}},
+  {key:'sector_short', title:'Салбарын богино нэр', where:'01-р хэсэг — үндсэн үзүүлэлтийн 5 багана',
+   labels:{road:'Авто зам',rail:'Төмөр зам',air:'Агаар',water:'Усан зам',public:'Нийтийн'}},
+  {key:'sectors', title:'Салбарын нэр',    where:'01/02/05/06/07 — виджет доторх салбарын мөр бүрд',
+   labels:{road:'Авто зам',rail:'Төмөр зам',air:'Агаарын тээвэр',water:'Ус, далайн тээвэр',public:'Нийтийн тээвэр'}},
   {key:'a11y',    title:'Хандах боломж',   where:'aria-label — дэлгэц уншигчид зориулсан',
    labels:{menu:'Цэсний товч',filter:'Шүүлтийн товч',close:'Хаах товч'}}
 ];
@@ -1369,7 +1396,7 @@ function lvAll(){
         '<div class="allhead"><span class="dot d-'+st+'"></span>'+
         '<span class="allid">'+esc(id)+'</span>'+
         '<span class="allpos">'+esc(posInSection(id))+'</span>'+
-        '<span class="allsec">'+esc(sectionLabel(anchorOf(id)))+'</span></div>'+
+        '<span class="allsec" title="'+esc(widgetPath(id))+'">'+esc(sectionLabel(anchorOf(id)))+(sectionDynNote(anchorOf(id))?' '+sectionDynNote(anchorOf(id)):'')+'</span></div>'+
         previewFor(id,true)+'</div>';
     }).join('')+'</div>';
 }
@@ -1382,7 +1409,7 @@ function lvSections(){
     keys.map(function(sec){
       var list=widgetsIn(sec),t=tally(list);
       return '<button class="pcard" data-section="'+esc(sec)+'">'+
-        '<div class="pc-t">'+esc(sectionLabel(sec))+'</div>'+
+        '<div class="pc-t">'+esc(sectionLabel(sec))+(sectionDynNote(sec)?' <span class="dyn">'+sectionDynNote(sec)+'</span>':'')+'</div>'+
         '<div class="pc-n">'+list.length+' виджет'+
           (t.ok<list.length?' · '+(list.length-t.ok)+' анхаарах':'')+
           (sectionDirty(sec)?' · <b style="color:var(--warn)">хадгалаагүй</b>':'')+'</div>'+
@@ -1428,7 +1455,8 @@ function lvWidgets(){
             (widgetDirty(id)?' <b class="dt">хадгалаагүй</b>':'')+'</div>'+
           '<div class="cd-t">'+esc(SHAPEN[SHAPE[id]]||KIND[id]||'')+' · '+esc(id)+
             ' · '+esc(posInSection(id))+' байрлал'+
-            ' · '+(txt?'зөвхөн текст':'хүлээж авна: '+esc(ru||'нэгж тодорхойгүй'))+'</div></div>'+
+            ' · '+(txt?'зөвхөн текст':'хүлээж авна: '+esc(ru||'нэгж тодорхойгүй'))+'</div>'+
+          '<div class="cd-path">'+esc(widgetPath(id))+'</div></div>'+
         src+iconBar(id)+
         '<span class="cv" data-widget="'+esc(id)+'" style="cursor:pointer">›</span>'+
         /* Жагсаалтаас НЭРЭЭР нь биш, ЗУРГААР нь таних — сайт дээрх
@@ -1530,7 +1558,7 @@ function lvEdit(){
      өргөсөөгүй: метрик холболт энд байхгүй, зөвхөн content.json-ий текст. */
   if(TEXT_ONLY[id]){
     return '<div class="edit2"><div class="e-pv">'+
-      '<p class="ph">Сайт дээрх харагдац</p>'+previewFor(id,false)+
+      '<p class="ph">Сайт дээрх харагдац</p>'+'<div class="pathbar">'+esc(widgetPath(id))+'</div>'+previewFor(id,false)+
       '<p class="pvnote">Өнгө, фонт нь сайтын эх кодын токеноос. Текст дээр дарж талбар руу шилжинэ.</p>'+
       '</div><div class="e-fm">'+
       '<div class="txtonly"><b>Зөвхөн нэршил засах горим</b>'+
@@ -1556,7 +1584,7 @@ function lvEdit(){
       '</div>';
   }).join('');
   return '<div class="edit2"><div class="e-pv">'+
-    '<p class="ph">Сайт дээрх харагдац</p>'+vizSelect(id)+sitePreview(id)+
+    '<p class="ph">Сайт дээрх харагдац</p>'+'<div class="pathbar">'+esc(widgetPath(id))+'</div>'+vizSelect(id)+sitePreview(id)+
     '<p class="pvnote">Өнгө, фонт нь сайтын эх кодын токеноос; дата цэг нь сайт өөрөө уншдаг '+
       'вэб сервисээс, <code>metric_registry.json</code>-д бичигдсэн agg/filter/transform-оор '+
       'тооцоолов. Метрик сольсон даруйд график шууд шинэчлэгдэнэ.</p></div><div class="e-fm">'+
@@ -1821,7 +1849,13 @@ document.addEventListener('click',function(e){
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     if(S.mo){closeMo();return}
-    if(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+    /* Талбарт фокустай үед: ЭХНИЙ Esc зөвхөн талбараас гаргана (бичиж
+       байхад санамсаргүй хуудас орхихоос сэргийлнэ), ДАРААГИЙН Esc
+       буцаана. Өмнө нь фокустай үед Esc огт ажиллахгүй байсан тул ✎
+       товчоор орсны дараа (талбар автоматаар фокуслагддаг) Esc-ээр
+       хэзээ ч буцаж чаддаггүй байв — тестээр илэрсэн. */
+    var ae=document.activeElement;
+    if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)){ ae.blur(); return }
     /* "← Буцах" товч, хөтчийн Back-тай ЯГ ижил зам — нэг л goBack() */
     goBack();
     return}

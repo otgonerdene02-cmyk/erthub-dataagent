@@ -4334,11 +4334,24 @@ class Component extends DCLogic {
   // JSON эвдэрсэн) `this.content` хоосон үлдэж, `txt()` бүрт fallback
   // (темплейт дэх анхны утга) хэвээр гарна — хуудас хэзээ ч хоосон
   // гарчигтай харагдахгүй.
+  // КЭШ: GitHub Pages нь content.json / metric_registry.json-г
+  // "Cache-Control: max-age=600" (10 мин) CDN кэштэйгээр өгдөг. Өмнө
+  // {cache:'no-cache'} байсан нь ЗӨВХӨН хөтчийг дахин баталгаажуулахад
+  // хүргэдэг ч CDN ирмэг хуучин хуулбараа 10 минут хүртэл буцаасаар
+  // байсан — admin-аар засаад push хийсэн засвар сайт дээр ШУУД
+  // ГАРАХГҮЙ байсан ҮНДСЭН шалтгаан яг энэ. no-store + давтагдашгүй
+  // query нь хөтөч, CDN хоёуланг нь тойрно.
   async loadContent(){
     try{
-      const res=await fetch('content.json',{cache:'no-cache'});
+      const res=await fetch('content.json?t='+Date.now(),{cache:'no-store'});
       if(!res.ok) return;
       const json=await res.json();
+      // Салбарын нэр (Авто зам, Төмөр зам, …) нь SECTORS тогтмолд хатуу
+      // бичигдсэн боловч нүүр хуудсан дээр 20 гаруй газар харагддаг тул
+      // content.json-оос удирдах боломжтой байх ёстой. SECTORS-ыг ЭНД
+      // НЭГ УДАА дарж бичнэ — дараагийн рендерүүд шинэ нэрийг авна.
+      const sl=json&&json.site&&json.site.sectors;
+      if(sl) Object.keys(SECTORS).forEach(k=>{ if(sl[k]) SECTORS[k].label=sl[k]; });
       this.setState({content:json});
     }catch(e){
       console.info('[ErtHub] content.json ачаалагдсангүй, темплейтийн анхны текст үлдэнэ:',e.message);
@@ -4378,7 +4391,7 @@ class Component extends DCLogic {
   // H4-т цааш нэмэгдэнэ.
   async loadMetricRegistry(){
     try{
-      const res=await fetch('metric_registry.json',{cache:'no-cache'});
+      const res=await fetch('metric_registry.json?t='+Date.now(),{cache:'no-store'});
       if(!res.ok) return;
       const json=await res.json();
       this.setState({metricRegistry:json});
@@ -6505,9 +6518,6 @@ class Component extends DCLogic {
       sOrbPubS:this.stxt('hero.diagram.orbit_public.sub','Санал · хяналт'),
       sOrbMedT:this.stxt('hero.diagram.orbit_media.title','Олон нийт · хэвлэл'),
       sOrbMedS:this.stxt('hero.diagram.orbit_media.sub','Судалгаа · тайлан'),
-      sChip0:this.stxt('hero.diagram.chips.0','ИРГЭДИЙН ДУУ ХООЛОЙ'),
-      sChip1:this.stxt('hero.diagram.chips.1','НЭЭЛТТЭЙ ӨГӨГДӨЛ'),
-      sChip2:this.stxt('hero.diagram.chips.2','ШИЛЭН ИЛ ТОД'),
       sSec01:this.stxt('sections.sec-01','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
       sSec02:this.stxt('sections.sec-02','Долоо хоногийн тайлан'),
       sSec03:this.stxt('sections.sec-03','Коммунитийн онцлох'),
@@ -7234,7 +7244,11 @@ class Component extends DCLogic {
         glyph:GLYPH[k],
         metric:verified?sk.kpis[0][0]:(sk.kpis[0][0]+' · '+q.label),
         delta:verified?sk.kpis[0][3]:'—',
-        short:{road:'Авто зам',rail:'Төмөр зам',air:'Агаар',water:'Усан замын',public:'Нийтийн'}[k],
+        // ls-ийн богино нэр — content.json → site.sector_short-оос.
+        // Өмнө нь ЭНД хатуу бичигдсэн байсан тул салбарын нэрийг
+        // админаас сольсон ч 01-р хэсэгт ХЭВЭЭР үлддэг байв.
+        short:this.stxt('sector_short.'+k,
+          {road:'Авто зам',rail:'Төмөр зам',air:'Агаар',water:'Усан замын',public:'Нийтийн'}[k]),
         deltaColor:verified?(dir==='up'?'#0E8F63':(dir==='down'?'#C8443A':'#6B7896')):'#828EA8',
         spark:verified?miniSpark(dir,k.length):flatSpark,
         cellStyle:'position:relative;display:flex;flex-direction:column;gap:0;align-items:stretch;text-align:left;background:'
