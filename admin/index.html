@@ -348,25 +348,24 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 
 <div class="hd">
   <div class="hd-t"><div class="mark">EH</div>
-    <div><div class="sub">Дата удирдлага · нүүр хуудас</div><h1>Нүүр хуудасны агуулга</h1></div>
+    <div><div class="sub" data-ui="app.sub">Дата удирдлага · нүүр хуудас</div><h1 data-ui="app.title">Нүүр хуудасны агуулга</h1></div>
     <div class="hd-r">
       <button class="btn sm" id="allBtn">Бүх харагдац</button>
-      <a class="btn sm" href="../index.html" target="_blank" rel="noopener">Сайтыг нээх ↗</a></div>
+      <a class="btn sm" href="../index.html" target="_blank" rel="noopener" data-ui="app.open_site">Сайтыг нээх ↗</a></div>
   </div>
   <div class="tabs">
-    <button class="tab on" data-tab="data">Виджет ба дата</button>
-    <button class="tab" data-tab="site">Сайтын текст<span class="tbadge" id="siteN"></span></button>
+    <button class="tab on" data-tab="data" data-ui="app.tab_data">Виджет ба дата</button>
+    <button class="tab" data-tab="site"><span data-ui="app.tab_site">Сайтын текст</span><span class="tbadge" id="siteN"></span></button>
   </div>
 </div>
 
 <div class="grid" id="gridWrap">
   <div class="pane l" id="paneL">
-    <input class="srch" id="q" placeholder="Датасэт хайх…" aria-label="Датасэт хайх">
-    <p class="ph">Датасэт <span id="dsn" style="font-family:var(--mono)"></span></p>
+    <input class="srch" id="q" placeholder="Датасэт хайх…" aria-label="Датасэт хайх"
+      data-ui-ph="left.search_ph" data-ui-aria="left.search_ph">
+    <p class="ph"><span data-ui="left.heading">Датасэт</span> <span id="dsn" style="font-family:var(--mono)"></span></p>
     <div id="dsList"></div>
-    <p class="pvnote" style="margin-top:12px">Датасэт нь <code style="font-size:10px">metric_registry.json</code>-ий
-      метрик бүрийн <code style="font-size:10px">dataset</code> талбараас автоматаар гарна — шинэ эх сурвалж
-      нэмэгдмэгц энд өөрөө гарч ирнэ.</p>
+    <p class="pvnote" style="margin-top:12px" data-ui="left.note">Датасэт нь metric_registry.json-ий метрик бүрийн dataset талбараас автоматаар гарна — шинэ эх сурвалж нэмэгдмэгц энд өөрөө гарч ирнэ.</p>
   </div>
   <div class="pane r">
     <div id="state"></div>
@@ -377,15 +376,15 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 </div>
 
 <div class="expbar" id="expbar">
-  <button class="btn pri" id="expBtn" disabled>Экспортлох</button>
-  <button class="btn sm" id="revBtn" disabled>Бүх өөрчлөлтийг буцаах</button>
+  <button class="btn pri" id="expBtn" disabled data-ui="app.export">Экспортлох</button>
+  <button class="btn sm" id="revBtn" disabled data-ui="app.revert">Бүх өөрчлөлтийг буцаах</button>
   <span class="d" id="dirtyMsg">Өөрчлөлт алга</span>
-  <span class="d" style="margin-left:auto">Файл руу шууд бичихгүй — татаж аваад commit хийнэ</span>
+  <span class="d" style="margin-left:auto" data-ui="app.export_note">Файл руу шууд бичихгүй — татаж аваад commit хийнэ</span>
 </div>
 
 <div class="scrim" id="scrim"></div>
 <aside class="mo" id="mo" role="dialog" aria-modal="true" aria-labelledby="moN">
-  <div class="mo-h"><button class="mo-x" id="moX" aria-label="Хаах">✕</button>
+  <div class="mo-h"><button class="mo-x" id="moX" aria-label="Хаах" data-ui-aria="app.close">✕</button>
     <div class="k" id="moK"></div><h3 id="moN"></h3><div class="s" id="moS"></div></div>
   <div class="mo-t" id="moT"></div>
   <div class="mo-b" id="moB"></div>
@@ -432,7 +431,7 @@ var SEC_SUFFIX={'sec-04':' — Авто зам','sec-05':' — Сарын дун
 /* Эдгээрийн ард ирэх хэсэг сонгосон салбараас хамаарч өөрчлөгддөг —
    дээрх нь ЗӨВХӨН анхны төлөвийн утга. */
 var SEC_DYN={'sec-04':1,'sec-05':1};
-function sectionDynNote(key){return SEC_DYN[key]?'(динамик)':''}
+function sectionDynNote(key){return SEC_DYN[key]?utxt('section.dyn_note','(динамик)'):''}
 var SEC_NUM={'sec-01':'01','sec-02':'02','sec-04':'04','sec-05':'05',
              'sec-06':'06','sec-07':'07'};
 function sectionLabel(key){
@@ -443,7 +442,7 @@ function sectionLabel(key){
 /* Виджетийн БАЙРШЛЫН ЗАМ — "Нүүр → 01 · … → ҮНДСЭН ҮЗҮҮЛЭЛТҮҮД".
    Сайтаас виджет хайж олоод админ дээрх мөртэй тулгахад хэрэгтэй. */
 function widgetPath(id){
-  return 'Нүүр → '+sectionLabel(anchorOf(id))+' → '+(curText(id,'title')||id);
+  return utxt('section.path_root','Нүүр')+' → '+sectionLabel(anchorOf(id))+' → '+(curText(id,'title')||id);
 }
 /* Датасэтийн танилцуулах нэр — index.html-ийн DATASETS бичлэгээс.
    Түлхүүр нь registry-ийн metrics[*].dataset утга. Тааруулалт олдохгүй бол
@@ -518,6 +517,69 @@ var $=function(i){return document.getElementById(i)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
 var clone=function(o){return JSON.parse(JSON.stringify(o))};
+/* ── Админы интерфейсийн текст: content.json → ui{} ──────────────────
+   Сайтын txt()/stxt()-тэй ЯГ ИЖИЛ зарчим. Түлхүүр олдохгүй (эсвэл хоосон)
+   бол fallback үлдэнэ — content.json уншигдаагүй ч хэрэгсэл бүрэн
+   ажиллана. Давтагддаг badge/товч/шошгыг ЭНД НЭГ УДАА бүртгэснээр
+   виджет бүрийн дэлгэц автоматаар ижил утга авна. */
+function utxt(path,fallback){
+  var cur=CON&&CON.ui, ps=String(path).split('.');
+  for(var i=0;i<ps.length;i++){
+    if(cur==null||typeof cur!=='object') return fallback;
+    cur=cur[ps[i]];
+  }
+  return (cur==null||cur==='')?fallback:cur;
+}
+/* content.json ачаалагдсаны ДАРАА дуудагдана: parse үед тогтсон
+   тогтмолуудыг (SECN/SECTIONS/SHAPEN/VIZNAME/FL/MONTHS) амьд утгаар нь
+   дарж бичнэ. Ингэснээр эдгээрийг ашигладаг 40 гаруй дуудалтыг
+   өөрчлөхгүйгээр БҮГД засварлагдах болно. */
+function applyContentText(){
+  if(!CON) return;
+  var sec=(CON.site&&CON.site.sectors)||{};
+  Object.keys(sec).forEach(function(k){ if(sec[k]) SECN[k]=sec[k] });
+  SECN.plan =utxt('sector_extra.plan', SECN.plan);
+  SECN.other=utxt('sector_extra.other',SECN.other);
+  Object.keys(SECTIONS).forEach(function(k){ SECTIONS[k]=utxt('section.'+k,SECTIONS[k]) });
+  var sc=(CON.site&&CON.site.sections)||{};
+  Object.keys(sc).forEach(function(k){ if(sc[k]&&SECTIONS[k]!==undefined) SECTIONS[k]=sc[k] });
+  /* 04/05-р хэсгийн гарчгийн ард сайт дээр нэмэгддэг хэсэг — салбарын нэр
+     ба тухайн салбарын графикийн гарчиг. Хатуу бичихгүй, site{}-ээс. */
+  var scr=(CON.site&&CON.site.sector_chart&&CON.site.sector_chart.road)||'';
+  if(SECN.road) SEC_SUFFIX['sec-04']=' — '+SECN.road;
+  if(scr)       SEC_SUFFIX['sec-05']=' — '+scr;
+  Object.keys(SHAPEN ).forEach(function(k){ SHAPEN[k] =utxt('shape.'+k, SHAPEN[k]) });
+  Object.keys(VIZNAME).forEach(function(k){ VIZNAME[k]=utxt('viz.'+k,   VIZNAME[k]) });
+  Object.keys(FL     ).forEach(function(k){ FL[k]     =utxt('field.'+k, FL[k]) });
+  Object.keys(KIND).forEach(function(k){ KIND[k]=utxt('kind.'+k,KIND[k]) });
+  Object.keys(DSMETA).forEach(function(k){
+    DSMETA[k].n=utxt('dataset.'+k+'.name',  DSMETA[k].n);
+    DSMETA[k].a=utxt('dataset.'+k+'.agency',DSMETA[k].a);
+  });
+  Object.keys(FIXED_UNIT).forEach(function(k){
+    FIXED_UNIT[k]=utxt('required_unit.'+FIXED_UNIT[k],FIXED_UNIT[k]);
+  });
+  var mo=(CON.site&&CON.site.months)||null;
+  if(Array.isArray(mo)) mo.forEach(function(v,i){ if(v) MONTHS[i]=v });
+  /* Маягтын бүлэг ба шошго — content.json → ui_form{}. Кодод байгаа
+     жагсаалт нь ЗӨВХӨН fallback; файлд бичигдсэн бол тэр давуу эрхтэй
+     тул засварлагчийн харах БҮХ шошго ч засварлагдана. */
+  var uf=CON.ui_form;
+  if(uf){
+    if(Array.isArray(uf.site)) SITE_GROUPS=uf.site.map(function(g){
+      return {key:g.key,title:g.title,where:g.where,labels:g.labels||{}} });
+    if(Array.isArray(uf.site_nested)) SITE_NESTED=uf.site_nested.map(function(g){
+      return {path:String(g.path).split('.'),title:g.title,where:g.where,labels:g.labels||{}} });
+    if(Array.isArray(uf.ui)) UI_GROUPS=uf.ui.map(function(g){
+      return {key:g.key,title:g.title,where:g.where,labels:g.labels||{}} });
+  }
+  document.querySelectorAll('[data-ui]').forEach(function(e){
+    var v=utxt(e.getAttribute('data-ui'),null); if(v!=null) e.textContent=v });
+  document.querySelectorAll('[data-ui-ph]').forEach(function(e){
+    var v=utxt(e.getAttribute('data-ui-ph'),null); if(v!=null) e.setAttribute('placeholder',v) });
+  document.querySelectorAll('[data-ui-aria]').forEach(function(e){
+    var v=utxt(e.getAttribute('data-ui-aria'),null); if(v!=null) e.setAttribute('aria-label',v) });
+}
 var now=function(){var d=new Date();
   return (d.getMonth()+1)+'-'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+
     ':'+String(d.getMinutes()).padStart(2,'0')};
@@ -541,7 +603,7 @@ function loadFeed(){
     .then(function(r){if(!r.ok)throw new Error('flights-index HTTP '+r.status);return r.json()})
     .then(function(idx){
       var years=(idx.years||[]).map(function(y){return y.year}).sort(function(a,b){return b-a});
-      if(!years.length) throw new Error('feed-д жил алга');
+      if(!years.length) throw new Error(utxt('feed.no_year','feed-д жил алга'));
       FEED.fetchedAt=(idx.years[0]||{}).fetchedAt||null;
       var want=[years[0]];
       if(years[1]) want.push(years[1]);   /* 7 хоногийн цонх жилийн зааг давж болно */
@@ -727,10 +789,10 @@ function requiredUnit(id,sectorKey){
 function why(mk,reqUnit){
   if(!mk) return null;
   var m=REG.metrics[mk];
-  if(!m) return 'метрик тодорхойлолт олдсонгүй';
-  if(m.quality!=='verified') return 'метрик өөрөө verified биш';
+  if(!m) return utxt('metric.why_no_def','метрик тодорхойлолт олдсонгүй');
+  if(m.quality!=='verified') return utxt('metric.why_not_verified','метрик өөрөө verified биш');
   if(reqUnit==null) return null;
-  if(m.unit!==reqUnit) return 'нэгж үл нийцнэ: "'+m.unit+'" ≠ "'+reqUnit+'"';
+  if(m.unit!==reqUnit) return utxt('metric.why_unit','нэгж үл нийцнэ:')+' "'+m.unit+'" ≠ "'+reqUnit+'"';
   return null;
 }
 /* Нийлбэрийн (grain) анхааруулга — dbt MetricFlow-ийн grain validation
@@ -872,37 +934,171 @@ var SITE_NESTED=[
   {path:['hero','diagram','orbit_media'], title:'Диаграм · Олон нийт', where:'Hero диаграм',
    labels:{title:'Гарчиг',sub:'Дэд бичиг'}}
 ];
-var LONG_FIELDS={lead:1,copyright:1,top_seen:1,top_prop:1,'sec-01':1,'sec-06':1};
+var LONG_FIELDS={lead:1,copyright:1,top_seen:1,top_prop:1,'sec-01':1,'sec-06':1,
+  a:1,q:1,desc:1,air_only:1,uk_mock:1,table_no_date:1,axis_prefix:1,
+  note:1,note_text_only:1,note_modal:1,body:1,export_note:1,server_hint:1,
+  server_cmd_hint:1,'sec-02':1,ui_note:1,missing_hint:1,none:1};
+/* ══════════════════ АДМИНЫ ИНТЕРФЕЙСИЙН ТЕКСТ (content.json → ui{}) ═════
+   Виджет БҮРИЙН засварын дэлгэц дээр давтагддаг badge, товч, шошго.
+   Энд НЭГ УДАА засахад бүх виджетэд адил тусна. Бүлэг бүрийг
+   ГАЗРЫН НЭРТЭЙГЭЭ хамт үзүүлнэ — засварлагч хаана харагдахыг мэднэ. */
+var UI_GROUPS=[
+  {key:'app', title:'Админ · толгой ба хөл', where:'Хуудасны дээд/доод мөр',
+   labels:{sub:'Дээд жижиг мөр',title:'Хуудасны гарчиг',tab_data:'1-р таб',
+           tab_site:'2-р таб',open_site:'Сайтыг нээх товч',all_views:'Бүх харагдац товч',
+           by_section:'Хэсгээр нь товч',export:'Экспорт товч',revert:'Буцаах товч',
+           no_changes:'Өөрчлөлтгүй мессеж',unsaved:'Хадгалаагүй мессеж',
+           export_note:'Хөлийн тайлбар',close:'Хаах товч (aria)'}},
+  {key:'left',title:'Админ · зүүн багана', where:'Датасэтийн жагсаалт',
+   labels:{search_ph:'Хайлтын сануулга',heading:'Багананы гарчиг',note:'Доод тайлбар',
+           none:'Илэрц алга',source_unknown:'Эх сурвалж тодорхойгүй'}},
+  {key:'crumb',title:'Админ · зам мөр ба тоо', where:'Дэлгэц бүрийн дээд мөр',
+   labels:{back:'Буцах товч',back_title:'Буцах товчны тайлбар',all_datasets:'Бүх датасэт',
+           all_views:'Бүх харагдац',home_page:'Нүүр хуудас',widget_word:'"виджет" үг',
+           metric_word:'"метрик" үг',data_word:'"дата" үг',full:'Бүрэн холбогдсон шошго',
+           partial:'Хэсэгчлэн шошго',none:'Холбогдоогүй шошго',textonly:'Зөвхөн текст шошго'}},
+  {key:'feed', title:'Админ · дата ачаалалт', where:'Дээд мөр ба preview карт',
+   labels:{loading:'Ачаалж байна',error:'Ачаалагдаагүй',no_year:'Feed-д жил алга'}},
+  {key:'preview',title:'Админ · урьдчилан харах', where:'Виджетийн засварын зүүн тал',
+   labels:{heading:'Хэсгийн гарчиг',note:'Тайлбар',note_text_only:'Тайлбар (зөвхөн текст виджет)',
+           note_modal:'Тайлбар (модаль)',slot_quality:'Слотын чанар гарчиг',
+           add_sub:'Дэд гарчиг нэмэх сануулга',add_foot:'Хөл бичиг нэмэх сануулга',
+           ticker_tag:'Гүйдэг мөрийн шошго',no_series:'Цуваа алга',no_data:'Дата алга',
+           points:'"цэг" үг',five_lines:'5 салбарын шугам',bar:'"багана" үг',
+           daily7:'7 хоногийн шошго',kpi_row:'KPI мөрийн нэр',edit_widget:'Засах товч'}},
+  {key:'portal_kpi',title:'Админ · порталын 4 карт', where:'uk виджетийн preview',
+   labels:{datasets:'1-р карт',services:'2-р карт',research:'3-р карт',orgs:'4-р карт'}},
+  {key:'badge',title:'Админ · чанарын badge', where:'Слот бүрийн баруун тал (давтагдана)',
+   labels:{live_value:'Амьд утга',live_service:'Амьд · вэб сервис',live:'Амьд',
+           mock:'Түр дата',no_source:'Эх сурвалж алга',no_data:'Мэдээлэл алга'}},
+  {key:'metric',title:'Админ · метрик холбох', where:'Виджетийн засварын баруун тал',
+   labels:{heading:'Хэсгийн гарчиг',single:'Ганц слотын гарчиг',unbound:'Холбоогүй сонголт',
+           unit_label:'Нэгжийн шошго',unit_unknown:'Нэгж тодорхойгүй',calc:'Тооцоолол',
+           dataset:'Датасэт',source:'Эх сурвалж',filter:'Шүүлт',required:'Шаардлагатай',
+           single_slot:'Ганц метрик',warn_rule:'Дүрэм зөрчсөн анхааруулга',
+           warn_sum:'Нийлбэрийн анхааруулга',why_no_def:'Тодорхойлолт алга',
+           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ'}},
+  {key:'text',title:'Админ · текстийн маягт', where:'Виджетийн засварын доод хэсэг',
+   labels:{heading:'Хэсгийн гарчиг',apply:'Хэрэглэх товч',cancel:'Болих товч',
+           location:'Байршил товч',history:'Түүх товч',changed:'Өөрчлөгдсөн тэмдэг'}},
+  {key:'field',title:'Админ · текстийн талбарын нэр', where:'Виджет бүрийн текстийн маягт',
+   labels:{title:'Гарчиг',sub:'Дэд гарчиг',unit:'Нэгжийн шошго',foot:'Хөл бичиг',foot2:'Хөл бичиг 2'}},
+  {key:'shape',title:'Админ · виджетийн хэлбэрийн нэр', where:'Preview картын баруун дээд шошго',
+   labels:{ticker:'Гүйдэг мөр',strip5:'5 салбарын зурвас',grid8:'8 KPI сүлжээ',kpi4:'4 картын мөр',
+           line:'Шугаман график',multiline:'Олон шугамт график',donut:'Донут + жагсаалт',
+           cols5:'5 баганат харьцуулалт',bignum:'Том тоо + багана',rank:'Эрэмбийн жагсаалт',
+           cards:'Картан жагсаалт',bar:'Багана график'}},
+  {key:'viz',title:'Админ · дүрслэлийн ангилал', where:'Модаль дэд мөр',
+   labels:{counter:'Тоолуур',kpi:'KPI',line:'График',donut:'Донут',
+           sectors:'Салбарын жагсаалт',bignum:'Том тоо',list:'Жагсаалт'}},
+  {key:'vizform',title:'Админ · харагдацын хэлбэр солих', where:'Виджетийн засварын зүүн дээд',
+   labels:{label:'Шошго',line:'Шугаман',bar:'Багана',donut:'Донут',bignum:'Том тоо',note:'Тайлбар'}},
+  {key:'filter',title:'Админ · хайлт ба шүүлт', where:'Виджет жагсаалтын дээд мөр',
+   labels:{search_ph:'Хайлтын сануулга',search_aria:'Хайлтын aria',quality:'Чанар шүүлт',
+           page:'Хуудас шүүлт',type:'Төрөл шүүлт',all:'"Бүгд" сонголт',clear:'Цэвэрлэх товч',
+           none:'Илэрц алга'}},
+  {key:'list',title:'Админ · виджет жагсаалт', where:'Хэсэг ба бүх харагдацын дэлгэц',
+   labels:{all_heading:'Бүх харагдац гарчиг',sections_heading:'Хэсгүүдийн гарчиг',
+           widgets_suffix:'Хэсгийн виджет дагавар',none_for_ds:'Виджет алга',open:'Нээх холбоос',
+           attention:'"анхаарах" үг',unsaved:'"хадгалаагүй" тэмдэг',text_only:'Зөвхөн текст',
+           accepts:'"хүлээж авна" шошго',unit_unknown:'Нэгж тодорхойгүй',slot:'"слот" үг',
+           position:'"байрлал" үг',not_bound:'Холбогдоогүй',text_src:'Текст эх сурвалж',
+           text_src_note:'Метрик холбохгүй',icon_view:'◧ товчны нэр',icon_view_title:'◧ товчны тайлбар',
+           icon_text:'✎ товчны нэр',icon_text_title:'✎ товчны тайлбар',icon_loc:'⌖ товчны нэр',
+           icon_loc_title:'⌖ товчны тайлбар',icon_hist:'↻ товчны нэр',icon_hist_title:'↻ товчны тайлбар'}},
+  {key:'textonly',title:'Админ · зөвхөн текст горим', where:'uk виджетийн засварын дэлгэц',
+   labels:{heading:'Гарчиг',body:'Тайлбар'}},
+  {key:'loc',title:'Админ · байршлын модаль', where:'⌖ товчоор нээгдэх цонх',
+   labels:{page:'Хуудас',section:'Хэсэг',widget_id:'Виджетийн ID',slot:'Слот',
+           direct_link:'Шууд холбоосын гарчиг',open_on_site:'Сайт дээр нээх',
+           content_note:'content тэмдэглэл',registry_note:'registry тэмдэглэл',
+           same_metric:'Ижил метрик гарчиг',no_metric:'Метрикгүй мессеж',
+           no_other:'Өөр виджет алга',out_of_scope:'Хүрээнээс гадуур (title)',
+           out_of_scope_tag:'Хүрээнээс гадуур (шошго)'}},
+  {key:'hist',title:'Админ · түүхийн модаль', where:'↻ товчоор нээгдэх цонх',
+   labels:{note:'Тайлбар',registry_updated:'registry огноо',content_updated:'content огноо',
+           empty:'Өөрчлөлт алга'}},
+  {key:'site_tab',title:'Админ · Сайтын текст таб', where:'2-р табын дэлгэц',
+   labels:{back_title:'Буцах товчны тайлбар',search_ph:'Хайлтын сануулга',search_aria:'Хайлтын aria',
+           heading:'site блокийн гарчиг',ui_heading:'ui блокийн гарчиг',note:'site тайлбар',
+           ui_note:'ui тайлбар',no_site:'site блок алга',not_found:'Илэрц алга',
+           chip_group:'Чипийн бүлэг',chip_where:'Чипийн байршил',chip_word:'"Чип" үг',
+           chip_title:'Чип · гарчиг',chip_body:'Чип · тайлбар',month_group:'Сарын бүлэг',
+           month_where:'Сарын байршил',month_label:'Сарын шошгын дагавар',changed:'Өөрчлөгдсөн тэмдэг'}},
+  {key:'toast',title:'Админ · мэдэгдэл (toast)', where:'Зүүн доод буланд түр гарах мөр',
+   labels:{field_active:'Талбар идэвхжлээ',text_applied:'Текст хэрэглэгдлээ',
+           text_cancelled:'Текст цуцлагдлаа',viz_changed:'Хэлбэр солигдлоо',bound:'Холбогдлоо',
+           unbound:'Салгагдлаа',downloaded:'Татагдлаа',downloaded_note:'Татсаны дараах сануулга',
+           reverted:'Бүгд буцаагдлаа',moved:'Шилжлээ',out_of_scope:'Хүрээнээс гадуур',
+           all_datasets:'Бүх датасэт'}},
+  {key:'boot',title:'Админ · ачаалалтын дэлгэц', where:'Эхлэх үе ба алдааны дэлгэц',
+   labels:{loading:'Ачааллаж байна',loading_body:'Ачаалалтын тайлбар',
+           missing_title:'Бүртгэлгүй виджет гарчиг',missing_lead:'"Дараах" үг',
+           missing_tail:'Дутуу виджетийн тайлбар',missing_hint:'Заавар',
+           read_fail:'Уншиж чадсангүй',server_hint:'Сервер шаардлагатай',
+           server_cmd_hint:'Серверийн команд'}},
+  {key:'section',title:'Админ · хэсгийн нэр', where:'Зам мөр ба хэсгийн карт',
+   labels:{hero:'Hero хэсэг',dyn_note:'Динамик тэмдэглэгээ',path_root:'Замын эхлэл'}},
+  {key:'sector_extra',title:'Админ · нэмэлт слотын нэр', where:'Төлөвлөгөө ба нэгтгэсэн слот',
+   labels:{plan:'Төлөвлөгөөний слот',other:'Бусад салбар'}}
+];
 
-function siteGet(p){var c=CON.site;for(var i=0;i<p.length;i++){if(!c)return undefined;c=c[p[i]]}return c}
-function siteGet0(p){var c=CON0.site;for(var i=0;i<p.length;i++){if(!c)return undefined;c=c[p[i]]}return c}
+/* Зам нь 'ui'-ээр эхэлбэл CON.ui, эс тэгвэл CON.site-аас уншина —
+   ингэснээр админы интерфейсийн текст сайтын текст ЯГ ИЖИЛ маягт,
+   ижил dirty/export урсгалаар засварлагдана. */
+function siteRoot(o,p){return (p[0]==='ui'||p[0]==='ui_form')?o:o.site}
+/* Обьектийн БҮХ мөр навчийн зам. Массивын элементийг индексээр нь
+   (мөр эсвэл дэд обьект аль аль нь) дамжина. "_"-ээр эхэлсэн түлхүүр
+   бол тэмдэглэл — засварын талбар болгохгүй. */
+function leafPaths(o,base){
+  var out=[];
+  (function walk(x,p){
+    if(x==null||typeof x!=='object') return;
+    Object.keys(x).forEach(function(k){
+      if(k.charAt(0)==='_') return;
+      var v=x[k], np=p.concat([k]);
+      if(Array.isArray(v)) v.forEach(function(el,i){
+        if(typeof el==='string') out.push(np.concat([String(i)]));
+        else if(el&&typeof el==='object') walk(el,np.concat([String(i)]));
+      });
+      else if(v&&typeof v==='object') walk(v,np);
+      else if(typeof v==='string') out.push(np);
+    });
+  })(o,base);
+  return out;
+}
+/* content.json доторх ЗАСВАРЛАХ БОЛОМЖТОЙ бүх текстийн зам */
+function everyTextPath(){
+  var out=[];
+  if(CON.site)    out=out.concat(leafPaths(CON.site,[]));
+  if(CON.ui)      out=out.concat(leafPaths(CON.ui,['ui']));
+  if(CON.ui_form) out=out.concat(leafPaths(CON.ui_form,['ui_form']));
+  return out;
+}
+/* Гараар бүлэглэсэн (нэртэй шошготой) замууд */
+function curatedPaths(){
+  var m={};
+  SITE_GROUPS.forEach(function(g){Object.keys(g.labels).forEach(function(k){m[g.key+'.'+k]=1})});
+  SITE_NESTED.forEach(function(g){Object.keys(g.labels).forEach(function(k){m[g.path.concat(k).join('.')]=1})});
+  UI_GROUPS.forEach(function(g){Object.keys(g.labels).forEach(function(k){m['ui.'+g.key+'.'+k]=1})});
+  var ch=siteGet(['hero','diagram','chips']);
+  if(Array.isArray(ch)) ch.forEach(function(_,i){
+    m['hero.diagram.chips.'+i]=1; m['hero.diagram.chip_bodies.'+i]=1 });
+  var mo=siteGet(['months']);
+  if(Array.isArray(mo)) mo.forEach(function(_,i){ m['months.'+i]=1 });
+  return m;
+}
+function siteGet(p){var c=siteRoot(CON,p);for(var i=0;i<p.length;i++){if(!c)return undefined;c=c[p[i]]}return c}
+function siteGet0(p){var c=siteRoot(CON0,p);for(var i=0;i<p.length;i++){if(!c)return undefined;c=c[p[i]]}return c}
 function siteSet(p,v){
-  var c=CON.site;
+  var c=siteRoot(CON,p);
   for(var i=0;i<p.length-1;i++) c=c[p[i]];
   c[p[p.length-1]]=v;
 }
-/* Бүх засварлах талбарын зам — dirty тооллого, зурагт хоёуланд нь */
-function sitePaths(){
-  var out=[];
-  SITE_GROUPS.forEach(function(g){
-    Object.keys(g.labels).forEach(function(k){
-      if(siteGet([g.key,k])!==undefined) out.push([g.key,k]);
-    });
-  });
-  SITE_NESTED.forEach(function(g){
-    Object.keys(g.labels).forEach(function(k){
-      if(siteGet(g.path.concat(k))!==undefined) out.push(g.path.concat(k));
-    });
-  });
-  /* chips / chip_bodies — массив */
-  var ch=siteGet(['hero','diagram','chips']);
-  if(Array.isArray(ch)) ch.forEach(function(_,i){out.push(['hero','diagram','chips',String(i)])});
-  var cb=siteGet(['hero','diagram','chip_bodies']);
-  if(Array.isArray(cb)) cb.forEach(function(_,i){out.push(['hero','diagram','chip_bodies',String(i)])});
-  var mo=siteGet(['months']);
-  if(Array.isArray(mo)) mo.forEach(function(_,i){out.push(['months',String(i)])});
-  return out;
-}
+/* Бүх засварлах талбарын зам — dirty тооллого, зурагт хоёуланд нь.
+   Гараар бүртгэсэн бүлгээс ХАМААРАХГҮЙ: content.json дахь БҮХ мөр
+   утга засварлагдана (шинэ текст нэмэхэд админ өөрөө дагана). */
+function sitePaths(){ return everyTextPath(); }
 function siteDirtyKeys(){
   if(!CON||!CON.site) return [];
   return sitePaths().filter(function(p){
@@ -986,8 +1182,8 @@ function headMetric(id){
 }
 function feedNote(){
   if(FEED.state==='ready') return '';
-  if(FEED.state==='loading') return '<span class="pvfeed">дата ачаалж байна…</span>';
-  if(FEED.state==='error') return '<span class="pvfeed err">дата ачаалагдаагүй</span>';
+  if(FEED.state==='loading') return '<span class="pvfeed">'+esc(utxt('feed.loading','дата ачаалж байна…'))+'</span>';
+  if(FEED.state==='error') return '<span class="pvfeed err">'+esc(utxt('feed.error','дата ачаалагдаагүй'))+'</span>';
   return '';
 }
 /* previewFor(id, mini) — mini=true бол жагсаалтын жижиг хувилбар */
@@ -1032,7 +1228,7 @@ function previewFor(id,mini){
         '<span class="v">'+(tv==null?'0':esc(nf(tv)))+'</span>'+
         '<span class="ed t" data-ed="title">'+esc(title)+'</span>'+
         (tu?'<span class="t">'+esc(tu)+'</span>':'')+
-        '<span class="d">гүйдэг мөр</span>'+
+        '<span class="d">'+esc(utxt('preview.ticker_tag','гүйдэг мөр'))+'</span>'+
       '</div></div>';
   }
 
@@ -1070,14 +1266,15 @@ function previewFor(id,mini){
     var cells=[];
     for(var i=0;i<8;i++){
       var live=(i===0&&on);
-      cells.push('<div class="pvgc"><div class="l">'+(live?esc(on.n):'үзүүлэлт '+(i+1))+
+      cells.push('<div class="pvgc"><div class="l">'+(live?esc(on.n):esc(utxt('preview.kpi_row','үзүүлэлт'))+' '+(i+1))+
         '</div><div class="v"'+(live?'':' style="color:#A7B0C6"')+'>'+
         (live?esc(nf(on.v)||'0'):'0')+'</div></div>');
     }
     body='<div class="pvgrid8">'+cells.join('')+'</div>';
   } else if(kind==='kpi4'){
     /* uk — порталын 4 мета-карт */
-    var n4=['датасэт','үйлчилгээ','судалгаа','байгууллага'];
+    var n4=[utxt('portal_kpi.datasets','датасэт'),utxt('portal_kpi.services','үйлчилгээ'),
+            utxt('portal_kpi.research','судалгаа'),utxt('portal_kpi.orgs','байгууллага')];
     body='<div class="pvgrid8" style="grid-template-columns:repeat(4,1fr)">'+
       n4.map(function(n){return '<div class="pvgc"><div class="l">'+esc(n)+
         '</div><div class="v" style="color:#A7B0C6">—</div></div>'}).join('')+'</div>';
@@ -1086,13 +1283,13 @@ function previewFor(id,mini){
     body=ser&&ser.length>1
       ? svgLine(ser,accent,W,H,false)+
         '<div class="pvax">'+esc(ser[0].label)+' — '+esc(ser[ser.length-1].label)+
-        ' · '+ser.length+' цэг'+(kind==='multiline'?' · 5 салбарын шугам':'')+'</div>'
-      : '<div class="pvempty">'+(FEED.state==='ready'?'цуваа алга':'дата ачаалагдаагүй')+'</div>';
+        ' · '+ser.length+' '+esc(utxt('preview.points','цэг'))+(kind==='multiline'?' · '+esc(utxt('preview.five_lines','5 салбарын шугам')):'')+'</div>'
+      : '<div class="pvempty">'+esc(FEED.state==='ready'?utxt('preview.no_series','цуваа алга'):utxt('feed.error','дата ачаалагдаагүй'))+'</div>';
   } else if(kind==='bar'){
     var ser2=mk?metricSeries(mk):null;
     body=ser2&&ser2.length>1
-      ? svgLine(ser2,accent,W,H,true)+'<div class="pvax">'+ser2.length+' цэг · багана</div>'
-      : '<div class="pvempty">дата алга</div>';
+      ? svgLine(ser2,accent,W,H,true)+'<div class="pvax">'+ser2.length+' '+esc(utxt('preview.points','цэг'))+' · '+esc(utxt('preview.bar','багана'))+'</div>'
+      : '<div class="pvempty">'+esc(utxt('preview.no_data','дата алга'))+'</div>';
   } else if(kind==='donut'){
     var parts=sectorParts(id);
     if(!parts.length){ /* хавтгай виджет — эх виджетийнхээ бүтцийг өвлөнө */
@@ -1117,7 +1314,7 @@ function previewFor(id,mini){
     var chart=(days&&days.length>1)
       ? svgLine(days,accent,W,mini?26:40,true)+
         '<div class="pvax">'+esc(days[0].label)+' — '+esc(days[days.length-1].label)+
-        ' · 7 хоногийн өдөр тутам</div>'
+        ' · '+esc(utxt('preview.daily7','7 хоногийн өдөр тутам'))+'</div>'
       : svgBarsH(pv.slice(0,mini?3:5),W);
     body='<div class="sp-body"><div class="sp-val" style="font-size:'+(mini?18:26)+'px">'+
       (tv2?esc(nf(tv2)):'<span style="color:#A7B0C6">0</span>')+
@@ -1157,24 +1354,24 @@ function previewFor(id,mini){
       return '<div class="pvcd" style="border-left-color:'+r.c+'">'+
         '<span class="n">'+esc(r.n)+'</span>'+
         '<span class="d"'+(r.d?'':' style="color:#C0C8D8"')+'>'+
-        (r.d?esc(r.d):'мэдээлэл алга')+'</span></div>'}).join('')+'</div>';
+        (r.d?esc(r.d):esc(utxt('badge.no_data','мэдээлэл алга')))+'</span></div>'}).join('')+'</div>';
   }
 
   return '<div class="sitepv'+(mini?' mini':'')+'" style="--sc:'+accent+'"><div class="sp-card">'+
     '<div class="sp-top"><span class="sp-g">'+face.glyph+'</span>'+
       '<span class="ed" data-ed="title">'+esc(title)+'</span>'+
       (sub?'<span class="ed sp-sub" data-ed="sub">'+esc(sub)+'</span>'
-          :(!mini&&('sub' in c)?'<span class="ed sp-sub empty" data-ed="sub">+ дэд гарчиг</span>':''))+
+          :(!mini&&('sub' in c)?'<span class="ed sp-sub empty" data-ed="sub">'+esc(utxt('preview.add_sub','+ дэд гарчиг'))+'</span>':''))+
       feedNote()+
       '<span class="pvshape">'+esc(SHAPEN[kind]||kind)+'</span>'+
     '</div>'+body+
     (foot?'<div class="ed sp-foot" data-ed="foot">'+esc(foot)+'</div>'
-        :(!mini&&('foot' in c)?'<div class="ed sp-foot empty" data-ed="foot">+ хөл бичиг</div>':''))+
+        :(!mini&&('foot' in c)?'<div class="ed sp-foot empty" data-ed="foot">'+esc(utxt('preview.add_foot','+ хөл бичиг'))+'</div>':''))+
   '</div></div>';
 }
 /* ══════════════════ ЗҮҮН БАГАНА ══════════════════ */
 function dsLabel(k){return (DSMETA[k]&&DSMETA[k].n)||k}
-function dsAgency(k){return (DSMETA[k]&&DSMETA[k].a)||'эх сурвалж тодорхойгүй'}
+function dsAgency(k){return (DSMETA[k]&&DSMETA[k].a)||utxt('left.source_unknown','эх сурвалж тодорхойгүй')}
 function dsColor(k){return NEON[(DSMETA[k]&&DSMETA[k].s)||'air']}
 function rDs(){
   var all=datasets();
@@ -1191,26 +1388,26 @@ function rDs(){
       '<span class="dsi-i" style="background:'+dsColor(k)+'"></span>'+
       '<span><span class="dsi-n">'+esc(dsLabel(k))+'</span>'+
         '<span class="dsi-a" style="display:block">'+esc(dsAgency(k))+'</span>'+
-        '<span class="dsi-s" style="display:block">'+metricsOfDs(k).length+' метрик · '+
-          t.ok+'/'+ids.length+' виджет</span></span>'+
+        '<span class="dsi-s" style="display:block">'+metricsOfDs(k).length+' '+esc(utxt('crumb.metric_word','метрик'))+' · '+
+          t.ok+'/'+ids.length+' '+esc(utxt('crumb.widget_word','виджет'))+'</span></span>'+
       '<span class="st '+cls+'">'+gl+'</span></button>';
-  }).join('')||'<div class="empty" style="padding:18px">Тохирох датасэт олдсонгүй</div>';
+  }).join('')||'<div class="empty" style="padding:18px">'+esc(utxt('left.none','Тохирох датасэт олдсонгүй'))+'</div>';
 }
 
 /* ══════════════════ ЗАМ МӨР ══════════════════ */
 function crumb(){
   var ids=scopeIds(), t=tally(ids);
   var bits=[];
-  bits.push('<button class="cb'+(S.level==='sections'&&!S.ds?' on':'')+'" data-lv="all">Бүх датасэт</button>');
+  bits.push('<button class="cb'+(S.level==='sections'&&!S.ds?' on':'')+'" data-lv="all">'+esc(utxt('crumb.all_datasets','Бүх датасэт'))+'</button>');
   if(S.ds){
     bits.push('<span class="cbs">›</span><button class="cb'+(S.level==='sections'?' on':'')+
       '" data-lv="sections">'+esc(dsLabel(S.ds))+'</button>');
   }
   if(S.level==='all'){
-    bits.push('<span class="cbs">›</span><button class="cb on">Бүх харагдац</button>');
+    bits.push('<span class="cbs">›</span><button class="cb on">'+esc(utxt('crumb.all_views','Бүх харагдац'))+'</button>');
   }
   if(S.level!=='sections'&&S.level!=='all'){
-    if(!S.ds) bits.push('<span class="cbs">›</span><button class="cb" data-lv="sections">Нүүр хуудас</button>');
+    if(!S.ds) bits.push('<span class="cbs">›</span><button class="cb" data-lv="sections">'+esc(utxt('crumb.home_page','Нүүр хуудас'))+'</button>');
     bits.push('<span class="cbs">›</span><button class="cb'+(S.level==='widgets'?' on':'')+
       '" data-lv="widgets">'+esc(sectionLabel(S.section))+'</button>');
   }
@@ -1219,20 +1416,20 @@ function crumb(){
       esc(curText(S.widget,'title')||S.widget)+'</button>');
   var metricN=t.ok+t.mix+t.no;   /* txt виджет хамралтад ороогүй */
   var back=canGoBack()
-    ? '<button class="cb cbback" data-back="1" title="Буцах (Esc эсвэл хөтчийн Back)">← Буцах</button>'
+    ? '<button class="cb cbback" data-back="1" title="'+esc(utxt('crumb.back_title','Буцах (Esc эсвэл хөтчийн Back)'))+'">'+esc(utxt('crumb.back','← Буцах'))+'</button>'
     : '';
   return '<div class="cov"><div class="crumbnav">'+back+bits.join('')+'</div>'+
-    '<div class="m">'+(S.ds?esc(dsAgency(S.ds))+' · ':'')+ids.length+' виджет · '+
-      (S.ds?metricsOfDs(S.ds).length:Object.keys(REG.metrics).length)+' метрик'+
-      (FEED.state==='ready'?' · дата '+esc(String(FEED.fetchedAt||'').slice(0,10))
-        :FEED.state==='loading'?' · дата ачаалж байна…'
-        :FEED.state==='error'?' · дата ачаалагдаагүй':'')+'</div>'+
+    '<div class="m">'+(S.ds?esc(dsAgency(S.ds))+' · ':'')+ids.length+' '+esc(utxt('crumb.widget_word','виджет'))+' · '+
+      (S.ds?metricsOfDs(S.ds).length:Object.keys(REG.metrics).length)+' '+esc(utxt('crumb.metric_word','метрик'))+
+      (FEED.state==='ready'?' · '+esc(utxt('crumb.data_word','дата'))+' '+esc(String(FEED.fetchedAt||'').slice(0,10))
+        :FEED.state==='loading'?' · '+esc(utxt('feed.loading','дата ачаалж байна…'))
+        :FEED.state==='error'?' · '+esc(utxt('feed.error','дата ачаалагдаагүй')):'')+'</div>'+
     miniBar(t,metricN)+
     '<div class="lg">'+
-      '<div><i style="background:var(--ok)"></i><b>'+t.ok+'</b> бүрэн холбогдсон</div>'+
-      '<div><i style="background:var(--warn)"></i><b>'+t.mix+'</b> хэсэгчлэн</div>'+
-      '<div><i style="background:var(--bad)"></i><b>'+t.no+'</b> холбогдоогүй</div>'+
-      (t.txt?'<div><i style="background:var(--line2)"></i><b>'+t.txt+'</b> зөвхөн текст</div>':'')+
+      '<div><i style="background:var(--ok)"></i><b>'+t.ok+'</b> '+esc(utxt('crumb.full','бүрэн холбогдсон'))+'</div>'+
+      '<div><i style="background:var(--warn)"></i><b>'+t.mix+'</b> '+esc(utxt('crumb.partial','хэсэгчлэн'))+'</div>'+
+      '<div><i style="background:var(--bad)"></i><b>'+t.no+'</b> '+esc(utxt('crumb.none','холбогдоогүй'))+'</div>'+
+      (t.txt?'<div><i style="background:var(--line2)"></i><b>'+t.txt+'</b> '+esc(utxt('crumb.textonly','зөвхөн текст'))+'</div>':'')+
     '</div></div>';
 }
 
@@ -1243,15 +1440,15 @@ function siteField(p,label){
   var last=p[p.length-1];
   var long=LONG_FIELDS[last]||String(v).length>70;
   return '<div class="sfield'+(dirty?' dirty':'')+'">'+
-    '<div class="lbl">'+esc(label)+(dirty?' <b class="dt">өөрчлөгдсөн</b>':'')+
-      '<code>site.'+esc(key)+'</code></div>'+
+    '<div class="lbl">'+esc(label)+(dirty?' <b class="dt">'+esc(utxt('site_tab.changed','өөрчлөгдсөн'))+'</b>':'')+
+      '<code>'+(p[0]==='ui'?'':'site.')+esc(key)+'</code></div>'+
     (long
       ? '<textarea data-sf="'+esc(key)+'" rows="'+(String(v).length>140?4:2)+'">'+esc(v)+'</textarea>'
       : '<input data-sf="'+esc(key)+'" value="'+esc(v)+'">')+
     '</div>';
 }
 function lvSite(){
-  if(!CON.site) return '<div class="empty">content.json-д <code>site</code> блок алга</div>';
+  if(!CON.site) return '<div class="empty">'+esc(utxt('site_tab.no_site','content.json-д site блок алга'))+'</div>';
   var q=(S.q||'').trim().toLowerCase();
   var match=function(label,p){
     if(!q) return true;
@@ -1285,32 +1482,70 @@ function lvSite(){
   if(Array.isArray(ch)){
     var rows='';
     ch.forEach(function(_,i){
-      var p=['hero','diagram','chips',String(i)], lb='Чип '+(i+1)+' · гарчиг';
+      var p=['hero','diagram','chips',String(i)],
+          lb=utxt('site_tab.chip_word','Чип')+' '+(i+1)+' '+utxt('site_tab.chip_title','· гарчиг');
       if(match(lb,p)){ rows+=siteField(p,lb); shown++; }
-      var pb=['hero','diagram','chip_bodies',String(i)], lbb='Чип '+(i+1)+' · тайлбар';
+      var pb=['hero','diagram','chip_bodies',String(i)],
+          lbb=utxt('site_tab.chip_word','Чип')+' '+(i+1)+' '+utxt('site_tab.chip_body','· тайлбар');
       if(siteGet(pb)!==undefined && match(lbb,pb)){ rows+=siteField(pb,lbb); shown++; }
     });
-    if(rows) html+='<div class="sgroup"><h3>Hero · чип</h3>'+
-      '<div class="where">Hero диаграмын доод эгнээ</div>'+rows+'</div>';
+    if(rows) html+='<div class="sgroup"><h3>'+esc(utxt('site_tab.chip_group','Hero · чип'))+'</h3>'+
+      '<div class="where">'+esc(utxt('site_tab.chip_where','Hero диаграмын доод эгнээ'))+'</div>'+rows+'</div>';
   }
   /* months — 01-р хэсгийн хугацааны шүүлтийн сарын шошго (2 сонголтод адил) */
   var mo=siteGet(['months']);
   if(Array.isArray(mo)){
     var mr='';
     mo.forEach(function(_,i){
-      var p=['months',String(i)], lb=(i+1)+'-р сарын шошго';
+      var p=['months',String(i)], lb=(i+1)+utxt('site_tab.month_label','-р сарын шошго');
       if(!match(lb,p)) return;
       mr+=siteField(p,lb); shown++;
     });
-    if(mr) html+='<div class="sgroup"><h3>Сарын шошго</h3>'+
-      '<div class="where">01-р хэсэг · хугацааны шүүлтийн 2 сонголтод адил</div>'+mr+'</div>';
+    if(mr) html+='<div class="sgroup"><h3>'+esc(utxt('site_tab.month_group','Сарын шошго'))+'</h3>'+
+      '<div class="where">'+esc(utxt('site_tab.month_where','01-р хэсэг · хугацааны шүүлтийн 2 сонголтод адил'))+'</div>'+mr+'</div>';
   }
 
-  if(!shown) return '<div class="empty">"'+esc(S.q)+'" — тохирох текст олдсонгүй</div>';
-  return '<p class="ph">Сайтын текст · content.json → site '+
-    '<span style="font-family:var(--mono)">'+shown+'</span></p>'+html+
-    '<p class="pvnote">Эдгээр нь виджетийн БУС текст. 04/05/07/08 хэсгийн гарчиг энд байхгүй — '+
-    'тэдгээр виджетээсээ гарчигаа авдаг тул давхардуулбал хоёр эх сурвалж үүснэ.</p>';
+  /* Админы интерфейсийн текст — ЭНД ижил маягтаар засварлагдана.
+     Нэг утга нь виджет бүрийн дэлгэц дээр давтагдана (badge, товч, шошго). */
+  var uiHtml='', uiShown=0;
+  UI_GROUPS.forEach(function(g){
+    var rows='';
+    Object.keys(g.labels).forEach(function(k){
+      var p=['ui',g.key,k];
+      if(siteGet(p)===undefined||!match(g.labels[k],p)) return;
+      rows+=siteField(p,g.labels[k]); uiShown++;
+    });
+    if(rows) uiHtml+='<div class="sgroup"><h3>'+esc(g.title)+'</h3>'+
+      '<div class="where">'+esc(g.where)+'</div>'+rows+'</div>';
+  });
+  /* ── Үлдсэн БҮХ талбар. Гараар бүлэглээгүй ч засварлагдана —
+     "бүртгэлтэй мөртөө засагдахгүй" талбар үүсэх боломжгүй болно. ── */
+  var cur=curatedPaths(), autoBy={}, autoShown=0;
+  everyTextPath().forEach(function(p){
+    var key=p.join('.');
+    if(cur[key]) return;
+    var lbl=p[p.length-1];
+    if(!match(lbl+' '+key,p)) return;
+    var grp=p.slice(0,-1).join('.')||'site';
+    (autoBy[grp]=autoBy[grp]||[]).push({p:p,l:lbl});
+  });
+  var autoHtml='';
+  Object.keys(autoBy).sort().forEach(function(grp){
+    var rows='';
+    autoBy[grp].forEach(function(x){ rows+=siteField(x.p,x.l); autoShown++ });
+    if(rows) autoHtml+='<div class="sgroup"><h3>'+esc(grp)+'</h3>'+
+      '<div class="where">'+esc(utxt('site_tab.auto_where','Автоматаар илэрсэн талбар — content.json-д байгаа боловч гараар бүлэглээгүй'))+'</div>'+rows+'</div>';
+  });
+  shown+=uiShown+autoShown;
+  if(!shown) return '<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
+  return (html?'<p class="ph">'+esc(utxt('site_tab.heading','Сайтын текст · content.json → site'))+' '+
+    '<span style="font-family:var(--mono)">'+(shown-uiShown)+'</span></p>'+html+
+    '<p class="pvnote">'+esc(utxt('site_tab.note','Эдгээр нь виджетийн БУС текст. 04/05/07/08 хэсгийн гарчиг энд байхгүй — тэдгээр виджетээсээ гарчигаа авдаг тул давхардуулбал хоёр эх сурвалж үүснэ.'))+'</p>':'')+
+    (uiHtml?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.ui_heading','Админы интерфейсийн текст · content.json → ui'))+' '+
+    '<span style="font-family:var(--mono)">'+uiShown+'</span></p>'+uiHtml+
+    '<p class="pvnote">'+esc(utxt('site_tab.ui_note','Эдгээр нь ЭНЭ УДИРДЛАГЫН ХЭРЭГСЛИЙН текст (сайтад харагдахгүй). Нэг утга бүх виджетийн засварын дэлгэцэд адил хэрэглэгдэнэ.'))+'</p>':'')+
+    (autoHtml?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.auto_heading','Бусад бүртгэлтэй текст · content.json'))+' '+
+    '<span style="font-family:var(--mono)">'+autoShown+'</span></p>'+autoHtml:'');
 }
 
 /* ══════════════════ ХАЙЛТ + ШҮҮЛТ ══════════════════
@@ -1352,28 +1587,28 @@ function vizOptions(ids){
 function filterBar(scopeIdsForOptions){
   var pages=pageOptions(scopeIdsForOptions), vizs=vizOptions(scopeIdsForOptions);
   return '<div class="fbar">'+
-    '<input class="srch" id="wq" style="margin:0" placeholder="Хайх… (гарчиг, метрик, хуудас)" '+
-      'aria-label="Виджет хайх" value="'+esc(S.wq||'')+'">'+
-    '<select id="fQuality" aria-label="Chanar шүүлт">'+
-      '<option value="all"'+(S.wQuality==='all'?' selected':'')+'>Chanar: Бүгд</option>'+
+    '<input class="srch" id="wq" style="margin:0" placeholder="'+esc(utxt('filter.search_ph','Хайх… (гарчиг, метрик, хуудас)'))+'" '+
+      'aria-label="'+esc(utxt('filter.search_aria','Виджет хайх'))+'" value="'+esc(S.wq||'')+'">'+
+    '<select id="fQuality" aria-label="'+esc(utxt('filter.quality','Чанар'))+'">'+
+      '<option value="all"'+(S.wQuality==='all'?' selected':'')+'>'+esc(utxt('filter.quality','Чанар'))+': '+esc(utxt('filter.all','Бүгд'))+'</option>'+
       '<option value="verified"'+(S.wQuality==='verified'?' selected':'')+'>Verified</option>'+
       '<option value="mock"'+(S.wQuality==='mock'?' selected':'')+'>Mock</option>'+
     '</select>'+
-    '<select id="fPage" aria-label="Хуудас шүүлт">'+
-      '<option value="all"'+(S.wPage==='all'?' selected':'')+'>Хуудас: Бүгд</option>'+
+    '<select id="fPage" aria-label="'+esc(utxt('filter.page','Хуудас'))+'">'+
+      '<option value="all"'+(S.wPage==='all'?' selected':'')+'>'+esc(utxt('filter.page','Хуудас'))+': '+esc(utxt('filter.all','Бүгд'))+'</option>'+
       pages.map(function(k){return '<option value="'+esc(k)+'"'+(S.wPage===k?' selected':'')+'>'+
         esc(sectionLabel(k))+'</option>'}).join('')+
     '</select>'+
-    '<select id="fViz" aria-label="Дүрслэлийн төрөл шүүлт">'+
-      '<option value="all"'+(S.wViz==='all'?' selected':'')+'>Төрөл: Бүгд</option>'+
+    '<select id="fViz" aria-label="'+esc(utxt('filter.type','Төрөл'))+'">'+
+      '<option value="all"'+(S.wViz==='all'?' selected':'')+'>'+esc(utxt('filter.type','Төрөл'))+': '+esc(utxt('filter.all','Бүгд'))+'</option>'+
       vizs.map(function(k){return '<option value="'+esc(k)+'"'+(S.wViz===k?' selected':'')+'>'+
         esc(SHAPEN[k]||k)+'</option>'}).join('')+
     '</select>'+
   '</div>';
 }
 function emptyFilterMsg(){
-  return '<div class="empty">Тохирох зүйл олдсонгүй — хайлт/шүүлтээ өөрчилнө үү.'+
-    '<div style="margin-top:10px"><button class="btn sm" id="fClear">Шүүлт цэвэрлэх</button></div></div>';
+  return '<div class="empty">'+esc(utxt('filter.none','Тохирох зүйл олдсонгүй — хайлт/шүүлтээ өөрчилнө үү.'))+
+    '<div style="margin-top:10px"><button class="btn sm" id="fClear">'+esc(utxt('filter.clear','Шүүлт цэвэрлэх'))+'</button></div></div>';
 }
 
 /* ══════════════════ БҮХ ХАРАГДАЦ ══════════════════
@@ -1388,7 +1623,7 @@ function currentListScope(){
 function lvAll(){
   var all=scopeIds(), ids=filterWidgets(all);
   if(!ids.length) return emptyFilterMsg();
-  return '<p class="ph">Бүх виджетийн харагдац <span style="font-family:var(--mono)">'+
+  return '<p class="ph">'+esc(utxt('list.all_heading','Бүх виджетийн харагдац'))+' <span style="font-family:var(--mono)">'+
     ids.length+(ids.length!==all.length?' / '+all.length:'')+'</span></p>'+
     '<div class="allgrid">'+ids.map(function(id){
       var st=statOf(id);
@@ -1404,20 +1639,20 @@ function lvAll(){
 /* ══════════════════ ТҮВШИН 1 ══════════════════ */
 function lvSections(){
   var keys=sectionKeys();
-  if(!keys.length) return '<div class="empty">Энэ датасэтэд хамаарах виджет алга</div>';
-  return '<p class="ph">Нүүр хуудасны хэсгүүд</p><div class="pgrid">'+
+  if(!keys.length) return '<div class="empty">'+esc(utxt('list.none_for_ds','Энэ датасэтэд хамаарах виджет алга'))+'</div>';
+  return '<p class="ph">'+esc(utxt('list.sections_heading','Нүүр хуудасны хэсгүүд'))+'</p><div class="pgrid">'+
     keys.map(function(sec){
       var list=widgetsIn(sec),t=tally(list);
       return '<button class="pcard" data-section="'+esc(sec)+'">'+
         '<div class="pc-t">'+esc(sectionLabel(sec))+(sectionDynNote(sec)?' <span class="dyn">'+sectionDynNote(sec)+'</span>':'')+'</div>'+
-        '<div class="pc-n">'+list.length+' виджет'+
-          (t.ok<list.length?' · '+(list.length-t.ok)+' анхаарах':'')+
-          (sectionDirty(sec)?' · <b style="color:var(--warn)">хадгалаагүй</b>':'')+'</div>'+
+        '<div class="pc-n">'+list.length+' '+esc(utxt('crumb.widget_word','виджет'))+
+          (t.ok<list.length?' · '+(list.length-t.ok)+' '+esc(utxt('list.attention','анхаарах')):'')+
+          (sectionDirty(sec)?' · <b style="color:var(--warn)">'+esc(utxt('list.unsaved','хадгалаагүй'))+'</b>':'')+'</div>'+
         miniBar(t,list.length)+
         '<div class="pc-w">'+list.slice(0,4).map(function(id){
           return '<span>'+esc(curText(id,'title')||id)+'</span>'}).join('')+
           (list.length>4?'<span class="mo2">+'+(list.length-4)+'</span>':'')+'</div>'+
-        '<span class="pc-go">Нээх →</span></button>';
+        '<span class="pc-go">'+esc(utxt('list.open','Нээх →'))+'</span></button>';
     }).join('')+'</div>';
 }
 
@@ -1427,35 +1662,36 @@ var ICONS={
 };
 function iconBar(id){
   return '<div class="ico">'+
-    '<button class="ib" data-mo="view|'+id+'" title="Харагдац — сайт дээрх урьдчилан харах" aria-label="Харагдац">'+ICONS.view+'</button>'+
-    '<button class="ib" data-goedit="'+id+'|text" title="Текст — гарчиг, хөл бичиг засах" aria-label="Текст">'+ICONS.text+'</button>'+
-    '<button class="ib" data-mo="loc|'+id+'" title="Байршил — хуудас, anchor, ижил метрик ашигладаг виджет" aria-label="Байршил">'+ICONS.loc+'</button>'+
-    '<button class="ib" data-mo="hist|'+id+'" title="Түүх — энэ сессийн өөрчлөлт" aria-label="Түүх">'+ICONS.hist+'</button>'+
+    '<button class="ib" data-mo="view|'+id+'" title="'+esc(utxt('list.icon_view_title','Харагдац — сайт дээрх урьдчилан харах'))+'" aria-label="'+esc(utxt('list.icon_view','Харагдац'))+'">'+ICONS.view+'</button>'+
+    '<button class="ib" data-goedit="'+id+'|text" title="'+esc(utxt('list.icon_text_title','Текст — гарчиг, хөл бичиг засах'))+'" aria-label="'+esc(utxt('list.icon_text','Текст'))+'">'+ICONS.text+'</button>'+
+    '<button class="ib" data-mo="loc|'+id+'" title="'+esc(utxt('list.icon_loc_title','Байршил — хуудас, anchor, ижил метрик ашигладаг виджет'))+'" aria-label="'+esc(utxt('list.icon_loc','Байршил'))+'">'+ICONS.loc+'</button>'+
+    '<button class="ib" data-mo="hist|'+id+'" title="'+esc(utxt('list.icon_hist_title','Түүх — энэ сессийн өөрчлөлт'))+'" aria-label="'+esc(utxt('list.icon_hist','Түүх'))+'">'+ICONS.hist+'</button>'+
   '</div>';
 }
 function lvWidgets(){
   var all=widgetsIn(S.section), list=filterWidgets(all);
   if(!list.length) return emptyFilterMsg();
   return '<p class="ph">'+esc(sectionLabel(S.section))+
-    ' — виджетүүд <span style="font-family:var(--mono)">'+
+    ' '+esc(utxt('list.widgets_suffix','— виджетүүд'))+' <span style="font-family:var(--mono)">'+
     list.length+(list.length!==all.length?' / '+all.length:'')+'</span></p>'+
     list.map(function(id){
       var st=statOf(id), txt=!!TEXT_ONLY[id];
       var sl=txt?[]:slotsOf(id), b=txt?[]:boundMetrics(id);
       var ru=txt?null:requiredUnit(id,sl[0].key);
       var src=txt
-        ? '<div class="src"><b>текст</b><i>метрик холбохгүй</i></div>'
+        ? '<div class="src"><b>'+esc(utxt('list.text_src','текст'))+'</b><i>'+esc(utxt('list.text_src_note','метрик холбохгүй'))+'</i></div>'
         : (b.length
-          ? '<div class="src"><b>'+esc(b[0])+'</b><i>'+b.length+'/'+sl.length+' слот · '+esc(ru||'?')+'</i></div>'
-          : '<div class="src no"><b>холбогдоогүй</b><i>'+sl.length+' слот</i></div>');
+          ? '<div class="src"><b>'+esc(b[0])+'</b><i>'+b.length+'/'+sl.length+' '+esc(utxt('list.slot','слот'))+' · '+esc(ru||'?')+'</i></div>'
+          : '<div class="src no"><b>'+esc(utxt('list.not_bound','холбогдоогүй'))+'</b><i>'+sl.length+' '+esc(utxt('list.slot','слот'))+'</i></div>');
       return '<div class="cd'+(S.flash===id?' flash':'')+'" data-cd="'+esc(id)+'"><div class="cd-h">'+
         '<span class="dot d-'+st+'"></span>'+
         '<div class="cd-open" data-widget="'+esc(id)+'" role="button" tabindex="0">'+
           '<div class="cd-n">'+esc(curText(id,'title')||id)+
-            (widgetDirty(id)?' <b class="dt">хадгалаагүй</b>':'')+'</div>'+
+            (widgetDirty(id)?' <b class="dt">'+esc(utxt('list.unsaved','хадгалаагүй'))+'</b>':'')+'</div>'+
           '<div class="cd-t">'+esc(SHAPEN[SHAPE[id]]||KIND[id]||'')+' · '+esc(id)+
-            ' · '+esc(posInSection(id))+' байрлал'+
-            ' · '+(txt?'зөвхөн текст':'хүлээж авна: '+esc(ru||'нэгж тодорхойгүй'))+'</div>'+
+            ' · '+esc(posInSection(id))+' '+esc(utxt('list.position','байрлал'))+
+            ' · '+(txt?esc(utxt('list.text_only','зөвхөн текст'))
+                     :esc(utxt('list.accepts','хүлээж авна:'))+' '+esc(ru||utxt('list.unit_unknown','нэгж тодорхойгүй')))+'</div>'+
           '<div class="cd-path">'+esc(widgetPath(id))+'</div></div>'+
         src+iconBar(id)+
         '<span class="cv" data-widget="'+esc(id)+'" style="cursor:pointer">›</span>'+
@@ -1472,13 +1708,14 @@ function lvWidgets(){
    ажиллах үедээ flights JSON-оос тооцоолдог) — иймд энд зохиомол тоо
    ГАРГАХГҮЙ, зөвхөн үнэн төлөвийг харуулна. */
 function slotDisplay(sv,q){
-  if(q==='verified') return {v:'амьд утга',cls:'',badge:'<span class="badge b-ok">амьд · вэб сервис</span>'};
-  if(q==='none')     return {v:'0',cls:'z',badge:'<span class="badge b-zero">'+esc(sv.label||'мэдээлэл алга')+'</span>'};
-  return {v:'—',cls:'z',badge:'<span class="badge b-warn">түр дата</span>'};
+  if(q==='verified') return {v:utxt('badge.live_value','амьд утга'),cls:'',
+    badge:'<span class="badge b-ok">'+esc(utxt('badge.live_service','амьд · вэб сервис'))+'</span>'};
+  if(q==='none')     return {v:'0',cls:'z',badge:'<span class="badge b-zero">'+esc(sv.label||utxt('badge.no_data','мэдээлэл алга'))+'</span>'};
+  return {v:'—',cls:'z',badge:'<span class="badge b-warn">'+esc(utxt('badge.mock','түр дата'))+'</span>'};
 }
 function metricSelect(id,path,sectorKey){
   var sv=slotVal(id,path), ru=requiredUnit(id,sectorKey);
-  var opts=['<option value="">— холбоогүй —</option>'];
+  var opts=['<option value="">'+esc(utxt('metric.unbound','— холбоогүй —'))+'</option>'];
   Object.keys(REG.metrics).forEach(function(mk){
     var w=why(mk,ru), m=REG.metrics[mk], cur=(sv.metric===mk);
     /* ОДООГИЙН холбоосыг ХЭЗЭЭ Ч disabled болгохгүй — эс тэгвэл select
@@ -1496,16 +1733,16 @@ function bindingWarn(id){
     var sv=slotVal(id,s.path);
     if(!sv.metric)return;
     var w=why(sv.metric,requiredUnit(id,s.key));
-    if(w) out.push((SECN[s.key]||s.key||'метрик')+': '+w);
+    if(w) out.push((SECN[s.key]||s.key||utxt('metric.single','Метрик'))+': '+w);
   });
   return out.length?out:null;
 }
 function calcLine(mk){
   var m=REG.metrics[mk];if(!m)return '';
-  return '<div class="mecalc">Тооцоолол <code>'+esc(m.agg)+'('+esc(m.column)+')'+
+  return '<div class="mecalc">'+esc(utxt('metric.calc','Тооцоолол'))+' <code>'+esc(m.agg)+'('+esc(m.column)+')'+
     (m.transform?' '+esc(m.transform):'')+'</code> → <b>'+esc(m.unit)+'</b><br>'+
-    'Датасэт <code>'+esc(m.dataset)+'</code> · эх сурвалж <code>'+esc(m.source)+'</code><br>'+
-    'Шүүлт <code>'+esc(m.filter||'—')+'</code></div>';
+    esc(utxt('metric.dataset','Датасэт'))+' <code>'+esc(m.dataset)+'</code> · '+esc(utxt('metric.source','эх сурвалж'))+' <code>'+esc(m.source)+'</code><br>'+
+    esc(utxt('metric.filter','Шүүлт'))+' <code>'+esc(m.filter||'—')+'</code></div>';
 }
 /* Засварын хэсгийн урьдчилан харах — жагсаалттай ЯГ НЭГ рендерер ашиглана
    (previewFor), иймд метрик сольсон даруйд график ХЭЛБЭР нь өөрөө
@@ -1517,39 +1754,40 @@ function sitePreview(id){
     var sv=slotVal(id,s.path),q=qualityOf(sv),d=slotDisplay(sv,q);
     return '<div class="secrow '+d.cls+'">'+
       '<span class="secrow-i" style="background:'+(NEON[s.key]||'#8A93AB')+'"></span>'+
-      '<span class="secrow-n">'+esc(SECN[s.key]||s.key||'ганц метрик')+'</span>'+
+      '<span class="secrow-n">'+esc(SECN[s.key]||s.key||utxt('metric.single_slot','ганц метрик'))+'</span>'+
       '<span class="secrow-v">'+esc(d.v)+'</span>'+d.badge+'</div>';
   }).join('');
   return head+'<div class="sitepv" style="padding:12px 16px"><div class="sp-card">'+
-    '<div class="pvax" style="margin:0 0 6px">Слотын чанар</div>'+rows+'</div></div>';
+    '<div class="pvax" style="margin:0 0 6px">'+esc(utxt('preview.slot_quality','Слотын чанар'))+'</div>'+rows+'</div></div>';
 }
 /* Чартын хэлбэр солих — утга алдагдахгүй хосуудад л санал болгоно */
 function vizSelect(id){
   var base=PKIND[id], opts=SWAPPABLE[base];
   if(!opts) return '';
-  var NAMES={line:'Шугаман',bar:'Багана',donut:'Донут',bignum:'Том тоо'};
-  return '<div class="vizsel"><label>Харагдацын хэлбэр</label><select data-viz="'+esc(id)+'">'+
+  var NAMES={line:utxt('vizform.line','Шугаман'),bar:utxt('vizform.bar','Багана'),
+             donut:utxt('vizform.donut','Донут'),bignum:utxt('vizform.bignum','Том тоо')};
+  return '<div class="vizsel"><label>'+esc(utxt('vizform.label','Харагдацын хэлбэр'))+'</label><select data-viz="'+esc(id)+'">'+
     opts.map(function(o){return '<option value="'+o+'"'+(vizOf(id)===o?' selected':'')+'>'+
-      NAMES[o]+'</option>'}).join('')+'</select>'+
-    '<span class="pvax" style="margin:0">зөвхөн урьдчилан харахад — сайтад хадгалагдахгүй</span></div>';
+      esc(NAMES[o])+'</option>'}).join('')+'</select>'+
+    '<span class="pvax" style="margin:0">'+esc(utxt('vizform.note','зөвхөн урьдчилан харахад — сайтад хадгалагдахгүй'))+'</span></div>';
 }
 function textForm(id){
   var fields=textFields(id), d=dirtyTextFields(id);
   if(!fields.length) return '';
-  return '<p class="ph" style="margin:18px 0 9px">Текст · content.json</p>'+
+  return '<p class="ph" style="margin:18px 0 9px">'+esc(utxt('text.heading','Текст · content.json'))+'</p>'+
     fields.map(function(f){
       var v=S.td[f]==null?'':S.td[f];
       return '<div class="f" style="margin-bottom:9px"><label>'+esc(FL[f]||f)+
-        (d.indexOf(f)>=0?' <b class="dt">өөрчлөгдсөн</b>':'')+'</label>'+
+        (d.indexOf(f)>=0?' <b class="dt">'+esc(utxt('text.changed','өөрчлөгдсөн'))+'</b>':'')+'</label>'+
         ((f==='foot'||f==='foot2')
           ? '<textarea data-tf="'+f+'" rows="3">'+esc(v)+'</textarea>'
           : '<input data-tf="'+f+'" value="'+esc(v)+'">')+'</div>';
     }).join('')+
     '<div class="acts"><button class="btn pri sm" data-tsave="1"'+(d.length?'':' disabled')+'>'+
-      'Хэрэглэх'+(d.length?' ('+d.length+')':'')+'</button>'+
-      '<button class="btn sm" data-tcancel="1"'+(d.length?'':' disabled')+'>Болих</button>'+
-      '<button class="btn sm" data-mo="loc|'+id+'">'+ICONS.loc+' Байршил</button>'+
-      '<button class="btn sm" data-mo="hist|'+id+'">'+ICONS.hist+' Түүх</button></div>';
+      esc(utxt('text.apply','Хэрэглэх'))+(d.length?' ('+d.length+')':'')+'</button>'+
+      '<button class="btn sm" data-tcancel="1"'+(d.length?'':' disabled')+'>'+esc(utxt('text.cancel','Болих'))+'</button>'+
+      '<button class="btn sm" data-mo="loc|'+id+'">'+ICONS.loc+' '+esc(utxt('text.location','Байршил'))+'</button>'+
+      '<button class="btn sm" data-mo="hist|'+id+'">'+ICONS.hist+' '+esc(utxt('text.history','Түүх'))+'</button></div>';
 }
 function lvEdit(){
   var id=S.widget;
@@ -1558,40 +1796,36 @@ function lvEdit(){
      өргөсөөгүй: метрик холболт энд байхгүй, зөвхөн content.json-ий текст. */
   if(TEXT_ONLY[id]){
     return '<div class="edit2"><div class="e-pv">'+
-      '<p class="ph">Сайт дээрх харагдац</p>'+'<div class="pathbar">'+esc(widgetPath(id))+'</div>'+previewFor(id,false)+
-      '<p class="pvnote">Өнгө, фонт нь сайтын эх кодын токеноос. Текст дээр дарж талбар руу шилжинэ.</p>'+
+      '<p class="ph">'+esc(utxt('preview.heading','Сайт дээрх харагдац'))+'</p>'+'<div class="pathbar">'+esc(widgetPath(id))+'</div>'+previewFor(id,false)+
+      '<p class="pvnote">'+esc(utxt('preview.note_text_only','Өнгө, фонт нь сайтын эх кодын токеноос. Текст дээр дарж талбар руу шилжинэ.'))+'</p>'+
       '</div><div class="e-fm">'+
-      '<div class="txtonly"><b>Зөвхөн нэршил засах горим</b>'+
-        'Энэ виджет порталын мета-үзүүлэлт (датасэт, үйлчилгээ, судалгааны тоо) харуулдаг — '+
-        'тээврийн салбарын метрик биш. Иймд метрик холбох хэсэггүй, зөвхөн '+
-        '<code>content.json</code>-ий текст засварлана.</div>'+
+      '<div class="txtonly"><b>'+esc(utxt('textonly.heading','Зөвхөн нэршил засах горим'))+'</b>'+
+        esc(utxt('textonly.body','Энэ виджет порталын мета-үзүүлэлт (датасэт, үйлчилгээ, судалгааны тоо) харуулдаг — тээврийн салбарын метрик биш. Иймд метрик холбох хэсэггүй, зөвхөн content.json-ий текст засварлана.'))+'</div>'+
       textForm(id)+'</div></div>';
   }
   var gw=grainWarn(id), bw=bindingWarn(id);
   var slotForm=slotsOf(id).map(function(s){
     var sv=slotVal(id,s.path),q=qualityOf(sv);
-    var head=s.key===null?'<b>Метрик</b>'
+    var head=s.key===null?'<b>'+esc(utxt('metric.single','Метрик'))+'</b>'
       :'<span class="secrow-i" style="background:'+(NEON[s.key]||'#8A93AB')+'"></span><b>'+
         esc(SECN[s.key]||s.key)+'</b>';
-    var badge=q==='verified'?'<span class="badge b-ok">амьд</span>'
-      :q==='none'?'<span class="badge b-zero">'+esc(sv.label||'мэдээлэл алга')+'</span>'
-      :'<span class="badge b-warn">эх сурвалж алга</span>';
+    var badge=q==='verified'?'<span class="badge b-ok">'+esc(utxt('badge.live','амьд'))+'</span>'
+      :q==='none'?'<span class="badge b-zero">'+esc(sv.label||utxt('badge.no_data','мэдээлэл алга'))+'</span>'
+      :'<span class="badge b-warn">'+esc(utxt('badge.no_source','эх сурвалж алга'))+'</span>';
     return '<div class="sedit"><div class="sedit-h">'+head+badge+'</div>'+
-      '<div class="f" style="margin-bottom:8px"><label>Метрик · шаардах нэгж: '+
-        esc(requiredUnit(id,s.key)||'тодорхойгүй')+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
+      '<div class="f" style="margin-bottom:8px"><label>'+esc(utxt('metric.unit_label','Метрик · шаардах нэгж:'))+' '+
+        esc(requiredUnit(id,s.key)||utxt('metric.unit_unknown','тодорхойгүй'))+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
       (sv.metric?calcLine(sv.metric)
-        :(sv.would_need?'<div class="acc"><b>Шаардлагатай:</b> '+esc(sv.would_need)+'</div>':''))+
+        :(sv.would_need?'<div class="acc"><b>'+esc(utxt('metric.required','Шаардлагатай:'))+'</b> '+esc(sv.would_need)+'</div>':''))+
       '</div>';
   }).join('');
   return '<div class="edit2"><div class="e-pv">'+
-    '<p class="ph">Сайт дээрх харагдац</p>'+'<div class="pathbar">'+esc(widgetPath(id))+'</div>'+vizSelect(id)+sitePreview(id)+
-    '<p class="pvnote">Өнгө, фонт нь сайтын эх кодын токеноос; дата цэг нь сайт өөрөө уншдаг '+
-      'вэб сервисээс, <code>metric_registry.json</code>-д бичигдсэн agg/filter/transform-оор '+
-      'тооцоолов. Метрик сольсон даруйд график шууд шинэчлэгдэнэ.</p></div><div class="e-fm">'+
-    (bw?'<div class="warnbox"><b>Одоогийн холбоос дүрэм зөрчиж байна</b>'+
+    '<p class="ph">'+esc(utxt('preview.heading','Сайт дээрх харагдац'))+'</p>'+'<div class="pathbar">'+esc(widgetPath(id))+'</div>'+vizSelect(id)+sitePreview(id)+
+    '<p class="pvnote">'+esc(utxt('preview.note','Өнгө, фонт нь сайтын эх кодын токеноос; дата цэг нь сайт өөрөө уншдаг вэб сервисээс, metric_registry.json-д бичигдсэн agg/filter/transform-оор тооцоолов. Метрик сольсон даруйд график шууд шинэчлэгдэнэ.'))+'</p></div><div class="e-fm">'+
+    (bw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_rule','Одоогийн холбоос дүрэм зөрчиж байна'))+'</b>'+
         esc(bw.join(' · '))+'</div>':'')+
-    (gw?'<div class="warnbox"><b>Нийлбэрийн анхааруулга</b>'+esc(gw)+'</div>':'')+
-    '<p class="ph">Эх сурвалж</p>'+slotForm+textForm(id)+'</div></div>';
+    (gw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_sum','Нийлбэрийн анхааруулга'))+'</b>'+esc(gw)+'</div>':'')+
+    '<p class="ph">'+esc(utxt('metric.heading','Эх сурвалж'))+'</p>'+slotForm+textForm(id)+'</div></div>';
 }
 
 /* ══════════════════ МОДАЛЬ ══════════════════ */
@@ -1612,65 +1846,64 @@ function moLoc(id){
   var c=CON.widgets[id]||{}, b=boundMetrics(id);
   var url=BASE+'#'+anchorOf(id);
   var rows='<dl style="margin:0">'+
-    '<div class="loc"><dt>Хуудас</dt><dd>'+esc(c.page||'—')+'</dd></div>'+
-    '<div class="loc"><dt>Хэсэг</dt><dd>'+esc(sectionLabel(anchorOf(id)))+'</dd></div>'+
+    '<div class="loc"><dt>'+esc(utxt('loc.page','Хуудас'))+'</dt><dd>'+esc(c.page||'—')+'</dd></div>'+
+    '<div class="loc"><dt>'+esc(utxt('loc.section','Хэсэг'))+'</dt><dd>'+esc(sectionLabel(anchorOf(id)))+'</dd></div>'+
     '<div class="loc"><dt>Anchor</dt><dd>#'+esc(anchorOf(id))+'</dd></div>'+
-    '<div class="loc"><dt>Виджетийн ID</dt><dd>'+esc(id)+'</dd></div>'+
-    '<div class="loc"><dt>Слот</dt><dd>'+slotsOf(id).map(function(s){
-        return esc(SECN[s.key]||s.key||'ганц метрик')}).join(', ')+'</dd></div>'+
+    '<div class="loc"><dt>'+esc(utxt('loc.widget_id','Виджетийн ID'))+'</dt><dd>'+esc(id)+'</dd></div>'+
+    '<div class="loc"><dt>'+esc(utxt('loc.slot','Слот'))+'</dt><dd>'+slotsOf(id).map(function(s){
+        return esc(SECN[s.key]||s.key||utxt('metric.single_slot','ганц метрик'))}).join(', ')+'</dd></div>'+
     '</dl>'+
-    '<p class="ph" style="margin:16px 0 6px">Сайт дээрх шууд холбоос</p>'+
+    '<p class="ph" style="margin:16px 0 6px">'+esc(utxt('loc.direct_link','Сайт дээрх шууд холбоос'))+'</p>'+
     '<div class="urlbox">'+esc(url)+'</div>'+
-    '<div class="acts"><a class="btn sm" href="'+esc(url)+'" target="_blank" rel="noopener">Сайт дээр нээх ↗</a></div>';
-  if(c._note) rows+='<p class="ph" style="margin:16px 0 6px">content.json тэмдэглэл</p>'+
+    '<div class="acts"><a class="btn sm" href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(utxt('loc.open_on_site','Сайт дээр нээх ↗'))+'</a></div>';
+  if(c._note) rows+='<p class="ph" style="margin:16px 0 6px">'+esc(utxt('loc.content_note','content.json тэмдэглэл'))+'</p>'+
     '<div class="acc">'+esc(c._note)+'</div>';
-  if(REG.widgets[id].note) rows+='<p class="ph" style="margin:16px 0 6px">registry тэмдэглэл</p>'+
+  if(REG.widgets[id].note) rows+='<p class="ph" style="margin:16px 0 6px">'+esc(utxt('loc.registry_note','registry тэмдэглэл'))+'</p>'+
     '<div class="acc">'+esc(REG.widgets[id].note)+'</div>';
 
-  rows+='<p class="ph" style="margin:16px 0 6px">Ижил метрик ашигладаг виджет</p>';
+  rows+='<p class="ph" style="margin:16px 0 6px">'+esc(utxt('loc.same_metric','Ижил метрик ашигладаг виджет'))+'</p>';
   if(!b.length){
-    rows+='<div class="empty">Энэ виджет одоогоор ямар ч метрикт холбогдоогүй</div>';
+    rows+='<div class="empty">'+esc(utxt('loc.no_metric','Энэ виджет одоогоор ямар ч метрикт холбогдоогүй'))+'</div>';
   }else{
     b.forEach(function(mk){
       var u=usersOfMetric(mk,id);
       rows+='<div class="mecalc" style="margin-bottom:5px"><code>'+esc(mk)+'</code></div>';
       rows+= u.length
         ? '<div class="use">'+u.map(function(x){
-            return '<button class="utag" data-goto="'+esc(x.id)+'"'+(x.inScope?'':' disabled title="Хамрах хүрээнээс гадуур"')+'>'+
-              esc(curText(x.id,'title')||x.id)+' · '+esc(x.slot)+(x.inScope?' →':' (хүрээнээс гадуур)')+'</button>'}).join('')+'</div>'
-        : '<div class="empty" style="padding:14px">Өөр виджет энэ метрикийг ашиглахгүй байна</div>';
+            return '<button class="utag" data-goto="'+esc(x.id)+'"'+(x.inScope?'':' disabled title="'+esc(utxt('loc.out_of_scope','Хамрах хүрээнээс гадуур'))+'"')+'>'+
+              esc(curText(x.id,'title')||x.id)+' · '+esc(x.slot)+(x.inScope?' →':' '+esc(utxt('loc.out_of_scope_tag','(хүрээнээс гадуур)')))+'</button>'}).join('')+'</div>'
+        : '<div class="empty" style="padding:14px">'+esc(utxt('loc.no_other','Өөр виджет энэ метрикийг ашиглахгүй байна'))+'</div>';
     });
   }
   return rows;
 }
 function moHist(id){
   var mine=LOG.filter(function(l){return l.id===id});
-  var head='<div class="acc" style="margin-bottom:12px">Файлууд өөрчлөлтийн түүх хадгалдаггүй тул '+
-    'энд <b>ЭНЭ СЕССИЙН</b> бодит өөрчлөлт л харагдана. Экспортлосны дараа git түүх нь бүрэн бичлэг болно.</div>'+
+  var head='<div class="acc" style="margin-bottom:12px">'+esc(utxt('hist.note','Файлууд өөрчлөлтийн түүх хадгалдаггүй тул энд ЭНЭ СЕССИЙН бодит өөрчлөлт л харагдана. Экспортлосны дараа git түүх нь бүрэн бичлэг болно.'))+'</div>'+
     '<dl style="margin:0 0 14px">'+
-    '<div class="loc"><dt>registry шинэчлэгдсэн</dt><dd>'+esc(REG.updated||'—')+'</dd></div>'+
-    '<div class="loc"><dt>content шинэчлэгдсэн</dt><dd>'+esc(CON.updated||'—')+'</dd></div></dl>';
-  if(!mine.length) return head+'<div class="empty">Энэ виджетэд өөрчлөлт хийгээгүй байна</div>';
+    '<div class="loc"><dt>'+esc(utxt('hist.registry_updated','registry шинэчлэгдсэн'))+'</dt><dd>'+esc(REG.updated||'—')+'</dd></div>'+
+    '<div class="loc"><dt>'+esc(utxt('hist.content_updated','content шинэчлэгдсэн'))+'</dt><dd>'+esc(CON.updated||'—')+'</dd></div></dl>';
+  if(!mine.length) return head+'<div class="empty">'+esc(utxt('hist.empty','Энэ виджетэд өөрчлөлт хийгээгүй байна'))+'</div>';
   return head+'<div class="hist">'+mine.map(function(l){
     return '<div class="h"><time>'+esc(l.t)+'</time><span>'+esc(l.x)+'</span></div>'}).join('')+'</div>';
 }
 function rMo(){
   if(!S.mo)return;
   var id=S.mo;
-  $('moK').textContent=(CON.widgets[id]&&CON.widgets[id].page||'Нүүр')+' · '+id;
+  $('moK').textContent=(CON.widgets[id]&&CON.widgets[id].page||utxt('section.path_root','Нүүр'))+' · '+id;
   $('moN').textContent=curText(id,'title')||id;
-  $('moS').textContent=(KIND[id]||'')+' · '+slotsOf(id).length+' слот · '+
-    (boundMetrics(id).length)+' холбогдсон';
-  var tabs=[['view','Харагдац'],['loc','Байршил'],['hist','Түүх']];
+  $('moS').textContent=(KIND[id]||'')+' · '+slotsOf(id).length+' '+utxt('list.slot','слот')+' · '+
+    (boundMetrics(id).length)+' '+utxt('crumb.full','бүрэн холбогдсон');
+  var tabs=[['view',utxt('list.icon_view','Харагдац')],['loc',utxt('text.location','Байршил')],
+            ['hist',utxt('text.history','Түүх')]];
   $('moT').innerHTML=tabs.map(function(t){
     return '<button class="mt'+(S.mt===t[0]?' on':'')+'" data-mt="'+t[0]+'">'+t[1]+'</button>'}).join('');
   if(S.mt==='view'){
     if(!S.td||S.widget!==id){S.widget=id;resetTd(id)}
     $('moB').innerHTML=sitePreview(id)+
-      '<p class="pvnote">Энэ бол сайтын бодит CSS токеноор хийсэн урьдчилан харах — '+
-      'жинхэнэ хуудас биш. Засах бол доорх товчийг дарна уу.</p>'+
+      '<p class="pvnote">'+esc(utxt('preview.note_modal','Энэ бол сайтын бодит CSS токеноор хийсэн урьдчилан харах — жинхэнэ хуудас биш. Засах бол доорх товчийг дарна уу.'))+'</p>'+
       '<div class="acts" style="margin-top:12px">'+
-      '<button class="btn pri sm" data-goedit="'+id+'|full">Энэ виджетийг засах →</button></div>';
+      '<button class="btn pri sm" data-goedit="'+id+'|full">'+esc(utxt('preview.edit_widget','Энэ виджетийг засах →'))+'</button></div>';
   } else if(S.mt==='loc'){ $('moB').innerHTML=moLoc(id); }
   else { $('moB').innerHTML=moHist(id); }
 }
@@ -1680,7 +1913,7 @@ function closeMo(){S.mo=null;$('mo').classList.remove('on');$('scrim').classList
 
 /* ══════════════════ ШИЛЖИЛТ ══════════════════ */
 function gotoWidget(id,mode){
-  if(SCOPE.indexOf(id)<0){toast('Энэ виджет хамрах хүрээнээс гадуур');return}
+  if(SCOPE.indexOf(id)<0){toast(utxt('toast.out_of_scope','Энэ виджет хамрах хүрээнээс гадуур'));return}
   /* Тухайн виджет одоогийн датасэтийн шүүлтэд багтахгүй бол шүүлтийг
      автоматаар тайлна — эс тэгвэл шилжсэн ч жагсаалтад харагдахгүй. */
   if(S.ds&&widgetsOfDs(S.ds).indexOf(id)<0) S.ds=null;
@@ -1690,7 +1923,7 @@ function gotoWidget(id,mode){
     var el=document.querySelector('[data-tf="title"]');
     if(el){el.focus();el.select&&el.select()}
   }
-  toast('Шилжлээ: '+(curText(id,'title')||id));
+  toast(utxt('toast.moved','Шилжлээ:')+' '+(curText(id,'title')||id));
 }
 
 /* ══════════════════ ЗУРАЛТ ══════════════════ */
@@ -1754,9 +1987,9 @@ function render(){
     if(!$('qsite')){
       $('cov').innerHTML='<div class="cov" style="padding:12px 14px">'+
         '<div style="display:flex;gap:8px;align-items:center">'+
-        '<button class="cb cbback" data-back="1" title="Буцах (Esc)">← Буцах</button>'+
-        '<input class="srch" id="qsite" style="margin:0;flex:1" placeholder="Текст хайх… (шошго, зам, утга)" '+
-        'aria-label="Сайтын текст хайх" value="'+esc(S.q||'')+'"></div></div>';
+        '<button class="cb cbback" data-back="1" title="'+esc(utxt('site_tab.back_title','Буцах (Esc)'))+'">'+esc(utxt('crumb.back','← Буцах'))+'</button>'+
+        '<input class="srch" id="qsite" style="margin:0;flex:1" placeholder="'+esc(utxt('site_tab.search_ph','Текст хайх… (шошго, зам, утга)'))+'" '+
+        'aria-label="'+esc(utxt('site_tab.search_aria','Сайтын текст хайх'))+'" value="'+esc(S.q||'')+'"></div></div>';
     }
     $('body').innerHTML=lvSite();
   }else{
@@ -1769,10 +2002,10 @@ function render(){
     var showBar=S.level==='widgets'||S.level==='all';
     $('fbar').innerHTML=showBar?filterBar(currentListScope()):'';
     renderBody();
-    $('allBtn').textContent=S.level==='all'?'Хэсгээр нь':'Бүх харагдац';
+    $('allBtn').textContent=S.level==='all'?utxt('app.by_section','Хэсгээр нь'):utxt('app.all_views','Бүх харагдац');
   }
   var n=dirtyCount();
-  $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> өөрчлөлт хадгалагдаагүй'):'Өөрчлөлт алга';
+  $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
   $('expBtn').disabled=n===0;
   $('revBtn').disabled=n===0;
   if(S.flash) setTimeout(function(){S.flash=null},1200);
@@ -1803,7 +2036,7 @@ document.addEventListener('click',function(e){
   if((el=t.closest&&t.closest('[data-ds]'))){
     var k=el.dataset.ds;
     S.ds=(S.ds===k)?null:k;S.level='sections';S.section=null;S.td=null;
-    render();toast(S.ds?dsLabel(S.ds):'Бүх датасэт');return}
+    render();toast(S.ds?dsLabel(S.ds):utxt('toast.all_datasets','Бүх датасэт'));return}
   if(t.closest&&t.closest('[data-back]')){ goBack(); return }
   if((el=t.closest&&t.closest('[data-lv]'))){
     var lv=el.dataset.lv;
@@ -1833,16 +2066,16 @@ document.addEventListener('click',function(e){
     var f=el.dataset.ed;
     if(S.mo){closeMo();gotoWidget(S.mo,'full')}
     var i=document.querySelector('[data-tf="'+f+'"]');
-    if(i){i.focus();i.select&&i.select();toast(FL[f]+' талбар идэвхжлээ')}return}
+    if(i){i.focus();i.select&&i.select();toast(FL[f]+' '+utxt('toast.field_active','талбар идэвхжлээ'))}return}
   if(t.closest&&t.closest('[data-tsave]')){
     var id=S.widget,d=dirtyTextFields(id);
     if(!d.length)return;
     d.forEach(function(f){
       log(id,FL[f]+': "'+curText(id,f)+'" → "'+S.td[f]+'"');
       CON.widgets[id][f]=S.td[f]});
-    render();toast(d.length+' текст талбар хэрэглэгдлээ');return}
+    render();toast(d.length+' '+utxt('toast.text_applied','текст талбар хэрэглэгдлээ'));return}
   if(t.closest&&t.closest('[data-tcancel]')){
-    resetTd(S.widget);render();toast('Текстийн өөрчлөлт цуцлагдлаа');return}
+    resetTd(S.widget);render();toast(utxt('toast.text_cancelled','Текстийн өөрчлөлт цуцлагдлаа'));return}
 });
 
 /* Гар талбараар (Enter/Space) виджет нээх */
@@ -1871,7 +2104,7 @@ document.addEventListener('change',function(e){
   if(t.id==='fViz'){S.wViz=t.value;renderBody();return}
   var vz=e.target.closest&&e.target.closest('[data-viz]');
   if(vz){S.viz[vz.dataset.viz]=vz.value;render();
-    toast('Харагдацын хэлбэр: '+vz.value);return}
+    toast(utxt('toast.viz_changed','Харагдацын хэлбэр:')+' '+vz.value);return}
   var sel=e.target.closest&&e.target.closest('[data-slot]');
   if(!sel)return;
   var p=sel.dataset.slot.split('|'), id=p[0], path=p[1]?p[1].split(','):[], mk=sel.value||null;
@@ -1896,7 +2129,7 @@ document.addEventListener('change',function(e){
     if(ov&&ov.label) sv.label=ov.label;
   }
   log(id,(p[2]||'метрик')+': '+(before||'—')+' → '+(mk||'—'));
-  render();toast(mk?('Холбогдлоо: '+mk):'Холбоос салгагдлаа');
+  render();toast(mk?(utxt('toast.bound','Холбогдлоо:')+' '+mk):utxt('toast.unbound','Холбоос салгагдлаа'));
 });
 
 document.addEventListener('input',function(e){
@@ -1911,7 +2144,7 @@ document.addEventListener('input',function(e){
     var d=String(sf.value)!==String(siteGet0(p)==null?'':siteGet0(p));
     if(row) row.classList.toggle('dirty',d);
     var n=dirtyCount();
-    $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> өөрчлөлт хадгалагдаагүй'):'Өөрчлөлт алга';
+    $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
     $('expBtn').disabled=n===0; $('revBtn').disabled=n===0;
     $('siteN').textContent=siteDirtyKeys().length||'';
     return;
@@ -1946,20 +2179,24 @@ $('expBtn').addEventListener('click',function(){
   var today=new Date().toISOString().slice(0,10), files=[];
   if(regDirtyKeys().length){REG.updated=today;download(REG,'metric_registry.json');files.push('metric_registry.json')}
   if(contentDirty()){CON.updated=today;download(CON,'content.json');files.push('content.json')}
-  toast('Татагдлаа: '+files.join(' + ')+' — репод хуулж commit хийнэ үү');
+  toast(utxt('toast.downloaded','Татагдлаа:')+' '+files.join(' + ')+' '+
+    utxt('toast.downloaded_note','— репод хуулж commit хийнэ үү'));
 });
 $('allBtn').addEventListener('click',function(){
   S.level=(S.level==='all')?'sections':'all';S.section=null;S.td=null;render();
 });
 $('revBtn').addEventListener('click',function(){
   REG=clone(REG0);CON=clone(CON0);S.td=null;LOG=[];
-  render();toast('Бүх өөрчлөлт буцаагдлаа');
+  render();toast(utxt('toast.reverted','Бүх өөрчлөлт буцаагдлаа'));
 });
 
 /* ══════════════════ АЧААЛАХ ══════════════════ */
 function showState(html,cls){$('state').innerHTML='<div class="state '+(cls||'')+'">'+html+'</div>'}
 showState('<h2><span class="spin"></span>Ачааллаж байна</h2>'+
   '<p><code>../metric_registry.json</code> ба <code>../content.json</code> уншиж байна…</p>');
+/* Энэ мөр content.json уншигдахаас ӨМНӨ гарах тул ui{}-ээс уншиж чадахгүй —
+   цорын ганц зориудаар хатуу үлдээсэн текст. Уншсаны дараах БҮХ дэлгэц
+   ui{}-ээс уншина. */
 function getJson(u){
   return fetch(u,{cache:'no-store'}).then(function(r){
     if(!r.ok)throw new Error(u+' → HTTP '+r.status);
@@ -1968,12 +2205,14 @@ function getJson(u){
 Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
 .then(function(r){
   REG=r[0];CON=r[1];REG0=clone(REG);CON0=clone(CON);
+  applyContentText();
   var missing=SCOPE.filter(function(id){return !REG.widgets[id]||!CON.widgets[id]})
     .concat(Object.keys(TEXT_ONLY).filter(function(id){return !CON.widgets[id]}));
   if(missing.length){
-    showState('<h2>Бүртгэлгүй виджет олдлоо</h2><p>Дараах '+missing.length+
-      ' виджет registry эсвэл content.json-д алга: <code>'+esc(missing.join(', '))+
-      '</code></p><p>Файлыг шалгаад дахин ачаална уу — зохиомол утгаар нөхөхгүй.</p>','err');
+    showState('<h2>'+esc(utxt('boot.missing_title','Бүртгэлгүй виджет олдлоо'))+'</h2><p>'+
+      esc(utxt('boot.missing_lead','Дараах'))+' '+missing.length+' '+
+      esc(utxt('boot.missing_tail','виджет registry эсвэл content.json-д алга:'))+' <code>'+esc(missing.join(', '))+
+      '</code></p><p>'+esc(utxt('boot.missing_hint','Файлыг шалгаад дахин ачаална уу — зохиомол утгаар нөхөхгүй.'))+'</p>','err');
     return}
   $('state').innerHTML='';
   $('expbar').style.display='flex';
@@ -1984,11 +2223,9 @@ Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
   loadFeed().then(render);
 })
 .catch(function(err){
-  showState('<h2>Файл уншиж чадсангүй</h2><p>'+esc(err.message)+'</p>'+
-    '<p>Энэ хэрэгсэл <b>локал HTTP сервер</b> шаардана. Файлыг давхар товшиж '+
-    '(<code>file://</code>) нээвэл хөтөч <code>fetch</code>-ийг блоклоно.</p>'+
-    '<p>Репозиторийн үндсэн хавтаснаас: <code>python -m http.server 8080</code> '+
-    'ажиллуулаад <code>http://localhost:8080/admin/index.html</code> хаягаар нээнэ үү.</p>','err');
+  showState('<h2>'+esc(utxt('boot.read_fail','Файл уншиж чадсангүй'))+'</h2><p>'+esc(err.message)+'</p>'+
+    '<p>'+esc(utxt('boot.server_hint','Энэ хэрэгсэл локал HTTP сервер шаардана. Файлыг давхар товшиж (file://) нээвэл хөтөч fetch-ийг блоклоно.'))+'</p>'+
+    '<p>'+esc(utxt('boot.server_cmd_hint','Репозиторийн үндсэн хавтаснаас: python -m http.server 8080 ажиллуулаад http://localhost:8080/admin/index.html хаягаар нээнэ үү.'))+'</p>','err');
 });
 
 })();

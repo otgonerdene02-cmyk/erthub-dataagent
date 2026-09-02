@@ -144,10 +144,19 @@ function groupB() {
     if (/^hero\.diagram\.chip_bodies\.\d+$/.test(p)) return !/stxt\('hero\.diagram\.chip_bodies\./.test(src);
     /* nav-ийн шошгыг PAGES дээр давталтаар уншдаг тул түлхүүр нь ДИНАМИК */
     if (/^nav\./.test(p)) return !src.includes("stxt('nav.'+p.id");
-    /* Салбарын нэрийг loadContent() дотор SECTORS руу шууд дарж бичдэг */
-    if (/^sectors\./.test(p)) return !src.includes('SECTORS[k].label=sl[k]');
     /* Богино нэрийг livestrip дотор ДИНАМИК түлхүүрээр уншина */
     if (/^sector_short\./.test(p)) return !src.includes("stxt('sector_short.'+k");
+    /* applySiteContent() нь модулийн түвшний тогтмолыг (SECTORS, KPI_UNIFIED,
+       WEEK_DATA, RECENT, PROJECTS, POLICIES, AI_*) content.json-оос ДИНАМИК
+       түлхүүрээр дүүргэдэг тул мөрөөр хайж олдохгүй. Бүлгийн нэр тэр функц
+       дотор ашиглагдсан эсэхийг шалгана. Утга нь сайт дээр ҮНЭХЭЭР гарч
+       ирснийг tests/text-coverage.js (F3 round-trip) DOM-оос баталдаг. */
+    const dynGroups = ['sectors', 'sector_kpi', 'sector_kpi_air_live', 'sector_chart', 'unit',
+      'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
+    const grp = p.split('.')[0];
+    if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
+      return !(src.includes('S.' + grp) || src.includes("stxt('" + grp + "."));
+    }
     return !src.includes("stxt('" + p + "'");
   });
   check('site{} зам бүр stxt()-ээр уншигдана',
@@ -251,6 +260,25 @@ function groupE() {
   check('Нэршил: admin-д "<...>" placeholder үлдээгүй',
     !/<идэвхтэй салбар>|<үзүүлэлт>/.test(admNoCmt));
   check('Нэршил: байршлын зам (widgetPath) байна', /function widgetPath\(/.test(adm));
+
+  /* T5 — админы интерфейсийн текст ба маягтын шошго ч content.json-оос */
+  const con5 = readJson('content.json');
+  check('T5: content.json-д ui{} блок байна', !!con5.ui && Object.keys(con5.ui).length > 10);
+  check('T5: content.json-д ui_form{} (маягтын шошго) байна',
+    !!con5.ui_form && Array.isArray(con5.ui_form.ui) && Array.isArray(con5.ui_form.site));
+  check('T5: admin-д utxt() уншигч байна', /function utxt\(path,fallback\)/.test(adm));
+  check('T5: admin ui_form-оос бүлгийн шошгыг уншина',
+    /CON\.ui_form/.test(adm) && /SITE_GROUPS=uf\.site/.test(adm));
+  check('T5: admin бүх навч талбарыг засварлагдах болгоно',
+    /function everyTextPath\(\)/.test(adm) && /function sitePaths\(\)\{ return everyTextPath\(\); \}/.test(adm));
+  check('T5: index.html-д applySiteContent() байна',
+    /function applySiteContent\(\)/.test(src) && /SITE_TEXT=\(json&&json\.site\)\|\|null;/.test(src));
+  check('T5: модулийн түвшний stxt() (класс гаднаас уншина)',
+    /^function stxt\(path,fallback\)\{/m.test(src));
+  /* Виджетийн preview дэх салбарын нэр админд ХАТУУ бичигдээгүй —
+     site.sectors-оос ирнэ (01-р виджетийн 5 салбарын нэр гэх мэт) */
+  check('T5: admin салбарын нэрийг site.sectors-оос авна',
+    /CON\.site&&CON\.site\.sectors/.test(adm) && /SECN\[k\]=sec\[k\]/.test(adm));
 }
 
 /* ───────────────────── C. ADMIN UI (толгойгүй Chrome) ───────────────────── */
