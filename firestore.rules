@@ -16,6 +16,13 @@ service cloud.firestore {
 
     function signedIn()    { return request.auth != null; }
     function isOwner(uid)  { return signedIn() && request.auth.uid == uid; }
+    // Нийтлэх эрх — admins/{uid} баримт байгаа эсэхээр шийднэ. Жагсаалтыг
+    // дүрэм дотор ХАТУУ БИЧИХГҮЙ: шинэ админ нэмэхэд дүрэм дахин
+    // Publish хийх шаардлагагүй болно.
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
 
     // Нэгтгэсэн тоолуурын талбарууд — өөр талбар бичихийг зөвшөөрөхгүй.
     function counterKeys() {
@@ -96,6 +103,36 @@ service cloud.firestore {
       allow create: if request.resource.data.count == 1;
       allow update: if request.resource.data.count == resource.data.count + 1;
       allow delete: if false;
+    }
+
+    // ---- Сайтын нийтлэгдсэн контент --------------------------------------
+    // Админ самбар файл руу бичдэггүй тул засвар нь өмнө нь зөвхөн хөтчийн
+    // санах ойд үлдэж, экспорт → commit хийж байж сайтад гардаг байв.
+    // Энэ баримт нь content.json / metric_registry.json-ий ДЭЭР давхарлагдах
+    // нийтлэл — админ "Нийтлэх" дарангуут бүх зочин шинэ текстийг харна.
+    //
+    // Уншилт НЭЭЛТТЭЙ: сайтын зочин бүр (нэвтрээгүй ч) уншина.
+    // Бичих эрх: ЗӨВХӨН admins/{uid} баримт үүсгэгдсэн хэрэглэгч.
+    // Талбарууд нь JSON-г МӨРӨӨР хадгална (Firestore массив доторх массив
+    // зөвшөөрдөггүй, төрөл хөрвүүлэлт хоосон мөрийг гажуудуулж болзошгүй).
+    match /site_content/{docId} {
+      allow read: if true;
+      allow write: if isAdmin()
+                   && request.resource.data.content is string
+                   && request.resource.data.content.size() < 900000
+                   && request.resource.data.byUid == request.auth.uid;
+    }
+
+    // ---- Нийтлэх эрхтэй хүмүүсийн жагсаалт -------------------------------
+    // Баримтыг ЗӨВХӨН Firebase Console-оос гараар үүсгэнэ (клиентээс
+    // бичих боломжгүй) — эс тэгвэл хэн ч өөрийгөө админ болгоно.
+    // Үүсгэх: Firestore → "admins" коллекц → Document ID = таны uid
+    // (админ самбарын толгойд харагдана), талбар шаардлагагүй.
+    // Эзэн нь өөрийнхөө бичлэгийг уншиж чадах ёстой — админ самбар
+    // "Нийтлэх" товчийг үзүүлэх эсэхээ үүгээр шийднэ.
+    match /admins/{uid} {
+      allow read:  if isOwner(uid);
+      allow write: if false;
     }
 
     // Бусад бүх зам хаалттай.

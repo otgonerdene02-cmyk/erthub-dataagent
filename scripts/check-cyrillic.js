@@ -24,9 +24,15 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 
 function defaultFiles() {
-  const fixed = ['index.html', 'content.json', 'metric_registry.json'];
+  // admin/index.html ба js/*.js урт монгол тайлбартай ч ӨМНӨ НЬ шалгагддаггүй
+  // байсан — кириллийн дүр төстэй латин үсэг тэнд ч ордог тул хамруулна.
+  const fixed = ['index.html', 'content.json', 'metric_registry.json', 'admin/index.html'];
+  const jsDir = path.join(repoRoot, 'js');
+  const jsFiles = fs.existsSync(jsDir)
+    ? fs.readdirSync(jsDir).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f)
+    : [];
   const mdFiles = fs.readdirSync(repoRoot).filter((f) => f.toLowerCase().endsWith('.md'));
-  return [...fixed, ...mdFiles].map((f) => path.join(repoRoot, f));
+  return [...fixed, ...jsFiles, ...mdFiles].map((f) => path.join(repoRoot, f));
 }
 
 const allowlistPath = path.join(__dirname, 'check-cyrillic-allowlist.txt');

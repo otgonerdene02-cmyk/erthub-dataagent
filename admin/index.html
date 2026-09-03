@@ -330,6 +330,13 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .expbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line2);padding:11px 18px;display:none;align-items:center;gap:12px;flex-wrap:wrap;z-index:25;box-shadow:0 -3px 14px rgba(19,26,46,.06)}
 .expbar .d{font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
 .expbar .d b{color:var(--warn)}
+/* нийтлэх · нэвтрэлт */
+.pubwho{font-family:var(--mono);font-size:10px;color:var(--ink3);display:flex;align-items:center;gap:7px}
+.pubwho code{background:#F2F5FC;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:9.5px}
+.pubst{font-family:var(--mono);font-size:10px;color:var(--ink3)}
+.pubst.on{color:var(--ok)} .pubst.err{color:var(--bad)}
+#pubBtn{background:var(--ok);border-color:var(--ok);color:#fff}
+#pubBtn:hover:not(:disabled){background:#0C8E57;border-color:#0C8E57}
 .toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--ink);color:#fff;font-family:var(--mono);font-size:11.5px;padding:10px 18px;border-radius:9px;box-shadow:0 8px 26px rgba(19,26,46,.28);opacity:0;transition:.24s;z-index:70;pointer-events:none;max-width:92vw;text-align:center}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .cd.flash{animation:fl 1.1s ease}
@@ -351,6 +358,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/erthub-publish.js"></script>
 </head>
 <body>
 
@@ -359,6 +370,9 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
     <div><div class="sub" data-ui="app.sub">Дата удирдлага · нүүр хуудас</div><h1 data-ui="app.title">Нүүр хуудасны агуулга</h1></div>
     <div class="hd-r">
       <button class="btn sm" id="allBtn">Бүх харагдац</button>
+      <span class="pubwho" id="pubWho"></span>
+      <button class="btn sm" id="loginBtn" style="display:none" data-ui="publish.login">Нэвтрэх (Google)</button>
+      <button class="btn sm" id="logoutBtn" style="display:none" data-ui="publish.logout">Гарах</button>
       <a class="btn sm" href="../index.html" target="_blank" rel="noopener" data-ui="app.open_site">Сайтыг нээх ↗</a></div>
   </div>
   <div class="tabs">
@@ -387,6 +401,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
   <button class="btn pri" id="expBtn" disabled data-ui="app.export">Экспортлох</button>
   <button class="btn sm" id="revBtn" disabled data-ui="app.revert">Бүх өөрчлөлтийг буцаах</button>
   <span class="d" id="dirtyMsg">Өөрчлөлт алга</span>
+  <button class="btn" id="pubBtn" disabled data-ui="publish.button">Сайтад нийтлэх</button>
+  <span class="pubst" id="pubMsg"></span>
   <span class="d" style="margin-left:auto" data-ui="app.export_note">Файл руу шууд бичихгүй — татаж аваад commit хийнэ</span>
 </div>
 
@@ -2182,6 +2198,7 @@ window.addEventListener('popstate',function(e){
 function render(){
   if(!REG||!CON)return;
   applyContentText();   /* ui{}/site{} → тогтмол (шууд засварыг барина) */
+  if(typeof renderAuth==='function') renderAuth();
   navSync();
   /* Табын харагдац: "Сайтын текст" нь датасэт/зам мөр/хамралтын зурвасыг
      хэрэглэхгүй тул зүүн багана болон толгойн хэсгийг нуулгана. */
@@ -2222,6 +2239,7 @@ function render(){
   $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
   $('expBtn').disabled=n===0;
   $('revBtn').disabled=n===0;
+  if(typeof refreshPubBtn==='function') refreshPubBtn();
   if(S.flash) setTimeout(function(){S.flash=null},1200);
 }
 /* Зөвхөн #body-г шинэчилнэ — #fbar-д хүрэхгүй тул хайлтын input/шүүлтийн
@@ -2359,7 +2377,7 @@ document.addEventListener('input',function(e){
     if(row) row.classList.toggle('dirty',d);
     var n=dirtyCount();
     $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
-    $('expBtn').disabled=n===0; $('revBtn').disabled=n===0;
+    $('expBtn').disabled=n===0; $('revBtn').disabled=n===0; if(typeof refreshPubBtn==='function') refreshPubBtn();
     $('siteN').textContent=siteDirtyKeys().length||'';
     /* Виджетийн засварын дэлгэц дээрх "Preview-ийн нийтлэг текст"
        талбар — бичих даруйд preview шинэчлэгдэнэ. */
@@ -2381,7 +2399,7 @@ document.addEventListener('input',function(e){
     }
     var rn=dirtyCount();
     $('dirtyMsg').innerHTML=rn?('<b>'+rn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
-    $('expBtn').disabled=rn===0; $('revBtn').disabled=rn===0;
+    $('expBtn').disabled=rn===0; $('revBtn').disabled=rn===0; if(typeof refreshPubBtn==='function') refreshPubBtn();
     repaintPreview();
     return;
   }
@@ -2429,6 +2447,94 @@ $('revBtn').addEventListener('click',function(){
   render();toast(utxt('toast.reverted','Бүх өөрчлөлт буцаагдлаа'));
 });
 
+/* ══════════════════ САЙТАД НИЙТЛЭХ ══════════════════
+   Админ ФАЙЛ РУУ бичдэггүй тул засвар нь өмнө нь зөвхөн санах ойд үлдэж,
+   Экспортлох → гар хуулалт → commit → push хийж байж сайтад гардаг байв.
+   "Сайтад нийтлэх" нь тэр гинжийг таслаад CON/REG-ийг Firestore-ийн
+   site_content/current баримтад бичнэ; сайт үүнийг файлын ДЭЭР давхарлан
+   уншина (js/erthub-publish.js).
+
+   Экспорт ХЭВЭЭР хэрэгтэй: нийтлэл нь шуурхай харагдац, git нь бүртгэл.
+   Хоёуланг нь хийхийг хэрэглэгчид ил сануулна. */
+var PUBSTATE={signedIn:false,canPublish:false,lastAt:null,lastBy:null,fromPublished:false};
+function pubMsg(t,cls){
+  var e=$('pubMsg'); if(!e) return;
+  e.textContent=t||''; e.className='pubst'+(cls?' '+cls:'');
+}
+function renderAuth(){
+  var w=$('pubWho'), li=$('loginBtn'), lo=$('logoutBtn'), pb=$('pubBtn');
+  if(!w) return;
+  var enabled=(typeof EHPublish!=='undefined')&&EHPublish.enabled;
+  if(!enabled){
+    w.textContent=utxt('publish.disabled','Firebase тохируулаагүй — нийтлэх боломжгүй');
+    li.style.display='none'; lo.style.display='none';
+    if(pb){pb.disabled=true;pb.title=utxt('publish.disabled','Firebase тохируулаагүй — нийтлэх боломжгүй')}
+    return;
+  }
+  var u=window.auth&&window.auth.currentUser;
+  if(!u){
+    w.textContent='';
+    li.style.display=''; lo.style.display='none';
+    if(pb){pb.disabled=true;pb.title=utxt('publish.need_login','Нийтлэхийн тулд нэвтэрнэ үү')}
+    return;
+  }
+  li.style.display='none'; lo.style.display='';
+  /* uid-ыг ИЛ үзүүлнэ — Firestore дээр admins/<uid> баримт үүсгэхэд
+     хэрэглэгчид энэ утга зайлшгүй хэрэгтэй. */
+  w.innerHTML=esc(u.email||u.uid)+' <code title="'+esc(utxt('publish.uid_hint',
+    'Firestore → admins коллекцод ЭНЭ ID-гаар баримт үүсгэвэл нийтлэх эрх нээгдэнэ'))+
+    '">'+esc(u.uid)+'</code>';
+  if(pb){
+    pb.disabled=!PUBSTATE.canPublish||dirtyCount()===0;
+    pb.title=PUBSTATE.canPublish
+      ?utxt('publish.hint','Одоогийн өөрчлөлтийг сайтад шууд нийтэлнэ')
+      :utxt('publish.no_rights','Нийтлэх эрхгүй — Firestore дээр admins/<uid> баримт үүсгэнэ үү');
+  }
+}
+function refreshPubBtn(){
+  var pb=$('pubBtn'); if(!pb) return;
+  pb.disabled=!PUBSTATE.canPublish||dirtyCount()===0;
+}
+if(typeof EHPublish!=='undefined'&&EHPublish.enabled&&window.auth){
+  window.auth.onAuthStateChanged(function(){
+    PUBSTATE.signedIn=!!(window.auth&&window.auth.currentUser);
+    PUBSTATE.canPublish=false; renderAuth();
+    if(!PUBSTATE.signedIn) return;
+    EHPublish.canPublish().then(function(ok){
+      PUBSTATE.canPublish=ok; renderAuth();
+      if(!ok) pubMsg(utxt('publish.no_rights','Нийтлэх эрхгүй — Firestore дээр admins/<uid> баримт үүсгэнэ үү'),'err');
+      else pubMsg('');
+    });
+  });
+}
+document.addEventListener('click',function(e){
+  var t=e.target;
+  if(t&&t.id==='loginBtn'){
+    if(!window.googleProvider){pubMsg(utxt('publish.disabled','Firebase тохируулаагүй — нийтлэх боломжгүй'),'err');return}
+    window.auth.signInWithPopup(window.googleProvider)
+      .catch(function(err){pubMsg(err.message,'err')});
+    return;
+  }
+  if(t&&t.id==='logoutBtn'){ window.auth.signOut(); return }
+  if(t&&t.id==='pubBtn'){
+    if(t.disabled) return;
+    t.disabled=true;
+    pubMsg(utxt('publish.publishing','Нийтэлж байна…'));
+    EHPublish.publish(CON,REG).then(function(r){
+      /* Нийтэлсэн төлөв нь шинэ "суурь" болно — дараагийн dirty тоолол
+         файлаас БИШ, нийтлэгдсэн хувилбараас тоологдоно. */
+      CON0=clone(CON); REG0=clone(REG);
+      PUBSTATE.lastAt=r.at; PUBSTATE.fromPublished=true;
+      pubMsg(utxt('publish.done','Нийтлэгдлээ — сайт шинэчлэгдсэн'),'on');
+      toast(utxt('publish.toast','Сайтад нийтлэгдлээ. Git-д бүртгэхийн тулд Экспортлох дарж commit хийнэ үү.'));
+      render();
+    }).catch(function(err){
+      pubMsg(err.message,'err'); refreshPubBtn();
+    });
+    return;
+  }
+});
+
 /* ══════════════════ АЧААЛАХ ══════════════════ */
 function showState(html,cls){$('state').innerHTML='<div class="state '+(cls||'')+'">'+html+'</div>'}
 showState('<h2><span class="spin"></span>Ачааллаж байна</h2>'+
@@ -2456,6 +2562,22 @@ Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
   $('state').innerHTML='';
   $('expbar').style.display='flex';
   render();
+  /* Нийтлэгдсэн хувилбар байвал ТҮҮНИЙГ суурь болгоно — эс тэгвэл админ
+     файлын хуучин текстийг засаж, дараагийн нийтлэлээр амьд сайтын
+     өөрчлөлтийг БУЦААЖ дарах эрсдэлтэй. */
+  if(typeof EHPublish!=='undefined'&&EHPublish.enabled){
+    EHPublish.load().then(function(pub){
+      if(!pub) return;
+      if(pub.content){ CON=pub.content; CON0=clone(CON) }
+      if(pub.registry){ REG=pub.registry; REG0=clone(REG) }
+      PUBSTATE.fromPublished=true;
+      PUBSTATE.lastAt=pub.meta&&pub.meta.at; PUBSTATE.lastBy=pub.meta&&pub.meta.by;
+      applyContentText(); S.td=null; render();
+      pubMsg(utxt('publish.base_published','Нийтлэгдсэн хувилбар дээр ажиллаж байна')+
+        (PUBSTATE.lastAt?' · '+String(PUBSTATE.lastAt).slice(0,16).replace('T',' '):'')+
+        (PUBSTATE.lastBy?' · '+PUBSTATE.lastBy:''));
+    }).catch(function(){});
+  }
   /* Урьдчилан харах картыг ЖИНХЭНЭ дата цэгээр зурахын тулд сайт өөрөө
      уншдаг feed-ийг ачаална. Амжилтгүй ч гэсэн хэрэгсэл БҮРЭН ажиллана —
      preview зөвхөн бүтцээ харуулж, "дата ачаалагдаагүй" гэж ил хэлнэ. */

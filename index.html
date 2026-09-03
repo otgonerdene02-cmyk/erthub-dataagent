@@ -12,6 +12,7 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/dataset-views.js"></script>
 <script src="js/erthub-store.js"></script>
+<script src="js/erthub-publish.js"></script>
 <script src="js/vendor/dc-runtime.js"></script>
 </head>
 <body>
@@ -4276,6 +4277,7 @@ class Component extends DCLogic {
   componentDidMount(){
     this.loadGlobe(); this.syncMonths(); this.loadSources(); this.loadMongoliaGeo();
     this.auditBindings(); this.loadContent(); this.loadMetricRegistry();
+    this.loadPublished();
     this._esc=(e)=>{ if(e.key==='Escape') this.escClose(); };
     window.addEventListener('keydown',this._esc);
     this._onResize=()=>this.setState({viewportW:window.innerWidth});
@@ -4473,6 +4475,30 @@ class Component extends DCLogic {
   // дотор нь "getters" жагсаалтаас (метрикийн нэр → JS функц) уншина.
   // Одоохондоо ЗӨВХӨН 1 метрик (air.flight_count_last_month) холбогдсон;
   // H4-т цааш нэмэгдэнэ.
+  // ─── Нийтлэгдсэн контент (Firestore overlay) ───────────────────────────
+  // Админ самбар ФАЙЛ РУУ бичдэггүй тул засвар нь өмнө нь экспорт → гар
+  // хуулалт → commit хийж байж сайтад гардаг байв. Одоо админ "Нийтлэх"
+  // дарахад Firestore-ийн site_content/current баримт шинэчлэгдэж, сайт
+  // үүнийг ФАЙЛЫН ДЭЭР давхарлан уншина.
+  //
+  // ДАРААЛАЛ ЧУХАЛ: файл ЭХЛЭЭД ачаалагдаж хуудас зурагдана (хурдан,
+  // сүлжээнээс хамааралгүй), overlay хожуу ирээд дахин зурна. Firestore
+  // унтарсан/хаалттай/сүлжээгүй бол сайт ЯГ ӨМНӨХ ШИГЭЭ ажиллана —
+  // нийтлэл бол НЭМЭЛТ давхарга, шаардлага биш.
+  async loadPublished(){
+    if(typeof EHPublish==='undefined'||!EHPublish.enabled) return;
+    let pub=null;
+    try{ pub=await EHPublish.load(); }catch(e){ return }
+    if(!pub) return;
+    if(pub.content){
+      SITE_TEXT=(pub.content&&pub.content.site)||SITE_TEXT;
+      applySiteContent();
+      this.setState({content:pub.content});
+    }
+    if(pub.registry) this.setState({metricRegistry:pub.registry});
+    console.info('[ErtHub] нийтлэгдсэн контент хэрэглэгдлээ:',
+      (pub.meta&&pub.meta.at)||'—', (pub.meta&&pub.meta.by)||'');
+  }
   async loadMetricRegistry(){
     try{
       const res=await fetch('metric_registry.json?t='+Date.now(),{cache:'no-store'});

@@ -292,11 +292,23 @@ const CHROME = [
    file:// дээрээс http://localhost-ыг iframe-дэж байсан нь CROSS-ORIGIN
    болж contentDocument унаад probe мөнхөд хүлээж, ETIMEDOUT болдог байв. */
 let PROBE_JS = '', PROBE_RESULT = null;
+/* Probe-ийн iframe аль хуудсыг ачаалахыг сонгоно (админ / нүүр хуудас),
+   мөн ямар нэг файлыг САНАХ ОЙНООС орлуулж өгч болно — репо дэх файл
+   ХӨНДӨГДӨХГҮЙ. G бүлэг нь Firestore-гүйгээр нийтлэлийн давхаргыг
+   шалгахад үүнийг ашиглана. */
+let PROBE_SRC = '/admin/index.html';
+let SERVE_OVERRIDE = null;   /* {'/js/erthub-publish.js': '<эх бичвэр>'} */
 function serve() {
   const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
     '.css': 'text/css', '.svg': 'image/svg+xml' };
   return http.createServer((req, res) => {
     const p = decodeURIComponent(req.url.split('?')[0]);
+    if (SERVE_OVERRIDE && SERVE_OVERRIDE[p] != null) {
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(p).toLowerCase()] || 'text/plain',
+        'Cache-Control': 'no-store' });
+      res.end(SERVE_OVERRIDE[p]);
+      return;
+    }
     if (p === '/__result__' && req.method === 'POST') {
       let b = ''; req.on('data', c => b += c);
       req.on('end', () => { PROBE_RESULT = b; res.writeHead(200); res.end('ok'); });
@@ -305,7 +317,7 @@ function serve() {
     if (p === '/__probe__') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(`<!doctype html><meta charset="utf-8"><body>
-<iframe id="f" src="/admin/index.html" style="width:1400px;height:1200px;border:0"></iframe>
+<iframe id="f" src="${PROBE_SRC}" style="width:1400px;height:1200px;border:0"></iframe>
 <script>
 function done(v){fetch('/__result__',{method:'POST',body:JSON.stringify(v)})}
 function poll(){var f=document.getElementById('f'),d,w;
@@ -526,10 +538,94 @@ async function groupF() {
   } finally { srv.close(); }
 }
 
+
+/* Firestore-гүй орчинд нийтлэлийн давхаргыг шалгах хуурамч модуль.
+   Жинхэнэ js/erthub-publish.js-ийн ГЭРЭЭ (load/publish/canPublish/enabled)
+   яг ижил — index.html-ийн холболт зөв эсэхийг шалгана. */
+const STUB_NONE = 'window.EHPublish={enabled:true,load:function(){return Promise.resolve(null)},'+
+  'publish:function(){return Promise.reject(new Error("stub"))},canPublish:function(){return Promise.resolve(false)}};';
+
+function stubWith(patch) {
+  return 'window.EHPublish={enabled:true,canPublish:function(){return Promise.resolve(false)},'+
+    'publish:function(){return Promise.reject(new Error("stub"))},'+
+    'load:function(){return fetch("content.json?s=1",{cache:"no-store"}).then(function(r){return r.json()})'+
+    '.then(function(j){ (' + patch + ')(j); return {content:j,registry:null,meta:{at:"2026-09-03T00:00:00Z",by:"test"}} })}};';
+}
+const STUB_SOME = stubWith('function(j){ j.widgets.ls.title="ПУБ-ГАРЧИГ"; j.site.nav.home="ПУБ-НҮҮР" }');
+
+/* Нүүр хуудсанд ямар текст гарсныг уншина */
+const SITE_PROBE = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(5000);
+  const q=s=>{const e=d.querySelector(s); return e?e.textContent.trim():null};
+  return { ls:q('[data-eh-card="ls"][data-eh-field="title"]'),
+           nav:(function(){var b=[].slice.call(d.querySelectorAll('button,a'))
+                 .filter(function(x){return /^(Нүүр|ПУБ-НҮҮР)$/.test(x.textContent.trim())})[0];
+                 return b?b.textContent.trim():null})() };
+}`;
+
+/* ══════════════════════════════════════════════════════════════════
+   G. САЙТАД НИЙТЛЭХ ДАВХАРГА (Firestore overlay)
+
+   Админ ФАЙЛ РУУ бичдэггүй тул засвар нь өмнө нь Экспортлох → гар
+   хуулалт → commit хийж байж сайтад гардаг байв. Одоо "Сайтад нийтлэх"
+   нь content.json/metric_registry.json-ий ДЭЭР давхарлагдах баримтыг
+   Firestore-т бичдэг. Энэ бүлэг Firestore-гүйгээр (эх модулийг санах
+   ойн хуурамч хувилбараар орлуулж) хоёр зүйлийг шалгана:
+     G1. Нийтлэл БАЙХГҮЙ / уншигдахгүй үед сайт ФАЙЛААРАА ажиллана
+         (нийтлэл бол НЭМЭЛТ давхарга, шаардлага биш)
+     G2. Нийтлэл БАЙВАЛ сайт түүнийг файлын дээр давхарлан харуулна
+   ══════════════════════════════════════════════════════════════════ */
+async function groupG() {
+  group('G. Сайтад нийтлэх давхарга (Firestore overlay)');
+  if (!CHROME) { skipped('G бүлэг бүхэлдээ', 'Chrome олдсонгүй'); return; }
+
+  /* Статик шалгалт — холбоос бүрэн эсэх */
+  const idx = read('index.html'), adm = read('admin/index.html'), pub = read('js/erthub-publish.js');
+  check('index.html нийтлэлийн модулийг ачаална',
+    idx.includes('js/erthub-publish.js') && idx.includes('loadPublished()'));
+  check('admin нийтлэх товч ба модультай', adm.includes('erthub-publish.js') &&
+    adm.includes("id=\"pubBtn\"") && adm.includes('EHPublish.publish('));
+  check('Нийтлэл JSON-г МӨРӨӨР хадгална (массив доторх массивын хязгаар)',
+    pub.includes('stringValue: JSON.stringify(content)'));
+  check('firestore.rules-д site_content ба admins зам бүртгэгдсэн',
+    read('firestore.rules').includes('match /site_content/{docId}') &&
+    read('firestore.rules').includes('match /admins/{uid}'));
+  check('Нийтлэх эрхийг admins/{uid} баримтаар шийднэ (жагсаалт хатуу биш)',
+    read('firestore.rules').includes('documents/admins/$(request.auth.uid)'));
+
+  const srv = serve();
+  try {
+    /* ── G1. Нийтлэлгүй үед файлын утга үлдэнэ ── */
+    const base = readJson('content.json').widgets.ls.title;
+    PROBE_SRC = '/index.html';
+    SERVE_OVERRIDE = { '/js/erthub-publish.js': STUB_NONE };
+    const r1 = await runProbe(SITE_PROBE, 120000);
+    if (r1.__err) { bad('G1 ачаалалт', r1.__err); }
+    else check('G1. Нийтлэлгүй үед сайт файлын текстээ хэвээр харуулна',
+      r1.ls === base, 'олдсон: ' + r1.ls + ' (хүлээсэн: ' + base + ')');
+
+    /* ── G2. Нийтлэл байвал давхарлана ── */
+    SERVE_OVERRIDE = { '/js/erthub-publish.js': STUB_SOME };
+    const r2 = await runProbe(SITE_PROBE, 120000);
+    if (r2.__err) { bad('G2 ачаалалт', r2.__err); }
+    else {
+      check('G2. Нийтлэгдсэн гарчиг сайтад давхарлагдана',
+        r2.ls === 'ПУБ-ГАРЧИГ', 'олдсон: ' + r2.ls);
+      check('G2. Нийтлэгдсэн site{} текст ч давхарлагдана',
+        r2.nav === 'ПУБ-НҮҮР', 'олдсон: ' + r2.nav);
+    }
+  } finally {
+    SERVE_OVERRIDE = null;
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
-  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF();
+  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
