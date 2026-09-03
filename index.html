@@ -6001,7 +6001,21 @@ class Component extends DCLogic {
       const barsMarked=bars.map((b,i)=>Object.assign({},b,{isPeak:i===bestI,
         valueStyle:'font-family:\'JetBrains Mono\',monospace;font-size:10.5px;white-space:nowrap;flex-shrink:0;position:relative;z-index:1;'
           +(i===bestI?'color:var(--ink);font-weight:700;':'color:var(--ink2);')}));
-      const wbase=stxt('week.axis_prefix','Шугам тус бүр дээрх тоо = 7 хоногийн нийт')+' '+wd.unit+' '+
+      // fmtWeekVal нь K/M-ийг ӨӨРТӨӨ шингээж форматлодог (жиш. "18.4K") тул
+      // "мянган ..." шошгыг хамт үзүүлбэл масштаб ХОЁР ДАХИН тооцогдох мэт
+      // ойлгогдоно — иймд бодит утгын үед энгийн нэгж (хүн/тонн) ашиглана,
+      // mock үед л хуучин "мянган ..." үлдэнэ.
+      // Нэгжийн шошго: admin-аар content.json-д ГАРААР бичсэн утга байвал
+      // ТЭР нь давуу эрхтэй — эс тэгвэл "Нэгжийн шошго" талбар admin дээр
+      // харагдаж байгаа мөртөө сайтад ОРДОГГҮЙ "үхмэл талбар" болно.
+      // Хоосон үед л код өөрөө тооцоолно (бодит дата үед хүн/тонн).
+      const unitTxt=this.txt(widgetId,'unit','');
+      const unit=unitTxt||(realVal!=null
+        ?(wt==='cargo'?stxt('unit.ton','тонн'):stxt('unit.person','хүн')):wd.unit);
+      // Тэнхлэгийн тайлбар нь ЯГ ЭНЭ нэгжийг давтана — өмнө нь энд wd.unit
+      // (статик "мянган хүн") бичигддэг тул нэг картан дотор хоёр өөр нэгж
+      // харагдаж байв.
+      const wbase=stxt('week.axis_prefix','Шугам тус бүр дээрх тоо = 7 хоногийн нийт')+' '+unit+' '+
         stxt('week.axis_mid','· тэнхлэг')+' '+base.toLocaleString()+stxt('week.axis_suffix','-с эхэлнэ');
       // H5 (нэмэлт): w2pb/w2cb-ийн "Төрлийн хуваарь" донут — index 0
       // ("Агаарын тээвэр") ХУУЧИН WEEK_DATA статик тоо (жиш. 32.2) ашигладаг
@@ -6078,17 +6092,6 @@ class Component extends DCLogic {
       const airOnlyNote=(realVal!=null&&otherSectorsNone)
         ?stxt('status.air_only','Зөвхөн агаарын тээврийн эх сурвалж холбогдсон. Бусад салбар холбогдох бүрд нийт дүнд нэмэгдэнэ.')
         :'';
-      // fmtWeekVal нь K/M-ийг ӨӨРТЭЭ шингээж форматлодог (жиш. "18.4K")
-      // тул wd.unit-ийн "мянган ..." шошгыг хамт үзүүлбэл масштаб ХОЁР
-      // ДАХИН тооцогдох мэт ойлгогдоно — иймд бодит үтгын үед энгийн
-      // нэгж (хүн/тонн) ашиглана, mock үед л хуучин "мянган ..." үлдэнэ.
-      // Нэгжийн шошго: admin-аар content.json-д ГАРААР бичсэн утга байвал
-      // ТЭР нь давуу эрхтэй — эс тэгвэл "Нэгжийн шошго" талбар admin дээр
-      // харагдаж байгаа мөртөө сайтад ОРДОГГүй "үхмэл талбар" болно.
-      // Хоосон үед л код өөрөө тооцоолно (бодит дата үед хүн/тонн).
-      const unitTxt=this.txt(widgetId,'unit','');
-      const unit=unitTxt||(realVal!=null
-        ?(wt==='cargo'?stxt('unit.ton','тонн'):stxt('unit.person','хүн')):wd.unit);
       return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,stats,plan,unit,total,delta,airOnlyNote};
     };
     const wPax=buildWeek('pax',WEEK_DATA.pax,'w2p','w2px'), wCargo=buildWeek('cargo',WEEK_DATA.cargo,'w2c','w2cx');

@@ -440,7 +440,13 @@ async function groupC() {
         const spec='<b>"&\\'x</b> 🚗 mixed vү';
         inp2.value=spec; inp2.dispatchEvent(new w.Event('input',{bubbles:true})); await sleep(280);
         const pv=d.querySelector('.sitepv');
-        R.specNoInject=!!pv && pv.querySelectorAll('b').length===0;
+        /* Оруулсан ТЕКСТ HTML болж хувираагүй эсэхийг ЯГ ТЭР талбар дээр
+           шалгана. Өмнө нь "картад <b> элемент огт байхгүй" гэж шалгадаг
+           байсан нь буруу дохио өгдөг — preview дотор ЗОРИУДААР зурсан
+           <b> (донутын хувь, төлөвлөгөөний утга) ч тестийг унагаана. */
+        const ti=pv&&pv.querySelector('[data-ed="title"]');
+        R.specNoInject=!!ti && ti.querySelectorAll('b').length===0 &&
+                       ti.textContent.indexOf('<b>')>=0;
         R.specShown=!!pv && pv.textContent.includes('🚗');
       }
       return R;
@@ -476,10 +482,54 @@ async function groupC() {
   } finally { srv.close(); }
 }
 
+const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n  await sleep(3500);\n  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',\n    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',\n    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',\n    r06:'sec-06',u07:'sec-07'};\n  const norm=t=>t.replace(/[\\s\\u00a0]+/g,' ').trim();\n  const pvT=()=>norm(d.getElementById('pvhost').innerText);\n  const edT=()=>norm(d.querySelector('.edit2').innerText);\n  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost rect,#pvhost circle,#pvhost path,'+\n      '#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvrk i,'+\n      '#pvhost .pvcd .d,#pvhost .sp-val'))\n    .map(e=>e.tagName+':'+(e.getAttribute('height')||e.getAttribute('d')||\n      e.getAttribute('stroke-dasharray')||e.getAttribute('style')||e.textContent)).join('|');\n  const snap=()=>({t:pvT(),g:geo()});\n  const go=id=>{ let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();\n    const s=d.querySelector('[data-section=\"'+SEC[id]+'\"]'); if(!s) return false;\n    s.click(); const c=d.querySelector('[data-widget=\"'+id+'\"]'); if(!c) return false;\n    c.click(); return true; };\n  const probeAll=(q,attr,mk,scope)=>{ const out={};\n    [].slice.call(d.querySelectorAll(q)).map(x=>x.getAttribute(attr)).forEach(k=>{\n      const e=d.querySelector('['+attr+'=\"'+k+'\"]'); if(!e) return;\n      const ov=e.value, pr=mk(k);\n      e.value=pr; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n      out[k]=scope().indexOf(pr)>=0?'PASS':'FAIL';\n      e.value=ov; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n    }); return out; };\n  const R={rows:[]};\n  for(const id of Object.keys(SEC)){\n    const row={id:id};\n    if(!go(id)){ row.nav=false; R.rows.push(row); continue }\n    row.nav=true;\n    const s0=snap();\n    const sels=[].slice.call(d.querySelectorAll('[data-slot]'));\n    if(!sels.length){ row.swap='N/A'; row.back='N/A' }\n    else{\n      const sel=sels[0], cur=sel.value;\n      const en=[].slice.call(sel.options).filter(o=>!o.disabled&&o.value!==cur).map(o=>o.value);\n      const all=[].slice.call(sel.options).map(o=>o.value).filter(v=>v!==cur);\n      const pref=en.filter(v=>v);\n      const tgt=pref.length?pref[0]:(en.length?en[0]:all[0]);\n      sel.value=tgt; sel.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s1=snap();\n      row.swap=(s1.t!==s0.t||s1.g!==s0.g);\n      row.swapInfo=(cur||'—')+' → '+(tgt||'—');\n      const s2=d.querySelector('[data-slot]');\n      s2.value=cur; s2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s3=snap();\n      row.back=(s3.t===s0.t&&s3.g===s0.g);\n    }\n    const tf=probeAll('[data-tf]','data-tf',k=>'ZZ'+k.toUpperCase()+'ZZ',pvT);\n    const sf=probeAll('.e-fm [data-sf]','data-sf',()=>'ZZSFZZ',pvT);\n    const rf=probeAll('[data-rf]','data-rf',()=>'ZZRFZZ',edT);\n    row.tfN=Object.keys(tf).length; row.sfN=Object.keys(sf).length; row.rfN=Object.keys(rf).length;\n    row.dead=[].concat(Object.entries(tf),Object.entries(sf),Object.entries(rf))\n      .filter(x=>x[1]!=='PASS').map(x=>x[0]);\n    row.text=Object.values(tf).every(v=>v==='PASS');\n    R.rows.push(row);\n  }\n  R.dirty=d.getElementById('dirtyMsg').textContent;\n  return R;\n}";
+
+/* ══════════════════════════════════════════════════════════════════
+   F. ВИДЖЕТИЙН БҮХ ТАЛБАР ЗАСВАРЛАГДАХ (16 виджет)
+
+   Энэ бүлэг бол ДАХИН УНАЛТААС хамгаалах гол хаалт. Өмнө нь preview
+   доторх зарим элемент (нэгжийн шошго, хэлбэрийн badge, тэнхлэгийн
+   тайлбар, төлөвлөгөөний мөр, foot2) КОДОД ХАТУУ бичигдсэн эсвэл өөр
+   эх сурвалжаас уншигддаг байсан тул админ дээр засаж байхад preview-д
+   ОГТ тусдаггүй байв. Мөн w2p/w2c-ийн баганан график "энэ метрик cargo
+   мөн үү?" гэсэн ГАНЦ хатуу нөхцөлөөр дата сонгодог тул метрик сольсон
+   ч ӨӨРЧЛӨГДӨХГҮЙ байв.
+
+     F1. Метрик солиход preview-ийн текст эсвэл геометр ӨӨРЧЛӨГДӨНӨ
+     F2. Метрикийг буцаахад preview яг анхны төлөвтөө эргэнэ
+     F3. Виджетийн текст талбар бүр preview-д ШУУД тусна
+     F4. Засварын дэлгэц дээр ҮХМЭЛ (preview-д нөлөөлдөггүй) талбар алга
+   ══════════════════════════════════════════════════════════════════ */
+async function groupF() {
+  group('F. Виджетийн бүх талбар засварлагдах (16 виджет)');
+  if (!CHROME) { skipped('F бүлэг бүхэлдээ', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(PROBE_F, 240000);
+    if (R.__err) { bad('F бүлэг ажиллав', R.__err); return; }
+    const rows = R.rows || [];
+    check('16 виджет бүгд засварын дэлгэц нээгдэнэ',
+      rows.length === 16 && rows.every(r => r.nav),
+      'нээгдсэн: ' + rows.filter(r => r.nav).length);
+    const swapBad = rows.filter(r => r.swap === false).map(r => r.id + ' (' + r.swapInfo + ')');
+    check('F1. Метрик солиход preview ӨӨРЧЛӨГДӨНӨ', swapBad.length === 0, swapBad.join(', '));
+    const backBad = rows.filter(r => r.back === false).map(r => r.id);
+    check('F2. Метрикийг буцаахад preview анхны төлөвт эргэнэ', backBad.length === 0, backBad.join(', '));
+    const textBad = rows.filter(r => r.text === false).map(r => r.id);
+    check('F3. Виджетийн текст талбар бүр preview-д ШУУД тусна', textBad.length === 0, textBad.join(', '));
+    const dead = rows.filter(r => (r.dead || []).length).map(r => r.id + ': ' + r.dead.join(','));
+    check('F4. Засварын дэлгэцэд ҮХМЭЛ талбар БАЙХГҮЙ', dead.length === 0, dead.join(' | '));
+    const total = rows.reduce((a, r) => a + (r.tfN || 0) + (r.sfN || 0) + (r.rfN || 0), 0);
+    check('Засварлагдах талбар 200-аас олон шалгагдав', total > 200, 'нийт: ' + total);
+    console.log('        16 виджет · нийт ' + total + ' засварлагдах талбар шалгав');
+    check('Тест дуусахад өөрчлөлт үлдээгүй', /алга/.test(R.dirty || ''), R.dirty);
+  } finally { srv.close(); }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
-  groupA(); groupB(); await groupC(); groupD(); groupE();
+  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

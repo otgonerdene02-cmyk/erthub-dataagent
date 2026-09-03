@@ -11,7 +11,7 @@
 | `admin/index.html` | Удирдлагын хэрэгсэл — текст ба метрик холбоос засах |
 | `content.json` | **Бүх харагдах текст** (доор үз) |
 | `metric_registry.json` | Виджет → метрикийн холбоос, `agg/filter/transform` |
-| `tests/run.js` | Ерөнхий регресс (74 тест) |
+| `tests/run.js` | Ерөнхий регресс (81 тест; F бүлэг = 16 виджетийн засварлагдалт) |
 | `tests/text-coverage.js` | Харагдах текстийн хамрах хүрээ + round-trip (5 тест) |
 
 ## content.json — 4 блок
@@ -36,7 +36,7 @@
 
 ```bash
 node scripts/serve.js 8080          # хөгжүүлэлтийн сервер
-node tests/run.js                   # 74 тест
+node tests/run.js                   # 81 тест
 node tests/text-coverage.js --list  # хамрах хүрээ 100% байх ёстой
 ```
 
@@ -45,6 +45,37 @@ Commit хийхийн ӨМНӨ заавал:
 ```bash
 node scripts/check-cyrillic.js && node scripts/check-registry.js
 ```
+
+## Админы preview — засварлагдалтын гэрээ
+
+Виджетийн засварын дэлгэц дээр ХАРАГДАЖ БАЙГАА текст бүр засварлагдана.
+Гурван эх сурвалж, гурван төрлийн талбар:
+
+| Эх сурвалж | Атрибут | Юу |
+|---|---|---|
+| `content.json → widgets{}` | `data-tf` | Виджетийн өөрийн текст (title/sub/unit/foot/foot2) |
+| `content.json → ui{}` ба `site{}` | `data-sf` | "Preview-ийн нийтлэг текст" — badge, тэнхлэг, салбарын нэр |
+| `metric_registry.json` слот | `data-rf` | Холбогдоогүй слотын `label` / `would_need` |
+
+Дүрмүүд:
+
+- **Нэгжийн шошгод content.json ДАВУУ эрхтэй.** Админы `previewUnit()` ба
+  сайтын `buildWeek()` хоёул ижил дараалал баримтална:
+  `widgets.<id>.unit` → FIXED_UNIT/registry. Preview-д зөвхөн
+  `requiredUnit()` уншивал "Нэгжийн шошго" талбар үхмэл болно.
+- **График сонгосон МЕТРИКЭЭС хамаарна.** `metricAnySeries(mk)` ашиглана.
+  Метрикийн нэрийг хатуу шалгаж (`headMetric(id)==='...'`) дата сонгож
+  БОЛОХГҮЙ — өөр метрик сонгоход график өөрчлөгдөхгүй болно.
+- **Үхмэл талбар нэмэхгүй.** `chromeFields()` нь зам бүрийг
+  `pathAffectsPreview()`-ээр (утгыг нь түр зондоор солиод preview-г дахин
+  зурж) шалгана. Preview-д нөлөөлдөггүй зам жагсаалтад ОРОХГҮЙ.
+- **Бичих даруйд preview шинэчлэгдэнэ.** `repaintPreview()` нь `#pvhost`-ыг
+  л дахин зурна (бүтэн `render()` хийвэл курсор алдагдана).
+- **`applyContentText()` ДАХИН дуудагддаг.** Тогтмолуудыг (`SECN`, `SHAPEN`,
+  `FL`, `FIXED_UNIT` …) `DEF` хуулбараас дүүргэнэ — эс тэгвэл өмнөх утга
+  дараагийн удаагийн fallback болж "наалдаж", буцаах боломжгүй болно.
+
+Эдгээрийг `tests/run.js` F бүлэг 16 виджет × 300+ талбараар шалгана.
 
 ## Дүрэм
 

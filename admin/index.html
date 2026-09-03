@@ -206,6 +206,12 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .pvrow span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pvrow b{color:#0C1428;font-weight:600;white-space:nowrap}
 .pvax{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:8.5px;color:#7D8CA8;margin-top:5px}
+.pvplan{display:flex;align-items:center;gap:8px;margin-top:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;color:#7D8CA8}
+.pvplan b{color:#0C1428;font-weight:600}
+.pvplan b.z{color:#A7B0C6;font-weight:400}
+.pvplan u{margin-left:auto;text-decoration:none;font-weight:600;color:#0C1428}
+.pvpbar{height:6px;border-radius:4px;background:rgba(20,32,58,.08);overflow:hidden;margin-top:5px}
+.pvpbar i{display:block;height:100%;border-radius:4px}
 .pvempty{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;color:#A7B0C6;
   padding:10px 0;text-align:center;border:1px dashed rgba(20,32,58,.14);border-radius:6px}
 .pvkpi{display:flex;gap:7px;flex-wrap:wrap}
@@ -245,7 +251,9 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .pvgc .v{font-family:var(--mono);font-size:10px;font-weight:600;color:#0C1428}
 /* Эрэмбийн жагсаалт (r06) */
 .pvrank{display:flex;flex-direction:column;gap:4px}
-.pvrk{display:grid;grid-template-columns:14px 1fr auto;gap:6px;align-items:center}
+.pvrk .g{font-size:10px;flex:none}
+.pvrk .l{font-size:9px;color:#3A4460;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pvrk{display:grid;grid-template-columns:14px 13px minmax(0,1fr) 1fr auto;gap:6px;align-items:center}
 .pvrk .n{font-family:var(--mono);font-size:8px;color:#A7B0C6}
 .pvrk .b{height:4px;border-radius:2px;background:rgba(20,32,58,.08);overflow:hidden}
 .pvrk .b i{display:block;height:100%;border-radius:2px}
@@ -534,13 +542,29 @@ function utxt(path,fallback){
    тогтмолуудыг (SECN/SECTIONS/SHAPEN/VIZNAME/FL/MONTHS) амьд утгаар нь
    дарж бичнэ. Ингэснээр эдгээрийг ашигладаг 40 гаруй дуудалтыг
    өөрчлөхгүйгээр БҮГД засварлагдах болно. */
-function applyContentText(){
+/* Кодод бичсэн АНХНЫ (fallback) утгын хуулбар. applyContentText()-ийг
+   ДАХИН дуудахад өмнөх удаагийн утга дараагийн удаагийн fallback болж
+   "наалдвал" content.json дахь өөрчлөлтийг буцаах боломжгүй болно —
+   иймд үргэлж ЭНЭ хуулбараас дүүргэнэ. (Админ дээр ui{} утгыг шууд
+   засахад preview тэр дор нь шинэчлэгддэг болсноор илэрсэн.) */
+var DEF=null;
+function snapshotDefaults(){
+  if(DEF) return;
+  DEF={SECN:clone(SECN),SECTIONS:clone(SECTIONS),SHAPEN:clone(SHAPEN),
+       VIZNAME:clone(VIZNAME),FL:clone(FL),KIND:clone(KIND),
+       FIXED_UNIT:clone(FIXED_UNIT),MONTHS:clone(MONTHS),
+       DSMETA:clone(DSMETA),SEC_SUFFIX:clone(SEC_SUFFIX)};
+}
+function applyContentText(skipDom){
   if(!CON) return;
+  snapshotDefaults();
   var sec=(CON.site&&CON.site.sectors)||{};
+  Object.keys(DEF.SECN).forEach(function(k){ SECN[k]=DEF.SECN[k] });
   Object.keys(sec).forEach(function(k){ if(sec[k]) SECN[k]=sec[k] });
-  SECN.plan =utxt('sector_extra.plan', SECN.plan);
-  SECN.other=utxt('sector_extra.other',SECN.other);
-  Object.keys(SECTIONS).forEach(function(k){ SECTIONS[k]=utxt('section.'+k,SECTIONS[k]) });
+  SECN.plan =utxt('sector_extra.plan', DEF.SECN.plan);
+  SECN.other=utxt('sector_extra.other',DEF.SECN.other);
+  Object.keys(SEC_SUFFIX).forEach(function(k){ SEC_SUFFIX[k]=DEF.SEC_SUFFIX[k] });
+  Object.keys(SECTIONS).forEach(function(k){ SECTIONS[k]=utxt('section.'+k,DEF.SECTIONS[k]) });
   var sc=(CON.site&&CON.site.sections)||{};
   Object.keys(sc).forEach(function(k){ if(sc[k]&&SECTIONS[k]!==undefined) SECTIONS[k]=sc[k] });
   /* 04/05-р хэсгийн гарчгийн ард сайт дээр нэмэгддэг хэсэг — салбарын нэр
@@ -548,18 +572,19 @@ function applyContentText(){
   var scr=(CON.site&&CON.site.sector_chart&&CON.site.sector_chart.road)||'';
   if(SECN.road) SEC_SUFFIX['sec-04']=' — '+SECN.road;
   if(scr)       SEC_SUFFIX['sec-05']=' — '+scr;
-  Object.keys(SHAPEN ).forEach(function(k){ SHAPEN[k] =utxt('shape.'+k, SHAPEN[k]) });
-  Object.keys(VIZNAME).forEach(function(k){ VIZNAME[k]=utxt('viz.'+k,   VIZNAME[k]) });
-  Object.keys(FL     ).forEach(function(k){ FL[k]     =utxt('field.'+k, FL[k]) });
-  Object.keys(KIND).forEach(function(k){ KIND[k]=utxt('kind.'+k,KIND[k]) });
+  Object.keys(SHAPEN ).forEach(function(k){ SHAPEN[k] =utxt('shape.'+k, DEF.SHAPEN[k]) });
+  Object.keys(VIZNAME).forEach(function(k){ VIZNAME[k]=utxt('viz.'+k,   DEF.VIZNAME[k]) });
+  Object.keys(FL     ).forEach(function(k){ FL[k]     =utxt('field.'+k, DEF.FL[k]) });
+  Object.keys(KIND).forEach(function(k){ KIND[k]=utxt('kind.'+k,DEF.KIND[k]) });
   Object.keys(DSMETA).forEach(function(k){
-    DSMETA[k].n=utxt('dataset.'+k+'.name',  DSMETA[k].n);
-    DSMETA[k].a=utxt('dataset.'+k+'.agency',DSMETA[k].a);
+    DSMETA[k].n=utxt('dataset.'+k+'.name',  DEF.DSMETA[k].n);
+    DSMETA[k].a=utxt('dataset.'+k+'.agency',DEF.DSMETA[k].a);
   });
   Object.keys(FIXED_UNIT).forEach(function(k){
-    FIXED_UNIT[k]=utxt('required_unit.'+FIXED_UNIT[k],FIXED_UNIT[k]);
+    FIXED_UNIT[k]=utxt('required_unit.'+DEF.FIXED_UNIT[k],DEF.FIXED_UNIT[k]);
   });
   var mo=(CON.site&&CON.site.months)||null;
+  DEF.MONTHS.forEach(function(v,i){ MONTHS[i]=v });
   if(Array.isArray(mo)) mo.forEach(function(v,i){ if(v) MONTHS[i]=v });
   /* Маягтын бүлэг ба шошго — content.json → ui_form{}. Кодод байгаа
      жагсаалт нь ЗӨВХӨН fallback; файлд бичигдсэн бол тэр давуу эрхтэй
@@ -573,6 +598,7 @@ function applyContentText(){
     if(Array.isArray(uf.ui)) UI_GROUPS=uf.ui.map(function(g){
       return {key:g.key,title:g.title,where:g.where,labels:g.labels||{}} });
   }
+  if(skipDom) return;
   document.querySelectorAll('[data-ui]').forEach(function(e){
     var v=utxt(e.getAttribute('data-ui'),null); if(v!=null) e.textContent=v });
   document.querySelectorAll('[data-ui-ph]').forEach(function(e){
@@ -699,6 +725,20 @@ function metricSeries(mk){
   if(mk==='air.monthly_growth_index')  return FEED.index;
   return null;
 }
+/* Метрикийн 7 ХОНОГИЙН ӨДӨР ТУТМЫН цуваа. Метрикээс ХАМААРНА —
+   өмнө нь previewFor() дотор "энэ метрик cargo мөн үү?" гэсэн ГАНЦ
+   хатуу нөхцөлөөр FEED.dayPax/dayCargo хоёрын нэгийг сонгодог байсан
+   тул ӨӨР метрик сонгоход (эсвэл холбоос салгахад) багана ХЭВЭЭР
+   үлдэж, "метрик сольсон ч график өөрчлөгдөхгүй" алдаа гарч байв. */
+function metricDaily(mk){
+  if(FEED.state!=='ready') return null;
+  if(mk==='air.weekly_pax')   return FEED.dayPax;
+  if(mk==='air.weekly_cargo') return FEED.dayCargo;
+  return null;
+}
+/* Аль ч төрлийн цуваа — өдөр тутам эсвэл сар тутам. Мэдэхгүй метрикт
+   null (тоо ЗОХИОХГҮЙ — preview нь бүтцээ л харуулна). */
+function metricAnySeries(mk){ return metricDaily(mk)||metricSeries(mk) }
 var nf=function(n){
   if(n==null||isNaN(n)) return null;
   return Number(n).toLocaleString('en-US',{maximumFractionDigits:1});
@@ -1040,7 +1080,11 @@ var UI_GROUPS=[
   {key:'section',title:'Админ · хэсгийн нэр', where:'Зам мөр ба хэсгийн карт',
    labels:{hero:'Hero хэсэг',dyn_note:'Динамик тэмдэглэгээ',path_root:'Замын эхлэл'}},
   {key:'sector_extra',title:'Админ · нэмэлт слотын нэр', where:'Төлөвлөгөө ба нэгтгэсэн слот',
-   labels:{plan:'Төлөвлөгөөний слот',other:'Бусад салбар'}}
+   labels:{plan:'Төлөвлөгөөний слот',other:'Бусад салбар'}},
+  {key:'chrome',title:'Админ · preview-ийн нийтлэг текст', where:'Виджет бүрийн засварын дэлгэцийн доод хэсэг',
+   labels:{heading:'Бүлгийн гарчиг',note:'Тайлбар'}},
+  {key:'slot_text',title:'Админ · слотын registry текст', where:'Холбогдоогүй слот бүрийн засварын хэсэг',
+   labels:{label:'Шошгын талбарын нэр',would_need:'Шаардлагатай эх сурвалжийн талбарын нэр'}}
 ];
 
 /* Зам нь 'ui'-ээр эхэлбэл CON.ui, эс тэгвэл CON.site-аас уншина —
@@ -1112,6 +1156,50 @@ function siteDirtyKeys(){
    Mono) — энд хатуу бичихгүй. Дата цэг нь бодит feed-ээс; feed
    ачаалаагүй бол тоо ЗОХИОХГҮЙ, бүтцийг нь харуулаад ил хэлнэ. */
 function vizOf(id){return S.viz[id]||PKIND[id]||'counter'}
+/* ── НЭГЖИЙН ШОШГО ─────────────────────────────────────────────────
+   САЙТ ДЭЭРХ ЯГ ТЭР дүрэм (index.html buildWeek: unitTxt||авто):
+   content.json-ий widgets.<id>.unit ДАВУУ эрхтэй, хоосон үед л
+   registry/FIXED_UNIT-ийн нэгж. Өмнө нь preview ЗӨВХӨН requiredUnit()
+   уншдаг байсан тул админ дээрх "Нэгжийн шошго" талбар өөрчлөгдөх
+   боловч preview-д ОГТ тусдаггүй ҮХМЭЛ талбар байв.
+   src: 'content' | 'fixed' | 'registry' — аль эх сурвалжаас гарсныг
+   chromeFields() мэдэж, зөв засварын талбарыг санал болгоно. */
+function previewUnitInfo(id,sectorKey){
+  var t=(S.widget===id&&S.td&&S.td.unit!=null)?S.td.unit:curText(id,'unit');
+  if(t) return {u:t,src:'content'};
+  var base=DERIVES_FROM[id]||id, key=DERIVES_FROM[id]?'air':(sectorKey||'');
+  var u=requiredUnit(id,sectorKey)||'';
+  return {u:u,src:FIXED_UNIT[base+'.'+key]?'fixed':'registry'};
+}
+function previewUnit(id,sectorKey){return previewUnitInfo(id,sectorKey).u}
+/* Хөл бичгийн мөр — foot БА foot2 хоёуланг нь. Өмнө нь зөвхөн foot
+   зурагддаг байсан тул k04/r06-ийн "Хөл бичиг 2" талбар админд
+   харагдаж байгаа мөртөө preview-д ОГТ тусдаггүй байв. */
+function footBlock(c,f,v,mini){
+  if(v) return '<div class="ed sp-foot" data-ed="'+f+'">'+esc(v)+'</div>';
+  if(!mini&&(f in c)) return '<div class="ed sp-foot empty" data-ed="'+f+'">'+
+    esc(utxt('preview.'+(f==='foot2'?'add_foot2':'add_foot'),'+ '+(FL[f]||f)))+'</div>';
+  return '';
+}
+/* Төлөвлөгөөний мөр — сайт дээр хөл бичгийн мөр нь
+   "<хөл бичиг> — <төлөвлөгөө>" + хувь + явцын зурвас (index.html
+   weekPaxPlan, мөр 845-850). Preview-д зөвхөн хөл бичиг харагддаг
+   байсан тул plan СЛОТ засварлагдаж байхад preview-д огт тусдаггүй
+   байв. Тоо ЗОХИОХГҮЙ: эх сурвалж холбогдоогүй бол "—" ба хоосон
+   зурвас. */
+function planRow(id,total,mini){
+  var sl=slotsOf(id).filter(function(s){return s.key==='plan'})[0];
+  if(!sl) return '';
+  var sv=slotVal(id,sl.path), on=(qualityOf(sv)==='verified'&&!!sv.metric);
+  var pval=on?metricValue(sv.metric):null;
+  var pct=(pval&&total!=null&&total>0)?Math.min(100,total/pval*100):null;
+  return '<div class="pvplan"><span>'+esc(SECN.plan)+'</span>'+
+    '<b'+(pval==null?' class="z"':'')+'>'+
+      (pval==null?esc(sv.label||utxt('badge.no_data','мэдээлэл алга')):esc(nf(pval)))+'</b>'+
+    '<u>'+(pct==null?'—':pct.toFixed(1)+'%')+'</u></div>'+
+    (mini?'':'<div class="pvpbar"><i style="width:'+(pct==null?'0':pct.toFixed(1))+
+      '%;background:'+NEON.air+'"></i></div>');
+}
 function svgLine(pts,color,w,h,asBar){
   if(!pts||pts.length<2) return '';
   var mx=Math.max.apply(null,pts.map(function(p){return p.v}));
@@ -1214,6 +1302,7 @@ function previewFor(id,mini){
   var title=(S.widget===id&&S.td&&S.td.title!=null)?S.td.title:(c.title||id);
   var sub  =(S.widget===id&&S.td&&S.td.sub!=null)?S.td.sub:(c.sub||'');
   var foot =(S.widget===id&&S.td&&S.td.foot!=null)?S.td.foot:(c.foot||'');
+  var foot2=(S.widget===id&&S.td&&S.td.foot2!=null)?S.td.foot2:(c.foot2||'');
   var mk=TEXT_ONLY[id]?null:headMetric(id);
   var face=widgetFace(id), accent=face.accent, body='';
   var W=mini?190:300, H=mini?34:56;
@@ -1222,7 +1311,7 @@ function previewFor(id,mini){
        харанхуй нимгэн зурвас. Иймд картын бүрхүүл огт өгөхгүй. ── */
   if(kind==='ticker'){
     var tv=mk?metricValue(mk):null;
-    var tu=TEXT_ONLY[id]?'':(requiredUnit(id,slotsOf(id)[0].key)||'');
+    var tu=TEXT_ONLY[id]?'':previewUnit(id,slotsOf(id)[0].key);
     return '<div class="sitepv'+(mini?' mini':'')+'" style="--sc:'+accent+'">'+
       '<div class="pvticker">'+
         '<span class="v">'+(tv==null?'0':esc(nf(tv)))+'</span>'+
@@ -1234,7 +1323,7 @@ function previewFor(id,mini){
 
   if(kind==='counter'){
     var v=mk?metricValue(mk):null;
-    var unit=TEXT_ONLY[id]?'':(requiredUnit(id,slotsOf(id)[0].key)||'');
+    var unit=TEXT_ONLY[id]?'':previewUnit(id,slotsOf(id)[0].key);
     body='<div class="sp-body"><div class="sp-val" style="font-size:'+(mini?18:26)+'px">'+
       (v==null?'<span style="color:#A7B0C6">0</span>':esc(nf(v)))+
       '<span class="sp-u">'+esc(unit)+'</span></div></div>';
@@ -1309,16 +1398,21 @@ function previewFor(id,mini){
        weeklyAirStats-тай ижил цонх), байхгүй үед л салбарын зурвас руу
        ухарна. */
     var pv=sectorParts(id), tv2=pv.reduce(function(a,p){return a+p.v},0);
-    var un=requiredUnit(id,'air')||'';
-    var days=(headMetric(id)==='air.weekly_cargo')?FEED.dayCargo:FEED.dayPax;
+    var un=previewUnit(id,'air');
+    /* Багана нь СОНГОСОН МЕТРИКЭЭС хамаарна (metricAnySeries). Метрик
+       салгасан эсвэл цуваагүй метрик сонгосон үед FEED-ийн хуучин
+       өдрүүдийг ҮРГЭЛЖЛҮҮЛЭН зурахгүй — салбарын зурвас руу ухарна. */
+    var mkB=headMetric(id), days=metricAnySeries(mkB), isDay=!!metricDaily(mkB);
     var chart=(days&&days.length>1)
       ? svgLine(days,accent,W,mini?26:40,true)+
         '<div class="pvax">'+esc(days[0].label)+' — '+esc(days[days.length-1].label)+
-        ' · '+esc(utxt('preview.daily7','7 хоногийн өдөр тутам'))+'</div>'
-      : svgBarsH(pv.slice(0,mini?3:5),W);
+        ' · '+esc(isDay?utxt('preview.daily7','7 хоногийн өдөр тутам')
+                      :(days.length+' '+utxt('preview.points','цэг')))+'</div>'
+      : (pv.length?svgBarsH(pv.slice(0,mini?3:5),W)
+                 :'<div class="pvempty">'+esc(utxt('preview.no_series','цуваа алга'))+'</div>');
     body='<div class="sp-body"><div class="sp-val" style="font-size:'+(mini?18:26)+'px">'+
       (tv2?esc(nf(tv2)):'<span style="color:#A7B0C6">0</span>')+
-      '<span class="sp-u">'+esc(un)+'</span></div></div>'+chart;
+      '<span class="sp-u">'+esc(un)+'</span></div></div>'+chart+planRow(id,tv2,mini);
   } else if(kind==='rank'){
     /* r06 — эрэмбэлсэн мөр + харьцангуй урттай зурвас.
        r06-ийн registry бичлэг ХАВТГАЙ (sectors:['air']) тул sectorParts()
@@ -1336,9 +1430,14 @@ function previewFor(id,mini){
       });
     }
     var mx=Math.max.apply(null,rp.map(function(p){return p.v}).concat([1]));
+    /* Сайт дээр эрэмбийн мөр бүр ТЭМДЭГ + САЛБАРЫН НЭРТЭЙ (index.html
+       мөр 1236-1239). Preview-д зөвхөн дугаар ба зурвас байсан тул
+       салбарын нэр засварлагдаж байхад энд огт тусдаггүй байв. */
     body='<div class="pvrank">'+rp.slice(0,mini?3:5).map(function(p,i){
       var on=p.q==='verified';
       return '<div class="pvrk"><span class="n">'+String(i+1).padStart(2,'0')+'</span>'+
+        '<span class="g">'+(GLYPH[p.k]||'')+'</span>'+
+        '<span class="l">'+esc(p.n)+'</span>'+
         '<span class="b"><i style="width:'+(on?Math.max(4,p.v/mx*100):0).toFixed(0)+
           '%;background:'+p.c+'"></i></span>'+
         '<span class="c" style="color:'+(on?'#0C1428':'#A7B0C6')+'">'+(on?'▲':'—')+'</span></div>'
@@ -1365,8 +1464,7 @@ function previewFor(id,mini){
       feedNote()+
       '<span class="pvshape">'+esc(SHAPEN[kind]||kind)+'</span>'+
     '</div>'+body+
-    (foot?'<div class="ed sp-foot" data-ed="foot">'+esc(foot)+'</div>'
-        :(!mini&&('foot' in c)?'<div class="ed sp-foot empty" data-ed="foot">'+esc(utxt('preview.add_foot','+ хөл бичиг'))+'</div>':''))+
+    footBlock(c,'foot',foot,mini)+footBlock(c,'foot2',foot2,mini)+
   '</div></div>';
 }
 /* ══════════════════ ЗҮҮН БАГАНА ══════════════════ */
@@ -1727,6 +1825,25 @@ function metricSelect(id,path,sectorKey){
   return '<select data-slot="'+esc(id)+'|'+path.join(',')+'|'+esc(sectorKey||'')+'">'+opts.join('')+'</select>';
 }
 /* Одоо холбогдсон метрик слотын дүрэм зөрчиж байгаа эсэх */
+/* Холбогдоогүй слотын РЕГИСТРИЙН текст. Preview дээрх "мэдээлэл алга"
+   badge ба "Шаардлагатай:" мөр ЯГ ЭНЭ хоёр талбараас гардаг
+   (metric_registry.json → widgets.<id>.<slot>.label / would_need).
+   Өмнө нь зөвхөн ХАРУУЛДАГ байсан тул preview-д харагдаж байгаа мөртөө
+   админаас засагдахгүй байв. */
+function slotTextForm(id,path){
+  var sv=slotVal(id,path), k=id+'|'+path.join(',');
+  var row=function(f,lab){
+    var v=sv[f]==null?'':sv[f];
+    return '<div class="f" style="margin-bottom:7px"><label>'+esc(lab)+
+      ' <code>'+f+'</code></label>'+
+      '<input data-rf="'+esc(k+'|'+f)+'" value="'+esc(v)+'"></div>';
+  };
+  /* label нь ЗӨВХӨН quality==='none' үед preview-д гарч ирдэг
+     (mock слотод 'түр дата' badge давуу эрхтэй) — үхмэл талбар
+     үүсгэхгүйн тулд тэр үед л үзүүлнэ. */
+  return (qualityOf(sv)==='none'?row('label',utxt('slot_text.label','Preview дээрх шошго')):'')+
+         row('would_need',utxt('slot_text.would_need','Шаардлагатай эх сурвалж'));
+}
 function bindingWarn(id){
   var out=[];
   slotsOf(id).forEach(function(s){
@@ -1771,6 +1888,88 @@ function vizSelect(id){
       esc(NAMES[o])+'</option>'}).join('')+'</select>'+
     '<span class="pvax" style="margin:0">'+esc(utxt('vizform.note','зөвхөн урьдчилан харахад — сайтад хадгалагдахгүй'))+'</span></div>';
 }
+/* ── PREVIEW-ИЙН НИЙТЛЭГ ТЕКСТ ────────────────────────────────────
+   Preview дээр ХАРАГДДАГ боловч виджетийн ӨӨРИЙН талбар БИШ текст:
+   хэлбэрийн badge ("Том тоо + багана"), тэнхлэгийн тайлбар
+   ("7 хоногийн өдөр тутам"), салбарын нэр, нэгжийн нэр г.м. Эдгээр нь
+   content.json-ий ui{} / site{}-д НЭГ УДАА бүртгэгддэг (олон виджетэд
+   давтагддаг) тул өмнө нь ЗӨВХӨН "Сайтын текст" табаас олддог байсан —
+   виджетийн дэлгэц дээр "засагдахгүй" мэт харагдаж байв. Одоо тухайн
+   виджетийн preview-д ҮНЭХЭЭР харагдаж байгаа замуудыг л энд гаргана. */
+function pathLabel(ps){
+  var p=ps.split('.'), g;
+  if(p[0]==='ui'){
+    g=UI_GROUPS.filter(function(x){return x.key===p[1]})[0];
+    return (g&&g.labels[p[2]])||p[p.length-1];
+  }
+  g=SITE_GROUPS.filter(function(x){return x.key===p[0]})[0];
+  return (g&&g.labels[p[1]])||p[p.length-1];
+}
+/* FIXED_UNIT-ийн нэгж ui.required_unit-аас дардаг тул ЯГ ТЭР замыг
+   утгаар нь эргүүлж олно (хэрэглэгч сольсон ч ажиллана). */
+function unitPath(u){
+  var ru=(CON.ui&&CON.ui.required_unit)||{},k;
+  for(k in ru) if(ru[k]===u) return 'ui.required_unit.'+k;
+  return null;
+}
+function chromeFields(id){
+  var kind=shapeOf(id), out=[];
+  /* (1) Preview хэсгийн бүрхүүл — гарчиг, зам мөр, тайлбар, хэлбэр солих */
+  out.push('ui.preview.heading','ui.section.path_root',
+           'ui.preview.'+(TEXT_ONLY[id]?'note_text_only':'note'),
+           'ui.vizform.label','ui.vizform.line','ui.vizform.bar',
+           'ui.vizform.donut','ui.vizform.bignum','ui.vizform.note');
+  var an=anchorOf(id);
+  out.push('sections.'+an,'ui.section.'+an);
+  /* (2) Картын дотоод — хэлбэрийн badge, тэнхлэг, хоосон төлөв */
+  out.push('ui.shape.'+kind,'ui.preview.ticker_tag','ui.preview.daily7',
+           'ui.preview.points','ui.preview.five_lines','ui.preview.bar',
+           'ui.preview.kpi_row','ui.preview.no_series','ui.preview.no_data',
+           'ui.preview.add_sub','ui.preview.add_foot','ui.preview.add_foot2',
+           'ui.feed.loading','ui.feed.error',
+           'ui.portal_kpi.datasets','ui.portal_kpi.services',
+           'ui.portal_kpi.research','ui.portal_kpi.orgs');
+  /* (3) Нэгжийн шошго — ЗӨВХӨН FIXED_UNIT-аас ирсэн үед (content.json-оос
+         ирсэн бол дээрх "Нэгжийн шошго" талбар нь өөрөө засварын цэг) */
+  var ui0=previewUnitInfo(id,(slotsOf(id)[0]||{}).key);
+  if(ui0.src==='fixed'){ var up=unitPath(ui0.u); if(up) out.push(up) }
+  /* (4) Салбар/слотын нэр ба чанарын badge — "Слотын чанар" мөрүүд ч
+         үүнд багтана */
+  ['air','road','rail','water','public'].forEach(function(k){out.push('sectors.'+k)});
+  out.push('ui.sector_extra.plan','ui.sector_extra.other','ui.metric.single_slot',
+           'ui.preview.slot_quality','ui.badge.live_value','ui.badge.live_service',
+           'ui.badge.mock','ui.badge.no_data');
+  /* (5) ҮХМЭЛ ТАЛБАР ҮҮСГЭХГҮЙ: зам бүрийг pathAffectsPreview()-ээр
+         шалгаж, preview-д ҮНЭХЭЭР нөлөөлдгийг нь л үлдээнэ. Нөхцөл
+         (метрик, дата, хэлбэр) өөрчлөгдөхөд жагсаалт өөрөө дагана. */
+  var seen={}, res=[];
+  out.forEach(function(p){
+    if(seen[p]) return; seen[p]=1;
+    if(pathAffectsPreview(id,p)) res.push(p);
+  });
+  return res;
+}
+/* Зам preview-д НӨЛӨӨЛДӨГ эсэх — утгыг нь ТҮР өвөрмөц зондоор сольж
+   preview-г дахин зурж шалгана. Энгийн "утга нь HTML дотор байна уу"
+   шалгалт хангалтгүй: богино үг (жиш. "цэг") өөр урт өгүүлбэрийн дунд
+   санамсаргүй таарч, засагдахгүй ҮХМЭЛ талбар үүсгэнэ. */
+function pathAffectsPreview(id,p){
+  var ps=p.split('.'), old=siteGet(ps);
+  if(old==null||old==='') return false;
+  var probe='@@PRB@@';
+  try{
+    siteSet(ps,probe); applyContentText(true);
+    return pvInner(id).indexOf(probe)>=0;
+  }catch(e){ return false }
+  finally{ siteSet(ps,old); applyContentText(true) }
+}
+function chromeForm(id){
+  var ps=chromeFields(id);
+  if(!ps.length) return '';
+  return '<p class="ph" style="margin:18px 0 9px">'+esc(utxt('chrome.heading','Preview-ийн нийтлэг текст'))+'</p>'+
+    '<div class="acc" style="margin-bottom:9px">'+esc(utxt('chrome.note','Эдгээр нь олон виджетэд давтагддаг ерөнхий шошго. Энд бичсэн даруйд preview шинэчлэгдэж, "Сайтын текст" таб дээрх ижил утга ч өөрчлөгдөнө (Хэрэглэх товч шаардлагагүй).'))+'</div>'+
+    ps.map(function(p){return siteField(p.split('.'),pathLabel(p))}).join('');
+}
 function textForm(id){
   var fields=textFields(id), d=dirtyTextFields(id);
   if(!fields.length) return '';
@@ -1789,19 +1988,33 @@ function textForm(id){
       '<button class="btn sm" data-mo="loc|'+id+'">'+ICONS.loc+' '+esc(utxt('text.location','Байршил'))+'</button>'+
       '<button class="btn sm" data-mo="hist|'+id+'">'+ICONS.hist+' '+esc(utxt('text.history','Түүх'))+'</button></div>';
 }
+/* Preview-ийн зүүн баганын БҮТЭН агуулга. Бичиж байх үед ЗӨВХӨН
+   энэ хэсгийг дахин зурна — бүтэн render() хийвэл бичиж байгаа
+   талбарын курсор алдагдана. */
+function pvInner(id){
+  var head='<p class="ph">'+esc(utxt('preview.heading','Сайт дээрх харагдац'))+'</p>'+
+    '<div class="pathbar">'+esc(widgetPath(id))+'</div>';
+  if(TEXT_ONLY[id]) return head+previewFor(id,false)+
+    '<p class="pvnote">'+esc(utxt('preview.note_text_only','Өнгө, фонт нь сайтын эх кодын токеноос. Текст дээр дарж талбар руу шилжинэ.'))+'</p>';
+  return head+vizSelect(id)+sitePreview(id)+
+    '<p class="pvnote">'+esc(utxt('preview.note','Өнгө, фонт нь сайтын эх кодын токеноос; дата цэг нь сайт өөрөө уншдаг вэб сервисээс, metric_registry.json-д бичигдсэн agg/filter/transform-оор тооцоолов. Метрик сольсон даруйд график шууд шинэчлэгдэнэ.'))+'</p>';
+}
+function repaintPreview(){
+  if(S.level!=='edit'||!S.widget) return;
+  applyContentText();   /* SHAPEN/SECN/FL… нь CON-оос амьдаар дүүрнэ */
+  var h=$('pvhost'); if(h) h.innerHTML=pvInner(S.widget);
+}
 function lvEdit(){
   var id=S.widget;
   if(!S.td) resetTd(id);
   /* uk — метрик холбохгүй, ЗӨВХӨН нэршил засах горим. Хамрах хүрээ
      өргөсөөгүй: метрик холболт энд байхгүй, зөвхөн content.json-ий текст. */
   if(TEXT_ONLY[id]){
-    return '<div class="edit2"><div class="e-pv">'+
-      '<p class="ph">'+esc(utxt('preview.heading','Сайт дээрх харагдац'))+'</p>'+'<div class="pathbar">'+esc(widgetPath(id))+'</div>'+previewFor(id,false)+
-      '<p class="pvnote">'+esc(utxt('preview.note_text_only','Өнгө, фонт нь сайтын эх кодын токеноос. Текст дээр дарж талбар руу шилжинэ.'))+'</p>'+
+    return '<div class="edit2"><div class="e-pv" id="pvhost">'+pvInner(id)+
       '</div><div class="e-fm">'+
       '<div class="txtonly"><b>'+esc(utxt('textonly.heading','Зөвхөн нэршил засах горим'))+'</b>'+
         esc(utxt('textonly.body','Энэ виджет порталын мета-үзүүлэлт (датасэт, үйлчилгээ, судалгааны тоо) харуулдаг — тээврийн салбарын метрик биш. Иймд метрик холбох хэсэггүй, зөвхөн content.json-ий текст засварлана.'))+'</div>'+
-      textForm(id)+'</div></div>';
+      textForm(id)+chromeForm(id)+'</div></div>';
   }
   var gw=grainWarn(id), bw=bindingWarn(id);
   var slotForm=slotsOf(id).map(function(s){
@@ -1816,16 +2029,16 @@ function lvEdit(){
       '<div class="f" style="margin-bottom:8px"><label>'+esc(utxt('metric.unit_label','Метрик · шаардах нэгж:'))+' '+
         esc(requiredUnit(id,s.key)||utxt('metric.unit_unknown','тодорхойгүй'))+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
       (sv.metric?calcLine(sv.metric)
-        :(sv.would_need?'<div class="acc"><b>'+esc(utxt('metric.required','Шаардлагатай:'))+'</b> '+esc(sv.would_need)+'</div>':''))+
+        :'<div class="acc" data-wn="1"'+(sv.would_need?'':' style="display:none"')+'><b>'+
+           esc(utxt('metric.required','Шаардлагатай:'))+'</b> <span>'+esc(sv.would_need||'')+'</span></div>')+
+      (sv.metric?'':slotTextForm(id,s.path))+
       '</div>';
   }).join('');
-  return '<div class="edit2"><div class="e-pv">'+
-    '<p class="ph">'+esc(utxt('preview.heading','Сайт дээрх харагдац'))+'</p>'+'<div class="pathbar">'+esc(widgetPath(id))+'</div>'+vizSelect(id)+sitePreview(id)+
-    '<p class="pvnote">'+esc(utxt('preview.note','Өнгө, фонт нь сайтын эх кодын токеноос; дата цэг нь сайт өөрөө уншдаг вэб сервисээс, metric_registry.json-д бичигдсэн agg/filter/transform-оор тооцоолов. Метрик сольсон даруйд график шууд шинэчлэгдэнэ.'))+'</p></div><div class="e-fm">'+
+  return '<div class="edit2"><div class="e-pv" id="pvhost">'+pvInner(id)+'</div><div class="e-fm">'+
     (bw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_rule','Одоогийн холбоос дүрэм зөрчиж байна'))+'</b>'+
         esc(bw.join(' · '))+'</div>':'')+
     (gw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_sum','Нийлбэрийн анхааруулга'))+'</b>'+esc(gw)+'</div>':'')+
-    '<p class="ph">'+esc(utxt('metric.heading','Эх сурвалж'))+'</p>'+slotForm+textForm(id)+'</div></div>';
+    '<p class="ph">'+esc(utxt('metric.heading','Эх сурвалж'))+'</p>'+slotForm+textForm(id)+chromeForm(id)+'</div></div>';
 }
 
 /* ══════════════════ МОДАЛЬ ══════════════════ */
@@ -1968,6 +2181,7 @@ window.addEventListener('popstate',function(e){
 });
 function render(){
   if(!REG||!CON)return;
+  applyContentText();   /* ui{}/site{} → тогтмол (шууд засварыг барина) */
   navSync();
   /* Табын харагдац: "Сайтын текст" нь датасэт/зам мөр/хамралтын зурвасыг
      хэрэглэхгүй тул зүүн багана болон толгойн хэсгийг нуулгана. */
@@ -2147,6 +2361,28 @@ document.addEventListener('input',function(e){
     $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
     $('expBtn').disabled=n===0; $('revBtn').disabled=n===0;
     $('siteN').textContent=siteDirtyKeys().length||'';
+    /* Виджетийн засварын дэлгэц дээрх "Preview-ийн нийтлэг текст"
+       талбар — бичих даруйд preview шинэчлэгдэнэ. */
+    repaintPreview();
+    return;
+  }
+  /* Слотын registry текст (label / would_need) — бичих даруйд REG руу
+     тусгаж, preview-г шинэчилнэ. Экспортод regDirtyKeys() өөрөө барина. */
+  var rf=el.closest&&el.closest('[data-rf]');
+  if(rf){
+    var q=rf.dataset.rf.split('|'), tgt=REG.widgets[q[0]];
+    var pth=q[1]?q[1].split(','):[];
+    for(var pi=0;pi<pth.length;pi++) tgt=tgt[pth[pi]];
+    if(rf.value) tgt[q[2]]=rf.value; else delete tgt[q[2]];
+    if(q[2]==='would_need'){
+      var box=rf.closest('.sedit'), acc=box&&box.querySelector('[data-wn]');
+      if(acc){ acc.style.display=rf.value?'':'none';
+               acc.querySelector('span').textContent=rf.value }
+    }
+    var rn=dirtyCount();
+    $('dirtyMsg').innerHTML=rn?('<b>'+rn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
+    $('expBtn').disabled=rn===0; $('revBtn').disabled=rn===0;
+    repaintPreview();
     return;
   }
   if(el.id==='qsite'){S.q=el.value.trim().toLowerCase();$('body').innerHTML=lvSite();return}
@@ -2158,8 +2394,11 @@ document.addEventListener('input',function(e){
   /* Зөвхөн товчийг шинэчилнэ — бүтэн дахин зурвал курсор алдагдана */
   var d=dirtyTextFields(S.widget);
   var sv=document.querySelector('[data-tsave]'), cn=document.querySelector('[data-tcancel]');
-  if(sv){sv.disabled=!d.length;sv.textContent='Хэрэглэх'+(d.length?' ('+d.length+')':'')}
+  if(sv){sv.disabled=!d.length;sv.textContent=utxt('text.apply','Хэрэглэх')+(d.length?' ('+d.length+')':'')}
   if(cn)cn.disabled=!d.length;
+  /* Гарчиг/дэд гарчиг/нэгж/хөл бичгийг бичих ЯГ ТЭР МӨЧИД preview-д
+     тусна — "Хэрэглэх" дарахыг хүлээхгүй (previewFor нь S.td-г уншдаг). */
+  repaintPreview();
 });
 
 /* Хадгалагдаагүй өөрчлөлттэй үед хуудас хаахаас сэргийлнэ — экспорт бол
