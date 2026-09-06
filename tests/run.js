@@ -8,6 +8,7 @@
      C. Admin UI (ачаалалт, хайлт, шүүлт, буцах, экспорт)
      D. Хил хязгаарын тохиолдол
      E. Регресс (H1–H5, T1–T4 хэвээр)
+     H. Дата холболт таб (metric_registry.json → metrics{} метадата)
 
    Ашиглалт:  node tests/run.js
    Гаралт:    бүлэг бүрийн PASS/FAIL + нийт дүн, алдаатай бол exit 1
@@ -622,10 +623,97 @@ async function groupG() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   H. ДАТА ХОЛБОЛТ ТАБ (metric_registry.json → metrics{})
+
+   Өмнө нь metrics{}-ийн МЕТАДАТА (unit/quality/filter/period_note/
+   would_need) ЗӨВХӨН хөгжүүлэгч гар аргаар JSON бичиж удирддаг байсан.
+   Энэ бүлэг шинэ "Дата холболт" табыг шалгана:
+     H1. Таб нээгдэж, REG.metrics-ийн тоотой тэнцүү карт зурагдана
+     H2. source/dataset/column ЗАСВАРЛАХ input/textarea ҮҮСГЭХГҮЙ
+     H3. Метадата талбар засварлахад dirty badge нэмэгдэж, экспортын
+         JSON-д тусна
+     H4. Шинэ "төлөвлөгөө" метрик нэмэхэд quality:'mock'-оор эхэлнэ
+   ══════════════════════════════════════════════════════════════════ */
+const PROBE_H = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(3500);
+  const R={};
+  const tab=[...d.querySelectorAll('[data-tab="metrics"]')][0];
+  if(!tab) return {__err:'metrics таб товч олдсонгүй'};
+  tab.click(); await sleep(600);
+  R.cards=d.querySelectorAll('[data-metric]').length;
+  R.roCount=d.querySelectorAll('[data-mf$="|source"],[data-mf$="|dataset"],[data-mf$="|column"]').length;
+  // H3 — метадата талбар засвар: dirty болж, экспортод тусна
+  const unitInp=d.querySelector('[data-mf$="|unit"]');
+  R.hasUnitField=!!unitInp;
+  if(unitInp){
+    const mk=unitInp.getAttribute('data-mf').split('|')[0];
+    unitInp.value='ШАЛГАЛТЫН НЭГЖ';
+    unitInp.dispatchEvent(new w.Event('input',{bubbles:true}));
+    await sleep(250);
+    R.editedKey=mk;
+    R.dirtyAfterEdit=d.getElementById('metricsN').textContent;
+    R.rowDirty=!!unitInp.closest('.mfield').classList.contains('dirty');
+  }
+  // H4 — шинэ метрик нэмэх, quality mock-оор эхэлнэ
+  const kIn=d.getElementById('mNewKey'), wnIn=d.getElementById('mNewWn'), add=d.querySelector('[data-madd]');
+  if(kIn&&wnIn&&add){
+    kIn.value='test.probe_metric'; kIn.dispatchEvent(new w.Event('input',{bubbles:true}));
+    wnIn.value='H4 туршилт'; wnIn.dispatchEvent(new w.Event('input',{bubbles:true}));
+    add.click(); await sleep(500);
+    R.cardsAfterAdd=d.querySelectorAll('[data-metric]').length;
+    const newCard=d.querySelector('[data-metric="test.probe_metric"]');
+    R.newCardMock=!!newCard&&/Түр дата/.test(newCard.querySelector('.badge').textContent);
+  }
+  // Экспорт — эдитэд болон шинэ метрик хоёулаа JSON-д тусна
+  let cap=null;
+  const oc=w.URL.createObjectURL.bind(w.URL);
+  w.URL.createObjectURL=function(b){const r=new w.FileReader();
+    r.onload=()=>{cap=r.result}; r.readAsText(b); return oc(b)};
+  const ex=d.getElementById('expBtn');
+  R.exportEnabled=!!(ex&&!ex.disabled);
+  if(R.exportEnabled){ex.click(); for(let i=0;i<25&&!cap;i++) await sleep(200);}
+  if(cap){ try{ const j=JSON.parse(cap);
+    /* Зөвхөн metrics{} өөрчлөгдсөн (виджет/сайт текст хөндөгдөөгүй) тул
+       "Экспортлох" ЗӨВХӨН metric_registry.json-г л татна — j нь шууд
+       registry обьект (j.metrics), {registry:...} гэж боолгогдоогүй. */
+    R.expHasNew=!!(j.metrics&&j.metrics['test.probe_metric']&&
+      j.metrics['test.probe_metric'].quality==='mock');
+    R.expHasEdit=!!(j.metrics&&R.editedKey&&
+      j.metrics[R.editedKey]&&j.metrics[R.editedKey].unit==='ШАЛГАЛТЫН НЭГЖ');
+  }catch(e){ R.expErr=String(e) } }
+  return R;
+}`;
+async function groupH() {
+  group('H. Дата холболт таб (metric_registry.json → metrics{})');
+  if (!CHROME) { skipped('H бүлэг бүхэлдээ', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const reg = readJson('metric_registry.json');
+    const metricCount = Object.keys(reg.metrics || {}).length;
+    const R = await runProbe(PROBE_H, 90000);
+    if (R.__err) { bad('H бүлэг ажиллав', R.__err); return; }
+    check('H1. Таб нээгдэж REG.metrics-ийн тоотой тэнцүү карт зурагдана',
+      R.cards === metricCount, 'карт: ' + R.cards + ' (хүлээсэн: ' + metricCount + ')');
+    check('H2. source/dataset/column ЗАСВАРЛАХ input/textarea ҮҮСГЭХГҮЙ',
+      R.roCount === 0, 'олдсон: ' + R.roCount);
+    check('H3. Метадата талбар засварлахад dirty тэмдэглэгдэнэ',
+      R.hasUnitField === true && R.rowDirty === true, JSON.stringify({hasUnitField:R.hasUnitField,rowDirty:R.rowDirty}));
+    check('H3. Экспортын JSON-д засвар тусна',
+      R.expHasEdit === true, JSON.stringify({expHasEdit:R.expHasEdit,expErr:R.expErr}));
+    check('H4. Шинэ метрик нэмэхэд карт нэг нэмэгдэж, quality:mock-оор эхэлнэ',
+      R.cardsAfterAdd === metricCount + 1 && R.newCardMock === true,
+      'cardsAfterAdd: ' + R.cardsAfterAdd + ', newCardMock: ' + R.newCardMock);
+    check('H4. Экспортын JSON-д шинэ метрик тусна',
+      R.expHasNew === true, JSON.stringify({expHasNew:R.expHasNew,expErr:R.expErr}));
+  } finally { srv.close(); }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
-  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG();
+  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

@@ -378,6 +378,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
   <div class="tabs">
     <button class="tab on" data-tab="data" data-ui="app.tab_data">Виджет ба дата</button>
     <button class="tab" data-tab="site"><span data-ui="app.tab_site">Сайтын текст</span><span class="tbadge" id="siteN"></span></button>
+    <button class="tab" data-tab="metrics"><span data-ui="app.tab_metrics">Дата холболт</span><span class="tbadge" id="metricsN"></span></button>
   </div>
 </div>
 
@@ -939,7 +940,20 @@ function widgetDirty(id){
   return regDirtyKeys().concat(conDirtyKeys()).some(function(k){return k.split('|')[0]===id});
 }
 function sectionDirty(sec){return widgetsIn(sec).some(widgetDirty)}
-function dirtyCount(){return regDirtyKeys().length+conDirtyKeys().length+siteDirtyKeys().length}
+/* "Дата холболт" таб — REG.metrics{}-ийн МЕТАДАТА (unit/quality/filter/
+   period_note/would_need) засвар, эсвэл шинэ түлхүүр нэмэгдсэн/устсан
+   эсэхийг илрүүлнэ. regDirtyKeys()-ээс тусдаа: тэр нь виджетийн СЛОТ
+   аль метрик рүү холбогдсоныг барьдаг, энэ нь метрикийн ӨӨРИЙНХ нь
+   тодорхойлолтыг барина. */
+function metricsDirtyKeys(){
+  var out=[], a=REG.metrics||{}, b=REG0.metrics||{}, seen={};
+  Object.keys(a).concat(Object.keys(b)).forEach(function(k){
+    if(seen[k]) return; seen[k]=1;
+    if(JSON.stringify(a[k])!==JSON.stringify(b[k])) out.push(k);
+  });
+  return out;
+}
+function dirtyCount(){return regDirtyKeys().length+conDirtyKeys().length+siteDirtyKeys().length+metricsDirtyKeys().length}
 /* content.json өөрчлөгдсөн эсэх — виджетийн текст ЭСВЭЛ site{} */
 function contentDirty(){return conDirtyKeys().length+siteDirtyKeys().length}
 
@@ -977,8 +991,17 @@ var SITE_GROUPS=[
   {key:'a11y',    title:'Хандах боломж',   where:'aria-label — дэлгэц уншигчид зориулсан',
    labels:{menu:'Цэсний товч',filter:'Шүүлтийн товч',close:'Хаах товч'}}
 ];
-/* hero.ticker / hero.diagram нь үүрлэсэн тул тусад нь */
+/* hero.ticker / hero.diagram / portal_kpi.<key> нь үүрлэсэн (3+ түвшин)
+   тул SITE_GROUPS (2 түвшин)-д биш энд тусад нь */
 var SITE_NESTED=[
+  {path:['portal_kpi','open_data'],title:'Портал 4 карт · Нээлттэй өгөгдөл',where:'uk виджет — 1-р карт',
+   labels:{label:'Гарчиг',unit:'Нэгж',note:'Тэмдэглэл'}},
+  {path:['portal_kpi','eservice'], title:'Портал 4 карт · Цахим үйлчилгээ', where:'uk виджет — 2-р карт',
+   labels:{label:'Гарчиг',unit:'Нэгж',note:'Тэмдэглэл'}},
+  {path:['portal_kpi','research'], title:'Портал 4 карт · Судалгаа',       where:'uk виджет — 3-р карт',
+   labels:{label:'Гарчиг',unit:'Нэгж',note:'Тэмдэглэл'}},
+  {path:['portal_kpi','orgs'],     title:'Портал 4 карт · Оролцогч байгууллага',where:'uk виджет — 4-р карт',
+   labels:{label:'Гарчиг',unit:'Нэгж'}},
   {path:['hero','ticker'], title:'Hero · гүйдэг мөр', where:'Hero дээд ирмэг — код 2 газар ашиглана',
    labels:{ai:'AI мөр',road:'Авто замын мөр',live:'Шууд мэдээллийн мөр'}},
   {path:['hero','diagram'],title:'Hero · AI CORE диаграм', where:'Hero баруун тал',
@@ -1001,7 +1024,7 @@ var LONG_FIELDS={lead:1,copyright:1,top_seen:1,top_prop:1,'sec-01':1,'sec-06':1,
 var UI_GROUPS=[
   {key:'app', title:'Админ · толгой ба хөл', where:'Хуудасны дээд/доод мөр',
    labels:{sub:'Дээд жижиг мөр',title:'Хуудасны гарчиг',tab_data:'1-р таб',
-           tab_site:'2-р таб',open_site:'Сайтыг нээх товч',all_views:'Бүх харагдац товч',
+           tab_site:'2-р таб',tab_metrics:'3-р таб',open_site:'Сайтыг нээх товч',all_views:'Бүх харагдац товч',
            by_section:'Хэсгээр нь товч',export:'Экспорт товч',revert:'Буцаах товч',
            no_changes:'Өөрчлөлтгүй мессеж',unsaved:'Хадгалаагүй мессеж',
            export_note:'Хөлийн тайлбар',close:'Хаах товч (aria)'}},
@@ -1023,7 +1046,7 @@ var UI_GROUPS=[
            points:'"цэг" үг',five_lines:'5 салбарын шугам',bar:'"багана" үг',
            daily7:'7 хоногийн шошго',kpi_row:'KPI мөрийн нэр',edit_widget:'Засах товч'}},
   {key:'portal_kpi',title:'Админ · порталын 4 карт', where:'uk виджетийн preview',
-   labels:{datasets:'1-р карт',services:'2-р карт',research:'3-р карт',orgs:'4-р карт'}},
+   labels:{computed:'Тооцоолсон тооны түр бичвэр (жинхэнэ тоо зөвхөн сайт дээр харагдана)'}},
   {key:'badge',title:'Админ · чанарын badge', where:'Слот бүрийн баруун тал (давтагдана)',
    labels:{live_value:'Амьд утга',live_service:'Амьд · вэб сервис',live:'Амьд',
            mock:'Түр дата',no_source:'Эх сурвалж алга',no_data:'Мэдээлэл алга'}},
@@ -1037,6 +1060,24 @@ var UI_GROUPS=[
   {key:'text',title:'Админ · текстийн маягт', where:'Виджетийн засварын доод хэсэг',
    labels:{heading:'Хэсгийн гарчиг',apply:'Хэрэглэх товч',cancel:'Болих товч',
            location:'Байршил товч',history:'Түүх товч',changed:'Өөрчлөгдсөн тэмдэг'}},
+  {key:'metrics_tab',title:'Админ · Дата холболт таб', where:'3-р таб — бүх бүртгэлтэй метрик',
+   labels:{heading:'Бүртгэлтэй метрикүүд',
+           note:'Эдгээрийг виджетийн засварын дэлгэц дэх "Метрик холбох" сонголтод ашиглана. Эх сурвалж/датасэт/багана нь кодтой холбоотой тул зөвхөн хөгжүүлэгч өөрчилнө — нэгж, чанар, тайлбарыг энд шууд засаж болно.',
+           readonly_note:'Кодтой холбоотой — хөгжүүлэгч тохируулна',
+           source_label:'Эх сурвалж',dataset_label:'Датасэт',column_label:'Багана',
+           unit_label:'Нэгж',quality_label:'Чанар',filter_label:'Шүүлт (тайлбар)',
+           period_note_label:'Хугацааны тэмдэглэл',would_need_label:'Шаардлагатай эх сурвалж',
+           used_by:'виджетэд ашиглагдаж буй',used_by_none:'Одоогоор ямар ч виджетэд холбогдоогүй',
+           quality_mock:'Түр дата',quality_pending:'Хүлээгдэж буй',quality_verified:'Баталгаажсан',
+           verified_confirm:'"Баталгаажсан" гэдэг нь энэ тоо БОДИТ, шалгагдсан гэсэн үг. Хуурамч/тооцоолоогүй утгыг Баталгаажсан болгож болохгүй. Итгэлтэй байна уу?',
+           add_button:'+ Шинэ метрик (зөвхөн төлөвлөгөө)',
+           add_note:'Энэ нь ЖИНХЭНЭ амьд холболт үүсгэхгүй — зөвхөн "ийм эх сурвалж хэрэгтэй" гэдгийг төлөвлөгөөнд тэмдэглэнэ. Бодит холболтыг хөгжүүлэгч кодоор хийнэ.',
+           add_key_ph:'Метрикийн түлхүүр (жиш. road.weekly_pax)',
+           add_would_need_ph:'Ямар эх сурвалж хэрэгтэйг бичнэ үү',
+           key_exists:'Энэ түлхүүр аль хэдийн бүртгэлтэй байна',
+           key_required:'Түлхүүр заавал бичнэ үү',
+           empty:'Метрик бүртгэгдээгүй байна',
+           search_ph:'Хайлтын сануулга'}},
   {key:'field',title:'Админ · текстийн талбарын нэр', where:'Виджет бүрийн текстийн маягт',
    labels:{title:'Гарчиг',sub:'Дэд гарчиг',unit:'Нэгжийн шошго',foot:'Хөл бичиг',foot2:'Хөл бичиг 2'}},
   {key:'shape',title:'Админ · виджетийн хэлбэрийн нэр', where:'Preview картын баруун дээд шошго',
@@ -1377,12 +1418,29 @@ function previewFor(id,mini){
     }
     body='<div class="pvgrid8">'+cells.join('')+'</div>';
   } else if(kind==='kpi4'){
-    /* uk — порталын 4 мета-карт */
-    var n4=[utxt('portal_kpi.datasets','датасэт'),utxt('portal_kpi.services','үйлчилгээ'),
-            utxt('portal_kpi.research','судалгаа'),utxt('portal_kpi.orgs','байгууллага')];
+    /* uk — порталын 4 мета-карт. Гарчиг/нэгж/тэмдэглэл нь content.json
+       site.portal_kpi.<key>-ээс уншигдаж бичих ДАРУЙД preview шинэчлэгдэнэ.
+       Тоон утга: Нээлттэй өгөгдөл/Цахим үйлчилгээ index.html дээр
+       DATASETS/SERVICES.length-ээс тооцоологдох тул энд стал тоо
+       ХАРУУЛАХГҮЙ ("тооцоолсон" гэсэн тайлбар л); Судалгаа/Байгууллага
+       жинхэнэ mock (эх сурвалжгүй) тул "—". */
+    var pk4=['open_data','eservice','research','orgs'],
+        pkDef={open_data:{label:'НЭЭЛТТЭЙ ӨГӨГДӨЛ',unit:'датасет'},
+               eservice:{label:'ЦАХИМ ҮЙЛЧИЛГЭЭ',unit:'үйлчилгээ'},
+               research:{label:'СУДАЛГАА',unit:'судалгаа'},
+               orgs:{label:'ОРОЛЦОГЧ БАЙГУУЛЛАГА',unit:'байгууллага'}},
+        pkComputed={open_data:1,eservice:1};
     body='<div class="pvgrid8" style="grid-template-columns:repeat(4,1fr)">'+
-      n4.map(function(n){return '<div class="pvgc"><div class="l">'+esc(n)+
-        '</div><div class="v" style="color:#A7B0C6">—</div></div>'}).join('')+'</div>';
+      pk4.map(function(k){
+        var lb=siteGet(['portal_kpi',k,'label'])||pkDef[k].label,
+            un=siteGet(['portal_kpi',k,'unit'])||pkDef[k].unit,
+            nt=siteGet(['portal_kpi',k,'note']);
+        return '<div class="pvgc"><div class="l">'+esc(lb)+'</div>'+
+          '<div class="v"'+(pkComputed[k]?'':' style="color:#A7B0C6"')+'>'+
+          (pkComputed[k]?esc(utxt('portal_kpi.computed','тооцоологдоно')):'—')+
+          ' <span style="font-weight:400">'+esc(un)+'</span></div>'+
+          (nt?'<div class="l" style="margin-top:2px">'+esc(nt)+'</div>':'')+
+          '</div>'}).join('')+'</div>';
   } else if(kind==='line'||kind==='multiline'){
     var ser=mk?metricSeries(mk):null;
     body=ser&&ser.length>1
@@ -1662,6 +1720,82 @@ function lvSite(){
     '<span style="font-family:var(--mono)">'+autoShown+'</span></p>'+autoHtml:'');
 }
 
+/* ══════════════════ ДАТА ХОЛБОЛТ (metric_registry.json → metrics{}) ═══
+   metric_registry.json-ий metrics{} нь ӨМНӨ нь ЗӨВХӨН хөгжүүлэгч гар
+   аргаар JSON бичиж удирддаг байсан (HANDOFF_widget_builder.md-ийн B/C
+   алхам). Энэ таб МЕТАДАТА (unit/quality/filter/period_note/would_need)-г
+   маягтаар засварлах боломж өгнө — source/dataset/column нь бодит
+   тооцооллын КОДТОЙ ШУУД холбоотой тул ЗӨВХӨН УНШИХ хэвээр (санамсаргүй
+   өөрчилбөл widget-ийн утга чимээгүй эвдэрнэ). Шинэ метрик нэмэх нь
+   ЗӨВХӨН ТӨЛӨВЛӨГӨӨ бүртгэнэ (quality:'mock', ямар ч амьд холболт
+   үүсгэхгүй) — жинхэнэ холболтыг хөгжүүлэгч кодоор хийнэ. */
+function mUsedBy(mk){
+  return SCOPE.filter(function(id){return boundMetrics(id).indexOf(mk)>=0});
+}
+function mField(mk,field,label,long){
+  var v=REG.metrics[mk][field]||'';
+  var dirty=JSON.stringify(v)!==JSON.stringify((REG0.metrics[mk]||{})[field]||'');
+  return '<div class="sfield mfield'+(dirty?' dirty':'')+'"><div class="lbl">'+esc(label)+
+    (dirty?' <b class="dt">'+esc(utxt('site_tab.changed','өөрчлөгдсөн'))+'</b>':'')+'</div>'+
+    (long?'<textarea data-mf="'+esc(mk)+'|'+field+'" rows="2">'+esc(v)+'</textarea>'
+         :'<input data-mf="'+esc(mk)+'|'+field+'" value="'+esc(v)+'">')+'</div>';
+}
+/* Дуудалт бүрт LITERAL utxt('metrics_tab.quality_xxx',...) байх ёстой —
+   динамик түлхүүр угсарвал tests/text-coverage.js статик шинжилгээгээр
+   "кодод уншигдахгүй" гэж танихгүй болно (F4/F5). */
+function qualityLabel(q){
+  if(q==='verified') return utxt('metrics_tab.quality_verified','Баталгаажсан');
+  if(q==='pending')  return utxt('metrics_tab.quality_pending','Хүлээгдэж буй');
+  return utxt('metrics_tab.quality_mock','Түр дата');
+}
+function mQualitySelect(mk){
+  var v=REG.metrics[mk].quality||'mock', d=v!==((REG0.metrics[mk]||{}).quality||'mock');
+  var opts=['mock','pending','verified'].map(function(o){
+    return '<option value="'+o+'"'+(v===o?' selected':'')+'>'+esc(qualityLabel(o))+'</option>'}).join('');
+  return '<div class="sfield mfield'+(d?' dirty':'')+'"><div class="lbl">'+esc(utxt('metrics_tab.quality_label','Чанар'))+
+    (d?' <b class="dt">'+esc(utxt('site_tab.changed','өөрчлөгдсөн'))+'</b>':'')+'</div>'+
+    '<select data-mfq="'+esc(mk)+'">'+opts+'</select></div>';
+}
+function lvMetrics(){
+  var mm=REG.metrics||{}, keys=Object.keys(mm).sort();
+  var q=(S.q||'').trim().toLowerCase();
+  var badgeCls={verified:'b-ok',pending:'b-warn',mock:'b-zero'};
+  var html='', shown=0;
+  keys.forEach(function(mk){
+    var m=mm[mk];
+    var hay=(mk+' '+(m.source||'')+' '+(m.dataset||'')+' '+(m.column||'')).toLowerCase();
+    if(q&&hay.indexOf(q)<0) return;
+    shown++;
+    var used=mUsedBy(mk);
+    html+='<div class="sgroup" data-metric="'+esc(mk)+'"><h3>'+esc(mk)+' <span class="badge '+
+      (badgeCls[m.quality]||'b-zero')+'">'+esc(qualityLabel(m.quality))+'</span></h3>'+
+      '<div class="where">'+esc(utxt('metrics_tab.source_label','Эх сурвалж'))+': '+esc(m.source||'—')+
+      ' · '+esc(utxt('metrics_tab.dataset_label','Датасэт'))+': '+esc(m.dataset||'—')+
+      ' · '+esc(utxt('metrics_tab.column_label','Багана'))+': '+esc(m.column||'—')+'</div>'+
+      '<div class="acc">'+esc(utxt('metrics_tab.readonly_note','Кодтой холбоотой — хөгжүүлэгч тохируулна'))+'</div>'+
+      mField(mk,'unit',utxt('metrics_tab.unit_label','Нэгж'))+
+      mQualitySelect(mk)+
+      mField(mk,'filter',utxt('metrics_tab.filter_label','Шүүлт (тайлбар)'),true)+
+      mField(mk,'period_note',utxt('metrics_tab.period_note_label','Хугацааны тэмдэглэл'),true)+
+      mField(mk,'would_need',utxt('metrics_tab.would_need_label','Шаардлагатай эх сурвалж'),true)+
+      '<div class="where">'+(used.length?used.length+' '+esc(utxt('metrics_tab.used_by','виджетэд ашиглагдаж буй'))+' ('+used.join(', ')+')'
+        :esc(utxt('metrics_tab.used_by_none','Одоогоор ямар ч виджетэд холбогдоогүй')))+'</div>'+
+      '</div>';
+  });
+  if(!shown && q) html='<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
+  if(!keys.length) html='<div class="empty">'+esc(utxt('metrics_tab.empty','Метрик бүртгэгдээгүй байна'))+'</div>';
+  return '<p class="ph">'+esc(utxt('metrics_tab.heading','Бүртгэлтэй метрикүүд'))+' '+
+    '<span style="font-family:var(--mono)">'+keys.length+'</span></p>'+html+
+    '<p class="pvnote">'+esc(utxt('metrics_tab.note','Эдгээрийг виджетийн засварын дэлгэц дэх "Метрик холбох" сонголтод ашиглана. Эх сурвалж/датасэт/багана нь кодтой холбоотой тул зөвхөн хөгжүүлэгч өөрчилнө — нэгж, чанар, тайлбарыг энд шууд засаж болно.'))+'</p>'+
+    '<div class="sgroup"><h3>'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</h3>'+
+    '<div class="acc">'+esc(utxt('metrics_tab.add_note','Энэ нь ЖИНХЭНЭ амьд холболт үүсгэхгүй — зөвхөн "ийм эх сурвалж хэрэгтэй" гэдгийг төлөвлөгөөнд тэмдэглэнэ. Бодит холболтыг хөгжүүлэгч кодоор хийнэ.'))+'</div>'+
+    '<div class="sfield"><div class="lbl">'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</div>'+
+    '<input id="mNewKey" placeholder="'+esc(utxt('metrics_tab.add_key_ph','Метрикийн түлхүүр (жиш. road.weekly_pax)'))+'"></div>'+
+    '<div class="sfield"><textarea id="mNewWn" rows="2" placeholder="'+esc(utxt('metrics_tab.add_would_need_ph','Ямар эх сурвалж хэрэгтэйг бичнэ үү'))+'"></textarea></div>'+
+    '<div class="acts"><button class="btn pri sm" data-madd="1">'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</button></div>'+
+    '</div>';
+}
+
 /* ══════════════════ ХАЙЛТ + ШҮҮЛТ ══════════════════
    "Датасэт" табын виджет жагсаалт (lvWidgets) ба "Бүх харагдац" (lvAll)
    хоёуланд ХАМТ ажиллана. Бүх нөхцөл AND логикоор нэгддэг —
@@ -1918,6 +2052,11 @@ function pathLabel(ps){
     g=UI_GROUPS.filter(function(x){return x.key===p[1]})[0];
     return (g&&g.labels[p[2]])||p[p.length-1];
   }
+  if(p.length>2){
+    var pre=p.slice(0,-1).join('.');
+    g=SITE_NESTED.filter(function(x){return x.path.join('.')===pre})[0];
+    if(g) return g.labels[p[p.length-1]]||p[p.length-1];
+  }
   g=SITE_GROUPS.filter(function(x){return x.key===p[0]})[0];
   return (g&&g.labels[p[1]])||p[p.length-1];
 }
@@ -1943,8 +2082,11 @@ function chromeFields(id){
            'ui.preview.kpi_row','ui.preview.no_series','ui.preview.no_data',
            'ui.preview.add_sub','ui.preview.add_foot','ui.preview.add_foot2',
            'ui.feed.loading','ui.feed.error',
-           'ui.portal_kpi.datasets','ui.portal_kpi.services',
-           'ui.portal_kpi.research','ui.portal_kpi.orgs');
+           'ui.portal_kpi.computed',
+           'portal_kpi.open_data.label','portal_kpi.open_data.unit','portal_kpi.open_data.note',
+           'portal_kpi.eservice.label','portal_kpi.eservice.unit','portal_kpi.eservice.note',
+           'portal_kpi.research.label','portal_kpi.research.unit','portal_kpi.research.note',
+           'portal_kpi.orgs.label','portal_kpi.orgs.unit');
   /* (3) Нэгжийн шошго — ЗӨВХӨН FIXED_UNIT-аас ирсэн үед (content.json-оос
          ирсэн бол дээрх "Нэгжийн шошго" талбар нь өөрөө засварын цэг) */
   var ui0=previewUnitInfo(id,(slotsOf(id)[0]||{}).key);
@@ -2176,10 +2318,10 @@ function navSync(){
 }
 /* Одоогийн байрлалаас буцах боломжтой юу */
 function canGoBack(){
-  return S.tab==='site'||S.level==='edit'||S.level==='widgets'||S.level==='all'||!!S.ds;
+  return S.tab==='site'||S.tab==='metrics'||S.level==='edit'||S.level==='widgets'||S.level==='all'||!!S.ds;
 }
 function goBack(){
-  if(S.tab==='site'){ S.tab='data'; }
+  if(S.tab==='site'||S.tab==='metrics'){ S.tab='data'; }
   else if(S.level==='edit'){ S.level='widgets'; S.td=null; }
   else if(S.level==='widgets'){ S.level='sections'; S.section=null; S.td=null; }
   else if(S.level==='all'){ S.level='sections'; S.section=null; S.td=null; }
@@ -2202,13 +2344,14 @@ function render(){
   navSync();
   /* Табын харагдац: "Сайтын текст" нь датасэт/зам мөр/хамралтын зурвасыг
      хэрэглэхгүй тул зүүн багана болон толгойн хэсгийг нуулгана. */
-  var isSite=S.tab==='site';
+  var isSite=S.tab==='site', isMetrics=S.tab==='metrics';
   document.querySelectorAll('.tab').forEach(function(b){
     b.classList.toggle('on',b.dataset.tab===S.tab)});
-  $('paneL').style.display=isSite?'none':'';
-  $('gridWrap').style.gridTemplateColumns=isSite?'minmax(0,1fr)':'';
-  $('allBtn').style.display=isSite?'none':'';
+  $('paneL').style.display=(isSite||isMetrics)?'none':'';
+  $('gridWrap').style.gridTemplateColumns=(isSite||isMetrics)?'minmax(0,1fr)':'';
+  $('allBtn').style.display=(isSite||isMetrics)?'none':'';
   $('siteN').textContent=siteDirtyKeys().length||'';
+  $('metricsN').textContent=metricsDirtyKeys().length||'';
   if(isSite){
     /* "Виджет ба дата" табын хайх/шүүх мөр энд хамаарахгүй тул арилгана —
        эс тэгвэл өмнөх табаас үлдсэн #fbar энд ч харагдана. */
@@ -2223,6 +2366,16 @@ function render(){
         'aria-label="'+esc(utxt('site_tab.search_aria','Сайтын текст хайх'))+'" value="'+esc(S.q||'')+'"></div></div>';
     }
     $('body').innerHTML=lvSite();
+  }else if(isMetrics){
+    $('fbar').innerHTML='';
+    if(!$('qsite')){
+      $('cov').innerHTML='<div class="cov" style="padding:12px 14px">'+
+        '<div style="display:flex;gap:8px;align-items:center">'+
+        '<button class="cb cbback" data-back="1" title="'+esc(utxt('site_tab.back_title','Буцах (Esc)'))+'">'+esc(utxt('crumb.back','← Буцах'))+'</button>'+
+        '<input class="srch" id="qsite" style="margin:0;flex:1" placeholder="'+esc(utxt('metrics_tab.search_ph','Метрик хайх… (түлхүүр, датасэт)'))+'" '+
+        'aria-label="'+esc(utxt('metrics_tab.heading','Бүртгэлтэй метрикүүд'))+'" value="'+esc(S.q||'')+'"></div></div>';
+    }
+    $('body').innerHTML=lvMetrics();
   }else{
     if($('qsite')) $('cov').innerHTML='';
     rDs();
@@ -2308,6 +2461,15 @@ document.addEventListener('click',function(e){
     render();toast(d.length+' '+utxt('toast.text_applied','текст талбар хэрэглэгдлээ'));return}
   if(t.closest&&t.closest('[data-tcancel]')){
     resetTd(S.widget);render();toast(utxt('toast.text_cancelled','Текстийн өөрчлөлт цуцлагдлаа'));return}
+  if(t.closest&&t.closest('[data-madd]')){
+    var kIn=$('mNewKey'), wnIn=$('mNewWn');
+    var newKey=(kIn&&kIn.value||'').trim();
+    if(!newKey){ toast(utxt('metrics_tab.key_required','Түлхүүр заавал бичнэ үү')); return }
+    if(REG.metrics[newKey]){ toast(utxt('metrics_tab.key_exists','Энэ түлхүүр аль хэдийн бүртгэлтэй байна')); return }
+    REG.metrics[newKey]={source:null,dataset:null,column:null,agg:null,filter:'',
+      transform:'',unit:'',additive:false,quality:'mock',would_need:(wnIn&&wnIn.value||'')};
+    log(newKey,'Шинэ метрик (төлөвлөгөө) нэмэгдлээ');
+    render();toast(utxt('toast.bound','Холбогдлоо:')+' '+newKey);return}
 });
 
 /* Гар талбараар (Enter/Space) виджет нээх */
@@ -2331,6 +2493,16 @@ document.addEventListener('keydown',function(e){
 
 document.addEventListener('change',function(e){
   var t=e.target;
+  var mfq=t.closest&&t.closest('[data-mfq]');
+  if(mfq){
+    var mk2=mfq.dataset.mfq, prevQ=REG.metrics[mk2].quality;
+    if(mfq.value==='verified'&&!confirm(utxt('metrics_tab.verified_confirm',
+      '"Баталгаажсан" гэдэг нь энэ тоо БОДИТ, шалгагдсан гэсэн үг. Хуурамч/тооцоолоогүй утгыг Баталгаажсан болгож болохгүй. Итгэлтэй байна уу?'))){
+      mfq.value=prevQ; return;
+    }
+    REG.metrics[mk2].quality=mfq.value;
+    render();return;
+  }
   if(t.id==='fQuality'){S.wQuality=t.value;renderBody();return}
   if(t.id==='fPage'){S.wPage=t.value;renderBody();return}
   if(t.id==='fViz'){S.wViz=t.value;renderBody();return}
@@ -2396,6 +2568,21 @@ document.addEventListener('input',function(e){
     repaintPreview();
     return;
   }
+  /* "Дата холболт" таб — REG.metrics[key]-ийн МЕТАДАТА талбар
+     (unit/filter/period_note/would_need). source/dataset/column энд
+     ОРОХГҮЙ (зөвхөн унших, тусдаа <span>-ээр зурагдана). */
+  var mf=el.closest&&el.closest('[data-mf]');
+  if(mf){
+    var mp=mf.dataset.mf.split('|'), mkey=mp[0], mfield=mp[1];
+    if(mf.value) REG.metrics[mkey][mfield]=mf.value; else delete REG.metrics[mkey][mfield];
+    var mrow=mf.closest('.mfield');
+    if(mrow) mrow.classList.toggle('dirty',JSON.stringify(REG.metrics[mkey][mfield]||'')!==JSON.stringify((REG0.metrics[mkey]||{})[mfield]||''));
+    var mn=dirtyCount();
+    $('dirtyMsg').innerHTML=mn?('<b>'+mn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
+    $('expBtn').disabled=mn===0; $('revBtn').disabled=mn===0; if(typeof refreshPubBtn==='function') refreshPubBtn();
+    $('metricsN').textContent=metricsDirtyKeys().length||'';
+    return;
+  }
   /* Слотын registry текст (label / would_need) — бичих даруйд REG руу
      тусгаж, preview-г шинэчилнэ. Экспортод regDirtyKeys() өөрөө барина. */
   var rf=el.closest&&el.closest('[data-rf]');
@@ -2415,7 +2602,7 @@ document.addEventListener('input',function(e){
     repaintPreview();
     return;
   }
-  if(el.id==='qsite'){S.q=el.value.trim().toLowerCase();$('body').innerHTML=lvSite();return}
+  if(el.id==='qsite'){S.q=el.value.trim().toLowerCase();$('body').innerHTML=(S.tab==='metrics'?lvMetrics():lvSite());return}
   if(el.id==='wq'){S.wq=el.value;renderBody();return}
   if(el===$('q')){S.q=el.value.trim().toLowerCase();rDs();return}
   var tf=el.closest&&el.closest('[data-tf]');
@@ -2446,7 +2633,7 @@ function download(obj,name){
 }
 $('expBtn').addEventListener('click',function(){
   var today=new Date().toISOString().slice(0,10), files=[];
-  if(regDirtyKeys().length){REG.updated=today;download(REG,'metric_registry.json');files.push('metric_registry.json')}
+  if(regDirtyKeys().length||metricsDirtyKeys().length){REG.updated=today;download(REG,'metric_registry.json');files.push('metric_registry.json')}
   if(contentDirty()){CON.updated=today;download(CON,'content.json');files.push('content.json')}
   toast(utxt('toast.downloaded','Татагдлаа:')+' '+files.join(' + ')+' '+
     utxt('toast.downloaded_note','— репод хуулж commit хийнэ үү'));
