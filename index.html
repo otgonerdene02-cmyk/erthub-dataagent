@@ -13,6 +13,8 @@
 <script src="js/dataset-views.js"></script>
 <script src="js/erthub-store.js"></script>
 <script src="js/erthub-publish.js"></script>
+<script src="js/backend-config.js"></script>
+<script src="js/erthub-backend.js"></script>
 <script src="js/vendor/dc-runtime.js"></script>
 </head>
 <body>
@@ -4277,7 +4279,7 @@ class Component extends DCLogic {
   componentDidMount(){
     this.loadGlobe(); this.syncMonths(); this.loadSources(); this.loadMongoliaGeo();
     this.auditBindings(); this.loadContent(); this.loadMetricRegistry();
-    this.loadPublished();
+    this.loadPublished(); this.loadEtransportBackend();
     this._esc=(e)=>{ if(e.key==='Escape') this.escClose(); };
     window.addEventListener('keydown',this._esc);
     this._onResize=()=>this.setState({viewportW:window.innerWidth});
@@ -4509,6 +4511,18 @@ class Component extends DCLogic {
       console.info('[ErtHub] metric_registry.json ачаалагдсангүй, статик тоо үлдэнэ:',e.message);
     }
   }
+  // etransport-backend (js/erthub-backend.js) руу холбогдох оролдлого.
+  // ETRANSPORT_BACKEND_BASE хоосон бол EHBackend.enabled=false тул энд
+  // ямар ч сүлжээний хүсэлт явахгүй — сайт файлын/статик утгаараа ажиллана.
+  async loadEtransportBackend(){
+    if(typeof EHBackend==='undefined'||!EHBackend.enabled) return;
+    try{
+      const d=await EHBackend.fetchRailWagonLoading();
+      if(d) this._railWagonLoading=d;
+    }catch(e){
+      console.info('[ErtHub] etransport-backend уншигдсангүй:',e.message);
+    }
+  }
   // Виджет → метрик → бодит утга. Registry ирээгүй, widget/metric
   // тодорхойлогдоогүй, эсвэл датаг хараахан тооцоолоогүй бол fallback-аа
   // үнэн зөв тэмдэглэсэн хэвээр буцаана (isFallback:true) — админ самбар
@@ -4517,7 +4531,8 @@ class Component extends DCLogic {
     const reg=this.state.metricRegistry;
     const metricId=reg&&reg.widgets&&reg.widgets[widgetId]&&reg.widgets[widgetId].metric;
     const getters={
-      'air.flight_count_last_month':()=>this._heroFlLastMonth
+      'air.flight_count_last_month':()=>this._heroFlLastMonth,
+      'rail.wagon_loading':()=>this._railWagonLoading
     };
     const live=metricId&&getters[metricId]&&getters[metricId]();
     if(!live||live.count==null) return {value:fallback,isFallback:true,monthLabel:null};

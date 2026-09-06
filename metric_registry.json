@@ -1,7 +1,7 @@
 {
   "$schema": "erthub-metrics/v1",
   "version": "0.1.0",
-  "updated": "2026-08-24",
+  "updated": "2026-09-06",
   "note": "H3 шатны хамгийн анхны хэрэгжилт. Зөвхөн hero_fl виджет код дээр бодитоор холбогдсон. Бусад 16 виджет (H2 тайланд бүрэн бүртгэгдсэн) H4-т, зөвшөөрлийн дараа нэг нэгээр нь энд нэмэгдэнэ — өмнө нь нэмэхгүй, учир нь энэ файл ЯГ КОД ХОЛБОГДСОН зүйлийг л мэдэгдэх ёстой.",
   "widgets": {
     "hero_fl": {
@@ -410,6 +410,18 @@
       "additive": false,
       "quality": "verified",
       "period_note": "cargo талбар аль хэдийн тонноор (cargoKg-ийн 1000-д хуваасантай тэнцүү). WoW хувь lastFullWeekWindow(1)-тэй харьцуулна."
+    },
+    "rail.wagon_loading": {
+      "source": "EHBackend.fetchRailWagonLoading (js/erthub-backend.js → GET /api/sectors/rail/summary)",
+      "dataset": "silver.rail_wagon_loading",
+      "column": "WIG_*/POG_*",
+      "agg": "тодорхойгүй",
+      "filter": "тодорхойгүй",
+      "transform": "",
+      "unit": "тодорхойгүй",
+      "additive": false,
+      "quality": "pending",
+      "period_note": "Код (val()-ийн getters) холбогдсон, гэхдээ АМЬД БИШ: (1) backend (10.2.115.40:3000) одоогоор зөвхөн дотоод сүлжээнд (127.0.0.1), widget builder (GitHub Pages) хүрч чадахгүй — js/backend-config.js-ийн ETRANSPORT_BACKEND_BASE хоосон хэвээр; (2) нийтлэг болсон ч одоогийн /api/sectors/rail/summary нь silver.rail_operations уншдаг, шинэ ETL хийсэн silver.rail_wagon_loading-тай ХОЛБОГДООГҮЙ — аль нэгийг сонгох шийдвэр backend талд хараахан гараагүй. Иймд agg/filter/unit-ийг ЗОХИОХГҮЙ, endpoint-ийн бодит хариу тодорхой болмогц бөглөнө (HANDOFF_widget_builder.md харах). Ямар нэг widget слот руу ХАРААХАН холбогдоогүй — админ 'Виджет бүтээгч'-ийн метрик сонголтод харагдах ч 'метрик өөрөө verified биш' анхааруулгатай гарна."
     }
   },
   "removed": {
