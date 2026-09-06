@@ -2339,18 +2339,30 @@ document.addEventListener('change',function(e){
     toast(utxt('toast.viz_changed','Харагдацын хэлбэр:')+' '+vz.value);return}
   var sel=e.target.closest&&e.target.closest('[data-slot]');
   if(!sel)return;
-  var p=sel.dataset.slot.split('|'), id=p[0], path=p[1]?p[1].split(','):[], mk=sel.value||null;
+  var p=sel.dataset.slot.split('|'), id=p[0], path=p[1]?p[1].split(','):[], sectorKey=p[2]||null, mk=sel.value||null;
   var sv=slotVal(id,path), ov=REG0.widgets[id];
   path.forEach(function(x){ov=ov&&ov[x]});
   var before=sv.metric;
   sv.metric=mk;
   if(mk){
-    /* quality-г ЗӨВХӨН анхнаасаа байсан слотод бичнэ. hero_fl/t05 мэтийн
-       хуучин хавтгай бичлэгт quality талбар огт байдаггүй (metric байгаа нь
-       өөрөө verified гэсэн үг) — шинээр нэмбэл экспортын diff шаардлагагүй
-       мөрөөр бохирдож, git дээр шүүх нь хүндэрнэ. */
-    if(ov&&('quality' in ov)) sv.quality='verified';
-    else if('quality' in sv) delete sv.quality;
+    /* Энгийн ашиглалтад <option disabled> нь why(mk,ru)!==null метрикийг
+       сонгуулахгүй хамгаална (metricSelect()) — гэхдээ энэ handler өөрөө
+       "mk байгаа тул verified" гэж ТААМАГЛАХГҮЙ, why()-ээр дахин шалгана.
+       Ингэснээр disabled хамгаалалтыг ямар нэгэн байдлаар алгасвал ч
+       (жиш. өөр код) "Слотын чанар" badge худал "амьд утга" гэж
+       харуулахгүй, метрикийн ЖИНХЭНЭ quality-г (mock/pending/none) тусгана. */
+    var okNow=why(mk,requiredUnit(id,sectorKey))===null;
+    if(!okNow){
+      sv.quality=(REG.metrics[mk]&&REG.metrics[mk].quality)||'mock';
+    }else if(ov&&('quality' in ov)){
+      /* quality-г ЗӨВХӨН анхнаасаа байсан слотод бичнэ. hero_fl/t05 мэтийн
+         хуучин хавтгай бичлэгт quality талбар огт байдаггүй (metric байгаа нь
+         өөрөө verified гэсэн үг) — шинээр нэмбэл экспортын diff шаардлагагүй
+         мөрөөр бохирдож, git дээр шүүх нь хүндэрнэ. */
+      sv.quality='verified';
+    }else if('quality' in sv){
+      delete sv.quality;
+    }
     /* would_need / label нь ЗӨВХӨН холбогдоогүй слотод утгатай — холбогдсон
        хойно үлдээвэл registry дотор хуучирсан, төөрөгдүүлэх мөр үлдэнэ. */
     if('would_need' in sv) delete sv.would_need;
