@@ -95,19 +95,59 @@ Backend (10.2.115.40:3000) хараахан публик URL-гүй тул **б�
    `why()` нь "метрик өөрөө verified биш" гэж анхааруулна — энэ бол зөв,
    учир нь бодит холболт хараахан алга.
 
-## Дараагийн ажлын жагсаалт (шинэ chat-д)
+## Backend URL гарсны дараах чек-лист
 
-1. Backend API-г widget builder-с хүрч болохоор болгох (firewall/reverse proxy/
-   public endpoint шийдэл) — сервер рүү SSH хандалттай chat/session хэрэгтэй,
-   ЭНЭ chat-д server access байхгүй байсан. URL гарсны дараа
-   `js/backend-config.js`-ийн `ETRANSPORT_BACKEND_BASE`-г бөглөнө.
-2. `gold.monthly_summary_by_sector`-ийн rail хэсгийг `silver.rail_wagon_loading`-тай
-   холбох эсэхийг (эсвэл тусдаа endpoint үүсгэх эсэхийг) backend талд шийдэх —
-   энэ шийдвэрийн дараа л `metric_registry.json`-ийн `rail.wagon_loading`
-   бичлэгийн `agg`/`filter`/`unit`-ийг бодит утгаар бөглөж, `quality:"verified"`
-   болгож болно.
-3. `rail.wagon_loading`-ийг аль widget слотод холбохыг тодруулж (жиш.
-   `w2c.sectors.rail` — 7 хоногийн ачаа), `admin/index.html`-ийн "Виджет
-   бүтээгч"-ээр бодитоор холбож, preview шалгах.
-4. Бусад салбарууд (`road`/`sea`/`transit`) ETL бэлэн болмогц ижил хэв маягаар
-   (config → getter → registry → widget холболт) нэмэгдэнэ.
+Доорх дараалал бүрэн биелэх хүртэл `rail.wagon_loading` нь `quality:"pending"`
+хэвээр үлдэнэ — алхам алгасаж яаравчлахгүй, учир нь CLAUDE.md-ийн "Тоо
+ЗОХИОХГҮЙ" дүрэм яг ЭНЭ алхмуудаар л хангагдана.
+
+### A. Backend талд (URL/сервер хандалттай chat-д)
+- [ ] `curl -s https://<public-url>/health` → `{"status":"ok"}` шалгах
+- [ ] `curl -s https://<public-url>/health/db` → DB холболт шалгах
+- [ ] **CORS**: Express backend GitHub Pages-ийн домэйныг (жиш.
+      `https://otgonerdene02-cmyk.github.io`) `Access-Control-Allow-Origin`-д
+      зөвшөөрсөн эсэхийг шалгах — үгүй бол URL хүрдэг ч хөтчийн fetch CORS
+      алдаагаар цуцлагдана (энэ одоогийн кодод шалгагдаагүй асуудал).
+- [ ] `curl -s https://<public-url>/api/sectors/rail/summary` — хариуны JSON
+      бүтцийг (талбарын нэрс, нэгж) тэмдэглэж авах, доорх C хэсэгт ашиглана.
+- [ ] `gold.monthly_summary_by_sector`-ийн rail хэсгийг `silver.rail_wagon_loading`-тай
+      холбох эсэхийг (эсвэл тусдаа endpoint үүсгэх эсэхийг) шийдэх — одоогоор
+      энэ endpoint `silver.rail_operations`-с уншдаг, шинэ ETL-тэй ХОЛБООГҮЙ.
+
+### B. Клиент тал (widget builder кодод)
+- [ ] `js/backend-config.js`-ийн `ETRANSPORT_BACKEND_BASE`-г бөглөх (төгсгөлийн
+      "/" ОРУУЛАХГҮЙ)
+- [ ] `node scripts/serve.js 8080`-аар локал нээж, DevTools Network-ээр
+      `js/erthub-backend.js`-ийн fetch амжилттай хариу авч байгааг (CORS
+      алдаагүй) шалгах
+- [ ] Console-д `loadEtransportBackend()`-ээс алдаа гарахгүй байгааг шалгах
+
+### C. Метрикийн утга баталгаажуулах (тоо зохиохгүй дүрэм)
+- [ ] A хэсгийн бодит хариунаас гарсан талбаруудаар `metric_registry.json`-ийн
+      `rail.wagon_loading` бичлэгийн `agg`/`filter`/`unit`-ийг ХУДАЛГҮЙ,
+      БОДИТООР бөглөх (одоо гурав нь "тодорхойгүй")
+      `/api/sectors/:sector/summary`-той нийцэж байгааг шалгах.
+- [ ] Утгыг өмнө нь ETL шатанд баталгаажуулсан тоотой (Шивээ-Овоо=322,
+      Амгалан=29/89) харьцуулж нийцэж байгааг шалгах
+- [ ] Нийцэж байвал `quality:"pending"` → `"verified"` болгох
+
+### D. Widget builder-т холбох (`admin/index.html`)
+- [ ] Аль widget слот руу холбохыг сонгох (жиш. `w2c.sectors.rail` — "Долоо
+      хоногийн нийт ачаа тээвэр")
+- [ ] Тухайн слотын метрик сонголтоос `rail.wagon_loading`-г сонгох (verified
+      болсны дараа disabled биш, идэвхтэй сонголт болно)
+- [ ] Preview дээр утга бодитоор гарч ирснийг (0/NaN биш), "Одоогийн холбоос
+      дүрэм зөрчиж байна" анхааруулга алга болсныг шалгах
+- [ ] Экспортлох → JSON татаж, `metric_registry.json`-г репод шинэчлэх
+
+### E. Тест ба commit (CLAUDE.md-ийн дүрмээр)
+- [ ] `node scripts/check-cyrillic.js`
+- [ ] `node scripts/check-registry.js`
+- [ ] `node tests/run.js` (89/89 pass)
+- [ ] `node tests/text-coverage.js --list` (5/5 pass)
+- [ ] Push хийхийн өмнө хэрэглэгчээс зөвшөөрөл авах
+
+## Дараагийн ажлын жагсаалт (бусад, шинэ chat-д)
+
+1. Бусад салбарууд (`road`/`sea`/`transit`) ETL бэлэн болмогц дээрх A–E хэв
+   маягийг давтан (config → getter → registry → widget холболт) нэмэгдэнэ.
