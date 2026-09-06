@@ -1066,7 +1066,7 @@ var UI_GROUPS=[
            readonly_note:'Кодтой холбоотой — хөгжүүлэгч тохируулна',
            source_label:'Эх сурвалж',dataset_label:'Датасэт',column_label:'Багана',
            unit_label:'Нэгж',quality_label:'Чанар',filter_label:'Шүүлт (тайлбар)',
-           period_note_label:'Хугацааны тэмдэглэл',would_need_label:'Шаардлагатай эх сурвалж',
+           period_note_label:'Тайлбар — энэ юу вэ',would_need_label:'Шаардлагатай эх сурвалж',
            used_by:'виджетэд ашиглагдаж буй',used_by_none:'Одоогоор ямар ч виджетэд холбогдоогүй',
            quality_mock:'Түр дата',quality_pending:'Хүлээгдэж буй',quality_verified:'Баталгаажсан',
            verified_confirm:'"Баталгаажсан" гэдэг нь энэ тоо БОДИТ, шалгагдсан гэсэн үг. Хуурамч/тооцоолоогүй утгыг Баталгаажсан болгож болохгүй. Итгэлтэй байна уу?',
@@ -1121,7 +1121,8 @@ var UI_GROUPS=[
            ui_note:'ui тайлбар',no_site:'site блок алга',not_found:'Илэрц алга',
            chip_group:'Чипийн бүлэг',chip_where:'Чипийн байршил',chip_word:'"Чип" үг',
            chip_title:'Чип · гарчиг',chip_body:'Чип · тайлбар',month_group:'Сарын бүлэг',
-           month_where:'Сарын байршил',month_label:'Сарын шошгын дагавар',changed:'Өөрчлөгдсөн тэмдэг'}},
+           month_where:'Сарын байршил',month_label:'Сарын шошгын дагавар',changed:'Өөрчлөгдсөн тэмдэг',
+           ufh_heading:'ui_form блокийн гарчиг',ufh_note:'ui_form блокийн тайлбар'}},
   {key:'toast',title:'Админ · мэдэгдэл (toast)', where:'Зүүн доод буланд түр гарах мөр',
    labels:{field_active:'Талбар идэвхжлээ',text_applied:'Текст хэрэглэгдлээ',
            text_cancelled:'Текст цуцлагдлаа',viz_changed:'Хэлбэр солигдлоо',bound:'Холбогдлоо',
@@ -1691,13 +1692,26 @@ function lvSite(){
       '<div class="where">'+esc(g.where)+'</div>'+rows+'</div>';
   });
   /* ── Үлдсэн БҮХ талбар. Гараар бүлэглээгүй ч засварлагдана —
-     "бүртгэлтэй мөртөө засагдахгүй" талбар үүсэх боломжгүй болно. ── */
-  var cur=curatedPaths(), autoBy={}, autoShown=0;
+     "бүртгэлтэй мөртөө засагдахгүй" талбар үүсэх боломжгүй болно.
+     ui_form.* (admin-ийн ӨӨРИЙН бүлэг/шошгын НЭРНИЙ метадата — жиш.
+     "Коммунити" гэдэг үг энд зөвхөн "community" гэдэг талбарын нэрлэлт,
+     жинхэнэ дэлгэцэн дээрх текст БИШ) энгийн "бусад бүртгэлтэй текст"-
+     тэй хольвол хэрэглэгч "энэ хаана ашиглагддаг вэ" гэдгийг олохгүй
+     төөрдөг (жинхэнэ асуудал дээр илэрсэн) тул тусдаа, тодорхой
+     тайлбартай харуулна. */
+  var cur=curatedPaths(), autoBy={}, autoShown=0, ufBy={}, ufShown=0;
   everyTextPath().forEach(function(p){
     var key=p.join('.');
     if(cur[key]) return;
     var lbl=p[p.length-1];
     if(!match(lbl+' '+key,p)) return;
+    if(p[0]==='ui_form'){
+      var arr=CON.ui_form[p[1]], idx=parseInt(p[2],10), g=arr&&arr[idx];
+      var gt=(g&&g.title)||(p[1]+'['+p[2]+']');
+      var friendly=(p[3]==='labels')?(gt+' → "'+lbl+'" шошго'):(gt+' · '+lbl);
+      (ufBy[gt]=ufBy[gt]||[]).push({p:p,l:friendly});
+      return;
+    }
     var grp=p.slice(0,-1).join('.')||'site';
     (autoBy[grp]=autoBy[grp]||[]).push({p:p,l:lbl});
   });
@@ -1708,7 +1722,13 @@ function lvSite(){
     if(rows) autoHtml+='<div class="sgroup"><h3>'+esc(grp)+'</h3>'+
       '<div class="where">'+esc(utxt('site_tab.auto_where','Автоматаар илэрсэн талбар — content.json-д байгаа боловч гараар бүлэглээгүй'))+'</div>'+rows+'</div>';
   });
-  shown+=uiShown+autoShown;
+  var ufHtml='';
+  Object.keys(ufBy).sort().forEach(function(grp){
+    var rows='';
+    ufBy[grp].forEach(function(x){ rows+=siteField(x.p,x.l); ufShown++ });
+    if(rows) ufHtml+='<div class="sgroup"><h3>'+esc(grp)+'</h3>'+rows+'</div>';
+  });
+  shown+=uiShown+autoShown+ufShown;
   if(!shown) return '<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
   return (html?'<p class="ph">'+esc(utxt('site_tab.heading','Сайтын текст · content.json → site'))+' '+
     '<span style="font-family:var(--mono)">'+(shown-uiShown)+'</span></p>'+html+
@@ -1717,7 +1737,10 @@ function lvSite(){
     '<span style="font-family:var(--mono)">'+uiShown+'</span></p>'+uiHtml+
     '<p class="pvnote">'+esc(utxt('site_tab.ui_note','Эдгээр нь ЭНЭ УДИРДЛАГЫН ХЭРЭГСЛИЙН текст (сайтад харагдахгүй). Нэг утга бүх виджетийн засварын дэлгэцэд адил хэрэглэгдэнэ.'))+'</p>':'')+
     (autoHtml?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.auto_heading','Бусад бүртгэлтэй текст · content.json'))+' '+
-    '<span style="font-family:var(--mono)">'+autoShown+'</span></p>'+autoHtml:'');
+    '<span style="font-family:var(--mono)">'+autoShown+'</span></p>'+autoHtml:'')+
+    (ufHtml?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.ufh_heading','Админ таб/бүлгийн НЭРНИЙ тохиргоо · content.json → ui_form'))+' '+
+    '<span style="font-family:var(--mono)">'+ufShown+'</span></p>'+ufHtml+
+    '<p class="pvnote">'+esc(utxt('site_tab.ufh_note','Эдгээр нь ЗӨВХӨН энэ удирдлагын хэрэгслийн дотоод бүлэг/шошгын НЭРИЙГ тодорхойлно — сайт дээр ХАРАГДАХГҮЙ. Ихэвчлэн засах шаардлагагүй.'))+'</p>':'');
 }
 
 /* ══════════════════ ДАТА ХОЛБОЛТ (metric_registry.json → metrics{}) ═══
@@ -1756,6 +1779,14 @@ function mQualitySelect(mk){
     (d?' <b class="dt">'+esc(utxt('site_tab.changed','өөрчлөгдсөн'))+'</b>':'')+'</div>'+
     '<select data-mfq="'+esc(mk)+'">'+opts+'</select></div>';
 }
+/* Датасэтийн түлхүүрийг (жиш. air_flights) DSMETA-аар танигдахуйц нэртэй
+   хамт харуулна — олдохгүй бол түлхүүрийг өөрийг нь харуулна (шинэ
+   датасэт нэмэгдэхэд ч ажиллана, DSMETA-ийн комментод адил зарчим). */
+function dsFriendly(dataset){
+  if(!dataset) return '—';
+  var meta=DSMETA[dataset];
+  return meta?(meta.n+' ('+dataset+')'):dataset;
+}
 function lvMetrics(){
   var mm=REG.metrics||{}, keys=Object.keys(mm).sort();
   var q=(S.q||'').trim().toLowerCase();
@@ -1767,19 +1798,26 @@ function lvMetrics(){
     if(q&&hay.indexOf(q)<0) return;
     shown++;
     var used=mUsedBy(mk);
+    var usedHtml=used.length
+      ? used.map(function(id){return '<button class="btn sm" data-mgoto="'+esc(id)+'">'+
+          esc(curText(id,'title')||id)+'</button>'}).join(' ')
+      : esc(utxt('metrics_tab.used_by_none','Одоогоор ямар ч виджетэд холбогдоогүй'));
     html+='<div class="sgroup" data-metric="'+esc(mk)+'"><h3>'+esc(mk)+' <span class="badge '+
       (badgeCls[m.quality]||'b-zero')+'">'+esc(qualityLabel(m.quality))+'</span></h3>'+
-      '<div class="where">'+esc(utxt('metrics_tab.source_label','Эх сурвалж'))+': '+esc(m.source||'—')+
-      ' · '+esc(utxt('metrics_tab.dataset_label','Датасэт'))+': '+esc(m.dataset||'—')+
-      ' · '+esc(utxt('metrics_tab.column_label','Багана'))+': '+esc(m.column||'—')+'</div>'+
+      /* Тайлбар — ХАМГИЙН ТҮРҮҮНД, "энэ юу вэ" гэдгийг эхлээд ойлгуулна.
+         period_note талбарыг ЭНД зөвхөн НЭГ удаа, тод байрлалд харуулна
+         (доор давхардуулахгүй). */
+      mField(mk,'period_note',utxt('metrics_tab.period_note_label','Тайлбар — энэ юу вэ'),true)+
       '<div class="acc">'+esc(utxt('metrics_tab.readonly_note','Кодтой холбоотой — хөгжүүлэгч тохируулна'))+'</div>'+
+      '<div class="where">'+esc(utxt('metrics_tab.source_label','Эх сурвалж'))+': '+esc(m.source||'—')+
+      ' · '+esc(utxt('metrics_tab.dataset_label','Датасэт'))+': '+esc(dsFriendly(m.dataset))+
+      ' · '+esc(utxt('metrics_tab.column_label','Багана'))+': '+esc(m.column||'—')+'</div>'+
       mField(mk,'unit',utxt('metrics_tab.unit_label','Нэгж'))+
       mQualitySelect(mk)+
       mField(mk,'filter',utxt('metrics_tab.filter_label','Шүүлт (тайлбар)'),true)+
-      mField(mk,'period_note',utxt('metrics_tab.period_note_label','Хугацааны тэмдэглэл'),true)+
       mField(mk,'would_need',utxt('metrics_tab.would_need_label','Шаардлагатай эх сурвалж'),true)+
-      '<div class="where">'+(used.length?used.length+' '+esc(utxt('metrics_tab.used_by','виджетэд ашиглагдаж буй'))+' ('+used.join(', ')+')'
-        :esc(utxt('metrics_tab.used_by_none','Одоогоор ямар ч виджетэд холбогдоогүй')))+'</div>'+
+      '<div class="where">'+(used.length?(used.length+' '+esc(utxt('metrics_tab.used_by','виджетэд ашиглагдаж буй'))+':'):'')+'</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'+usedHtml+'</div>'+
       '</div>';
   });
   if(!shown && q) html='<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
@@ -2435,6 +2473,11 @@ document.addEventListener('click',function(e){
     var p=el.dataset.mo.split('|');openMo(p[0],p[1]);return}
   if((el=t.closest&&t.closest('[data-goedit]'))){
     var g=el.dataset.goedit.split('|');gotoWidget(g[0],g[1]);return}
+  if((el=t.closest&&t.closest('[data-mgoto]'))){
+    /* "Дата холболт" табын "ашиглагдаж буй" жагсаалтаас тухайн виджет
+       рүү шууд орно — "Виджет ба дата" таб руу сэлгэнэ (gotoWidget()
+       өөрөө таб солихгүй). */
+    S.tab='data';gotoWidget(el.dataset.mgoto,'full');return}
   if((el=t.closest&&t.closest('[data-goto]'))){
     if(el.disabled)return;
     var gid=el.dataset.goto;S.flash=gid;gotoWidget(gid,'full');return}

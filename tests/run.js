@@ -644,6 +644,13 @@ const PROBE_H = `async function(d,w){
   tab.click(); await sleep(600);
   R.cards=d.querySelectorAll('[data-metric]').length;
   R.roCount=d.querySelectorAll('[data-mf$="|source"],[data-mf$="|dataset"],[data-mf$="|column"]').length;
+  // H5 — "ашиглагдаж буй" жагсаалт ВИДЖЕТИЙН ЖИНХЭНЭ ГАРЧИГ харуулна (raw id биш)
+  const wpCard=d.querySelector('[data-metric="air.weekly_pax"]');
+  if(wpCard){
+    const btns=[...wpCard.querySelectorAll('[data-mgoto]')];
+    R.usedByTitle=btns.some(b=>b.textContent.trim()==='Долоо хоногийн нийт зорчигч тээвэр');
+    R.usedByRawId=btns.some(b=>b.textContent.trim()==='w2p');
+  }
   // H3 — метадата талбар засвар: dirty болж, экспортод тусна
   const unitInp=d.querySelector('[data-mf$="|unit"]');
   R.hasUnitField=!!unitInp;
@@ -707,6 +714,9 @@ async function groupH() {
       'cardsAfterAdd: ' + R.cardsAfterAdd + ', newCardMock: ' + R.newCardMock);
     check('H4. Экспортын JSON-д шинэ метрик тусна',
       R.expHasNew === true, JSON.stringify({expHasNew:R.expHasNew,expErr:R.expErr}));
+    check('H5. "Ашиглагдаж буй" жагсаалт виджетийн ЖИНХЭНЭ гарчиг харуулна (raw id биш)',
+      R.usedByTitle === true && R.usedByRawId === false,
+      JSON.stringify({usedByTitle:R.usedByTitle,usedByRawId:R.usedByRawId}));
   } finally { srv.close(); }
 }
 
