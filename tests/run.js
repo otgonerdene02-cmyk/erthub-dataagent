@@ -765,14 +765,14 @@ const PROBE_I = `async function(d,w){
   const val=()=>{const e=d.querySelector('#pvhost .pvsc .v'); return e?e.textContent.trim():null};
   const spark=()=>{const p=d.querySelector('#pvhost .pvsc .sp path,#pvhost .pvsc .sp line');
     return p?(p.getAttribute('d')||'flat'):null};
-  R.hasValueForm=!!d.querySelector('[data-vf="ls|measure"]');
+  R.hasFieldGroup=!!d.querySelector('[data-slot^="ls|"] optgroup');
   R.before=val(); R.sparkBefore=spark();
-  const pick=(v)=>{const el=d.querySelector('[data-vf="ls|measure"]');
+  const pick=(v)=>{const el=d.querySelector('[data-slot^="ls|sectors,air"]');
     if(!el) return false; el.value=v; el.dispatchEvent(new w.Event('change',{bubbles:true})); return true};
-  pick('Зорчигч'); await sleep(1200);
+  pick('field:Зорчигч|SUM'); await sleep(1200);
   R.after=val(); R.sparkAfter=spark();
   R.dirtyAfter=(d.getElementById('dirtyMsg')||{}).textContent||'';
-  pick(''); await sleep(1200);
+  pick('air.flight_count_last_month'); await sleep(1200);
   R.reverted=val();
   R.dirtyReverted=(d.getElementById('dirtyMsg')||{}).textContent||'';
   return R;
@@ -783,14 +783,14 @@ async function groupI2() {
   try {
     const R = await runProbe(PROBE_I, 90000);
     if (R.__err) { bad('I5. Админ preview шалгалт ажиллав', R.__err); return; }
-    check('I5. Виджет засварлах дэлгэцэд "Утга" маягт гарна', R.hasValueForm === true);
+    check('I5. Слотын сонголтод "датаны талбараас" бүлэг гарна', R.hasFieldGroup === true);
     check('I5. Хэмжигдэхүүн сольсон ДАРУЙД preview-ийн ТОО өөрчлөгдөнө',
       !!R.before && !!R.after && R.before !== R.after,
       JSON.stringify({ before: R.before, after: R.after }));
     check('I5. Spark line ч сонгосон хэмжигдэхүүнээ дагана',
       !!R.sparkAfter && R.sparkBefore !== R.sparkAfter, 'муруй өөрчлөгдсөнгүй');
     check('I5. Тохиргоо dirty болж экспортод орно', /өөрчлөлт/.test(R.dirtyAfter), R.dirtyAfter.trim());
-    check('I5. "Өмнөх хэвээр" сонговол виджет анхны утгаа буцаана',
+    check('I5. Бүртгэлтэй метрик рүү буцаавал анхны утга сэргэнэ',
       R.reverted === R.before && /алга/.test(R.dirtyReverted),
       JSON.stringify({ reverted: R.reverted, before: R.before, dirty: R.dirtyReverted.trim() }));
   } finally { srv.close(); }
@@ -872,9 +872,9 @@ function groupI() {
   check('I4. Сайт нь виджетийн утгыг тохиргооноос уншина',
     idx.includes('valueFromSpec(\'ls\')') && idx.includes('vs?vs.value:'),
     'livestrip холболт олдсонгүй');
-  check('I4. Admin виджет засварлах дэлгэцэд "Утга" маягт нэмэгдсэн',
-    read('admin/index.html').includes('valueForm(id)') &&
-    read('admin/index.html').includes('data-vf='), 'valueForm олдсонгүй');
+  check('I4. Admin-ы слот сонголтод "датаны талбараас шууд" бүлэг нэмэгдсэн',
+    read('admin/index.html').includes("'field:'+c[0]") &&
+    read('admin/index.html').includes('metric.from_field'), 'optgroup олдсонгүй');
 }
 
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */

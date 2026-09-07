@@ -858,13 +858,31 @@ function requiredUnit(id,sectorKey){
   }
   return null;
 }
+/* Нэгжийн ХАРАГДАХ нэр. "mixed" гэдэг нь дотоод тэмдэглэгээ — k04 мэтийн
+   виджет 8 мөр ТУС БҮР ӨӨР нэгжтэй (нислэг, хүн, тонн…) тул ганц нэгж
+   оноож болохгүй гэсэн утга. Хэрэглэгчид "mixed" гэж англи товчлол
+   харуулбал юу ч ойлгуулахгүй. ХАРЬЦУУЛАЛТАД түүхий тэмдэглэгээ хэвээр
+   ашиглана (энд солибол why() k04-ийн холбоосыг худал зөрчилтэй гэнэ). */
+function unitLabel(u){
+  if(u==='mixed') return utxt('metric.unit_mixed','холимог — мөр бүр өөр нэгжтэй');
+  return u;
+}
+/* Слотод ОДОО хүчинтэй нэгж. Талбараас шууд сонгосон бол сонгосон
+   хэмжигдэхүүнийх, эс бөгөөс слотын өөрийн "шаардах нэгж". */
+function slotUnitNow(id,sectorKey){
+  if(typeof valueSpecOf==='function'&&typeof EHChart!=='undefined'&&sectorKey==='air'){
+    var sp=valueSpecOf(id);
+    if(sp&&sp.measure) return EHChart.unitOf(sp.measure)||null;
+  }
+  return requiredUnit(id,sectorKey);
+}
 function why(mk,reqUnit){
   if(!mk) return null;
   var m=REG.metrics[mk];
   if(!m) return utxt('metric.why_no_def','метрик тодорхойлолт олдсонгүй');
   if(m.quality!=='verified') return utxt('metric.why_not_verified','метрик өөрөө verified биш');
   if(reqUnit==null) return null;
-  if(m.unit!==reqUnit) return utxt('metric.why_unit','нэгж үл нийцнэ:')+' "'+m.unit+'" ≠ "'+reqUnit+'"';
+  if(m.unit!==reqUnit) return utxt('metric.why_unit','нэгж үл нийцнэ:')+' "'+unitLabel(m.unit)+'" ≠ "'+unitLabel(reqUnit)+'"';
   return null;
 }
 /* Нийлбэрийн (grain) анхааруулга — dbt MetricFlow-ийн grain validation
@@ -1073,7 +1091,7 @@ var UI_GROUPS=[
            dataset:'Датасэт',source:'Эх сурвалж',filter:'Шүүлт',required:'Шаардлагатай',
            single_slot:'Ганц метрик',warn_rule:'Дүрэм зөрчсөн анхааруулга',
            warn_sum:'Нийлбэрийн анхааруулга',why_no_def:'Тодорхойлолт алга',
-           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ'}},
+           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
   {key:'text',title:'Админ · текстийн маягт', where:'Виджетийн засварын доод хэсэг',
    labels:{heading:'Хэсгийн гарчиг',apply:'Хэрэглэх товч',cancel:'Болих товч',
            location:'Байршил товч',history:'Түүх товч',changed:'Өөрчлөгдсөн тэмдэг'}},
@@ -1098,10 +1116,6 @@ var UI_GROUPS=[
            key_required:'Түлхүүр заавал бичнэ үү',
            empty:'Метрик бүртгэгдээгүй байна',
            search_ph:'Хайлтын сануулга'}},
-  {key:'value_form',title:'Админ · виджетийн утга солих', where:'Виджет засварлах дэлгэцийн дээд хэсэг',
-   labels:{heading:'Хэсгийн гарчиг',note:'Хэсгийн тайлбар',measure_label:'Хэмжигдэхүүний шошго',
-           agg_label:'Нэгтгэлийн шошго',default:'"Өмнөх хэвээр" сонголт',
-           now:'"Одоо гарах утга" шошго',months:'"сарын цуваа" бичвэр'}},
   {key:'chart_tab',title:'Админ · Чарт бүтээгч', where:'Дата холболт табын доод хэсэг',
    labels:{heading:'Хэсгийн гарчиг',note:'Хэсгийн тайлбар',
            type_label:'Чартын төрлийн шошго',type_dual:'"Хосолсон" төрлийн нэр',
@@ -2191,15 +2205,41 @@ function slotDisplay(sv,q){
 }
 function metricSelect(id,path,sectorKey){
   var sv=slotVal(id,path), ru=requiredUnit(id,sectorKey);
-  var opts=['<option value="">'+esc(utxt('metric.unbound','— холбоогүй —'))+'</option>'];
+  var vspec=(typeof valueSpecOf==='function')?valueSpecOf(id):null;
+  var vsActive=!!(vspec&&sectorKey==='air');
+  var opts=['<option value=""'+(!vsActive&&!sv.metric?' selected':'')+'>'+
+    esc(utxt('metric.unbound','— холбоогүй —'))+'</option>'];
   Object.keys(REG.metrics).forEach(function(mk){
-    var w=why(mk,ru), m=REG.metrics[mk], cur=(sv.metric===mk);
+    var w=why(mk,ru), m=REG.metrics[mk], cur=(!vsActive&&sv.metric===mk);
     /* ОДООГИЙН холбоосыг ХЭЗЭЭ Ч disabled болгохгүй — эс тэгвэл select
        өөрийнхөө сонгосон утгыг харуулж чадахгүй, "боломжгүй төлөв" гарна.
        Дүрэм зөрчсөн бол доор тусад нь анхааруулга үзүүлнэ. */
     opts.push('<option value="'+esc(mk)+'"'+(cur?' selected':'')+(w&&!cur?' disabled':'')+'>'+
-      esc(mk)+' · '+esc(m.unit)+(w?' — '+(cur?'⚠ ':'')+esc(w):'')+'</option>');
+      esc(mk)+' · '+esc(unitLabel(m.unit))+(w?' — '+(cur?'⚠ ':'')+esc(w):'')+'</option>');
   });
+  /* ── ДАТАНЫ ТАЛБАРААС ШУУД ─────────────────────────────────────────
+     Бүртгэлтэй метрикүүд нь слотын "шаардах нэгж"-тэй таарах ёстой тул
+     (жиш. ls.air = "нислэг") зорчигчийн тоог сонгох боломжгүй байв.
+     Энд эх сурвалжийн БОДИТ талбарыг шууд сонгоно — нэгж, шошго, spark
+     line нь сонголтоо ДАГАЖ өөрчлөгддөг тул "нэгж үл нийцэх" зөрчил
+     үүсэхгүй. Тусдаа маягт нэмэхийн оронд ЯГ ЭНД байрлуулав: хэрэглэгч
+     "энэ слот юу харуулах вэ" гэдгээ НЭГ л газраас шийднэ. */
+  var ds=(typeof VALUE_TARGETS!=='undefined')&&VALUE_TARGETS[id];
+  if(ds&&sectorKey==='air'&&typeof EHChart!=='undefined'){
+    var aggNames={SUM:utxt('chart_tab.agg_sum','Нийлбэр (SUM)'),AVG:utxt('chart_tab.agg_avg','Дундаж (AVG)'),
+                  MIN:utxt('chart_tab.agg_min','Хамгийн бага (MIN)'),MAX:utxt('chart_tab.agg_max','Хамгийн их (MAX)')};
+    var fo=[];
+    EHChart.measures(ds).forEach(function(c){
+      ['SUM','AVG','MIN','MAX'].forEach(function(a){
+        var v='field:'+c[0]+'|'+a;
+        var sel=vsActive&&vspec.measure===c[0]&&(vspec.agg||'SUM')===a;
+        fo.push('<option value="'+esc(v)+'"'+(sel?' selected':'')+'>'+
+          esc(c[0])+' · '+esc(aggNames[a]||a)+(EHChart.unitOf(c[0])?' · '+esc(EHChart.unitOf(c[0])):'')+'</option>');
+      });
+    });
+    opts.push('<optgroup label="'+esc(utxt('metric.from_field','Датаны талбараас шууд (нэгж автоматаар)'))+'">'+
+      fo.join('')+'</optgroup>');
+  }
   return '<select data-slot="'+esc(id)+'|'+path.join(',')+'|'+esc(sectorKey||'')+'">'+opts.join('')+'</select>';
 }
 /* Одоо холбогдсон метрик слотын дүрэм зөрчиж байгаа эсэх */
@@ -2235,7 +2275,7 @@ function bindingWarn(id){
 function calcLine(mk){
   var m=REG.metrics[mk];if(!m)return '';
   return '<div class="mecalc">'+esc(utxt('metric.calc','Тооцоолол'))+' <code>'+esc(m.agg)+'('+esc(m.column)+')'+
-    (m.transform?' '+esc(m.transform):'')+'</code> → <b>'+esc(m.unit)+'</b><br>'+
+    (m.transform?' '+esc(m.transform):'')+'</code> → <b>'+esc(unitLabel(m.unit))+'</b><br>'+
     esc(utxt('metric.dataset','Датасэт'))+' <code>'+esc(m.dataset)+'</code> · '+esc(utxt('metric.source','эх сурвалж'))+' <code>'+esc(m.source)+'</code><br>'+
     esc(utxt('metric.filter','Шүүлт'))+' <code>'+esc(m.filter||'—')+'</code></div>';
 }
@@ -2416,34 +2456,6 @@ function valueDirtyKeys(){
   });
   return out;
 }
-function valueForm(id){
-  var ds=VALUE_TARGETS[id];
-  if(!ds||typeof EHChart==='undefined') return '';
-  var sp=valueSpecOf(id)||{};
-  var meas=EHChart.measures(ds).map(function(c){return c[0]});
-  var aggNames={SUM:utxt('chart_tab.agg_sum','Нийлбэр (SUM)'),COUNT:utxt('chart_tab.agg_count','Тоолох (COUNT)'),
-                AVG:utxt('chart_tab.agg_avg','Дундаж (AVG)'),MIN:utxt('chart_tab.agg_min','Хамгийн бага (MIN)'),
-                MAX:utxt('chart_tab.agg_max','Хамгийн их (MAX)')};
-  /* Одоо ямар тоо гарахыг ТУХАЙН ГАЗАРТ нь харуулна — сонгоод сайт
-     руу гарахыг хүлээхгүй. */
-  var now='';
-  if(FEED.state==='ready'&&FEED.rows){
-    var v=EHChart.value(FEED.rows,{dataset:ds,measure:sp.measure,agg:sp.agg||'SUM'});
-    if(v) now='<div class="acc" style="margin-top:6px"><b>'+esc(utxt('value_form.now','Одоо гарах утга:'))+
-      '</b> '+esc(v.value)+(v.unit?' '+esc(v.unit):'')+' · '+v.n+' '+esc(utxt('value_form.months','сарын цуваа'))+'</div>';
-  }
-  return '<div class="sedit"><div class="sedit-h"><b>'+esc(utxt('value_form.heading','Виджетийн утга — юуг харуулах вэ'))+'</b></div>'+
-    '<div class="acc">'+esc(utxt('value_form.note','Чартын ЗАГВАР хэвээр үлдэнэ — зөвхөн харуулах хэмжигдэхүүн солигдоно. Нэгжийн шошго ба spark line автоматаар дагаж өөрчлөгдөнө. Хоосон орхивол виджет өмнөх хэвээрээ.'))+'</div>'+
-    '<div class="f"><label>'+esc(utxt('value_form.measure_label','Хэмжигдэхүүн'))+'</label>'+
-    '<select data-vf="'+esc(id)+'|measure"><option value="">'+
-    esc(utxt('value_form.default','— өмнөх хэвээр (нислэгийн тоо) —'))+'</option>'+
-    meas.map(function(m){return '<option value="'+esc(m)+'"'+(sp.measure===m?' selected':'')+'>'+esc(m)+
-      (EHChart.unitOf(m)?' · '+esc(EHChart.unitOf(m)):'')+'</option>'}).join('')+'</select></div>'+
-    '<div class="f"><label>'+esc(utxt('value_form.agg_label','Нэгтгэл'))+'</label>'+
-    '<select data-vf="'+esc(id)+'|agg">'+
-    EHChart.AGG_LIST.map(function(a){return '<option value="'+a+'"'+((sp.agg||'SUM')===a?' selected':'')+'>'+
-      esc(aggNames[a]||a)+'</option>'}).join('')+'</select></div>'+now+'</div>';
-}
 function lvEdit(){
   var id=S.widget;
   if(!S.td) resetTd(id);
@@ -2466,8 +2478,11 @@ function lvEdit(){
       :q==='none'?'<span class="badge b-zero">'+esc(sv.label||utxt('badge.no_data','мэдээлэл алга'))+'</span>'
       :'<span class="badge b-warn">'+esc(utxt('badge.no_source','эх сурвалж алга'))+'</span>';
     return '<div class="sedit"><div class="sedit-h">'+head+badge+'</div>'+
+      /* Талбараас шууд сонгосон үед нэгж нь СОНГОЛТОО дагана — слотын
+         "шаардах нэгж" (нислэг) хэвээр үлдвэл зорчигчийн тоог "нислэг"
+         гэж ХУДАЛ шошголсон мэт харагдана. */
       '<div class="f" style="margin-bottom:8px"><label>'+esc(utxt('metric.unit_label','Метрик · шаардах нэгж:'))+' '+
-        esc(requiredUnit(id,s.key)||utxt('metric.unit_unknown','тодорхойгүй'))+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
+        esc(unitLabel(slotUnitNow(id,s.key))||utxt('metric.unit_unknown','тодорхойгүй'))+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
       (sv.metric?calcLine(sv.metric)
         :'<div class="acc" data-wn="1"'+(sv.would_need?'':' style="display:none"')+'><b>'+
            esc(utxt('metric.required','Шаардлагатай:'))+'</b> <span>'+esc(sv.would_need||'')+'</span></div>')+
@@ -2475,7 +2490,6 @@ function lvEdit(){
       '</div>';
   }).join('');
   return '<div class="edit2"><div class="e-pv" id="pvhost">'+pvInner(id)+'</div><div class="e-fm">'+
-    valueForm(id)+
     (bw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_rule','Одоогийн холбоос дүрэм зөрчиж байна'))+'</b>'+
         esc(bw.join(' · '))+'</div>':'')+
     (gw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_sum','Нийлбэрийн анхааруулга'))+'</b>'+esc(gw)+'</div>':'')+
@@ -2810,22 +2824,6 @@ document.addEventListener('change',function(e){
   var t=e.target;
   var cf=t.closest&&t.closest('[data-cf]');
   if(cf){ cfApply(cf); return }
-  /* Виджетийн утга (хэмжигдэхүүн / нэгтгэл) — REG.widgets[id].value */
-  var vf=t.closest&&t.closest('[data-vf]');
-  if(vf){
-    var vp=vf.dataset.vf.split('|'), vid=vp[0], vfield=vp[1];
-    REG.widgets=REG.widgets||{};
-    REG.widgets[vid]=REG.widgets[vid]||{};
-    var vspec=REG.widgets[vid].value||{};
-    if(vf.value) vspec[vfield]=vf.value; else delete vspec[vfield];
-    /* Хэмжигдэхүүн сонгоогүй бол тохиргоо утгагүй — бүрэн арилгаж,
-       виджетийг өмнөх зан төлөв рүү нь буцаана. */
-    if(!vspec.measure&&(vspec.agg||'SUM')!=='COUNT') delete REG.widgets[vid].value;
-    else { vspec.dataset=vspec.dataset||VALUE_TARGETS[vid]; REG.widgets[vid].value=vspec }
-    if(!REG.widgets[vid].value&&!Object.keys(REG.widgets[vid]).length) delete REG.widgets[vid];
-    log(vid,'Виджетийн утга: '+(vspec.measure||'—')+' · '+(vspec.agg||'SUM'));
-    render();return;
-  }
   var mfq=t.closest&&t.closest('[data-mfq]');
   if(mfq){
     var mk2=mfq.dataset.mfq, prevQ=REG.metrics[mk2].quality;
@@ -2845,6 +2843,23 @@ document.addEventListener('change',function(e){
   var sel=e.target.closest&&e.target.closest('[data-slot]');
   if(!sel)return;
   var p=sel.dataset.slot.split('|'), id=p[0], path=p[1]?p[1].split(','):[], sectorKey=p[2]||null, mk=sel.value||null;
+  /* "Датаны талбараас шууд" сонголт — бүртгэлтэй метрик БИШ, эх
+     сурвалжийн талбар дээрх нэгтгэл. widgets.<id>.value-д хадгална
+     (нэгж/шошго/spark line нь үүнийг дагана). */
+  if(mk&&mk.indexOf('field:')===0){
+    var fp=mk.slice(6).split('|');
+    REG.widgets[id]=REG.widgets[id]||{};
+    REG.widgets[id].value={dataset:VALUE_TARGETS[id]||'air_flights',measure:fp[0],agg:fp[1]||'SUM'};
+    log(id,'Виджетийн утга: '+fp[0]+' · '+(fp[1]||'SUM'));
+    render();toast(utxt('toast.bound','Холбогдлоо:')+' '+fp[0]);
+    return;
+  }
+  /* Бүртгэлтэй метрик рүү буцвал талбарын тохиргоог арилгана — эс тэгвэл
+     хоёр эх сурвалж зэрэг идэвхтэй мэт ойлгогдоно. */
+  if(REG.widgets[id]&&REG.widgets[id].value){
+    delete REG.widgets[id].value;
+    log(id,'Виджетийн утга: талбарын тохиргоо арилгав');
+  }
   var sv=slotVal(id,path), ov=REG0.widgets[id];
   path.forEach(function(x){ov=ov&&ov[x]});
   var before=sv.metric;
