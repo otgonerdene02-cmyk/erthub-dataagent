@@ -128,8 +128,16 @@ function serve() {
   return http.createServer((req, res) => {
     const p = decodeURIComponent(req.url.split('?')[0]);
     if (p === '/__result__' && req.method === 'POST') {
-      let b = ''; req.on('data', (c) => b += c);
-      req.on('end', () => { PROBE_RESULT = b; res.writeHead(200); res.end('ok'); });
+      /* Chunk-ийг ТУС ТУСАД нь мөр болгож нийлүүлбэл (b += c) кирилл үсэг
+         (UTF-8-д 2 байт) хоёр chunk-ийн ЗААГТ таарахад тал бүр нь тусдаа
+         задарч "�" болно. Ингэснээр тест САНАМСАРГҮЙ уначихдаг байв
+         ("бүтээг��" маягийн эвдэрсэн мөр). Байтуудыг бүтнээр нь цуглуулж,
+         ТӨГСГӨЛД нь НЭГ УДАА задална. */
+      const chunks = []; req.on('data', (c) => chunks.push(c));
+      req.on('end', () => {
+        PROBE_RESULT = Buffer.concat(chunks).toString('utf8');
+        res.writeHead(200); res.end('ok');
+      });
       return;
     }
     if (p === '/__probe__') {

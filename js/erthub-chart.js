@@ -296,6 +296,11 @@
     }
     return {
       raw: total,
+      /* rounded — ХАРУУЛАХ тоо. Админы preview ба сайт ХОЁУЛАА ҮҮНИЙГ
+         ашиглана: тус тусдаа Math.round хийвэл нэг өдөр нэг тал өөрчлөгдөж
+         preview ба сайт өөр тоо үзүүлж эхэлнэ (энэ төслийн хамгийн олон
+         давтагдсан алдааны төрөл). */
+      rounded: Math.round(total),
       value: Math.round(total).toLocaleString('en-US'),
       unit: ag === 'COUNT' ? '' : unitOf(valueSpec.measure),
       /* Виджет дээрх метрикийн НЭР ч хэмжигдэхүүнээ дагана — эс тэгвэл

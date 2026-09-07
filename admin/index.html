@@ -1094,7 +1094,7 @@ var UI_GROUPS=[
            dataset:'Датасэт',source:'Эх сурвалж',filter:'Шүүлт',required:'Шаардлагатай',
            single_slot:'Ганц метрик',warn_rule:'Дүрэм зөрчсөн анхааруулга',
            warn_sum:'Нийлбэрийн анхааруулга',why_no_def:'Тодорхойлолт алга',
-           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
+           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',unfit_group:'Тохирохгүй метрикийн бүлэг',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
   {key:'text',title:'Админ · текстийн маягт', where:'Виджетийн засварын доод хэсэг',
    labels:{heading:'Хэсгийн гарчиг',apply:'Хэрэглэх товч',cancel:'Болих товч',auto_name_hint:'Автомат нэрийн санал',auto_name_apply:'"Тавих" товч',
            location:'Байршил товч',history:'Түүх товч',changed:'Өөрчлөгдсөн тэмдэг'}},
@@ -1391,7 +1391,7 @@ function sectorParts(id){
     /* Сайт нь Math.round хийж харуулдаг тул preview ч ЯГ ижил тоо
        үзүүлнэ — эс тэгвэл preview "6,677,422.6", сайт "6,677,423" гэж
        зөрөх бөгөөд аль нь үнэн бэ гэсэн эргэлзээ төрүүлнэ. */
-    if(vres&&(s.key==='air'||s.key===null)&&q==='verified') v=Math.round(vres.raw);
+    if(vres&&(s.key==='air'||s.key===null)&&q==='verified') v=vres.rounded;
     return {k:s.key,n:SECN[s.key]||s.key,c:NEON[s.key]||'#8A93AB',v:v,q:q,
       label:q==='none'?(sv.label||'мэдээлэл алга'):(q==='mock'?'түр дата':'')};
   });
@@ -1448,7 +1448,7 @@ function previewFor(id,mini){
   if(kind==='ticker'){
     /* Утгын тохиргоотой бол ТҮҮНИЙ тоог харуулна (сайт дээр ч ижил). */
     var tvRes=widgetValueRes(id);
-    var tv=tvRes?Math.round(tvRes.raw):(mk?metricValue(mk):null);
+    var tv=tvRes?tvRes.rounded:(mk?metricValue(mk):null);
     var tu=TEXT_ONLY[id]?'':previewUnit(id,slotsOf(id)[0].key);
     return '<div class="sitepv'+(mini?' mini':'')+'" style="--sc:'+accent+'">'+
       '<div class="pvticker">'+
@@ -1599,7 +1599,7 @@ function previewFor(id,mini){
       rp=['air','road','rail','water','public'].map(function(k){
         var isOk=ok.indexOf(k)>=0;
         var rv=isOk?(metricValue(headMetric(id))||0):0;
-        if(rkRes&&k==='air'&&isOk) rv=Math.round(rkRes.raw);
+        if(rkRes&&k==='air'&&isOk) rv=rkRes.rounded;
         return {k:k,n:SECN[k],c:NEON[k],q:isOk?'verified':'none',v:rv};
       });
     }
@@ -2232,13 +2232,19 @@ function metricSelect(id,path,sectorKey){
   var vsActive=!!(vspec&&(sectorKey==='air'||sectorKey===null));
   var opts=['<option value=""'+(!vsActive&&!sv.metric?' selected':'')+'>'+
     esc(utxt('metric.unbound','— холбоогүй —'))+'</option>'];
+  /* СОНГОЖ БОЛОХ нь дээр, БОЛОХГҮЙ нь доор ТУСДАА бүлэгт. Өмнө нь 7
+     идэвхгүй сонголт урт тайлбартайгаа дунд нь холилдож, ажилладаг
+     сонголтуудыг дарж байв. Тайлбарыг нь ҮЛДЭЭНЭ (яагаад болохгүйг
+     мэдэх нь хэрэгтэй) — зөвхөн хойш нь тавина. */
+  var badOpts=[];
   Object.keys(REG.metrics).forEach(function(mk){
     var w=why(mk,ru), m=REG.metrics[mk], cur=(!vsActive&&sv.metric===mk);
     /* ОДООГИЙН холбоосыг ХЭЗЭЭ Ч disabled болгохгүй — эс тэгвэл select
        өөрийнхөө сонгосон утгыг харуулж чадахгүй, "боломжгүй төлөв" гарна.
        Дүрэм зөрчсөн бол доор тусад нь анхааруулга үзүүлнэ. */
-    opts.push('<option value="'+esc(mk)+'"'+(cur?' selected':'')+(w&&!cur?' disabled':'')+'>'+
-      esc(mk)+' · '+esc(unitLabel(m.unit))+(w?' — '+(cur?'⚠ ':'')+esc(w):'')+'</option>');
+    var html='<option value="'+esc(mk)+'"'+(cur?' selected':'')+(w&&!cur?' disabled':'')+'>'+
+      esc(mk)+' · '+esc(unitLabel(m.unit))+(w?' — '+(cur?'⚠ ':'')+esc(w):'')+'</option>';
+    if(w&&!cur) badOpts.push(html); else opts.push(html);
   });
   /* ── ДАТАНЫ ТАЛБАРААС ШУУД ─────────────────────────────────────────
      Бүртгэлтэй метрикүүд нь слотын "шаардах нэгж"-тэй таарах ёстой тул
@@ -2275,6 +2281,12 @@ function metricSelect(id,path,sectorKey){
     })();
     opts.push('<optgroup label="'+esc(utxt('metric.from_field','Датаны талбараас шууд (нэгж автоматаар)'))+'">'+
       fo.join('')+'</optgroup>');
+  }
+  /* Тохирохгүй метрикүүд ХАМГИЙН СҮҮЛД, өөрийн бүлгийн нэрээр — сонгож
+     чадахгүй ч "яагаад болохгүй вэ" гэдэг нь харагдана. */
+  if(badOpts.length){
+    opts.push('<optgroup label="'+esc(utxt('metric.unfit_group','Тохирохгүй (нэгж үл нийцнэ)'))+'">'+
+      badOpts.join('')+'</optgroup>');
   }
   return '<select data-slot="'+esc(id)+'|'+path.join(',')+'|'+esc(sectorKey||'')+'">'+opts.join('')+'</select>';
 }

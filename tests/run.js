@@ -39,6 +39,17 @@ function check(name, cond, detail) { cond ? ok(name) : bad(name, detail); }
 
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const readJson = (f) => JSON.parse(read(f));
+/* Гадаад feed уншигч — J бүлэгт "модуль юу бодох ёстой вэ" гэдгийг
+   бодит датагаар шалгахад ашиглана. Сүлжээгүй бол дуудагч тал SKIP. */
+function httpGet(url) {
+  return new Promise((resolve, reject) => {
+    require('https').get(url, (r) => {
+      if (r.statusCode !== 200) { reject(new Error('HTTP ' + r.statusCode)); r.resume(); return; }
+      let d = ''; r.setEncoding('utf8');
+      r.on('data', (c) => { d += c; }).on('end', () => resolve(d));
+    }).on('error', reject).setTimeout(20000, function () { this.destroy(new Error('timeout')); });
+  });
+}
 
 /* Хуудасны <script> блокийг гаргаж авах — синтакс шалгах, грепдэх */
 function dcScript() {
@@ -311,8 +322,14 @@ function serve() {
       return;
     }
     if (p === '/__result__' && req.method === 'POST') {
-      let b = ''; req.on('data', c => b += c);
-      req.on('end', () => { PROBE_RESULT = b; res.writeHead(200); res.end('ok'); });
+      /* Байтуудыг бүтнээр нь цуглуулж ТӨГСГӨЛД нь нэг удаа задална —
+         chunk тус бүрээр мөр болговол кирилл үсэг (2 байт) заагт таарч
+         "�" болж, тест САНАМСАРГҮЙ унадаг байв. */
+      const chunks = []; req.on('data', (c) => chunks.push(c));
+      req.on('end', () => {
+        PROBE_RESULT = Buffer.concat(chunks).toString('utf8');
+        res.writeHead(200); res.end('ok');
+      });
       return;
     }
     if (p === '/__probe__') {
@@ -1020,11 +1037,90 @@ function groupI() {
     read('admin/index.html').includes('metric.from_field'), 'optgroup олдсонгүй');
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   J. PREVIEW ↔ САЙТ ПАРИТЕТ (архитектурын гол хамгаалалт)
+
+   Энэ төслийн ХАМГИЙН ОЛОН давтагдсан алдааны төрөл: админы preview
+   зөв мөртөө сайт буруу (эсвэл эсрэгээр). Шалтгаан нь тоог хоёр тал
+   ТУС ТУСДАА бодож байсан явдал. Одоо хоёулаа js/erthub-chart.js-ийн
+   ЯГ НЭГ функцээс (EHChart.value) уншдаг — энэ тест тэр гэрээг барина:
+   ижил тохиргоо → ижил тоо.
+   ══════════════════════════════════════════════════════════════════ */
+async function groupJ() {
+  group('J. Preview ↔ сайт паритет');
+  const src = read('js/erthub-chart.js');
+  const sb = { window: {} };
+  try { new Function('window', src)(sb.window); } catch (e) { bad('J. модуль ачаалагдав', e.message); return; }
+  const E = sb.window.EHChart;
+
+  check('J1. Харуулах тоо МОДУЛЬД нэг удаа тодорхойлогдсон (rounded)',
+    typeof E.value === 'function' && 'rounded' in (E.value(
+      [{ carr: 'A', pax: 3, year: 2026, month: 1, day: 1 }], { measure: 'Зорчигч', agg: 'SUM' }) || {}),
+    'rounded талбар алга');
+
+  /* Хоёр тал ТУС ТУСДАА Math.round хийвэл нэг өдөр салж эхэлнэ — иймд
+     эх кодод давхардсан дугуйруулалт үлдээгүйг шалгана. */
+  const adm = read('admin/index.html');
+  const dupRound = (adm.match(/Math\.round\([A-Za-z0-9_]+\.raw\)/g) || []);
+  check('J2. Админ өөрөө дахин дугуйруулахгүй (ганц эх сурвалж)',
+    dupRound.length === 0, 'олдсон: ' + dupRound.join(', '));
+
+  /* Хоёр тал ижил модулийг ачаалж байгаа эсэх — өөр өөр хувилбар
+     ачаалбал паритет чимээгүй эвдэрнэ. */
+  check('J3. index.html ба admin ЯГ НЭГ модуль файл ачаална',
+    read('index.html').includes('js/erthub-chart.js') && adm.includes('js/erthub-chart.js'));
+
+  /* Тоон паритет — DOM дээр: ижил тохиргоог өгөөд админы preview ба
+     сайтын виджет ЯГ ИЖИЛ тоо үзүүлэх ёстой. */
+  if (!CHROME) { skipped('J4. Тоон паритет (DOM)', 'Chrome олдсонгүй'); return; }
+  const regPath = path.join(ROOT, 'metric_registry.json');
+  const orig = fs.readFileSync(regPath, 'utf8');
+  try {
+    const reg = JSON.parse(orig);
+    reg.widgets.ls = reg.widgets.ls || {};
+    reg.widgets.ls.value = { dataset: 'air_flights', measure: 'Зорчигч', agg: 'SUM' };
+    fs.writeFileSync(regPath, JSON.stringify(reg, null, 2) + '\n');
+
+    const srv = serve();
+    try {
+      PROBE_SRC = '/admin/index.html';
+      const a = await runProbe(`async function(d,w){
+        const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+        await sleep(4500);
+        d.querySelector('[data-section="sec-01"]').click(); await sleep(600);
+        d.querySelector('[data-widget="ls"]').click(); await sleep(1200);
+        const e=d.querySelector('#pvhost .pvsc .v');
+        return {n:e?e.textContent.trim():null};
+      }`, 90000);
+
+      /* Хүлээгдэж буй тоог МОДУЛИАР (сайт ба админ хоёулаа ашигладаг ЯГ
+         тэр функц) бодож, админы preview-тэй тулгана. Сайтын хуудсыг
+         дахин ачаалж харьцуулах нь сүлжээнээс хамаарч тогтворгүй байсан
+         тул ингэж хийв — J2/J3 нь "хоёр тал нэг модулиас, давхардсан
+         дугуйруулалтгүй" гэдгийг батлах тул энэ гинж бүрэн хаагдана. */
+      let expected = null;
+      try {
+        const idx = JSON.parse(await httpGet('https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/flights-index.json'));
+        const y = (idx.years || []).map((x) => x.year).sort((p, q) => q - p)[0];
+        const rows = JSON.parse(await httpGet('https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/flights-' + y + '.json')).flights || [];
+        const v = E.value(rows, { dataset: 'air_flights', measure: 'Зорчигч', agg: 'SUM' });
+        expected = v ? v.value : null;
+      } catch (e) { /* сүлжээгүй бол доор SKIP */ }
+
+      if (expected == null) skipped('J4. Preview ↔ модулийн тоон паритет', 'feed уншигдсангүй');
+      else check('J4. Админы preview нь МОДУЛИЙН тоог ЯГ хэвээр үзүүлнэ',
+        a.n === expected, JSON.stringify({ preview: a.n, expected }));
+    } finally { srv.close(); }
+  } finally {
+    fs.writeFileSync(regPath, orig);   /* тест дуусахад файлыг ЯГ хэвээр нь буцаана */
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
