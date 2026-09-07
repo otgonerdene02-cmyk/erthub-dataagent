@@ -2386,6 +2386,14 @@
               </sc-if>
             </div>
           </sc-for>
+          <sc-if value="{{ detail.rankTotal.show }}">
+            <div style="display:flex;justify-content:space-between;gap:10px;padding-top:10px;margin-top:2px;border-top:1px solid var(--line2);font-size:12.5px;font-weight:700;color:var(--ink);">
+              <span>{{ detail.rankTotal.totalLabel }}</span><span style="font-family:'JetBrains Mono',monospace;">{{ detail.rankTotal.totalValue }}</span>
+            </div>
+            <sc-if value="{{ detail.rankTotal.hasExtra }}">
+              <div sc-camel-on-click="{{ detail.rankTotal.toggle }}" style="cursor:pointer;text-align:center;font-size:11.5px;color:var(--ink3);padding-top:4px;">{{ detail.rankTotal.toggleLabel }}</div>
+            </sc-if>
+          </sc-if>
         </div>
       </div>
     </div>
@@ -2428,6 +2436,14 @@
               </sc-if>
             </div>
           </sc-for>
+          <sc-if value="{{ detail.airCountriesTotal.show }}">
+            <div style="display:flex;justify-content:space-between;gap:10px;padding-top:10px;margin-top:2px;border-top:1px solid var(--line2);font-size:12.5px;font-weight:700;color:var(--ink);">
+              <span>{{ detail.airCountriesTotal.totalLabel }}</span><span style="font-family:'JetBrains Mono',monospace;">{{ detail.airCountriesTotal.totalValue }}</span>
+            </div>
+            <sc-if value="{{ detail.airCountriesTotal.hasExtra }}">
+              <div sc-camel-on-click="{{ detail.airCountriesTotal.toggle }}" style="cursor:pointer;text-align:center;font-size:11.5px;color:var(--ink3);padding-top:4px;">{{ detail.airCountriesTotal.toggleLabel }}</div>
+            </sc-if>
+          </sc-if>
         </div>
       </div>
     </div>
@@ -2527,6 +2543,14 @@
           </div>
         </sc-for>
       </div>
+      <sc-if value="{{ detail.cargoRankTotal.show }}">
+        <div style="display:flex;justify-content:space-between;gap:10px;padding-top:14px;margin-top:10px;border-top:1px solid var(--line2);font-size:12.5px;font-weight:700;color:var(--ink);">
+          <span>{{ detail.cargoRankTotal.totalLabel }}</span><span style="font-family:'JetBrains Mono',monospace;">{{ detail.cargoRankTotal.totalValue }}</span>
+        </div>
+        <sc-if value="{{ detail.cargoRankTotal.hasExtra }}">
+          <div sc-camel-on-click="{{ detail.cargoRankTotal.toggle }}" style="cursor:pointer;text-align:center;font-size:11.5px;color:var(--ink3);padding-top:6px;">{{ detail.cargoRankTotal.toggleLabel }}</div>
+        </sc-if>
+      </sc-if>
     </div>
 
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
@@ -2651,6 +2675,29 @@
           </sc-for>
         </div>
       </sc-if>
+    </div>
+
+    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dai" data-eh-field="title">{{ detail.daiTitle }}</span></div>
+      <div data-eh-card="dai" data-eh-field="foot" style="font-size:12px;color:var(--ink3);margin-bottom:16px;">{{ detail.daiFoot }}</div>
+      <sc-if value="{{ detail.airAiHasThread }}">
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;max-height:280px;overflow-y:auto;">
+          <sc-for list="{{ detail.airAiThread }}" as="m" hint-placeholder-count="2">
+            <div style="display:flex;justify-content:{{ m.justify }};">
+              <div style="max-width:82%;border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5;background:{{ m.bg }};color:{{ m.color }};">{{ m.text }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;">
+        <sc-for list="{{ detail.airAiChips }}" as="ac" hint-placeholder-count="5">
+          <button sc-camel-on-click="{{ ac.pick }}" style="cursor:pointer;font-family:inherit;font-size:12px;border-radius:999px;padding:7px 14px;border:1px solid var(--line2);background:var(--surface);color:var(--ink2);white-space:nowrap;">{{ ac.q }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;background:var(--surface2);border:1px solid var(--line2);border-radius:13px;padding:6px 6px 6px 16px;">
+        <input type="text" value="{{ detail.airAiInput }}" sc-camel-on-input="{{ detail.onAirAiInput }}" sc-camel-on-key-down="{{ detail.onAirAiKey }}" placeholder="Асуултаа бичнэ үү…" style="flex:1;min-width:0;height:38px;border:none;background:transparent;font-family:inherit;font-size:13.5px;color:var(--ink);outline:none;">
+        <button sc-camel-on-click="{{ detail.airAiSend }}" style="cursor:pointer;font-family:inherit;flex-shrink:0;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;color:#FFFFFF;background:{{ activeColor }};white-space:nowrap;">Асуух ↵</button>
+      </div>
     </div>
     </sc-if>
 
@@ -4100,7 +4147,11 @@ const SECTORS = {
       ['ОУ НИСЛЭГ','9,009','75%','+8.0%','up'],['ДОТООД ЗОРЧИГЧ','243K','16%','−4.4%','down']],
     c1:'Сарын нислэгийн тоо', c1d:[1719,1241,1403,1392,1622,2044,2478,2200,1900,1700,1500,1300],
     rt:'Тээвэрлэгчдийн зах зээл', rank:[['MIAT','681,711','48.6%'],['Hunnu Air','174,454','12.4%'],['Airchina','131,386','9.4%'],['Aero Mongolia','118,942','8.5%'],['Бусад','296,471','21.1%']],
+    rankAll:[['MIAT','681,711','48.6%'],['Hunnu Air','174,454','12.4%'],['Airchina','131,386','9.4%'],['Aero Mongolia','118,942','8.5%'],['Бусад','296,471','21.1%']],
+    rankMeta:{total10Label:'Нийт (5)',total10Value:'1,402,164',totalAllLabel:'Нийт (5)',totalAllValue:'1,402,164',extraCount:0},
     c2:'Улс тус бүрийн зорчигч', bars:[['Өмнөд Солонгос',88,'457,815'],['Хятад',69,'357,372'],['Япон',22,'113,142'],['Турк',15,'79,801'],['Хонг Конг',12,'64,193']],
+    barsAll:[['Өмнөд Солонгос',88,'457,815'],['Хятад',69,'357,372'],['Япон',22,'113,142'],['Турк',15,'79,801'],['Хонг Конг',12,'64,193']],
+    barsMeta:{total10Label:'Нийт (5)',total10Value:'1,072,323',totalAllLabel:'Нийт (5)',totalAllValue:'1,072,323',extraCount:0},
     // Бодит flights feed ачаалагдахаас өмнөх түр орлуулга (loadFlightsData
     // амжилтгүй болвол ч ЭНЭ хэвээр үлдэнэ) — applyRealFlightsData ирмэгц
     // бодит датагаар дарагдана.
@@ -4111,7 +4162,11 @@ const SECTORS = {
       labels:['1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар','7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар']},
     cargoRank:[['MIAT','3,357.8 т','50.8%','+6.2%','up'],['Korean Air','1,723.6 т','26.1%','-9.0%','down'],
       ['Turkish Airlines','407.9 т','6.2%','+7.4%','up'],["T'way Air",'374.1 т','5.7%','+265.4%','up'],
-      ['MY FREIGHTER LLC','322.3 т','4.9%','+25.2%','up']] },
+      ['MY FREIGHTER LLC','322.3 т','4.9%','+25.2%','up']],
+    cargoRankAll:[['MIAT','3,357.8 т','50.8%','+6.2%','up'],['Korean Air','1,723.6 т','26.1%','-9.0%','down'],
+      ['Turkish Airlines','407.9 т','6.2%','+7.4%','up'],["T'way Air",'374.1 т','5.7%','+265.4%','up'],
+      ['MY FREIGHTER LLC','322.3 т','4.9%','+25.2%','up']],
+    cargoRankMeta:{total10Label:'Нийт (5)',total10Value:'6.2 т',totalAllLabel:'Нийт (5)',totalAllValue:'6.2 т',extraCount:0} },
   water:{ label:'Ус, далайн тээвэр',
     kpis:[['УСАН ЗАМ','612','км','0.0%','flat'],['ИДЭВХТЭЙ БООМТ','3','','0.0%','flat'],
       ['АЧАА / ЖИЛ','184K','тн','−2.1%','down'],['ХӨЛӨГ ОНГОЦ','12','','+9.1%','up']],
@@ -4485,6 +4540,8 @@ class Component extends DCLogic {
   state={ authed:false, authBusy:false, authReady:false, mobileNavOpen:false, viewportW:(typeof window!=='undefined'?window.innerWidth:1280),
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12', airTreemapRegion:null,
+    airRankExpanded:false, airCountryExpanded:false, airCargoExpanded:false,
+    airAiThread:null, airAiInput:'',
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
     theme:(function(){
@@ -5243,6 +5300,24 @@ class Component extends DCLogic {
       return {s:(d>=0?'+':'')+d.toFixed(1)+'%',dir:d>0?'up':(d<0?'down':'flat')};
     };
     const pctNum=(a,b)=>b?(a-b)/b*100:0;
+    // Эх veritech dashboard-ын "Тээвэрлэгчдийн зах зээл"/"Улс тус бүрийн
+    // зорчигч"/"Тээвэрлэгч тус бүрийн ачаа" хүснэгт бүр Топ 10 + "Нийт (N)"
+    // дэд нийлбэр мөр + "↕ N нэмэлт мөр" гэсэн өргөтгөх/хураах товчтой байдаг
+    // (жишээ нь 13 тээвэрлэгчтэй бол 10-ыг шууд, 3-ыг товчоор нэмж
+    // харуулна — "Бусад" гэсэн нэгтгэсэн мөр биш). sortedPairs нь
+    // [[key,rawValue],...] буурахаар эрэмбэлэгдсэн байх ёстой.
+    const buildRankedList=(sortedPairs,fmtRow,fmtTotal)=>{
+      fmtTotal=fmtTotal||(v=>v.toLocaleString('en-US'));
+      const totalRaw=sortedPairs.reduce((s,p)=>s+p[1],0)||1;
+      const all=sortedPairs.map(p=>fmtRow(p,totalRaw));
+      const top10Sum=sortedPairs.slice(0,10).reduce((s,p)=>s+p[1],0);
+      return {
+        all,top10:all.slice(0,10),
+        total10Label:'Нийт ('+Math.min(10,sortedPairs.length)+')',total10Value:fmtTotal(top10Sum),
+        totalAllLabel:'Нийт ('+sortedPairs.length+')',totalAllValue:fmtTotal(totalRaw),
+        extraCount:Math.max(0,sortedPairs.length-10)
+      };
+    };
     const compareLabel=prevFlights?stxt('chart.compare_prev_year','өмнөх оны мөн үетэй харьцуулахад'):'харьцуулах өгөгдөл алга';
     const intlPct=cur.count?(cur.intlFlights/cur.count*100):0;
     const intlPaxPct=cur.totalPax?(cur.intlPax/cur.totalPax*100):0;
@@ -5354,34 +5429,40 @@ class Component extends DCLogic {
     // Full (not top-N-limited) totals for the "Улаанбаатараас чиглэсэн
     // зорчигчийн урсгал" bubble map — buildFlowMap() reads these directly.
     this._airCountryFull=byCountry;
+    this._airCountryFlights=byCountryFlights;
     this._airDomesticFull=byDomesticAirport;
     // Бүс нутаг тус бүрийн зорчигч treemap-ийн бүрэн (топ-N-ээр
     // огтлоогүй) хуваарилалт — buildAirTreemap() эндээс уншина.
     this._airRegionTotals=byRegion;
     this._airRegionCountryTotals=byRegionCountry;
-    const carrierList=Object.entries(byCarrier).sort((a,b)=>b[1]-a[1]);
-    const carrierTotal=carrierList.reduce((s,c)=>s+c[1],0)||1;
-    const topCarriers=carrierList.slice(0,10);
-    const otherCarrierPax=carrierList.slice(10).reduce((s,c)=>s+c[1],0);
-    const rank=topCarriers.map(c=>[c[0],c[1].toLocaleString('en-US'),(c[1]/carrierTotal*100).toFixed(1)+'%',
+    const carrierPairs=Object.entries(byCarrier).sort((a,b)=>b[1]-a[1]);
+    const carrierRanked=buildRankedList(carrierPairs,(c,total)=>[c[0],c[1].toLocaleString('en-US'),(c[1]/total*100).toFixed(1)+'%',
       fmtCount(byCarrierFlights[c[0]]||0)+' '+stxt('unit.flight_word','нислэг')]);
-    if(otherCarrierPax>0) rank.push(['Бусад',otherCarrierPax.toLocaleString('en-US'),(otherCarrierPax/carrierTotal*100).toFixed(1)+'%','']);
-    SECTORS.air.rank=rank;
+    SECTORS.air.rankAll=carrierRanked.all;
+    SECTORS.air.rank=carrierRanked.top10;
+    SECTORS.air.rankMeta=carrierRanked;
 
-    const countryList=Object.entries(byCountry).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    const maxCountry=countryList.length?countryList[0][1]:1;
-    const countryTotal=Object.values(byCountry).reduce((s,v)=>s+v,0)||1;
-    SECTORS.air.bars=countryList.map(c=>[c[0],Math.round(c[1]/maxCountry*100),c[1].toLocaleString('en-US'),
-      (c[1]/countryTotal*100).toFixed(1)+'% · '+fmtCount(byCountryFlights[c[0]]||0)+' '+stxt('unit.flight_word','нислэг')]);
+    const countryPairs=Object.entries(byCountry).sort((a,b)=>b[1]-a[1]);
+    // Багана(bar)-ийн өргөнийг ХАМГИЙН ИХ (0-р индекс, эрэмбэлсэн тул) утгад
+    // харьцуулж хувь болгоно — энэ max нь Топ 10 эсвэл бүх жагсаалт аль нь ч
+    // сонгогдсон байсан ХЭЗЭЭ Ч өөрчлөгдөхгүй (эхний мөр үргэлж хамгийн их).
+    const maxCountry=countryPairs.length?countryPairs[0][1]:1;
+    const countryRanked=buildRankedList(countryPairs,(c,total)=>[c[0],Math.round(c[1]/maxCountry*100),c[1].toLocaleString('en-US'),
+      (c[1]/total*100).toFixed(1)+'% · '+fmtCount(byCountryFlights[c[0]]||0)+' '+stxt('unit.flight_word','нислэг')]);
+    SECTORS.air.barsAll=countryRanked.all;
+    SECTORS.air.bars=countryRanked.top10;
+    SECTORS.air.barsMeta=countryRanked;
 
-    // "Тээвэрлэгч тус бүрийн ачаа" — топ 10 тээвэрлэгчийг ачааны жингээр нь,
-    // өмнөх оны мөн үетэй харьцуулсан өсөлт/бууралт хувийн хамт.
-    const cargoCarrierList=Object.entries(byCarrierCargoKg).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    const cargoTotalKg=Object.values(byCarrierCargoKg).reduce((s,v)=>s+v,0)||1;
-    SECTORS.air.cargoRank=cargoCarrierList.map(c=>{
+    // "Тээвэрлэгч тус бүрийн ачаа" — Топ 10 + өргөтгөх боломжтой, ачааны
+    // жингээр нь, өмнөх оны мөн үетэй харьцуулсан өсөлт/бууралт хувийн хамт.
+    const cargoPairs=Object.entries(byCarrierCargoKg).sort((a,b)=>b[1]-a[1]);
+    const cargoRanked=buildRankedList(cargoPairs,(c,total)=>{
       const d=pctDelta(c[1],prevByCarrierCargoKg[c[0]]||0);
-      return [c[0],(c[1]/1000).toFixed(1)+' '+stxt('unit.ton','т'),(c[1]/cargoTotalKg*100).toFixed(1)+'%',d.s,d.dir];
-    });
+      return [c[0],(c[1]/1000).toFixed(1)+' '+stxt('unit.ton','т'),(c[1]/total*100).toFixed(1)+'%',d.s,d.dir];
+    },(kg)=>(kg/1000).toFixed(1)+' '+stxt('unit.ton','т'));
+    SECTORS.air.cargoRankAll=cargoRanked.all;
+    SECTORS.air.cargoRank=cargoRanked.top10;
+    SECTORS.air.cargoRankMeta=cargoRanked;
 
     RATIO.air={labels:['Олон улсын','Дотоодын'],pct:intlPct};
 
@@ -6797,13 +6878,42 @@ class Component extends DCLogic {
         acc2+=s.pct; return seg;
       });
       const cMax=Math.max.apply(null,sAir.bars.map(b=>b[1]));
-      const airCountries=sAir.bars.map(b=>({name:b[0],widthPct:(b[1]/cMax*100).toFixed(0)+'%',value:b[2],sub:b[3]||'',hasSub:!!b[3]}));
-      const cargoRank=(sAir.cargoRank||[]).map(c=>({name:c[0],value:c[1],pct:c[2],
+      // Эх dashboard-ын Топ 10 + "Нийт (N)" + "↕ N нэмэлт мөр" загварыг
+      // 3 жагсаалтад (тээвэрлэгч/улс/ачаа) адилхан хэрэглэнэ — өргөтгөх
+      // товч дарахад {{state}}Expanded триггэрлээд *All массив руу шилжинэ.
+      const mkTotal=(meta,expanded,toggleKey)=>({
+        show:true,
+        totalLabel:expanded?meta.totalAllLabel:meta.total10Label,
+        totalValue:expanded?meta.totalAllValue:meta.total10Value,
+        extraCount:meta.extraCount,hasExtra:meta.extraCount>0,expanded,collapsed:!expanded,
+        toggleLabel:expanded?stxt('rank.collapse','△ Хураах'):('↕ '+meta.extraCount+' '+stxt('rank.more_rows','нэмэлт мөр')),
+        toggle:()=>this.setState(s=>({[toggleKey]:!s[toggleKey]}))
+      });
+      const countryExpanded=!!this.state.airCountryExpanded;
+      const countrySrc=countryExpanded?(sAir.barsAll||sAir.bars):sAir.bars;
+      const airCountries=countrySrc.map(b=>({name:b[0],widthPct:(b[1]/cMax*100).toFixed(0)+'%',value:b[2],sub:b[3]||'',hasSub:!!b[3]}));
+      const airCountriesTotal=mkTotal(sAir.barsMeta||{total10Label:'',total10Value:'',totalAllLabel:'',totalAllValue:'',extraCount:0},countryExpanded,'airCountryExpanded');
+      const cargoExpanded=!!this.state.airCargoExpanded;
+      const cargoSrc=cargoExpanded?(sAir.cargoRankAll||sAir.cargoRank||[]):(sAir.cargoRank||[]);
+      const cargoRank=cargoSrc.map(c=>({name:c[0],value:c[1],pct:c[2],
         yoy:c[3],yoyColor:c[4]==='down'?'#D2564A':(c[4]==='flat'?'#828EA8':'#2FA37B'),width:c[2]}));
+      const cargoRankTotal=mkTotal(sAir.cargoRankMeta||{total10Label:'',total10Value:'',totalAllLabel:'',totalAllValue:'',extraCount:0},cargoExpanded,'airCargoExpanded');
       const airMonthly=buildDualAxisChart(sAir.monthly.pax,sAir.monthly.flights,sAir.monthly.labels);
       const airCargoMonthly=buildDualAxisChart(sAir.monthly.cargoTon,sAir.monthly.cargoYoyPct,sAir.monthly.labels);
-      airExtra={isAirDetail:true,airDonut,airCountries,cargoRank,airMonthly,airCargoMonthly,
-        airTreemap:this.buildAirTreemap(),flowMap:this.buildFlowMap()};
+      const AIR_AI_PROMPTS=['Солонгос руу хэдэн зорчигч ниссэн бэ?','Аль тээвэрлэгч хамгийн их зорчигч тээвэрлэсэн бэ?',
+        'Хятад руу хэдэн нислэг байсан бэ?','Топ 5 улсыг харуул','Олон улсын тээвэрлэгчдийн зах зээлийг харуул'];
+      const airAiChips=AIR_AI_PROMPTS.map(q=>({q,pick:()=>this.askAirAi(q)}));
+      const airAiThread=(this.state.airAiThread||[]).map(m=>({isBot:m.role==='bot',text:m.text,
+        justify:m.role==='bot'?'flex-start':'flex-end',
+        bg:m.role==='bot'?'var(--surface2)':NEON.air,
+        color:m.role==='bot'?'var(--ink)':'#0d1524'}));
+      airExtra={isAirDetail:true,airDonut,airCountries,airCountriesTotal,cargoRank,cargoRankTotal,airMonthly,airCargoMonthly,
+        airTreemap:this.buildAirTreemap(),flowMap:this.buildFlowMap(),
+        airAiChips,airAiThread,airAiHasThread:airAiThread.length>0,
+        airAiInput:this.state.airAiInput||'',
+        onAirAiInput:(e)=>this.setState({airAiInput:e.target.value}),
+        onAirAiKey:(e)=>{ if(e.key==='Enter') this.askAirAi(); },
+        airAiSend:()=>this.askAirAi()};
     }
     // Толгойн хоёр карт — нүүрний мөрүүдтэй яг ижил шийдэгчээр (bindCard)
     // холбогдоно, ялгаа нь зөвхөн аль талбарыг асууж байгаа нь.
@@ -6816,13 +6926,21 @@ class Component extends DCLogic {
     const dwpTitle=this.txt('dwp','title','7 хоногийн гүйцэтгэл');
     const dwpFoot=this.txt('dwp','foot','2025 оны төлөвлөгөө');
     const dtbFoot=this.txt('dtb','foot','Багана дээр дарж эрэмбэлнэ; хайлтын талбараар мөрийг агуулгаар нь шүүнэ');
-    const dstrTitle=this.txt('dstr','title','Салбарын бүтэц');
+    // dstr карт нь 5 салбарт хуваалцдаг ерөнхий "Салбарын бүтэц" гэсэн
+    // нэртэй ч, air дээр энэ нь бодит утгаараа тээвэрлэгчдийн зах зээлийн
+    // эрэмбэ тул эх veritech dashboard-ын яг адилхан гарчгийг ашиглана.
+    const dstrTitle=isAirDetail?this.txt('dstr_air','title','Тээвэрлэгчдийн зах зээл'):this.txt('dstr','title','Салбарын бүтэц');
     const dintTitle=this.txt('dint','title','ОУ / Дотоодын харьцаа');
     const dctyTitle=this.txt('dcty','title','Улс тус бүрийн зорчигч');
     const dtreeTitle=this.txt('dtree','title','Бүс нутаг тус бүрийн зорчигч');
     const dmthTitle=this.txt('dmth','title','Сараар зорчигч ба нислэг');
-    const dcgmTitle=this.txt('dcgm','title','Сараар ачааны хэмжээ (тонн)');
+    // dcgm гарчиг сонгосон оноор динамик өөрчлөгдөнэ (эх dashboard "(2026 он)"
+    // гэж он-оо шууд бичдэг, тогтмол "(тонн)" биш).
+    const dcgmYear=this.state.airYTo||this.state.airYFrom||'';
+    const dcgmTitle=this.txt('dcgm','title','Сараар ачааны хэмжээ')+(dcgmYear?' ('+dcgmYear+' он)':'');
     const dcgoTitle=this.txt('dcgo','title','Тээвэрлэгч тус бүрийн ачаа');
+    const daiTitle=this.txt('dai','title','AI туслах — Монгол хэлээр асуугаарай');
+    const daiFoot=this.txt('dai','foot','Ачаалагдсан бүх бичлэг дээр шууд, локал тооцоолол хийж хариулна.');
     const dmapTitle=this.txt('dmap','title','Улаанбаатараас чиглэсэн зорчигчийн урсгал');
     // dmap.foot нь content.json-д зөвхөн эхний 2 өгүүлбэртэй; markup дэх
     // 3 дахь өгүүлбэр ("Дотоодын" товчны тайлбар) статикаар үлдэнэ — 2-р
@@ -6832,7 +6950,7 @@ class Component extends DCLogic {
     const ddqTitle=this.txt('ddq','title','Дата чанарын үнэлгээ');
     const ddqFoot=this.txt('ddq','foot','Аргачлал: нээлттэй өгөгдлийн чанарын оноо (DQS) загварт үндэслэсэн — шинэлэг байдал, хандалт, тодорхойлолт, нээлттэй байдлын жинлэсэн дундаж.');
     const detail={
-      dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
+      dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
       isAirDetail,...airExtra,
       freqCard,useCard,
       name:dsel.name,desc:dsel.desc,agency:dsel.agency,fmt:dsel.fmt,freq:dsel.freq,use:dsel.use,
@@ -6915,7 +7033,17 @@ class Component extends DCLogic {
       changelog:[['2026-08-12','Бодит цагийн урсгалын хоцролт 20 сек болж сайжирлаа'],
                  ['2026-07-30','Мета тайлбар, багануудын нэр стандартчлагдав'],
                  ['2026-06-18','Түүхэн өгөгдөл 2021 он хүртэл нэмэгдэв']].map(x=>({d:x[0],t:x[1]})),
-      rank:SECTORS[dsel.sector].rank.map(r=>({name:r[0],value:r[1],pct:r[2],width:r[2],sub:r[3]||'',hasSub:!!r[3]}))
+      rank:(isAirDetail&&this.state.airRankExpanded?(SECTORS.air.rankAll||SECTORS.air.rank):SECTORS[dsel.sector].rank)
+        .map(r=>({name:r[0],value:r[1],pct:r[2],width:r[2],sub:r[3]||'',hasSub:!!r[3]})),
+      rankTotal:(()=>{
+        if(!isAirDetail) return {show:false,totalLabel:'',totalValue:'',extraCount:0,hasExtra:false,expanded:false,collapsed:true,toggleLabel:'',toggle:()=>{}};
+        const meta=SECTORS.air.rankMeta||{total10Label:'',total10Value:'',totalAllLabel:'',totalAllValue:'',extraCount:0};
+        const expanded=!!this.state.airRankExpanded;
+        return {show:true,totalLabel:expanded?meta.totalAllLabel:meta.total10Label,totalValue:expanded?meta.totalAllValue:meta.total10Value,
+          extraCount:meta.extraCount,hasExtra:meta.extraCount>0,expanded,collapsed:!expanded,
+          toggleLabel:expanded?stxt('rank.collapse','△ Хураах'):('↕ '+meta.extraCount+' '+stxt('rank.more_rows','нэмэлт мөр')),
+          toggle:()=>this.setState(s=>({airRankExpanded:!s.airRankExpanded}))};
+      })()
     };
     const ak=this.state.activeSector, as=SECTORS[ak];
     const sectorPage={
@@ -7140,6 +7268,58 @@ class Component extends DCLogic {
       }
     }
     return {sphere,land,mn,markerVisible,markerX,markerY};
+  }
+  // "AI туслах" — эх veritech dashboard-ын "ачаалагдсан бүх бичлэг дээр
+  // шууд, локал тооцоолол хийж хариулна (Claude API дуудахгүй)" гэсэн
+  // зарчмыг яг адилхан давтана: түлхүүр үг/улсын нэрээр таамаглаж,
+  // ХАРИУЛТЫГ ФАЙЛААС ЗОХИОХГҮЙ, зөвхөн одоо ачаалагдсан, идэвхтэй
+  // шүүлтээр шүүгдсэн бодит SECTORS.air.*/this._air* дата-с шууд тооцно.
+  answerAirAi(qRaw){
+    const q=(qRaw||'').toLowerCase().trim();
+    const sAir=SECTORS.air;
+    const countries=this._airCountryFull?Object.keys(this._airCountryFull):[];
+    // Улсын нэрийг ҮГ тус бүрээр тааруулна ("Солонгос" гэж асуухад "Өмнөд
+    // Солонгос" гэсэн бүтэн нэртэй тааруулж чадна) — 2-оос урт үг л шалгана
+    // (богино холбоос үг санамсаргүй давхацахаас сэргийлнэ).
+    const matchedCountry=countries.find(c=>c.toLowerCase().split(/\s+/).some(part=>part.length>2&&q.includes(part)));
+    if(matchedCountry && /нислэг/.test(q) && !/зорчигч/.test(q)){
+      const fl=(this._airCountryFlights&&this._airCountryFlights[matchedCountry])||0;
+      return matchedCountry+' чиглэлд одоогийн шүүлтээр нийт '+fl.toLocaleString('en-US')+' '+stxt('unit.flight_word','нислэг')+' бүртгэгдсэн байна.';
+    }
+    if(matchedCountry){
+      const pax=this._airCountryFull[matchedCountry]||0;
+      return matchedCountry+' чиглэлд одоогийн шүүлтээр нийт '+pax.toLocaleString('en-US')+' зорчигч тээвэрлэгдсэн байна.';
+    }
+    if(/хамгийн их/.test(q) && /тээвэрлэгч/.test(q)){
+      const top=sAir.rankAll&&sAir.rankAll[0];
+      if(top) return top[0]+' одоогийн шүүлтээр хамгийн их зорчигч тээвэрлэсэн — '+top[1]+' зорчигч ('+top[2]+' зах зээлийн хувь).';
+    }
+    if(/топ\s*5\s*улс|топ5\s*улс|таван улс/.test(q)){
+      const top5=(sAir.barsAll||[]).slice(0,5);
+      if(top5.length) return 'Топ 5 улс (зорчигчоор): '+top5.map(b=>b[0]+' — '+b[2]).join(', ')+'.';
+    }
+    if(/сар/.test(q) && /зорчигч/.test(q)){
+      const m=sAir.monthly;
+      if(m&&m.pax&&m.pax.length){
+        return 'Сар бүрийн зорчигчийн тоо: '+m.labels.map((lb,i)=>lb+' — '+Math.round(m.pax[i]).toLocaleString('en-US')).join(' · ')+'. Дэлгэрэнгүйг дээрх "Сараар зорчигч ба нислэг" графикаас харна уу.';
+      }
+    }
+    if(/олон улсын/.test(q) && /тээвэрлэгч|зах зээл/.test(q)){
+      const top=(sAir.rankAll||[]).slice(0,5);
+      if(top.length) return 'Одоогийн шүүлтээр тэргүүлэгч тээвэрлэгчид: '+top.map(r=>r[0]+' ('+r[2]+')').join(', ')+'. Зөвхөн олон улсын нислэгийг харахын тулд дээрх ШҮҮЛТ хэсгээс "ТӨРӨЛ → Олон улсын"-г сонгоно уу.';
+    }
+    if(/тээвэрлэгч/.test(q) && /зах зээл/.test(q)){
+      const top=(sAir.rankAll||[]).slice(0,3);
+      if(top.length) return 'Тээвэрлэгчдийн зах зээлийн Топ 3: '+top.map(r=>r[0]+' ('+r[2]+')').join(', ')+'.';
+    }
+    return 'Уучлаарай, энэ асуултад тодорхой хариулт олдсонгүй. Улсын нэр (жиш. "Хятад руу хэдэн нислэг байсан бэ?"), "аль тээвэрлэгч хамгийн их", эсвэл "топ 5 улс" гэх мэт тодорхой түлхүүр үгээр асуугаарай.';
+  }
+  askAirAi(q,presetIdx){
+    q=(q||this.state.airAiInput||'').trim();
+    if(!q) return;
+    const ans=this.answerAirAi(q);
+    const prior=this.state.airAiThread||[];
+    this.setState({airAiThread:prior.concat([{role:'user',text:q},{role:'bot',text:ans}]),airAiInput:''});
   }
   // "Бүс нутаг тус бүрийн зорчигч" — squarify() treemap (эх dashboard-ын
   // ECharts treemap-тай ижил, click хийж бүс→улс руу drill-down хийдэг).
