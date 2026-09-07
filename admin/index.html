@@ -83,14 +83,20 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .lg b{color:var(--ink);font-size:12px}
 
 /* ── түвшин 1 ── */
-.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:10px;align-items:start}
 .pcard{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px 15px;cursor:pointer;font-family:var(--sans);display:flex;flex-direction:column;gap:7px;transition:.13s}
 .pcard:hover{border-color:var(--road);box-shadow:0 3px 14px rgba(19,26,46,.07)}
 .pc-t{font-size:14px;font-weight:650;color:var(--ink);letter-spacing:-.01em}
 .pc-n{font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
-.pc-w{display:flex;flex-direction:column;gap:2px;font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
-.pc-w span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pc-w .mo2{color:var(--ink4)}
+/* Хэсгийн картын preview багц — виджетийг НЭРЭЭР нь биш, сайт дээрх
+   ЖИНХЭНЭ харагдацаар нь таниулна (жагсаалтын бусад бүх түвшин аль
+   хэдийн ингэдэг байсан, зөвхөн энэ эхний дэлгэц текст хэвээр байв).
+   zoom нь preview-г бүтнээр нь жижигрүүлнэ — дотоод хэмжээсийг гараар
+   давхардуулан бичих шаардлагагүй, дэмжигдээгүй хөтөч дээр зүгээр л
+   жаахан том харагдана (эвдрэхгүй).
+   pointer-events:none — дотор нь дарсан ч бүхэл карт л ажиллана. */
+.pc-thumbs{display:flex;flex-direction:column;gap:6px;zoom:.8;pointer-events:none}
+.pc-more{font-family:var(--mono);font-size:9.5px;color:var(--ink4)}
 .pc-go{font-family:var(--mono);font-size:10px;color:var(--road);margin-top:3px;font-weight:600}
 
 /* ── түвшин 2 ── */
@@ -1064,6 +1070,9 @@ var UI_GROUPS=[
    labels:{heading:'Бүртгэлтэй метрикүүд',
            note:'Эдгээрийг виджетийн засварын дэлгэц дэх "Метрик холбох" сонголтод ашиглана. Эх сурвалж/датасэт/багана нь кодтой холбоотой тул зөвхөн хөгжүүлэгч өөрчилнө — нэгж, чанар, тайлбарыг энд шууд засаж болно.',
            readonly_note:'Кодтой холбоотой — хөгжүүлэгч тохируулна',
+           key_label:'Кодны түлхүүрийн шошго',name_label:'Монгол нэрний талбар',
+           technical_summary:'Техникийн эвхэгддэг хэсгийн гарчиг',
+           add_name_ph:'Шинэ метрикийн нэрний сануулга',
            source_label:'Эх сурвалж',dataset_label:'Датасэт',column_label:'Багана',
            unit_label:'Нэгж',quality_label:'Чанар',filter_label:'Шүүлт (тайлбар)',
            period_note_label:'Тайлбар — энэ юу вэ',would_need_label:'Шаардлагатай эх сурвалж',
@@ -1794,7 +1803,7 @@ function lvMetrics(){
   var html='', shown=0;
   keys.forEach(function(mk){
     var m=mm[mk];
-    var hay=(mk+' '+(m.source||'')+' '+(m.dataset||'')+' '+(m.column||'')).toLowerCase();
+    var hay=(mk+' '+(m.name||'')+' '+(m.source||'')+' '+(m.dataset||'')+' '+(m.column||'')).toLowerCase();
     if(q&&hay.indexOf(q)<0) return;
     shown++;
     var used=mUsedBy(mk);
@@ -1802,16 +1811,24 @@ function lvMetrics(){
       ? used.map(function(id){return '<button class="btn sm" data-mgoto="'+esc(id)+'">'+
           esc(curText(id,'title')||id)+'</button>'}).join(' ')
       : esc(utxt('metrics_tab.used_by_none','Одоогоор ямар ч виджетэд холбогдоогүй'));
-    html+='<div class="sgroup" data-metric="'+esc(mk)+'"><h3>'+esc(mk)+' <span class="badge '+
+    /* Гарчиг: МОНГОЛ НЭР (эсвэл алга бол л түлхүүр) хамгийн түрүүнд, том;
+       кодны түлхүүр ЖИЖИГ, хоёрдогч мэдээлэл. Техникийн (source/dataset/
+       column, англи/JS нэр) мөрийг эвхэгддэг <details>-д НУУЖ, анхнаасаа
+       ХААЛТТАЙ харуулна — энгийн хэрэглэгч эхлээд ЗӨВХӨН монгол тайлбар,
+       нэр, нэгж, чанарыг харна. */
+    html+='<div class="sgroup" data-metric="'+esc(mk)+'"><h3>'+esc(m.name||mk)+' <span class="badge '+
       (badgeCls[m.quality]||'b-zero')+'">'+esc(qualityLabel(m.quality))+'</span></h3>'+
-      /* Тайлбар — ХАМГИЙН ТҮРҮҮНД, "энэ юу вэ" гэдгийг эхлээд ойлгуулна.
-         period_note талбарыг ЭНД зөвхөн НЭГ удаа, тод байрлалд харуулна
-         (доор давхардуулахгүй). */
+      '<div class="where" style="font-family:var(--mono)">'+esc(utxt('metrics_tab.key_label','код'))+': '+esc(mk)+'</div>'+
+      mField(mk,'name',utxt('metrics_tab.name_label','Монгол нэр (энгийн ойлгомжтой)'))+
+      /* Тайлбар — "энэ юу вэ" гэдгийг ойлгуулна. period_note талбарыг
+         ЭНД зөвхөн НЭГ удаа, тод байрлалд харуулна (доор давхардуулахгүй). */
       mField(mk,'period_note',utxt('metrics_tab.period_note_label','Тайлбар — энэ юу вэ'),true)+
-      '<div class="acc">'+esc(utxt('metrics_tab.readonly_note','Кодтой холбоотой — хөгжүүлэгч тохируулна'))+'</div>'+
-      '<div class="where">'+esc(utxt('metrics_tab.source_label','Эх сурвалж'))+': '+esc(m.source||'—')+
+      '<details class="acc" style="cursor:pointer"><summary>'+
+      esc(utxt('metrics_tab.technical_summary','Техникийн мэдээлэл (зөвхөн хөгжүүлэгчид)'))+'</summary>'+
+      '<div style="margin-top:6px">'+esc(utxt('metrics_tab.readonly_note','Кодтой холбоотой — хөгжүүлэгч тохируулна'))+'<br>'+
+      esc(utxt('metrics_tab.source_label','Эх сурвалж'))+': '+esc(m.source||'—')+
       ' · '+esc(utxt('metrics_tab.dataset_label','Датасэт'))+': '+esc(dsFriendly(m.dataset))+
-      ' · '+esc(utxt('metrics_tab.column_label','Багана'))+': '+esc(m.column||'—')+'</div>'+
+      ' · '+esc(utxt('metrics_tab.column_label','Багана'))+': '+esc(m.column||'—')+'</div></details>'+
       mField(mk,'unit',utxt('metrics_tab.unit_label','Нэгж'))+
       mQualitySelect(mk)+
       mField(mk,'filter',utxt('metrics_tab.filter_label','Шүүлт (тайлбар)'),true)+
@@ -1827,8 +1844,10 @@ function lvMetrics(){
     '<p class="pvnote">'+esc(utxt('metrics_tab.note','Эдгээрийг виджетийн засварын дэлгэц дэх "Метрик холбох" сонголтод ашиглана. Эх сурвалж/датасэт/багана нь кодтой холбоотой тул зөвхөн хөгжүүлэгч өөрчилнө — нэгж, чанар, тайлбарыг энд шууд засаж болно.'))+'</p>'+
     '<div class="sgroup"><h3>'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</h3>'+
     '<div class="acc">'+esc(utxt('metrics_tab.add_note','Энэ нь ЖИНХЭНЭ амьд холболт үүсгэхгүй — зөвхөн "ийм эх сурвалж хэрэгтэй" гэдгийг төлөвлөгөөнд тэмдэглэнэ. Бодит холболтыг хөгжүүлэгч кодоор хийнэ.'))+'</div>'+
-    '<div class="sfield"><div class="lbl">'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</div>'+
+    '<div class="sfield"><div class="lbl">'+esc(utxt('metrics_tab.add_key_ph','Метрикийн түлхүүр (жиш. road.weekly_pax)'))+'</div>'+
     '<input id="mNewKey" placeholder="'+esc(utxt('metrics_tab.add_key_ph','Метрикийн түлхүүр (жиш. road.weekly_pax)'))+'"></div>'+
+    '<div class="sfield"><div class="lbl">'+esc(utxt('metrics_tab.name_label','Монгол нэр (энгийн ойлгомжтой)'))+'</div>'+
+    '<input id="mNewName" placeholder="'+esc(utxt('metrics_tab.add_name_ph','Жиш. Авто замын 7 хоногийн зорчигчийн тоо'))+'"></div>'+
     '<div class="sfield"><textarea id="mNewWn" rows="2" placeholder="'+esc(utxt('metrics_tab.add_would_need_ph','Ямар эх сурвалж хэрэгтэйг бичнэ үү'))+'"></textarea></div>'+
     '<div class="acts"><button class="btn pri sm" data-madd="1">'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</button></div>'+
     '</div>';
@@ -1904,6 +1923,8 @@ function emptyFilterMsg(){
 function currentListScope(){
   if(S.level==='all') return scopeIds();
   if(S.level==='widgets') return widgetsIn(S.section);
+  /* Хэсгүүдийн түвшин — шүүлтийн сонголтууд бүх виджетээс бүрдэнэ */
+  if(S.level==='sections') return scopeIds();
   return [];
 }
 function lvAll(){
@@ -1923,21 +1944,45 @@ function lvAll(){
 }
 
 /* ══════════════════ ТҮВШИН 1 ══════════════════ */
+/* Хэсгийн картад хэдэн виджетийн preview харуулах. 3 нь картыг хэт
+   өндөр болгохгүйгээр "энэ хэсэг ямар харагддаг вэ" гэдгийг таниулна. */
+var SEC_THUMBS=3;
 function lvSections(){
   var keys=sectionKeys();
   if(!keys.length) return '<div class="empty">'+esc(utxt('list.none_for_ds','Энэ датасэтэд хамаарах виджет алга'))+'</div>';
+  /* Хайлт/шүүлт энэ түвшинд ч ажиллана — өмнө нь зөвхөн "Бүх харагдац"
+     руу орж байж хайж чаддаг байсан нь эхний дэлгэцээс виджет олоход
+     нэмэлт алхам шаарддаг байв. Тохирох виджетгүй хэсгийг огт
+     харуулахгүй, тохирсон нь preview-гээрээ шууд харагдана. */
+  var filtering=!!((S.wq||'').trim())||S.wQuality!=='all'||S.wPage!=='all'||S.wViz!=='all';
+  var rows=keys.map(function(sec){
+    return {sec:sec,list:filtering?filterWidgets(widgetsIn(sec)):widgetsIn(sec)};
+  }).filter(function(r){return r.list.length});
+  if(!rows.length) return emptyFilterMsg();
   return '<p class="ph">'+esc(utxt('list.sections_heading','Нүүр хуудасны хэсгүүд'))+'</p><div class="pgrid">'+
-    keys.map(function(sec){
-      var list=widgetsIn(sec),t=tally(list);
+    rows.map(function(r){
+      var sec=r.sec, list=r.list, t=tally(list);
+      /* Хайж байгаа үед олдсоныг БҮГДИЙГ нь харуулна (цөөн байдаг тул) —
+         "+N бусад" гэж нуувал хайлтын үр дүн дутуу харагдана. */
+      var cap=filtering?8:SEC_THUMBS;
       return '<button class="pcard" data-section="'+esc(sec)+'">'+
         '<div class="pc-t">'+esc(sectionLabel(sec))+(sectionDynNote(sec)?' <span class="dyn">'+sectionDynNote(sec)+'</span>':'')+'</div>'+
         '<div class="pc-n">'+list.length+' '+esc(utxt('crumb.widget_word','виджет'))+
           (t.ok<list.length?' · '+(list.length-t.ok)+' '+esc(utxt('list.attention','анхаарах')):'')+
           (sectionDirty(sec)?' · <b style="color:var(--warn)">'+esc(utxt('list.unsaved','хадгалаагүй'))+'</b>':'')+'</div>'+
         miniBar(t,list.length)+
-        '<div class="pc-w">'+list.slice(0,4).map(function(id){
-          return '<span>'+esc(curText(id,'title')||id)+'</span>'}).join('')+
-          (list.length>4?'<span class="mo2">+'+(list.length-4)+'</span>':'')+'</div>'+
+        /* Виджетийн НЭРийг жагсаахын оронд сайт дээрх жинхэнэ харагдацыг
+           нь жижгээр зурна. Өмнө нь хэсгийн нэр ба цорын ганц виджетийн
+           нэр ЯГ ИЖИЛ байх нь олонтаа тохиолдож (жиш. "Него · гүйдэг
+           мөр"), карт өөрийгөө давтаад мэдээлэл өгөхгүй байв.
+           aria-hidden — дэлгэц уншигчид preview доторх текстийг давхар
+           уншихгүй (картын гарчиг, тоо аль хэдийн уншигдсан). */
+        '<div class="pc-thumbs" aria-hidden="true">'+
+          list.slice(0,cap).map(function(id){return previewFor(id,true)}).join('')+
+        '</div>'+
+        (list.length>cap
+          ?'<div class="pc-more">+'+(list.length-cap)+' '+esc(utxt('crumb.widget_word','виджет'))+'</div>'
+          :'')+
         '<span class="pc-go">'+esc(utxt('list.open','Нээх →'))+'</span></button>';
     }).join('')+'</div>';
 }
@@ -2421,7 +2466,7 @@ function render(){
     /* Хайх/шүүх мөр ЗӨВХӨН виджет жагсаалт харуулдаг 2 түвшинд (widgets,
        all). #fbar нь #body-с тусдаа тул шүүлт өөрчлөгдөх бүрд #body-г
        дахин зурсан ч хайлтын input фокус алдагдахгүй. */
-    var showBar=S.level==='widgets'||S.level==='all';
+    var showBar=S.level==='widgets'||S.level==='all'||S.level==='sections';
     $('fbar').innerHTML=showBar?filterBar(currentListScope()):'';
     renderBody();
     $('allBtn').textContent=S.level==='all'?utxt('app.by_section','Хэсгээр нь'):utxt('app.all_views','Бүх харагдац');
@@ -2505,11 +2550,11 @@ document.addEventListener('click',function(e){
   if(t.closest&&t.closest('[data-tcancel]')){
     resetTd(S.widget);render();toast(utxt('toast.text_cancelled','Текстийн өөрчлөлт цуцлагдлаа'));return}
   if(t.closest&&t.closest('[data-madd]')){
-    var kIn=$('mNewKey'), wnIn=$('mNewWn');
+    var kIn=$('mNewKey'), wnIn=$('mNewWn'), nmIn=$('mNewName');
     var newKey=(kIn&&kIn.value||'').trim();
     if(!newKey){ toast(utxt('metrics_tab.key_required','Түлхүүр заавал бичнэ үү')); return }
     if(REG.metrics[newKey]){ toast(utxt('metrics_tab.key_exists','Энэ түлхүүр аль хэдийн бүртгэлтэй байна')); return }
-    REG.metrics[newKey]={source:null,dataset:null,column:null,agg:null,filter:'',
+    REG.metrics[newKey]={name:(nmIn&&nmIn.value||''),source:null,dataset:null,column:null,agg:null,filter:'',
       transform:'',unit:'',additive:false,quality:'mock',would_need:(wnIn&&wnIn.value||'')};
     log(newKey,'Шинэ метрик (төлөвлөгөө) нэмэгдлээ');
     render();toast(utxt('toast.bound','Холбогдлоо:')+' '+newKey);return}
