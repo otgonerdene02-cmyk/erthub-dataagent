@@ -2091,6 +2091,77 @@
       </div>
     </div>
 
+    <!-- Нэгдсэн шүүлт + KPI: эх veritech dashboard-той адил "Шүүлт" товч дарахад
+         яг доор нь нээгддэг, БҮХ картад (KPI/chart/хүснэгт) нэгэн зэрэг
+         нөлөөлдөг цонх — өмнө нь энэ панель хүснэгтийн карт дотор
+         "нуугдмал" байсан тул зөвхөн хүснэгтэд хамаатай мэт харагддаг байсан. -->
+    <sc-if value="{{ detail.isAirDetail }}">
+    <sc-if value="{{ detail.showAirFilters }}">
+      <div style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна</div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Жил:</div>
+          <sc-for list="{{ detail.airYearChips }}" as="yc" hint-placeholder-count="3">
+            <button sc-camel-on-click="{{ yc.pick }}" style="{{ yc.style }}">{{ yc.label }}</button>
+          </sc-for>
+          <sc-if value="{{ detail.airYearLoading }}"><span style="font-size:11px;color:var(--ink3);white-space:nowrap;">ачаалж байна…</span></sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Сар:</div>
+          <button sc-camel-on-click="{{ detail.airRangeUi.monthAllPick }}" style="{{ detail.airRangeUi.monthAllStyle }}">Бүгд</button>
+          <sc-for list="{{ detail.airMonthChips }}" as="mc" hint-placeholder-count="12">
+            <button sc-camel-on-click="{{ mc.pick }}" style="{{ mc.style }}">{{ mc.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding-top:2px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Интервал:</div>
+          <span style="font-size:11.5px;color:var(--ink2);white-space:nowrap;">Он</span>
+          <input type="number" value="{{ detail.airRangeUi.yFrom }}" sc-camel-on-input="{{ detail.airRangeUi.onYFrom }}" min="{{ detail.airRangeUi.yMin }}" max="{{ detail.airRangeUi.yMax }}" placeholder="{{ detail.airRangeUi.yMin }}" style="{{ detail.airRangeUi.inputStyle }}">
+          <span style="font-size:11.5px;color:var(--ink3);">—</span>
+          <input type="number" value="{{ detail.airRangeUi.yTo }}" sc-camel-on-input="{{ detail.airRangeUi.onYTo }}" min="{{ detail.airRangeUi.yMin }}" max="{{ detail.airRangeUi.yMax }}" placeholder="{{ detail.airRangeUi.yMax }}" style="{{ detail.airRangeUi.inputStyle }}">
+          <span style="font-size:11.5px;color:var(--ink2);white-space:nowrap;margin-left:8px;">Сар</span>
+          <input type="number" value="{{ detail.airRangeUi.mFrom }}" sc-camel-on-input="{{ detail.airRangeUi.onMFrom }}" min="1" max="12" placeholder="1" style="{{ detail.airRangeUi.inputStyle }}">
+          <span style="font-size:11.5px;color:var(--ink3);">—</span>
+          <input type="number" value="{{ detail.airRangeUi.mTo }}" sc-camel-on-input="{{ detail.airRangeUi.onMTo }}" min="1" max="12" placeholder="12" style="{{ detail.airRangeUi.inputStyle }}">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;margin-left:4px;">{{ detail.airRangeUi.summary }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Төрөл:</div>
+          <sc-for list="{{ detail.airTypeChips }}" as="tc" hint-placeholder-count="3">
+            <button sc-camel-on-click="{{ tc.pick }}" style="{{ tc.style }}">{{ tc.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Чиглэл:</div>
+          <sc-for list="{{ detail.airDirChips }}" as="dc" hint-placeholder-count="3">
+            <button sc-camel-on-click="{{ dc.pick }}" style="{{ dc.style }}">{{ dc.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;padding-top:5px;">Бүс нутгаар:</div>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;max-height:74px;overflow-y:auto;">
+            <sc-for list="{{ detail.airRegionChips }}" as="rc" hint-placeholder-count="6">
+              <button sc-camel-on-click="{{ rc.pick }}" style="{{ rc.style }}">{{ rc.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;">
+      <sc-for list="{{ detail.airKpis }}" as="ak" hint-placeholder-count="8">
+        <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:16px;box-shadow:var(--shadow);padding:16px;">
+          <div style="font-size:9.5px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ ak.label }}</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.02em;">{{ ak.value }}</div>
+          <sc-if value="{{ ak.hasUnit }}"><div style="font-size:11px;color:var(--ink3);margin-top:2px;">{{ ak.unit }}</div></sc-if>
+          <sc-if value="{{ ak.hasDelta }}">
+            <div style="font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ ak.deltaColor }};margin-top:9px;">{{ ak.deltaLabel }}</div>
+            <div style="font-size:10px;color:var(--ink3);margin-top:2px;line-height:1.35;">{{ ak.compareLabel }}</div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dwp" data-eh-field="title">{{ detail.dwpTitle }}</span></div>
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
@@ -2256,56 +2327,6 @@
           <sc-for list="{{ detail.pvStatusFilters }}" as="sf" hint-placeholder-count="3">
             <button sc-camel-on-click="{{ sf.pick }}" style="{{ sf.style }}">{{ sf.label }}</button>
           </sc-for>
-        </div>
-      </sc-if>
-      <sc-if value="{{ detail.showAirFilters }}">
-        <div style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
-          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Жил:</div>
-            <sc-for list="{{ detail.airYearChips }}" as="yc" hint-placeholder-count="3">
-              <button sc-camel-on-click="{{ yc.pick }}" style="{{ yc.style }}">{{ yc.label }}</button>
-            </sc-for>
-            <sc-if value="{{ detail.airYearLoading }}"><span style="font-size:11px;color:var(--ink3);white-space:nowrap;">ачаалж байна…</span></sc-if>
-          </div>
-          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Сар:</div>
-            <button sc-camel-on-click="{{ detail.airRangeUi.monthAllPick }}" style="{{ detail.airRangeUi.monthAllStyle }}">Бүгд</button>
-            <sc-for list="{{ detail.airMonthChips }}" as="mc" hint-placeholder-count="12">
-              <button sc-camel-on-click="{{ mc.pick }}" style="{{ mc.style }}">{{ mc.label }}</button>
-            </sc-for>
-          </div>
-          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding-top:2px;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Интервал:</div>
-            <span style="font-size:11.5px;color:var(--ink2);white-space:nowrap;">Он</span>
-            <input type="number" value="{{ detail.airRangeUi.yFrom }}" sc-camel-on-input="{{ detail.airRangeUi.onYFrom }}" min="{{ detail.airRangeUi.yMin }}" max="{{ detail.airRangeUi.yMax }}" placeholder="{{ detail.airRangeUi.yMin }}" style="{{ detail.airRangeUi.inputStyle }}">
-            <span style="font-size:11.5px;color:var(--ink3);">—</span>
-            <input type="number" value="{{ detail.airRangeUi.yTo }}" sc-camel-on-input="{{ detail.airRangeUi.onYTo }}" min="{{ detail.airRangeUi.yMin }}" max="{{ detail.airRangeUi.yMax }}" placeholder="{{ detail.airRangeUi.yMax }}" style="{{ detail.airRangeUi.inputStyle }}">
-            <span style="font-size:11.5px;color:var(--ink2);white-space:nowrap;margin-left:8px;">Сар</span>
-            <input type="number" value="{{ detail.airRangeUi.mFrom }}" sc-camel-on-input="{{ detail.airRangeUi.onMFrom }}" min="1" max="12" placeholder="1" style="{{ detail.airRangeUi.inputStyle }}">
-            <span style="font-size:11.5px;color:var(--ink3);">—</span>
-            <input type="number" value="{{ detail.airRangeUi.mTo }}" sc-camel-on-input="{{ detail.airRangeUi.onMTo }}" min="1" max="12" placeholder="12" style="{{ detail.airRangeUi.inputStyle }}">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;margin-left:4px;">{{ detail.airRangeUi.summary }}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Төрөл:</div>
-            <sc-for list="{{ detail.airTypeChips }}" as="tc" hint-placeholder-count="3">
-              <button sc-camel-on-click="{{ tc.pick }}" style="{{ tc.style }}">{{ tc.label }}</button>
-            </sc-for>
-          </div>
-          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">Чиглэл:</div>
-            <sc-for list="{{ detail.airDirChips }}" as="dc" hint-placeholder-count="3">
-              <button sc-camel-on-click="{{ dc.pick }}" style="{{ dc.style }}">{{ dc.label }}</button>
-            </sc-for>
-          </div>
-          <div style="display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;padding-top:5px;">Бүс нутгаар:</div>
-            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;max-height:74px;overflow-y:auto;">
-              <sc-for list="{{ detail.airRegionChips }}" as="rc" hint-placeholder-count="6">
-                <button sc-camel-on-click="{{ rc.pick }}" style="{{ rc.style }}">{{ rc.label }}</button>
-              </sc-for>
-            </div>
-          </div>
         </div>
       </sc-if>
       <div style="overflow-x:auto;">
@@ -6902,12 +6923,22 @@ class Component extends DCLogic {
       const airCargoMonthly=buildDualAxisChart(sAir.monthly.cargoTon,sAir.monthly.cargoYoyPct,sAir.monthly.labels);
       const AIR_AI_PROMPTS=['Солонгос руу хэдэн зорчигч ниссэн бэ?','Аль тээвэрлэгч хамгийн их зорчигч тээвэрлэсэн бэ?',
         'Хятад руу хэдэн нислэг байсан бэ?','Топ 5 улсыг харуул','Олон улсын тээвэрлэгчдийн зах зээлийг харуул'];
+      // Дашбоардын дээд хэсэгт байдаг 8 KPI карт — өмнө нь энэ хуудсанд огт
+      // харагдахгүй байсан (зөвхөн "Салбар" хуудсан дээр л байсан). k[2] нь
+      // зарим мөрөнд нийт дүнгийн хувь ("75.2%"), k[5] нь харьцуулах
+      // тайлбар мөр ("өмнөх оны мөн үетэй харьцуулахад").
+      const airKpis=sAir.kpis.map(k=>({
+        label:k[0],value:k[1],unit:k[2]||'',hasUnit:!!k[2],
+        deltaLabel:(k[3]?(k[4]==='up'?'↑ ':(k[4]==='down'?'↓ ':''))+k[3]:''),
+        deltaColor:k[4]==='down'?'#D2564A':(k[4]==='flat'?'#828EA8':'#2FA37B'),
+        hasDelta:!!k[3],compareLabel:k[5]||''
+      }));
       const airAiChips=AIR_AI_PROMPTS.map(q=>({q,pick:()=>this.askAirAi(q)}));
       const airAiThread=(this.state.airAiThread||[]).map(m=>({isBot:m.role==='bot',text:m.text,
         justify:m.role==='bot'?'flex-start':'flex-end',
         bg:m.role==='bot'?'var(--surface2)':NEON.air,
         color:m.role==='bot'?'var(--ink)':'#0d1524'}));
-      airExtra={isAirDetail:true,airDonut,airCountries,airCountriesTotal,cargoRank,cargoRankTotal,airMonthly,airCargoMonthly,
+      airExtra={isAirDetail:true,airDonut,airCountries,airCountriesTotal,cargoRank,cargoRankTotal,airMonthly,airCargoMonthly,airKpis,
         airTreemap:this.buildAirTreemap(),flowMap:this.buildFlowMap(),
         airAiChips,airAiThread,airAiHasThread:airAiThread.length>0,
         airAiInput:this.state.airAiInput||'',
