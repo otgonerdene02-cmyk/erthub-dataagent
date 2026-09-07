@@ -1345,10 +1345,28 @@ function svgBarsH(parts,w){
   }).join('');
 }
 /* Слот бүрийн бодит "юу харагдах вэ" — verified бол утга, none бол 0 */
+/* Виджетийн УТГЫН тохиргоо (widgets.<id>.value) preview-д тусах ёстой —
+   эс тэгвэл админ хэмжигдэхүүнээ сольсон хэрнээ зүүн талын preview
+   хуучин тоогоо (нислэгийн тоо) харуулж, "юу ч өөрчлөгдөхгүй байна"
+   гэсэн ойлголт төрүүлнэ. Сайт талын EHChart.value()-тай ЯГ ижил
+   хөдөлгүүр, ижил мөрүүд (FEED.rows). */
+function widgetValueRes(id){
+  if(typeof EHChart==='undefined'||typeof valueSpecOf!=='function') return null;
+  var sp=valueSpecOf(id);
+  if(!sp||FEED.state!=='ready'||!FEED.rows) return null;
+  return EHChart.value(FEED.rows,sp);
+}
 function sectorParts(id){
+  var vres=widgetValueRes(id);
   return slotsOf(id).filter(function(s){return s.key&&s.key!=='plan'}).map(function(s){
     var sv=slotVal(id,s.path), q=qualityOf(sv);
     var v=q==='verified'?(metricValue(sv.metric)||0):0;
+    /* Тохиргоо нь ЗӨВХӨН air салбарт хамаарна — бусад 4 салбарын мөр
+       түвшний дата хараахан алга (тоо ЗОХИОХГҮЙ). */
+    /* Сайт нь Math.round хийж харуулдаг тул preview ч ЯГ ижил тоо
+       үзүүлнэ — эс тэгвэл preview "6,677,422.6", сайт "6,677,423" гэж
+       зөрөх бөгөөд аль нь үнэн бэ гэсэн эргэлзээ төрүүлнэ. */
+    if(vres&&s.key==='air'&&q==='verified') v=Math.round(vres.raw);
     return {k:s.key,n:SECN[s.key]||s.key,c:NEON[s.key]||'#8A93AB',v:v,q:q,
       label:q==='none'?(sv.label||'мэдээлэл алга'):(q==='mock'?'түр дата':'')};
   });
@@ -1425,11 +1443,20 @@ function previewFor(id,mini){
        спарклайнтай. Verified салбарын спарклайн нь БОДИТ сарын цуваанаас
        (air.monthly_flight_series), бусад нь хавтгай 0 шугам — сайт дээр
        яг ижил зарчмаар зурагддаг. */
-    var ser5=metricSeries('air.monthly_flight_series');
+    /* Утгын тохиргоотой бол спарклайн нь СОНГОСОН хэмжигдэхүүний сар
+       тутмын цуваагаар зурагдана (сайт дээр ч яг ижил) — эс тэгвэл
+       preview дээр тоо нь солигдоод муруй нь хуучнаараа үлдэнэ. */
+    var vres5=widgetValueRes(id);
+    var ser5=(vres5&&vres5.series&&vres5.series.length>1)
+      ? vres5.series.map(function(v,i){return {label:vres5.labels[i],v:v}})
+      : metricSeries('air.monthly_flight_series');
     body='<div class="pvstrip">'+sectorParts(id).slice(0,5).map(function(p){
       var on=p.q==='verified';
-      var spark=(on&&ser5&&ser5.length>1)
-        ? svgLine(ser5,p.c,44,14,false)
+      /* Тохируулсан цуваа нь ЗӨВХӨН air салбарынх — бусдад нь хуучин
+         зарчмаар (verified бол ерөнхий цуваа, үгүй бол хавтгай шугам). */
+      var useSer=(vres5&&p.k!=='air')?null:ser5;
+      var spark=(on&&useSer&&useSer.length>1)
+        ? svgLine(useSer,p.c,44,14,false)
         : '<svg viewBox="0 0 44 14" style="width:100%;height:14px;display:block">'+
           '<line x1="2" y1="11" x2="42" y2="11" stroke="#C6CEDD" stroke-width="1.4" stroke-linecap="round"></line></svg>';
       return '<div class="pvsc'+(on?'':' z')+'" style="border-left-color:'+p.c+'">'+

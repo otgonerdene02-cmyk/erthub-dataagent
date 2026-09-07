@@ -747,6 +747,55 @@ async function groupH() {
      I3. Тохиргоогүй үед САЙТ өмнөх хатуу чартаа зурна (регресс хамгаалалт)
      I4. Admin-д X/Y/нэгтгэл сонгоход preview ЖИНХЭНЭ датагаар зурагдана
    ══════════════════════════════════════════════════════════════════ */
+/* I5 — Админ дээрх ЖИНХЭНЭ гүйлгээ: хэмжигдэхүүн сольсон ДАРУЙД зүүн
+   талын preview ӨӨРЧЛӨГДӨХ ёстой. Өмнө нь preview нь холбогдсон
+   метрикийн утгыг (нислэгийн тоо) ХАТУУ уншдаг байсан тул админ
+   сольсон хэрнээ "юу ч өөрчлөгдөхгүй" харагддаг байв — энэ тест тэр
+   регрессийг барина. */
+const PROBE_I = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(4000);
+  const R={};
+  const sec=d.querySelector('[data-section="sec-01"]');
+  if(!sec) return {__err:'sec-01 олдсонгүй'};
+  sec.click(); await sleep(700);
+  const wgt=d.querySelector('[data-widget="ls"]')||d.querySelector('[data-goedit^="ls|"]');
+  if(!wgt) return {__err:'ls виджет олдсонгүй'};
+  wgt.click(); await sleep(1000);
+  const val=()=>{const e=d.querySelector('#pvhost .pvsc .v'); return e?e.textContent.trim():null};
+  const spark=()=>{const p=d.querySelector('#pvhost .pvsc .sp path,#pvhost .pvsc .sp line');
+    return p?(p.getAttribute('d')||'flat'):null};
+  R.hasValueForm=!!d.querySelector('[data-vf="ls|measure"]');
+  R.before=val(); R.sparkBefore=spark();
+  const pick=(v)=>{const el=d.querySelector('[data-vf="ls|measure"]');
+    if(!el) return false; el.value=v; el.dispatchEvent(new w.Event('change',{bubbles:true})); return true};
+  pick('Зорчигч'); await sleep(1200);
+  R.after=val(); R.sparkAfter=spark();
+  R.dirtyAfter=(d.getElementById('dirtyMsg')||{}).textContent||'';
+  pick(''); await sleep(1200);
+  R.reverted=val();
+  R.dirtyReverted=(d.getElementById('dirtyMsg')||{}).textContent||'';
+  return R;
+}`;
+async function groupI2() {
+  if (!CHROME) { skipped('I5. Админ preview (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(PROBE_I, 90000);
+    if (R.__err) { bad('I5. Админ preview шалгалт ажиллав', R.__err); return; }
+    check('I5. Виджет засварлах дэлгэцэд "Утга" маягт гарна', R.hasValueForm === true);
+    check('I5. Хэмжигдэхүүн сольсон ДАРУЙД preview-ийн ТОО өөрчлөгдөнө',
+      !!R.before && !!R.after && R.before !== R.after,
+      JSON.stringify({ before: R.before, after: R.after }));
+    check('I5. Spark line ч сонгосон хэмжигдэхүүнээ дагана',
+      !!R.sparkAfter && R.sparkBefore !== R.sparkAfter, 'муруй өөрчлөгдсөнгүй');
+    check('I5. Тохиргоо dirty болж экспортод орно', /өөрчлөлт/.test(R.dirtyAfter), R.dirtyAfter.trim());
+    check('I5. "Өмнөх хэвээр" сонговол виджет анхны утгаа буцаана',
+      R.reverted === R.before && /алга/.test(R.dirtyReverted),
+      JSON.stringify({ reverted: R.reverted, before: R.before, dirty: R.dirtyReverted.trim() }));
+  } finally { srv.close(); }
+}
+
 function groupI() {
   group('I. Чарт бүтээгч (EHChart — X/Y тэнхлэг + нэгтгэл)');
   const src = read('js/erthub-chart.js');
@@ -831,7 +880,8 @@ function groupI() {
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
-  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH(); groupI();
+  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
+  groupI(); await groupI2();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
