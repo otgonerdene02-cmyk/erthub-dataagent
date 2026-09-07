@@ -2381,6 +2381,9 @@
               <div style="height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;">
                 <div style="height:100%;border-radius:4px;background:{{ detail.color }};width:{{ rk.width }};"></div>
               </div>
+              <sc-if value="{{ rk.hasSub }}">
+                <div style="font-size:11px;color:var(--ink3);margin-top:4px;">{{ rk.sub }}</div>
+              </sc-if>
             </div>
           </sc-for>
         </div>
@@ -2420,9 +2423,109 @@
               <div style="height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;">
                 <div style="height:100%;border-radius:4px;background:{{ activeColor }};width:{{ cn.widthPct }};"></div>
               </div>
+              <sc-if value="{{ cn.hasSub }}">
+                <div style="font-size:11px;color:var(--ink3);margin-top:4px;">{{ cn.sub }}</div>
+              </sc-if>
             </div>
           </sc-for>
         </div>
+      </div>
+    </div>
+
+    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dtree" data-eh-field="title">{{ detail.dtreeTitle }}</span></div>
+        <sc-if value="{{ detail.airTreemap.drilled }}">
+          <div sc-camel-on-click="{{ detail.airTreemap.back }}" style="cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9px;border:1px solid var(--line2);background:var(--surface);white-space:nowrap;">← {{ detail.airTreemap.regionLabel }}</div>
+        </sc-if>
+      </div>
+      <svg sc-camel-view-box="0 0 600 300" style="width:100%;height:auto;display:block;">
+        <sc-for list="{{ detail.airTreemap.boxes }}" as="tb" hint-placeholder-count="8">
+          <g sc-camel-on-click="{{ tb.pick }}" style="cursor:pointer;">
+            <rect x="{{ tb.x }}" y="{{ tb.y }}" width="{{ tb.w }}" height="{{ tb.h }}" fill="{{ tb.color }}" stroke="var(--surface)" stroke-width="2" rx="3"></rect>
+            <sc-if value="{{ tb.showLabel }}">
+              <text x="{{ tb.labelX }}" y="{{ tb.labelY }}" fill="#fff" font-size="11" font-weight="600" font-family="inherit">{{ tb.name }}</text>
+              <text x="{{ tb.labelX }}" y="{{ tb.valueY }}" fill="#fff" font-size="10" opacity=".85" font-family="'JetBrains Mono',monospace">{{ tb.pctLabel }}</text>
+            </sc-if>
+          </g>
+        </sc-for>
+      </svg>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dmth" data-eh-field="title">{{ detail.dmthTitle }}</span></div>
+        <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:180px;display:block;">
+          <sc-for list="{{ detail.airMonthly.yTicksLeft }}" as="yt" hint-placeholder-count="5">
+            <line x1="{{ detail.airMonthly.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.airMonthly.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
+            <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
+            </foreignObject>
+          </sc-for>
+          <sc-for list="{{ detail.airMonthly.yTicksRight }}" as="yt2" hint-placeholder-count="5">
+            <foreignObject x="{{ yt2.fx }}" y="{{ yt2.fy }}" width="42" height="14">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:{{ activeColor }};font-family:'JetBrains Mono',monospace;text-align:left;padding-left:6px;">{{ yt2.label }}</div>
+            </foreignObject>
+          </sc-for>
+          <sc-for list="{{ detail.airMonthly.barRects }}" as="br" hint-placeholder-count="12">
+            <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="var(--ink3)" opacity=".35" rx="2"></rect>
+          </sc-for>
+          <path d="{{ detail.airMonthly.line }}" fill="none" stroke="{{ activeColor }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+          <sc-for list="{{ detail.airMonthly.dotPts }}" as="dp" hint-placeholder-count="12">
+            <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ activeColor }}"></circle>
+          </sc-for>
+          <sc-for list="{{ detail.airMonthly.xTicks }}" as="xt" hint-placeholder-count="6">
+            <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;">{{ xt.label }}</div>
+            </foreignObject>
+          </sc-for>
+        </svg>
+      </div>
+      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dcgm" data-eh-field="title">{{ detail.dcgmTitle }}</span></div>
+        <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:180px;display:block;">
+          <sc-for list="{{ detail.airCargoMonthly.yTicksLeft }}" as="cyt" hint-placeholder-count="5">
+            <line x1="{{ detail.airCargoMonthly.axisX1 }}" y1="{{ cyt.y }}" x2="{{ detail.airCargoMonthly.axisX2 }}" y2="{{ cyt.y }}" stroke="var(--line)" stroke-width="1"></line>
+            <foreignObject x="0" y="{{ cyt.fy }}" width="42" height="14">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ cyt.label }}</div>
+            </foreignObject>
+          </sc-for>
+          <sc-for list="{{ detail.airCargoMonthly.yTicksRight }}" as="cyt2" hint-placeholder-count="5">
+            <foreignObject x="{{ cyt2.fx }}" y="{{ cyt2.fy }}" width="42" height="14">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:{{ activeColor }};font-family:'JetBrains Mono',monospace;text-align:left;padding-left:6px;">{{ cyt2.label }}</div>
+            </foreignObject>
+          </sc-for>
+          <sc-for list="{{ detail.airCargoMonthly.barRects }}" as="cbr" hint-placeholder-count="12">
+            <rect x="{{ cbr.x }}" y="{{ cbr.y }}" width="{{ cbr.w }}" height="{{ cbr.h }}" fill="var(--ink3)" opacity=".35" rx="2"></rect>
+          </sc-for>
+          <path d="{{ detail.airCargoMonthly.line }}" fill="none" stroke="{{ activeColor }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+          <sc-for list="{{ detail.airCargoMonthly.dotPts }}" as="cdp" hint-placeholder-count="12">
+            <circle cx="{{ cdp.cx }}" cy="{{ cdp.cy }}" r="2.6" fill="{{ activeColor }}"></circle>
+          </sc-for>
+          <sc-for list="{{ detail.airCargoMonthly.xTicks }}" as="cxt" hint-placeholder-count="6">
+            <foreignObject x="{{ cxt.fx }}" y="{{ cxt.fy }}" width="40" height="14">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;">{{ cxt.label }}</div>
+            </foreignObject>
+          </sc-for>
+        </svg>
+      </div>
+    </div>
+
+    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dcgo" data-eh-field="title">{{ detail.dcgoTitle }}</span></div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;">
+        <sc-for list="{{ detail.cargoRank }}" as="cr" hint-placeholder-count="10">
+          <div>
+            <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2);margin-bottom:6px;">
+              <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ cr.name }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);white-space:nowrap;flex-shrink:0;">{{ cr.value }}</span>
+            </div>
+            <div style="height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;">
+              <div style="height:100%;border-radius:4px;background:{{ activeColor }};width:{{ cr.width }};"></div>
+            </div>
+            <div style="font-size:11px;color:{{ cr.yoyColor }};margin-top:4px;font-family:'JetBrains Mono',monospace;">{{ cr.pct }} · {{ cr.yoy }}</div>
+          </div>
+        </sc-for>
       </div>
     </div>
 
@@ -2673,6 +2776,9 @@
               <div style="height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;">
                 <div style="height:100%;border-radius:4px;background:{{ sectorPage.color }};width:{{ rk.width }};"></div>
               </div>
+              <sc-if value="{{ rk.hasSub }}">
+                <div style="font-size:11px;color:var(--ink3);margin-top:4px;">{{ rk.sub }}</div>
+              </sc-if>
             </div>
           </sc-for>
         </div>
@@ -2691,6 +2797,9 @@
             <div style="height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;">
               <div style="height:100%;border-radius:5px;background:{{ sectorPage.color }};width:{{ bar.widthPct }};"></div>
             </div>
+            <sc-if value="{{ bar.hasSub }}">
+              <div style="font-size:11px;color:var(--ink3);margin-top:4px;">{{ bar.sub }}</div>
+            </sc-if>
           </div>
         </sc-for>
       </div>
@@ -3515,6 +3624,59 @@ function bubbleSize(pax,maxPax,minS,maxS){
   if(!maxPax) return minS;
   return minS+(maxS-minS)*Math.sqrt(Math.max(pax,0)/maxPax);
 }
+// Squarified treemap (Bruls/Huizing/van Wijk) — items эрчимээр (value)
+// буурахаар эрэмбэлэгдсэн байх ёстой. Хайрцаг бүр дөрвөлжинд аль болох
+// ойрхон харьцаатай байхаар мөр мөрөөр байрлуулна (slice-and-dice-аас ялгаатай
+// нь урт нарийн зурвас үүсгэдэггүй) — эх dashboard-ын treemap-тай ижил
+// дүрслэлийг өгнө. Бүс нутаг ба улсын хоёр түвшинд ижил функцээр дуудагдана.
+function squarify(items,x,y,w,h){
+  if(!items||!items.length) return [];
+  if(w<=0||h<=0) return items.map(it=>({...it,x,y,w:0,h:0}));
+  const total=items.reduce((s,it)=>s+Math.max(it.value,0),0)||1;
+  const scale=(w*h)/total;
+  const worst=(row,rowSum,side)=>{
+    const rmax=Math.max.apply(null,row.map(it=>it.value*scale));
+    const rmin=Math.min.apply(null,row.map(it=>it.value*scale));
+    const s2=rowSum*rowSum, side2=side*side;
+    return Math.max((side2*rmax)/s2,s2/(side2*rmin||1));
+  };
+  const layoutRow=(row,rx,ry,rw,rh,horizontal)=>{
+    const rowSum=row.reduce((s,it)=>s+it.value*scale,0);
+    let off=horizontal?rx:ry;
+    return row.map(it=>{
+      const area=it.value*scale;
+      const len=rowSum?area/(horizontal?rh:rw):0;
+      const box=horizontal
+        ?{x:off,y:ry,w:len,h:rh}
+        :{x:rx,y:off,w:rw,h:len};
+      off+=len;
+      return {...it,...box};
+    });
+  };
+  const out=[];
+  let rest=items.slice(), rx=x, ry=y, rw=w, rh=h;
+  while(rest.length){
+    const horizontal=rw>=rh;
+    const side=horizontal?rh:rw;
+    let row=[rest[0]], rowSum=rest[0].value*scale;
+    let i=1;
+    while(i<rest.length){
+      const next=rest[i], nextSum=rowSum+next.value*scale;
+      if(worst(row.concat(next),nextSum,side)<=worst(row,rowSum,side)){
+        row.push(next); rowSum=nextSum; i++;
+      } else break;
+    }
+    const rowLen=rowSum/side;
+    out.push(...layoutRow(row,rx,ry,rw,rh,horizontal));
+    rest=rest.slice(row.length);
+    if(horizontal){ rx+=rowLen; rw-=rowLen; } else { ry+=rowLen; rh-=rowLen; }
+    if(rw<=0||rh<=0) break;
+  }
+  // Хэрэв layout эрт зогссон бол (rw/rh 0 болсон) үлдсэн item-үүдийг 0
+  // хэмжээтэйгээр буцаана — дэлгэцэнд харагдахгүй ч алдаа шидэхгүй.
+  rest.forEach(it=>out.push({...it,x:rx,y:ry,w:0,h:0}));
+  return out;
+}
 function hexToRgb(hex){
   const h=hex.replace('#','');
   return [parseInt(h.substring(0,2),16),parseInt(h.substring(2,4),16),parseInt(h.substring(4,6),16)];
@@ -3938,7 +4100,18 @@ const SECTORS = {
       ['ОУ НИСЛЭГ','9,009','75%','+8.0%','up'],['ДОТООД ЗОРЧИГЧ','243K','16%','−4.4%','down']],
     c1:'Сарын нислэгийн тоо', c1d:[1719,1241,1403,1392,1622,2044,2478,2200,1900,1700,1500,1300],
     rt:'Тээвэрлэгчдийн зах зээл', rank:[['MIAT','681,711','48.6%'],['Hunnu Air','174,454','12.4%'],['Airchina','131,386','9.4%'],['Aero Mongolia','118,942','8.5%'],['Бусад','296,471','21.1%']],
-    c2:'Улс тус бүрийн зорчигч', bars:[['Өмнөд Солонгос',88,'457,815'],['Хятад',69,'357,372'],['Япон',22,'113,142'],['Турк',15,'79,801'],['Хонг Конг',12,'64,193']] },
+    c2:'Улс тус бүрийн зорчигч', bars:[['Өмнөд Солонгос',88,'457,815'],['Хятад',69,'357,372'],['Япон',22,'113,142'],['Турк',15,'79,801'],['Хонг Конг',12,'64,193']],
+    // Бодит flights feed ачаалагдахаас өмнөх түр орлуулга (loadFlightsData
+    // амжилтгүй болвол ч ЭНЭ хэвээр үлдэнэ) — applyRealFlightsData ирмэгц
+    // бодит датагаар дарагдана.
+    monthly:{pax:[132000,98000,111000,109000,128000,161000,196000,174000,150000,134000,118000,103000],
+      flights:[1719,1241,1403,1392,1622,2044,2478,2200,1900,1700,1500,1300],
+      cargoTon:[520,410,470,455,505,560,600,585,540,500,460,430],
+      cargoYoyPct:[4.2,-2.1,3.5,1.8,6.0,7.4,5.1,2.9,-1.4,3.3,4.8,2.2],
+      labels:['1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар','7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар']},
+    cargoRank:[['MIAT','3,357.8 т','50.8%','+6.2%','up'],['Korean Air','1,723.6 т','26.1%','-9.0%','down'],
+      ['Turkish Airlines','407.9 т','6.2%','+7.4%','up'],["T'way Air",'374.1 т','5.7%','+265.4%','up'],
+      ['MY FREIGHTER LLC','322.3 т','4.9%','+25.2%','up']] },
   water:{ label:'Ус, далайн тээвэр',
     kpis:[['УСАН ЗАМ','612','км','0.0%','flat'],['ИДЭВХТЭЙ БООМТ','3','','0.0%','flat'],
       ['АЧАА / ЖИЛ','184K','тн','−2.1%','down'],['ХӨЛӨГ ОНГОЦ','12','','+9.1%','up']],
@@ -4211,6 +4384,54 @@ function buildTrendChart(data,off){
     w,h,padL,padR,padT,padB,axisX1:padL,axisX2:w-padR,axisY:(h-padB).toFixed(1)};
 }
 
+// Багана(зүүн тэнхлэг)+шугам(баруун тэнхлэг) хосолсон chart — эх
+// veritech dashboard-ын "Сараар зорчигч ба нислэг"/"Сараар ачааны хэмжээ"
+// графикуудтай ижил төрөл. buildTrendChart-аас ялгаатай нь: 2 тусдаа
+// Y-масштабтай (багана 0-ээс эхэлнэ, шугам өөрийн бодит хүрээгээрээ),
+// AI прогноз/итгэлцлийн зурвасгүй — зөвхөн түүхэн бодит дата.
+function buildDualAxisChart(barSeries,lineSeries,labels){
+  const w=600,h=170,padL=46,padR=42,padT=14,padB=26;
+  const n=barSeries.length;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const slot=plotW/(n||1), barW=slot*0.56;
+
+  const barMax=Math.max.apply(null,barSeries.concat([0]));
+  const barStep=Math.pow(10,Math.floor(Math.log10((barMax||1)/4||1)));
+  const barNiceMax=Math.ceil((barMax||1)/barStep)*barStep||1;
+  const Y1=v=>padT+plotH*(1-v/barNiceMax);
+
+  const lineMax=Math.max.apply(null,lineSeries), lineMin=Math.min.apply(null,lineSeries);
+  const lineSpan=(lineMax-lineMin)||1;
+  const lineStep=Math.pow(10,Math.floor(Math.log10(lineSpan/4||1)));
+  const lineNiceMax=Math.ceil(lineMax/lineStep)*lineStep, lineNiceMin=Math.floor(lineMin/lineStep)*lineStep;
+  const lineRange=(lineNiceMax-lineNiceMin)||1;
+  const Y2=v=>padT+plotH*(1-(v-lineNiceMin)/lineRange);
+
+  const X=i=>padL+i*slot+slot/2;
+  const barRects=barSeries.map((v,i)=>{
+    const y=Y1(v);
+    return {x:(padL+i*slot+(slot-barW)/2).toFixed(1),y:y.toFixed(1),w:barW.toFixed(1),h:(padT+plotH-y).toFixed(1)};
+  });
+
+  const xy=lineSeries.map((v,i)=>[X(i),Y2(v)]);
+  const line=xy.length?'M'+xy.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L'):'';
+  const dotPts=xy.map(p=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1)}));
+
+  const yTicksLeft=[0,0.25,0.5,0.75,1].map(fr=>{
+    const val=barNiceMax*fr, y=Y1(val);
+    return {y:y.toFixed(1),label:Math.round(val).toLocaleString(),fx:0,fy:(y-7).toFixed(1)};
+  });
+  const yTicksRight=[0,0.25,0.5,0.75,1].map(fr=>{
+    const val=lineNiceMin+lineRange*fr, y=Y2(val);
+    return {y:y.toFixed(1),label:Math.round(val).toLocaleString(),fx:(w-padR).toFixed(1),fy:(y-7).toFixed(1)};
+  });
+  const every=n>8?2:1;
+  const xTicks=labels.map((lb,i)=>({x:X(i).toFixed(1),label:lb||'',fx:(X(i)-19).toFixed(1),fy:(h-padB+6).toFixed(1)})).filter((_,i)=>i%every===0);
+
+  return {barRects,line,dotPts,yTicksLeft,yTicksRight,xTicks,
+    w,h,padL,padR,padT,padB,axisX1:padL,axisX2:w-padR,axisYBottom:(padT+plotH).toFixed(1)};
+}
+
 function miniSpark(dir,seed){
   const pts=[]; let v=40;
   for(let i=0;i<10;i++){
@@ -4263,7 +4484,7 @@ function mapFirebaseError(err){
 class Component extends DCLogic {
   state={ authed:false, authBusy:false, authReady:false, mobileNavOpen:false, viewportW:(typeof window!=='undefined'?window.innerWidth:1280),
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
-    airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12',
+    airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12', airTreemapRegion:null,
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
     theme:(function(){
@@ -4926,16 +5147,16 @@ class Component extends DCLogic {
     },260);
   }
   setAirYearRange(from,to){
-    this.setState({airYFrom:String(from),airYTo:String(to),mapSelectedNode:null},()=>this.applyAirRange());
+    this.setState({airYFrom:String(from),airYTo:String(to),mapSelectedNode:null,airTreemapRegion:null},()=>this.applyAirRange());
   }
   setAirRangeField(key,value){
-    this.setState({[key]:value,mapSelectedNode:null},()=>this.applyAirRange());
+    this.setState({[key]:value,mapSelectedNode:null,airTreemapRegion:null},()=>this.applyAirRange());
   }
   setAirFilter(key,val){
-    // Clear any selected map bubble on filter change — it belongs to
-    // whichever country/airport set was visible before, which may no
-    // longer even be on screen after e.g. a world/domestic switch.
-    this.setState({[key]:val,mapSelectedNode:null},()=>this.recomputeAirData());
+    // Clear any selected map bubble/treemap drill on filter change — it
+    // belongs to whichever country/region set was visible before, which
+    // may no longer even be on screen after e.g. a world/domestic switch.
+    this.setState({[key]:val,mapSelectedNode:null,airTreemapRegion:null},()=>this.recomputeAirData());
   }
   recomputeAirData(){
     const r=this.airRange();
@@ -4980,23 +5201,25 @@ class Component extends DCLogic {
     const filtered=flights.filter(matchFilter);
 
     const aggregate=(list)=>{
-      const monthCounts={};
+      const monthCounts={},monthPax={},monthCargoKg={};
       let totalPax=0,intlFlights=0,intlPax=0,domPax=0,cargoKg=0;
       const carriers=new Set(),cities=new Set();
       let latestM=0,latestD=0;
       for(const f of list){
-        const m=f.month||1,pax=f.pax||0;
+        const m=f.month||1,pax=f.pax||0,fCargo=(f.cargoKg||0)+(f.mailKg||0);
         monthCounts[m]=(monthCounts[m]||0)+1;
+        monthPax[m]=(monthPax[m]||0)+pax;
+        monthCargoKg[m]=(monthCargoKg[m]||0)+fCargo;
         totalPax+=pax;
         if(f.ou==='ОУ'){ intlFlights++; intlPax+=pax; } else { domPax+=pax; }
-        cargoKg+=(f.cargoKg||0)+(f.mailKg||0);
+        cargoKg+=fCargo;
         if(f.carr) carriers.add(f.carr);
         if(f.city) cities.add(f.city);
         if(m>latestM || (m===latestM && (f.day||0)>latestD)){ latestM=m; latestD=f.day||0; }
       }
       return {count:list.length,totalPax,intlFlights,intlPax,domPax,
         cargoTon:cargoKg/1000,carrierCount:carriers.size,cityCount:cities.size,
-        monthCounts,latestM,latestD};
+        monthCounts,monthPax,monthCargoKg,latestM,latestD};
     };
     const cur=aggregate(filtered);
     // "Same period last year" — cap the previous year's data at the same
@@ -5008,12 +5231,18 @@ class Component extends DCLogic {
           (f.month||1)<cur.latestM || ((f.month||1)===cur.latestM && (f.day||0)<=cur.latestD))
       : [];
     const prev=aggregate(prevFilteredSamePeriod);
+    // Сар бүрийн харьцуулалт (Сараар ачааны хэмжээ chart-ын шугам) нь
+    // "мөн үеийн" тайрсан prev биш — сар тус бүрийг өмнөх оны ЯГ ТУХАЙН
+    // сартай харьцуулна, тул өмнөх оны БҮХ (тайрахгүй) шүүгдсэн дата хэрэгтэй.
+    const prevAllFiltered=prevFlights?prevFlights.filter(matchFilter):[];
+    const prevAll=aggregate(prevAllFiltered);
 
     const pctDelta=(a,b)=>{
       if(!b) return {s:'0.0%',dir:'flat'};
       const d=(a-b)/b*100;
       return {s:(d>=0?'+':'')+d.toFixed(1)+'%',dir:d>0?'up':(d<0?'down':'flat')};
     };
+    const pctNum=(a,b)=>b?(a-b)/b*100:0;
     const compareLabel=prevFlights?stxt('chart.compare_prev_year','өмнөх оны мөн үетэй харьцуулахад'):'харьцуулах өгөгдөл алга';
     const intlPct=cur.count?(cur.intlFlights/cur.count*100):0;
     const intlPaxPct=cur.totalPax?(cur.intlPax/cur.totalPax*100):0;
@@ -5079,33 +5308,80 @@ class Component extends DCLogic {
     // year fed a fake cliff-to-zero into that regression instead.
     const c1dFull=[]; for(let m=1;m<=12;m++) c1dFull.push(cur.monthCounts[m]||0);
     const lastRealIdx=(()=>{ for(let i=11;i>=0;i--) if(c1dFull[i]>0) return i; return -1; })();
+    const lastRealM=lastRealIdx>=0?lastRealIdx+1:12;
     SECTORS.air.c1d=lastRealIdx>=0?c1dFull.slice(0,lastRealIdx+1):c1dFull;
 
-    const byCarrier={},byCountry={},byDomesticAirport={};
+    // "Сараар зорчигч ба нислэг" / "Сараар ачааны хэмжээ" dual-axis
+    // графикуудын эх дата — зөвхөн бодит бичлэгтэй сарууд (c1d-тэй ижил
+    // зарчим), тул хоёул ижил тооны сар агуулна.
+    const monthLabels=[]; for(let m=1;m<=lastRealM;m++) monthLabels.push(MONTHS[m-1]);
+    const monthPaxArr=[],monthFlightsArr=[],monthCargoTonArr=[],monthCargoYoyArr=[];
+    for(let m=1;m<=lastRealM;m++){
+      monthPaxArr.push(cur.monthPax[m]||0);
+      monthFlightsArr.push(cur.monthCounts[m]||0);
+      const cargoTon=(cur.monthCargoKg[m]||0)/1000;
+      monthCargoTonArr.push(cargoTon);
+      monthCargoYoyArr.push(pctNum(cur.monthCargoKg[m]||0,prevAll.monthCargoKg[m]||0));
+    }
+    SECTORS.air.monthly={pax:monthPaxArr,flights:monthFlightsArr,cargoTon:monthCargoTonArr,cargoYoyPct:monthCargoYoyArr,labels:monthLabels};
+
+    const byCarrier={},byCarrierFlights={},byCarrierCargoKg={},prevByCarrierCargoKg={},
+      byCountry={},byCountryFlights={},byDomesticAirport={},byRegion={},byRegionCountry={};
     for(const f of filtered){
-      if(f.carr) byCarrier[f.carr]=(byCarrier[f.carr]||0)+(f.pax||0);
-      if(f.cntry && f.cntry!=='Монгол') byCountry[f.cntry]=(byCountry[f.cntry]||0)+(f.pax||0);
+      if(f.carr){
+        byCarrier[f.carr]=(byCarrier[f.carr]||0)+(f.pax||0);
+        byCarrierFlights[f.carr]=(byCarrierFlights[f.carr]||0)+1;
+        byCarrierCargoKg[f.carr]=(byCarrierCargoKg[f.carr]||0)+(f.cargoKg||0)+(f.mailKg||0);
+      }
+      if(f.cntry && f.cntry!=='Монгол'){
+        byCountry[f.cntry]=(byCountry[f.cntry]||0)+(f.pax||0);
+        byCountryFlights[f.cntry]=(byCountryFlights[f.cntry]||0)+1;
+      }
       if(f.ou!=='ОУ' && f.city && DOMESTIC_AIRPORT_COORD[f.city]){
         const d=byDomesticAirport[f.city]||{pax:0,fl:0};
         d.pax+=(f.pax||0); d.fl++;
         byDomesticAirport[f.city]=d;
       }
+      if(f.region){
+        byRegion[f.region]=(byRegion[f.region]||0)+(f.pax||0);
+        const key=f.region+'|'+(f.cntry||'—');
+        byRegionCountry[key]=(byRegionCountry[key]||0)+(f.pax||0);
+      }
+    }
+    for(const f of prevFilteredSamePeriod){
+      if(f.carr) prevByCarrierCargoKg[f.carr]=(prevByCarrierCargoKg[f.carr]||0)+(f.cargoKg||0)+(f.mailKg||0);
     }
     // Full (not top-N-limited) totals for the "Улаанбаатараас чиглэсэн
     // зорчигчийн урсгал" bubble map — buildFlowMap() reads these directly.
     this._airCountryFull=byCountry;
     this._airDomesticFull=byDomesticAirport;
+    // Бүс нутаг тус бүрийн зорчигч treemap-ийн бүрэн (топ-N-ээр
+    // огтлоогүй) хуваарилалт — buildAirTreemap() эндээс уншина.
+    this._airRegionTotals=byRegion;
+    this._airRegionCountryTotals=byRegionCountry;
     const carrierList=Object.entries(byCarrier).sort((a,b)=>b[1]-a[1]);
     const carrierTotal=carrierList.reduce((s,c)=>s+c[1],0)||1;
-    const topCarriers=carrierList.slice(0,4);
-    const otherCarrierPax=carrierList.slice(4).reduce((s,c)=>s+c[1],0);
-    const rank=topCarriers.map(c=>[c[0],c[1].toLocaleString('en-US'),(c[1]/carrierTotal*100).toFixed(1)+'%']);
-    if(otherCarrierPax>0) rank.push(['Бусад',otherCarrierPax.toLocaleString('en-US'),(otherCarrierPax/carrierTotal*100).toFixed(1)+'%']);
+    const topCarriers=carrierList.slice(0,10);
+    const otherCarrierPax=carrierList.slice(10).reduce((s,c)=>s+c[1],0);
+    const rank=topCarriers.map(c=>[c[0],c[1].toLocaleString('en-US'),(c[1]/carrierTotal*100).toFixed(1)+'%',
+      fmtCount(byCarrierFlights[c[0]]||0)+' '+stxt('unit.flight_word','нислэг')]);
+    if(otherCarrierPax>0) rank.push(['Бусад',otherCarrierPax.toLocaleString('en-US'),(otherCarrierPax/carrierTotal*100).toFixed(1)+'%','']);
     SECTORS.air.rank=rank;
 
-    const countryList=Object.entries(byCountry).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const countryList=Object.entries(byCountry).sort((a,b)=>b[1]-a[1]).slice(0,10);
     const maxCountry=countryList.length?countryList[0][1]:1;
-    SECTORS.air.bars=countryList.map(c=>[c[0],Math.round(c[1]/maxCountry*100),c[1].toLocaleString('en-US')]);
+    const countryTotal=Object.values(byCountry).reduce((s,v)=>s+v,0)||1;
+    SECTORS.air.bars=countryList.map(c=>[c[0],Math.round(c[1]/maxCountry*100),c[1].toLocaleString('en-US'),
+      (c[1]/countryTotal*100).toFixed(1)+'% · '+fmtCount(byCountryFlights[c[0]]||0)+' '+stxt('unit.flight_word','нислэг')]);
+
+    // "Тээвэрлэгч тус бүрийн ачаа" — топ 10 тээвэрлэгчийг ачааны жингээр нь,
+    // өмнөх оны мөн үетэй харьцуулсан өсөлт/бууралт хувийн хамт.
+    const cargoCarrierList=Object.entries(byCarrierCargoKg).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const cargoTotalKg=Object.values(byCarrierCargoKg).reduce((s,v)=>s+v,0)||1;
+    SECTORS.air.cargoRank=cargoCarrierList.map(c=>{
+      const d=pctDelta(c[1],prevByCarrierCargoKg[c[0]]||0);
+      return [c[0],(c[1]/1000).toFixed(1)+' '+stxt('unit.ton','т'),(c[1]/cargoTotalKg*100).toFixed(1)+'%',d.s,d.dir];
+    });
 
     RATIO.air={labels:['Олон улсын','Дотоодын'],pct:intlPct};
 
@@ -5497,14 +5773,14 @@ class Component extends DCLogic {
       onMTo:(e)=>this.setAirRangeField('airMTo',e.target.value),
       inputStyle:rangeInputStyle,
       monthAllStyle:chipStyle(monthAll),
-      monthAllPick:()=>this.setState({airMFrom:'1',airMTo:'12',mapSelectedNode:null},()=>this.applyAirRange()),
+      monthAllPick:()=>this.setState({airMFrom:'1',airMTo:'12',mapSelectedNode:null,airTreemapRegion:null},()=>this.applyAirRange()),
       summary:r?(r.yFrom===r.yTo?String(r.yFrom):r.yFrom+'–'+r.yTo)+' он · '
         +(r.mFrom===r.mTo?String(r.mFrom):r.mFrom+'–'+r.mTo)+' сар':''
     };
     const airMonthChips=[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{
       const on=!!(r&&m>=r.mFrom&&m<=r.mTo);
       return {label:String(m),on,
-        pick:()=>this.setState({airMFrom:String(m),airMTo:String(m),mapSelectedNode:null},()=>this.applyAirRange()),
+        pick:()=>this.setState({airMFrom:String(m),airMTo:String(m),mapSelectedNode:null,airTreemapRegion:null},()=>this.applyAirRange()),
         style:chipStyle(on)+busy};
     });
     const typeOpts=[['all','Бүгд'],['intl','Олон улсын'],['domestic','Дотоодын']];
@@ -6521,8 +6797,13 @@ class Component extends DCLogic {
         acc2+=s.pct; return seg;
       });
       const cMax=Math.max.apply(null,sAir.bars.map(b=>b[1]));
-      const airCountries=sAir.bars.map(b=>({name:b[0],widthPct:(b[1]/cMax*100).toFixed(0)+'%',value:b[2]}));
-      airExtra={isAirDetail:true,airDonut,airCountries,flowMap:this.buildFlowMap()};
+      const airCountries=sAir.bars.map(b=>({name:b[0],widthPct:(b[1]/cMax*100).toFixed(0)+'%',value:b[2],sub:b[3]||'',hasSub:!!b[3]}));
+      const cargoRank=(sAir.cargoRank||[]).map(c=>({name:c[0],value:c[1],pct:c[2],
+        yoy:c[3],yoyColor:c[4]==='down'?'#D2564A':(c[4]==='flat'?'#828EA8':'#2FA37B'),width:c[2]}));
+      const airMonthly=buildDualAxisChart(sAir.monthly.pax,sAir.monthly.flights,sAir.monthly.labels);
+      const airCargoMonthly=buildDualAxisChart(sAir.monthly.cargoTon,sAir.monthly.cargoYoyPct,sAir.monthly.labels);
+      airExtra={isAirDetail:true,airDonut,airCountries,cargoRank,airMonthly,airCargoMonthly,
+        airTreemap:this.buildAirTreemap(),flowMap:this.buildFlowMap()};
     }
     // Толгойн хоёр карт — нүүрний мөрүүдтэй яг ижил шийдэгчээр (bindCard)
     // холбогдоно, ялгаа нь зөвхөн аль талбарыг асууж байгаа нь.
@@ -6538,6 +6819,10 @@ class Component extends DCLogic {
     const dstrTitle=this.txt('dstr','title','Салбарын бүтэц');
     const dintTitle=this.txt('dint','title','ОУ / Дотоодын харьцаа');
     const dctyTitle=this.txt('dcty','title','Улс тус бүрийн зорчигч');
+    const dtreeTitle=this.txt('dtree','title','Бүс нутаг тус бүрийн зорчигч');
+    const dmthTitle=this.txt('dmth','title','Сараар зорчигч ба нислэг');
+    const dcgmTitle=this.txt('dcgm','title','Сараар ачааны хэмжээ (тонн)');
+    const dcgoTitle=this.txt('dcgo','title','Тээвэрлэгч тус бүрийн ачаа');
     const dmapTitle=this.txt('dmap','title','Улаанбаатараас чиглэсэн зорчигчийн урсгал');
     // dmap.foot нь content.json-д зөвхөн эхний 2 өгүүлбэртэй; markup дэх
     // 3 дахь өгүүлбэр ("Дотоодын" товчны тайлбар) статикаар үлдэнэ — 2-р
@@ -6547,7 +6832,7 @@ class Component extends DCLogic {
     const ddqTitle=this.txt('ddq','title','Дата чанарын үнэлгээ');
     const ddqFoot=this.txt('ddq','foot','Аргачлал: нээлттэй өгөгдлийн чанарын оноо (DQS) загварт үндэслэсэн — шинэлэг байдал, хандалт, тодорхойлолт, нээлттэй байдлын жинлэсэн дундаж.');
     const detail={
-      dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
+      dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
       isAirDetail,...airExtra,
       freqCard,useCard,
       name:dsel.name,desc:dsel.desc,agency:dsel.agency,fmt:dsel.fmt,freq:dsel.freq,use:dsel.use,
@@ -6630,15 +6915,15 @@ class Component extends DCLogic {
       changelog:[['2026-08-12','Бодит цагийн урсгалын хоцролт 20 сек болж сайжирлаа'],
                  ['2026-07-30','Мета тайлбар, багануудын нэр стандартчлагдав'],
                  ['2026-06-18','Түүхэн өгөгдөл 2021 он хүртэл нэмэгдэв']].map(x=>({d:x[0],t:x[1]})),
-      rank:SECTORS[dsel.sector].rank.map(r=>({name:r[0],value:r[1],pct:r[2],width:r[2]}))
+      rank:SECTORS[dsel.sector].rank.map(r=>({name:r[0],value:r[1],pct:r[2],width:r[2],sub:r[3]||'',hasSub:!!r[3]}))
     };
     const ak=this.state.activeSector, as=SECTORS[ak];
     const sectorPage={
       key:ak,label:as.label,color:NEON[ak],glyph:GLYPH[ak],c1:as.c1,rt:as.rt,c2:as.c2,
       kpis:as.kpis.map(k=>({label:k[0],value:k[1],unit:k[2],delta:k[3],
         deltaColor:k[4]==='down'?'#D2564A':(k[4]==='flat'?'#828EA8':'#2FA37B')})),
-      rank:as.rank.map(r=>({name:r[0],value:r[1],pct:r[2],width:r[2]})),
-      bars:as.bars.map(b=>({name:b[0],widthPct:b[1]+'%',value:b[2]})),
+      rank:as.rank.map(r=>({name:r[0],value:r[1],pct:r[2],width:r[2],sub:r[3]||'',hasSub:!!r[3]})),
+      bars:as.bars.map(b=>({name:b[0],widthPct:b[1]+'%',value:b[2],sub:b[3]||'',hasSub:!!b[3]})),
       trend:buildTrendChart(as.c1d),
       datasets:DATASETS.filter(d=>d.sector===ak).map(d=>({...d,color:NEON[ak],fmtLabel:d.fmt,badgeLine:d.badges.join(' · ')})),
       services:SERVICES.filter(s=>s[0]===ak).map(s=>({name:s[1],desc:s[2],hits:s[3]}))
@@ -6855,6 +7140,52 @@ class Component extends DCLogic {
       }
     }
     return {sphere,land,mn,markerVisible,markerX,markerY};
+  }
+  // "Бүс нутаг тус бүрийн зорчигч" — squarify() treemap (эх dashboard-ын
+  // ECharts treemap-тай ижил, click хийж бүс→улс руу drill-down хийдэг).
+  // state.airTreemapRegion==null үед 12 бүсийн түвшин, утгатай бол тухайн
+  // бүсийн улс тус бүрийн задаргаа руу шилжинэ. Дата нь applyRealFlightsData
+  // дотор бэлдсэн this._airRegionTotals/_airRegionCountryTotals-аас (бүрэн,
+  // топ-N огтолгүй хуваарилалт, buildFlowMap-ийн _airCountryFull-тэй адил
+  // зарчим) — filter солигдох бүрд шинэчлэгддэг.
+  buildAirTreemap(){
+    const dark=this.state.theme==='dark';
+    const nodeColor=(name)=>'hsl('+flowHue(name)+','+(dark?44:47)+'%,'+(dark?60:47)+'%)';
+    const W=600,H=300;
+    const drilled=this.state.airTreemapRegion;
+    let items;
+    if(!drilled){
+      const totals=this._airRegionTotals||{};
+      items=Object.entries(totals).filter(e=>e[1]>0)
+        .map(([name,value])=>({key:name,name,value}))
+        .sort((a,b)=>b.value-a.value);
+    } else {
+      const totals=this._airRegionCountryTotals||{};
+      const prefix=drilled+'|';
+      items=Object.entries(totals).filter(e=>e[0].startsWith(prefix)&&e[1]>0)
+        .map(([key,value])=>({key,name:key.slice(prefix.length),value}))
+        .sort((a,b)=>b.value-a.value);
+    }
+    const total=items.reduce((s,it)=>s+it.value,0)||1;
+    const boxes=squarify(items,0,0,W,H).filter(b=>b.w>0&&b.h>0).map(b=>({
+      x:b.x.toFixed(1),y:b.y.toFixed(1),w:b.w.toFixed(1),h:b.h.toFixed(1),
+      name:b.name,valueLabel:b.value.toLocaleString('en-US'),
+      pctLabel:(b.value/total*100).toFixed(1)+'%',
+      color:nodeColor(b.name),
+      // Жижиг хайрчигт нэр багтахгүй тул текстийг зөвхөн хангалттай том
+      // (badge-тэй харьцуулбал) хайрцагт харуулна.
+      showLabel:b.w>46&&b.h>26,
+      labelX:(b.x+6).toFixed(1),labelY:(b.y+18).toFixed(1),
+      valueY:(b.y+34).toFixed(1),
+      pick:drilled?(()=>{}):()=>this.setState({airTreemapRegion:b.name})
+    }));
+    return {
+      w:W,h:H,drilled:!!drilled,
+      regionLabel:drilled||'',
+      back:()=>this.setState({airTreemapRegion:null}),
+      boxes,
+      empty:!boxes.length
+    };
   }
   // "Улаанбаатараас чиглэсэн зорчигчийн урсгал" — жинхэнэ газрын зураг дээрх
   // bubble map (veritech-flights-dashboard-ийн ECharts хувилбартай ижил
