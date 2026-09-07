@@ -220,6 +220,9 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .pvpbar i{display:block;height:100%;border-radius:4px}
 .pvempty{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;color:#A7B0C6;
   padding:10px 0;text-align:center;border:1px dashed rgba(20,32,58,.14);border-radius:6px}
+/* Чарт бүтээгчийн preview сав — сонголт солиход ЗӨВХӨН энэ дотор дахин
+   зурагдана (бүтэн render хийвэл сонголтын фокус алдагдана). */
+.pvhostc{margin-top:8px;background:#F7F9FD;border:1px solid var(--line);border-radius:8px;padding:8px}
 .pvkpi{display:flex;gap:7px;flex-wrap:wrap}
 .pvk{padding:3px 0 3px 7px;min-width:52px}
 .pvk .l{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:7.5px;
@@ -368,6 +371,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/erthub-publish.js"></script>
+<script src="../js/erthub-chart.js"></script>
 </head>
 <body>
 
@@ -665,6 +669,11 @@ function loadFeed(){
     .then(function(packs){
       var byYear={};packs.forEach(function(p){byYear[p.year]=p.rows});
       var latest=packs[0];
+      /* Чарт бүтээгчийн preview нь ЖИНХЭНЭ мөрүүд дээр нэгтгэл хийдэг тул
+         түүхий датаг хадгална (өмнө нь computeSeries-ийн дараа хаягддаг
+         байсан). Сайт талын EHChart.agg-тай ЯГ ижил хөдөлгүүр ажиллана. */
+      FEED.rows=latest.rows;
+      FEED.byYear=byYear;
       computeSeries(byYear,latest);
       FEED.state='ready';
     })
@@ -959,7 +968,8 @@ function metricsDirtyKeys(){
   });
   return out;
 }
-function dirtyCount(){return regDirtyKeys().length+conDirtyKeys().length+siteDirtyKeys().length+metricsDirtyKeys().length}
+function dirtyCount(){return regDirtyKeys().length+conDirtyKeys().length+siteDirtyKeys().length+
+  metricsDirtyKeys().length+(typeof chartDirtyKeys==='function'?chartDirtyKeys().length:0)}
 /* content.json өөрчлөгдсөн эсэх — виджетийн текст ЭСВЭЛ site{} */
 function contentDirty(){return conDirtyKeys().length+siteDirtyKeys().length}
 
@@ -1087,6 +1097,17 @@ var UI_GROUPS=[
            key_required:'Түлхүүр заавал бичнэ үү',
            empty:'Метрик бүртгэгдээгүй байна',
            search_ph:'Хайлтын сануулга'}},
+  {key:'chart_tab',title:'Админ · Чарт бүтээгч', where:'Дата холболт табын доод хэсэг',
+   labels:{heading:'Хэсгийн гарчиг',note:'Хэсгийн тайлбар',
+           type_label:'Чартын төрлийн шошго',type_dual:'"Хосолсон" төрлийн нэр',
+           dim_label:'X тэнхлэгийн шошго',measure_label:'Y тэнхлэгийн шошго',
+           measure2_label:'Шугамын үзүүлэлтийн шошго',same_as_bar:'Шугам баганыг дагах сонголт',
+           agg_label:'Нэгтгэлийн шошго',agg_sum:'SUM-ийн нэр',agg_count:'COUNT-ийн нэр',
+           agg_avg:'AVG-ийн нэр',agg_min:'MIN-ийн нэр',agg_max:'MAX-ийн нэр',
+           topn_label:'Топ N-ийн шошго',sort_label:'Эрэмбийн шошго',
+           sort_desc:'Ихээс бага',sort_asc:'Багаас их',sort_label_opt:'Нэрээр эрэмбэлэх',
+           none:'"Тохируулаагүй" сонголт',pick:'"Сонгох" сонголт',title_label:'Гарчгийн талбар',
+           count_only:'"Зөвхөн тоолох" сонголт',not_set:'Тохируулаагүй үеийн preview бичвэр'}},
   {key:'field',title:'Админ · текстийн талбарын нэр', where:'Виджет бүрийн текстийн маягт',
    labels:{title:'Гарчиг',sub:'Дэд гарчиг',unit:'Нэгжийн шошго',foot:'Хөл бичиг',foot2:'Хөл бичиг 2'}},
   {key:'shape',title:'Админ · виджетийн хэлбэрийн нэр', where:'Preview картын баруун дээд шошго',
@@ -1796,6 +1817,97 @@ function dsFriendly(dataset){
   var meta=DSMETA[dataset];
   return meta?(meta.n+' ('+dataset+')'):dataset;
 }
+/* ══════════════════ ЧАРТ БҮТЭЭГЧ (Tableau маягийн field well) ═══════
+   Power BI / Tableau-гийн "X тэнхлэг · Y тэнхлэг · нэгтгэл · чартын
+   төрөл" загвар. Тохиргоо нь metric_registry.json → widgets.<id>.chart-д
+   хадгалагдаж, САЙТ ижил `EHChart.agg()` хөдөлгүүрээр зурна — иймд
+   preview ба сайт хоёр ЯГ ижил тоо үзүүлнэ.
+   Тохиргоо БАЙХГҮЙ бол сайт өмнөх хатуу чартаа хэвээр зурна. */
+var CHART_TARGETS=[
+  {id:'ds_air_monthly',      name:'Датасэт хуудас · Сараар зорчигч ба нислэг'},
+  {id:'ds_air_cargo_monthly',name:'Датасэт хуудас · Сараар ачааны хэмжээ'}
+];
+function chartSpecOf(id){
+  var w=REG.widgets&&REG.widgets[id];
+  return (w&&w.chart)||null;
+}
+/* Тохиргоо өөрчлөгдсөн эсэх — regDirtyKeys() нь ЗӨВХӨН нүүр хуудасны 16
+   виджетийн слотыг барьдаг тул датасэт хуудасны чартын тохиргоог ТУСАД
+   нь тоолохгүй бол Экспорт/Нийтлэх товч идэвхжихгүй үлдэнэ. */
+function chartDirtyKeys(){
+  var out=[];
+  CHART_TARGETS.forEach(function(t){
+    var a=(REG.widgets&&REG.widgets[t.id]&&REG.widgets[t.id].chart)||null;
+    var b=(REG0.widgets&&REG0.widgets[t.id]&&REG0.widgets[t.id].chart)||null;
+    if(JSON.stringify(a)!==JSON.stringify(b)) out.push(t.id);
+  });
+  return out;
+}
+function cfSelect(id,field,label,opts,cur,noneLabel){
+  var o=(noneLabel!=null?'<option value="">'+esc(noneLabel)+'</option>':'')+
+    opts.map(function(v){
+      var val=typeof v==='string'?v:v.v, txt=typeof v==='string'?v:v.t;
+      return '<option value="'+esc(val)+'"'+(String(cur||'')===String(val)?' selected':'')+'>'+esc(txt)+'</option>';
+    }).join('');
+  return '<div class="sfield"><div class="lbl">'+esc(label)+'</div>'+
+    '<select data-cf="'+esc(id)+'|'+field+'">'+o+'</select></div>';
+}
+/* Чартын preview — САЙТ дээрхтэй ижил EHChart.agg(). FEED ачаалагдаагүй
+   эсвэл тохиргоо дутуу бол ТОО ЗОХИОХГҮЙ, ил хэлнэ. */
+function chartPreview(id){
+  var spec=typeof EHChart!=='undefined'?EHChart.validate(chartSpecOf(id)):null;
+  if(!spec) return '<div class="pvempty">'+esc(utxt('chart_tab.not_set','Тохируулаагүй — сайт өмнөх хэвээрээ зурна'))+'</div>';
+  if(FEED.state!=='ready'||!FEED.rows) return '<div class="pvempty">'+esc(utxt('feed.error','дата ачаалагдаагүй'))+'</div>';
+  var r=EHChart.agg(FEED.rows,spec);
+  if(!r.n) return '<div class="pvempty">'+esc(utxt('preview.no_data','дата алга'))+'</div>';
+  var pts=r.labels.map(function(lb,i){return {label:lb,v:r.values[i]}});
+  return svgLine(pts,'#2FE0C4',260,74,spec.type!=='line')+
+    '<div class="pvax">'+esc(r.labels[0])+' — '+esc(r.labels[r.labels.length-1])+
+    ' · '+r.n+' '+esc(utxt('preview.points','цэг'))+'</div>';
+}
+function lvCharts(){
+  if(typeof EHChart==='undefined') return '';
+  var dims=EHChart.dims('air_flights').map(function(c){return c[0]});
+  var meas=EHChart.measures('air_flights').map(function(c){return c[0]});
+  var typeNames={bar:utxt('vizform.bar','Багана'),line:utxt('vizform.line','Шугаман'),
+                 donut:utxt('vizform.donut','Донут'),dual:utxt('chart_tab.type_dual','Хосолсон (багана+шугам)')};
+  var aggNames={SUM:utxt('chart_tab.agg_sum','Нийлбэр (SUM)'),COUNT:utxt('chart_tab.agg_count','Тоолох (COUNT)'),
+                AVG:utxt('chart_tab.agg_avg','Дундаж (AVG)'),MIN:utxt('chart_tab.agg_min','Хамгийн бага (MIN)'),
+                MAX:utxt('chart_tab.agg_max','Хамгийн их (MAX)')};
+  var sortNames={desc:utxt('chart_tab.sort_desc','Ихээс бага'),asc:utxt('chart_tab.sort_asc','Багаас их'),
+                 label:utxt('chart_tab.sort_label_opt','Нэрээр')};
+  var body=CHART_TARGETS.map(function(t){
+    var sp=chartSpecOf(t.id)||{};
+    var dirty=chartDirtyKeys().indexOf(t.id)>=0;
+    return '<div class="sgroup'+(dirty?' dirty':'')+'" data-chart="'+esc(t.id)+'"><h3>'+esc(t.name)+'</h3>'+
+      cfSelect(t.id,'type',utxt('chart_tab.type_label','Чартын төрөл'),
+        EHChart.TYPE_LIST.map(function(v){return {v:v,t:typeNames[v]||v}}),sp.type,
+        utxt('chart_tab.none','— тохируулаагүй (өмнөх хэвээр) —'))+
+      cfSelect(t.id,'dim',utxt('chart_tab.dim_label','X тэнхлэг — бүлэглэх талбар'),dims,sp.dim,
+        utxt('chart_tab.pick','— сонгох —'))+
+      cfSelect(t.id,'measure',utxt('chart_tab.measure_label','Y тэнхлэг — нэгтгэх талбар'),meas,sp.measure,
+        utxt('chart_tab.count_only','— зөвхөн бичлэг тоолох (COUNT) —'))+
+      cfSelect(t.id,'agg',utxt('chart_tab.agg_label','Нэгтгэл'),
+        EHChart.AGG_LIST.map(function(v){return {v:v,t:aggNames[v]||v}}),sp.agg||'SUM')+
+      cfSelect(t.id,'measure2',utxt('chart_tab.measure2_label','Шугамын үзүүлэлт (нэмэлт)'),meas,sp.measure2,
+        utxt('chart_tab.same_as_bar','— баганын оройг дагана —'))+
+      '<div class="sfield"><div class="lbl">'+esc(utxt('chart_tab.topn_label','Хэдэн мөр харуулах (0 = бүгд)'))+'</div>'+
+      '<input data-cf="'+esc(t.id)+'|topN" value="'+esc(sp.topN==null?'':sp.topN)+'"></div>'+
+      /* Гарчиг — хоосон орхивол тохиргооноос автоматаар гарна (жиш.
+         "Компани · Зорчигч (нийлбэр)"), тул хэзээ ч хуучин/худал
+         гарчигтай үлдэхгүй. */
+      '<div class="sfield"><div class="lbl">'+esc(utxt('chart_tab.title_label','Чартын гарчиг (хоосон = автоматаар)'))+'</div>'+
+      '<input data-cf="'+esc(t.id)+'|title" placeholder="'+
+      esc(typeof EHChart!=='undefined'?(EHChart.describe(sp)||''):'')+'" value="'+esc(sp.title||'')+'"></div>'+
+      cfSelect(t.id,'sort',utxt('chart_tab.sort_label','Эрэмбэ'),
+        ['desc','asc','label'].map(function(v){return {v:v,t:sortNames[v]}}),sp.sort||'desc')+
+      '<div class="pvhostc">'+chartPreview(t.id)+'</div>'+
+      '</div>';
+  }).join('');
+  return '<p class="ph" style="margin-top:22px">'+esc(utxt('chart_tab.heading','Чарт бүтээгч — датанаас X/Y сонгож зурах'))+'</p>'+
+    '<p class="pvnote">'+esc(utxt('chart_tab.note','X тэнхлэгт бүлэглэх талбар (жиш. Компани), Y тэнхлэгт нэгтгэх тоон талбар (жиш. Зорчигч) сонгоод нэгтгэлийн төрлийг заана. Сайт нь хуудасны Он/Сар/Бүсийн шүүлтийг дагаж ЯГ ЭНЭ тохиргоогоор зурна. Тохируулаагүй бол өмнөх чарт хэвээр үлдэнэ.'))+'</p>'+
+    body;
+}
 function lvMetrics(){
   var mm=REG.metrics||{}, keys=Object.keys(mm).sort();
   var q=(S.q||'').trim().toLowerCase();
@@ -1850,7 +1962,8 @@ function lvMetrics(){
     '<input id="mNewName" placeholder="'+esc(utxt('metrics_tab.add_name_ph','Жиш. Авто замын 7 хоногийн зорчигчийн тоо'))+'"></div>'+
     '<div class="sfield"><textarea id="mNewWn" rows="2" placeholder="'+esc(utxt('metrics_tab.add_would_need_ph','Ямар эх сурвалж хэрэгтэйг бичнэ үү'))+'"></textarea></div>'+
     '<div class="acts"><button class="btn pri sm" data-madd="1">'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</button></div>'+
-    '</div>';
+    '</div>'+
+    lvCharts();
 }
 
 /* ══════════════════ ХАЙЛТ + ШҮҮЛТ ══════════════════
@@ -2434,7 +2547,7 @@ function render(){
   $('gridWrap').style.gridTemplateColumns=(isSite||isMetrics)?'minmax(0,1fr)':'';
   $('allBtn').style.display=(isSite||isMetrics)?'none':'';
   $('siteN').textContent=siteDirtyKeys().length||'';
-  $('metricsN').textContent=metricsDirtyKeys().length||'';
+  $('metricsN').textContent=(metricsDirtyKeys().length+chartDirtyKeys().length)||'';
   if(isSite){
     /* "Виджет ба дата" табын хайх/шүүх мөр энд хамаарахгүй тул арилгана —
        эс тэгвэл өмнөх табаас үлдсэн #fbar энд ч харагдана. */
@@ -2579,8 +2692,37 @@ document.addEventListener('keydown',function(e){
     e.preventDefault();document.activeElement.click()}
 });
 
+/* Чарт бүтээгчийн сонголт — REG.widgets[id].chart руу шууд тусгаж,
+   зөвхөн ТУХАЙН чартын preview-г дахин зурна (бүтэн render хийвэл
+   сонголтын фокус/гүйлгээ алдагдана). */
+function cfApply(el){
+  var p=el.dataset.cf.split('|'), id=p[0], field=p[1];
+  REG.widgets=REG.widgets||{};
+  REG.widgets[id]=REG.widgets[id]||{};
+  var spec=REG.widgets[id].chart||{};
+  var v=el.value;
+  if(field==='topN'){
+    var n=parseInt(v,10); if(n>0) spec.topN=n; else delete spec.topN;
+  } else if(v){ spec[field]=v; } else { delete spec[field]; }
+  /* Датасэтийг нэг л газраас тавина — сонголтод байхгүй далд талбар. */
+  if(Object.keys(spec).length) spec.dataset=spec.dataset||'air_flights';
+  /* type сонгоогүй (хоосон) бол ТОХИРУУЛААГҮЙ гэж үзээд бүх блокийг
+     арилгана — сайт өмнөх хатуу чартаа зурна. */
+  if(!spec.type) delete REG.widgets[id].chart; else REG.widgets[id].chart=spec;
+  if(!REG.widgets[id].chart && !Object.keys(REG.widgets[id]).length) delete REG.widgets[id];
+  var box=el.closest('[data-chart]'), host=box&&box.querySelector('.pvhostc');
+  if(host) host.innerHTML=chartPreview(id);
+  if(box) box.classList.toggle('dirty',chartDirtyKeys().indexOf(id)>=0);
+  var n2=dirtyCount();
+  $('dirtyMsg').innerHTML=n2?('<b>'+n2+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
+  $('expBtn').disabled=n2===0; $('revBtn').disabled=n2===0;
+  if(typeof refreshPubBtn==='function') refreshPubBtn();
+  $('metricsN').textContent=(metricsDirtyKeys().length+chartDirtyKeys().length)||'';
+}
 document.addEventListener('change',function(e){
   var t=e.target;
+  var cf=t.closest&&t.closest('[data-cf]');
+  if(cf){ cfApply(cf); return }
   var mfq=t.closest&&t.closest('[data-mfq]');
   if(mfq){
     var mk2=mfq.dataset.mfq, prevQ=REG.metrics[mk2].quality;
@@ -2656,6 +2798,9 @@ document.addEventListener('input',function(e){
     repaintPreview();
     return;
   }
+  /* Чарт бүтээгчийн тоон талбар (Топ N) — бичих даруйд preview шинэчилнэ */
+  var cfIn=el.closest&&el.closest('[data-cf]');
+  if(cfIn){ cfApply(cfIn); return }
   /* "Дата холболт" таб — REG.metrics[key]-ийн МЕТАДАТА талбар
      (unit/filter/period_note/would_need). source/dataset/column энд
      ОРОХГҮЙ (зөвхөн унших, тусдаа <span>-ээр зурагдана). */
@@ -2668,7 +2813,7 @@ document.addEventListener('input',function(e){
     var mn=dirtyCount();
     $('dirtyMsg').innerHTML=mn?('<b>'+mn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
     $('expBtn').disabled=mn===0; $('revBtn').disabled=mn===0; if(typeof refreshPubBtn==='function') refreshPubBtn();
-    $('metricsN').textContent=metricsDirtyKeys().length||'';
+    $('metricsN').textContent=(metricsDirtyKeys().length+chartDirtyKeys().length)||'';
     return;
   }
   /* Слотын registry текст (label / would_need) — бичих даруйд REG руу
@@ -2721,7 +2866,7 @@ function download(obj,name){
 }
 $('expBtn').addEventListener('click',function(){
   var today=new Date().toISOString().slice(0,10), files=[];
-  if(regDirtyKeys().length||metricsDirtyKeys().length){REG.updated=today;download(REG,'metric_registry.json');files.push('metric_registry.json')}
+  if(regDirtyKeys().length||metricsDirtyKeys().length||chartDirtyKeys().length){REG.updated=today;download(REG,'metric_registry.json');files.push('metric_registry.json')}
   if(contentDirty()){CON.updated=today;download(CON,'content.json');files.push('content.json')}
   toast(utxt('toast.downloaded','Татагдлаа:')+' '+files.join(' + ')+' '+
     utxt('toast.downloaded_note','— репод хуулж commit хийнэ үү'));

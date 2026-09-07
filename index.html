@@ -15,6 +15,7 @@
 <script src="js/erthub-publish.js"></script>
 <script src="js/backend-config.js"></script>
 <script src="js/erthub-backend.js"></script>
+<script src="js/erthub-chart.js"></script>
 <script src="js/vendor/dc-runtime.js"></script>
 </head>
 <body>
@@ -3612,46 +3613,12 @@ const COUNTRY_COORD={
   'Унгар':[19.5,47.2],'Азербайжан':[47.6,40.4],'Филиппин':[122.0,12.9],
   'Ирланд':[-8.2,53.4],'Индонез':[113.9,-0.8]
 };
-// Агаарын тээврийн бодит feed-ийн БҮХ талбар — веритех dashboard-ийн
-// COLUMNS-той ижил бүрэн бүрэлдэхүүн. head/type/тайлбар/утга гаргагч дөрвийг
-// нэг дор барьснаар DS_SCHEMA.air-ийн head/types/notes/rows дөрвүүлээ үргэлж
-// синхрон үлдэнэ (Excel татах нь мөн эндээс шууд бүтэн баганаар гарна).
-// Сүүлийн 'Төлөв' багана нь generic хүснэгтийн status гэрээ — утгыг нь
-// applyRealFlightsData тусад нь нэмнэ.
-const WEEKDAY_MN=['Ням','Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба'];
-const AIR_COLUMNS=[
-  ['Огноо','date','Нислэгийн огноо (ISO-8601)',(f,d)=>d],
-  ['Компани','string','Тээвэрлэгч агаарын тээврийн компани',f=>f.carr||'—'],
-  ['Нислэг','string','Тээвэрлэгчийн нислэгийн код',f=>f.flight||'—'],
-  ['Хот','string','Хүрэх / гарах хот',f=>f.city||'—'],
-  ['Улс','string','Хүрэх / гарах улс',f=>f.cntry||'—'],
-  ['Чиглэл','string','Явсан (гарсан) эсвэл Ирсэн (буусан)',f=>f.dir==='1'?'Явсан':'Ирсэн'],
-  ['Ангилал','string','Нислэгийн ангилал — P зорчигч, C ачаа',f=>f.category||'—'],
-  ['Зорчигч','int','Нийт зорчигчийн тоо',f=>f.pax||0],
-  ['Ачаа (кг)','int','Тээвэрлэсэн ачааны жин, килограммаар',f=>f.cargoKg||0],
-  ['Аяллын дугаар','string','Нислэгийн бүртгэлийн дугаар',f=>f.id||'—'],
-  ['Гараг','string','Долоо хоногийн өдөр',(f)=>WEEKDAY_MN[new Date(Date.UTC(f.year,(f.month||1)-1,f.day||1)).getUTCDay()]||'—'],
-  ['ОУ/Дотоод','string','Олон улсын (ОУ) эсвэл дотоодын (ОН) нислэг',f=>f.ou||'—'],
-  ['Нислэгийн төрөл','string','Тогтмол хуваарийн эсвэл захиалгат',f=>f.flightType||'—'],
-  ['Агаарын хөлөг','string','Онгоцны загвар ба сүүлний дугаар',f=>f.aircraft||'—'],
-  ['Үйлдвэрлэгч','string','Онгоц үйлдвэрлэгч',f=>f.acManufacturer||'—'],
-  ['Хөлгийн ангилал','string','narrow-body / wide-body',f=>f.acCategory||'—'],
-  ['Суудал','int','Онгоцны суудлын багтаамж',f=>f.acSeatCap||0],
-  ['Бүртгэлийн улс','string','Онгоц бүртгэгдсэн улс',f=>f.acRegCountry||'—'],
-  ['Том хүн','int','Насанд хүрсэн зорчигчийн тоо',f=>f.adult||0],
-  ['Хүүхэд','int','Хүүхэд зорчигчийн тоо',f=>f.child||0],
-  ['Нялх','int','Нялх хүүхэд зорчигчийн тоо',f=>f.infant||0],
-  ['Транзит','int','Дамжин өнгөрөх зорчигчийн тоо',f=>f.transit||0],
-  ['VIP','int','VIP зорчигчийн тоо',f=>f.vip||0],
-  ['Дипломат','int','Дипломат зорчигчийн тоо',f=>f.diplomat||0],
-  ['Багийн гишүүн','int','Нислэгийн багийн гишүүдийн тоо',f=>f.crew||0],
-  ['Шуудан (кг)','int','Тээвэрлэсэн шуудангийн жин, килограммаар',f=>f.mailKg||0],
-  ['Бүс нутаг','string','Газарзүйн бүс нутаг',f=>f.region||'—'],
-  ['Тив','string','Тив',f=>f.continent||'—'],
-  ['Холбоо','string','Агаарын тээврийн холбоо (alliance)',f=>f.alliance||'—'],
-  ['Компанийн улс','string','Тээвэрлэгч бүртгэлтэй улс',f=>f.airlineCountry||'—'],
-  ['Төлөв','enum','Нислэгийн хуваарийн төлөв',null]
-];
+// Агаарын тээврийн feed-ийн БҮХ талбарын каталог (нэр/төрөл/тайлбар/утга
+// гаргагч) нь js/erthub-chart.js-д НҮҮСЭН. Шалтгаан: чарт бүтээгчийн X/Y
+// сонголтыг admin ба сайт ХОЁУЛАА ижил жагсаалтаас уншиж, ижил дүрмээр
+// нэгтгэх ёстой — эс тэгвэл preview ба сайт өөр тоо үзүүлнэ. Энд зөвхөн
+// лавлагаа: DS_SCHEMA.air-ийн head/types/notes/rows урьдын адил ажиллана.
+const AIR_COLUMNS=EHChart.AIR_COLUMNS;
 const DOMESTIC_AIRPORT_COORD={
   'Алтай':{lat:46.37583,lng:96.21917,aimag:'Говь-Алтай'},
   'Баянхонгор':{lat:46.17056,lng:100.70000,aimag:'Баянхонгор'},
@@ -4994,6 +4961,57 @@ class Component extends DCLogic {
     if(!s) return {quality:'none',label:stxt('status.no_data','мэдээлэл алга')};
     return {quality:s.quality||'none',label:s.label||stxt('status.no_data','мэдээлэл алга')};
   }
+  // ── ЧАРТ БҮТЭЭГЧ (no-code) ────────────────────────────────────────
+  // metric_registry.json → widgets.<id>.chart тохиргоог уншиж, түүнийг
+  // ХУУДАСНЫ ШҮҮЛТЭД орсон мөрүүд дээр (this._airFilteredRows) нэгтгэж,
+  // buildDualAxisChart-ийн ЯГ ТЭР бүтэцтэй объект буцаана. Тохиргоо
+  // байхгүй / буруу / дата ачаалагдаагүй бол `null` — дуудагч тал өмнөх
+  // хатуу зан төлөв рүүгээ унана (ТОО ЗОХИОХГҮЙ).
+  // Тохируулсан чартын гарчиг (тохиргоогүй бол null — хуудас өөрийн
+  // хатуу гарчгаа хэвээр хэрэглэнэ).
+  chartTitle(widgetId){
+    if(typeof EHChart==='undefined') return null;
+    const reg=this.state.metricRegistry;
+    const raw=reg&&reg.widgets&&reg.widgets[widgetId]&&reg.widgets[widgetId].chart;
+    if(!EHChart.validate(raw)) return null;
+    if(!this._airFilteredRows||!this._airFilteredRows.length) return null;
+    return EHChart.describe(raw)||null;
+  }
+  chartFromSpec(widgetId){
+    if(typeof EHChart==='undefined') return null;
+    const reg=this.state.metricRegistry;
+    const raw=reg&&reg.widgets&&reg.widgets[widgetId]&&reg.widgets[widgetId].chart;
+    const spec=EHChart.validate(raw);
+    if(!spec) return null;
+    const rows=this._airFilteredRows;
+    if(!rows||!rows.length) return null;
+    const r=EHChart.agg(rows,spec);
+    if(!r.n) return null;
+    // Хоёр дахь хэмжигдэхүүн (measure2) байвал шугам нь ТУСДАА үзүүлэлт
+    // болно; байхгүй бол шугам баганын оройг дагана (хоосон массив өгвөл
+    // Math.max/min нь ±Infinity буцааж геометрийг NaN болгоно).
+    let lineVals=r.values, hasLine=false;
+    if(raw&&raw.measure2){
+      hasLine=true;
+      // topN/эрэмбэ хоёр нэгтгэлд ӨӨР дараалал өгч болзошгүй тул индексээр
+      // БИШ, ШОШГООР тааруулна — эс тэгвэл багана/шугам хоёр өөр мөрийн
+      // тоог зэрэгцүүлж худал зураг гаргана.
+      const r2=EHChart.agg(rows,Object.assign({},spec,
+        {measure:raw.measure2,agg:spec.agg==='COUNT'?'SUM':spec.agg,topN:0}));
+      if(r2.n){
+        const by={};
+        r2.labels.forEach((lb,i)=>{by[lb]=r2.values[i]});
+        lineVals=r.labels.map(lb=>by[lb]||0);
+      }
+    }
+    const c=buildDualAxisChart(r.values,lineVals,r.labels);
+    // Шугамын ТУСДАА үзүүлэлт сонгоогүй бол шугам нь баганын оройг л
+    // давтана — баруун тэнхлэг зүүнтэйгээ ЯГ ижил тоо давхардуулж
+    // хэрэглэгчийг төөрөгдүүлнэ. Иймд шугам/цэг/баруун тэнхлэгийг
+    // ХАРУУЛАХГҮЙ (хоосон массив → темплейт юу ч зурахгүй).
+    if(!hasLine){ c.line=''; c.dotPts=[]; c.yTicksRight=[]; }
+    return c;
+  }
   // Registry-ийн widgets.<id>.sectors ХОЁР ӨӨР хэлбэртэй байж болно:
   // (a) объект {air:{quality:'verified'},road:{quality:'mock'},...} —
   //     k04/ls/d05/w2p гэх мэт, sectorQuality() үүнийг барина;
@@ -5277,6 +5295,11 @@ class Component extends DCLogic {
       return true;
     };
     const filtered=flights.filter(matchFilter);
+    // Чарт бүтээгчийн (EHChart) нэгтгэл ЯГ ЭНЭ шүүгдсэн мөрүүд дээр
+    // ажиллана — ингэснээр тохируулсан чарт хуудасны Он/Сар/Бүс/Чиглэлийн
+    // шүүлтийг Tableau-гийн dashboard filter шиг ДАГАНА (нэг дэлгэц дээрх
+    // бүх тоо нэг цонхоор тайлбарлагдана).
+    this._airFilteredRows=filtered;
 
     const aggregate=(list)=>{
       const monthCounts={},monthPax={},monthCargoKg={};
@@ -6919,8 +6942,17 @@ class Component extends DCLogic {
       const cargoRank=cargoSrc.map(c=>({name:c[0],value:c[1],pct:c[2],
         yoy:c[3],yoyColor:c[4]==='down'?'#D2564A':(c[4]==='flat'?'#828EA8':'#2FA37B'),width:c[2]}));
       const cargoRankTotal=mkTotal(sAir.cargoRankMeta||{total10Label:'',total10Value:'',totalAllLabel:'',totalAllValue:'',extraCount:0},cargoExpanded,'airCargoExpanded');
-      const airMonthly=buildDualAxisChart(sAir.monthly.pax,sAir.monthly.flights,sAir.monthly.labels);
-      const airCargoMonthly=buildDualAxisChart(sAir.monthly.cargoTon,sAir.monthly.cargoYoyPct,sAir.monthly.labels);
+      // ── ЧАРТ БҮТЭЭГЧ (no-code) ────────────────────────────────────
+      // metric_registry.json → widgets.<id>.chart тохиргоо БАЙВАЛ чартыг
+      // тэр тохиргоогоор (X тэнхлэг = бүлэглэх талбар, Y = нэгтгэх талбар,
+      // SUM/COUNT/AVG/MIN/MAX) зурна. БАЙХГҮЙ бол ЯГ ӨМНӨХ хатуу зан
+      // төлөв хэвээр — иймд тохиргоо хийгээгүй л бол юу ч өөрчлөгдөхгүй.
+      // Буруу тохиргоог EHChart.validate() null болгодог тул амьд сайт
+      // хэзээ ч эвдрэхгүй.
+      const airMonthly=this.chartFromSpec('ds_air_monthly')||
+        buildDualAxisChart(sAir.monthly.pax,sAir.monthly.flights,sAir.monthly.labels);
+      const airCargoMonthly=this.chartFromSpec('ds_air_cargo_monthly')||
+        buildDualAxisChart(sAir.monthly.cargoTon,sAir.monthly.cargoYoyPct,sAir.monthly.labels);
       const AIR_AI_PROMPTS=['Солонгос руу хэдэн зорчигч ниссэн бэ?','Аль тээвэрлэгч хамгийн их зорчигч тээвэрлэсэн бэ?',
         'Хятад руу хэдэн нислэг байсан бэ?','Топ 5 улсыг харуул','Олон улсын тээвэрлэгчдийн зах зээлийг харуул'];
       // Дашбоардын дээд хэсэгт байдаг 8 KPI карт — өмнө нь энэ хуудсанд огт
@@ -6964,7 +6996,10 @@ class Component extends DCLogic {
     const dintTitle=this.txt('dint','title','ОУ / Дотоодын харьцаа');
     const dctyTitle=this.txt('dcty','title','Улс тус бүрийн зорчигч');
     const dtreeTitle=this.txt('dtree','title','Бүс нутаг тус бүрийн зорчигч');
-    const dmthTitle=this.txt('dmth','title','Сараар зорчигч ба нислэг');
+    // Чарт бүтээгчээр X/Y-г сольсон бол гарчиг нь ЯГ ТЭР агуулгыг
+    // тайлбарлана — эс тэгвэл "Сараар..." гэсэн гарчиг доор нь
+    // тээвэрлэгчийн багана зурагдаж, хуудас ХУДАЛ тайлбарлана.
+    const dmthTitle=this.chartTitle('ds_air_monthly')||this.txt('dmth','title','Сараар зорчигч ба нислэг');
     // dcgm гарчиг сонгосон оноор динамик өөрчлөгдөнэ (эх dashboard "(2026 он)"
     // гэж он-оо шууд бичдэг, тогтмол "(тонн)" биш).
     const dcgmYear=this.state.airYTo||this.state.airYFrom||'';

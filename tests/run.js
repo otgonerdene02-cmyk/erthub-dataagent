@@ -736,10 +736,73 @@ async function groupH() {
   } finally { srv.close(); }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   I. ЧАРТ БҮТЭЭГЧ (js/erthub-chart.js — Tableau маягийн X/Y + нэгтгэл)
+
+   Админ КОД БИЧИХГҮЙГЭЭР чартын X тэнхлэг (бүлэглэх талбар), Y тэнхлэг
+   (нэгтгэх талбар), нэгтгэлийн төрлийг сонгоно. Хөдөлгүүр нь сайт ба
+   admin ХОЁУЛАНД ижил байх ёстой тул дундын модульд байрлана.
+     I1. Нэгтгэл (SUM/COUNT/AVG/MIN/MAX) БОДИТООР зөв тоо гаргана
+     I2. Буруу/дутуу тохиргоо → null (сайт өмнөх зан төлөв рүү унана)
+     I3. Тохиргоогүй үед САЙТ өмнөх хатуу чартаа зурна (регресс хамгаалалт)
+     I4. Admin-д X/Y/нэгтгэл сонгоход preview ЖИНХЭНЭ датагаар зурагдана
+   ══════════════════════════════════════════════════════════════════ */
+function groupI() {
+  group('I. Чарт бүтээгч (EHChart — X/Y тэнхлэг + нэгтгэл)');
+  const src = read('js/erthub-chart.js');
+  const sandbox = { window: {} };
+  try { new Function('window', src)(sandbox.window); }
+  catch (e) { bad('I. модуль ачаалагдав', e.message); return; }
+  const E = sandbox.window.EHChart;
+  if (!E) { bad('I. EHChart экспортлогдов', 'window.EHChart алга'); return; }
+
+  check('I1. Талбарын каталог dimension/measure болж хуваагдана',
+    E.dims('air_flights').length > 10 && E.measures('air_flights').length > 5,
+    'dim: ' + E.dims('air_flights').length + ', measure: ' + E.measures('air_flights').length);
+
+  /* Гараар бодох боломжтой ЖИЖИГ фикстур — нэгтгэл бүрийн хариу ТОДОРХОЙ */
+  const rows = [
+    { carr: 'A', pax: 10, year: 2026, month: 1, day: 1 },
+    { carr: 'A', pax: 30, year: 2026, month: 1, day: 2 },
+    { carr: 'B', pax: 5, year: 2026, month: 2, day: 1 }
+  ];
+  const at = (r, lb) => r.values[r.labels.indexOf(lb)];
+  const sum = E.agg(rows, { dim: 'Компани', measure: 'Зорчигч', agg: 'SUM' });
+  check('I1. SUM зөв (A=40, B=5)', at(sum, 'A') === 40 && at(sum, 'B') === 5, JSON.stringify(sum));
+  const cnt = E.agg(rows, { dim: 'Компани', agg: 'COUNT' });
+  check('I1. COUNT зөв (A=2, B=1)', at(cnt, 'A') === 2 && at(cnt, 'B') === 1, JSON.stringify(cnt));
+  const avg = E.agg(rows, { dim: 'Компани', measure: 'Зорчигч', agg: 'AVG' });
+  check('I1. AVG зөв (A=20)', at(avg, 'A') === 20, JSON.stringify(avg));
+  const mn = E.agg(rows, { dim: 'Компани', measure: 'Зорчигч', agg: 'MIN' });
+  const mx = E.agg(rows, { dim: 'Компани', measure: 'Зорчигч', agg: 'MAX' });
+  check('I1. MIN/MAX зөв (A: 10 / 30)', at(mn, 'A') === 10 && at(mx, 'A') === 30,
+    JSON.stringify({ min: mn.values, max: mx.values }));
+  const top = E.agg(rows, { dim: 'Компани', measure: 'Зорчигч', agg: 'SUM', topN: 1 });
+  check('I1. topN тайрна, эрэмбэ ихээс бага', top.n === 1 && top.labels[0] === 'A', JSON.stringify(top));
+
+  check('I2. Буруу талбар → null', E.validate({ dim: 'БАЙХГҮЙ', measure: 'Зорчигч', agg: 'SUM' }) === null);
+  check('I2. Буруу нэгтгэл → null', E.validate({ dim: 'Компани', measure: 'Зорчигч', agg: 'MEDIAN' }) === null);
+  check('I2. Хоосон мөр → ТОО ЗОХИОХГҮЙ (хоосон цуваа)',
+    E.agg([], { dim: 'Компани', measure: 'Зорчигч', agg: 'SUM' }).n === 0);
+  check('I2. Гарчиг тохиргооноос автоматаар гарна',
+    E.describe({ dim: 'Компани', measure: 'Зорчигч', agg: 'SUM' }) === 'Компани · Зорчигч (нийлбэр)',
+    E.describe({ dim: 'Компани', measure: 'Зорчигч', agg: 'SUM' }));
+
+  /* Сайт талын холболт — тохиргоогүй бол ӨМНӨХ хатуу зан төлөв */
+  const idx = read('index.html');
+  check('I3. Сайт тохиргоогүй үед хуучин чарт руу унана (fallback)',
+    /chartFromSpec\('ds_air_monthly'\)\|\|\s*buildDualAxisChart\(sAir\.monthly\.pax/.test(idx.replace(/\n\s*/g, ' ')),
+    'fallback хэлбэр олдсонгүй');
+  check('I3. Чарт нь ХУУДАСНЫ ШҮҮЛТЭД орсон мөрүүд дээр ажиллана',
+    idx.includes('this._airFilteredRows=filtered'));
+  check('I3. index.html ба admin ХОЁУЛАА нэг модулиас уншина',
+    idx.includes('js/erthub-chart.js') && read('admin/index.html').includes('js/erthub-chart.js'));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
-  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
+  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH(); groupI();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
