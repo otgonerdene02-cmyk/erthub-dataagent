@@ -1094,7 +1094,7 @@ var UI_GROUPS=[
            dataset:'Датасэт',source:'Эх сурвалж',filter:'Шүүлт',required:'Шаардлагатай',
            single_slot:'Ганц метрик',warn_rule:'Дүрэм зөрчсөн анхааруулга',
            warn_sum:'Нийлбэрийн анхааруулга',why_no_def:'Тодорхойлолт алга',
-           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',unfit_group:'Тохирохгүй метрикийн бүлэг',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
+           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',hide:'"Нуух" товч',hidden_on:'"Буцаах" товч',hide_hint:'Нуух товчны тайлбар',hidden_note:'Нуусан үеийн тайлбар',unfit_group:'Тохирохгүй метрикийн бүлэг',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
   {key:'text',title:'Админ · текстийн маягт', where:'Виджетийн засварын доод хэсэг',
    labels:{heading:'Хэсгийн гарчиг',apply:'Хэрэглэх товч',cancel:'Болих товч',auto_name_hint:'Автомат нэрийн санал',auto_name_apply:'"Тавих" товч',
            location:'Байршил товч',history:'Түүх товч',changed:'Өөрчлөгдсөн тэмдэг'}},
@@ -1383,7 +1383,10 @@ function widgetValueRes(id){
 }
 function sectorParts(id){
   var vres=widgetValueRes(id);
-  return slotsOf(id).filter(function(s){return s.key&&s.key!=='plan'}).map(function(s){
+  /* Админаас нуусан салбар preview-д ч ГАРАХГҮЙ — эс тэгвэл preview
+     сайттай зөрж, "нуусан ч байсаар байна" гэсэн ойлголт төрүүлнэ. */
+  return slotsOf(id).filter(function(s){
+    return s.key&&s.key!=='plan'&&!slotVal(id,s.path).hidden}).map(function(s){
     var sv=slotVal(id,s.path), q=qualityOf(sv);
     var v=q==='verified'?(metricValue(sv.metric)||0):0;
     /* Тохиргоо нь ЗӨВХӨН air салбарт хамаарна — бусад 4 салбарын мөр
@@ -2553,7 +2556,15 @@ function lvEdit(){
     var badge=q==='verified'?'<span class="badge b-ok">'+esc(utxt('badge.live','амьд'))+'</span>'
       :q==='none'?'<span class="badge b-zero">'+esc(sv.label||utxt('badge.no_data','мэдээлэл алга'))+'</span>'
       :'<span class="badge b-warn">'+esc(utxt('badge.no_source','эх сурвалж алга'))+'</span>';
-    return '<div class="sedit"><div class="sedit-h">'+head+badge+'</div>'+
+    /* Салбарыг ЭНЭ виджетээс нуух — зарим салбар тухайн харьцуулалтад
+       хамааралгүй байдаг (жиш. ачааны донут дээр нийтийн тээвэр).
+       Кодоос ХАСАХГҮЙ, админ өөрөө асаах/унтраах тохиргоо. */
+    var hid=!!sv.hidden;
+    var eye=s.key?'<button class="btn sm" data-hide="'+esc(id)+'|'+s.path.join(',')+'" '+
+      'title="'+esc(utxt('metric.hide_hint','Энэ салбарыг виджетээс нуух/буцаах'))+'">'+
+      esc(hid?utxt('metric.hidden_on','Нуусан — буцаах'):utxt('metric.hide','Нуух'))+'</button>':'';
+    return '<div class="sedit'+(hid?' z':'')+'"><div class="sedit-h">'+head+badge+eye+'</div>'+
+      (hid?'<div class="acc">'+esc(utxt('metric.hidden_note','Энэ салбар сайт дээр ЭНЭ виджетэд харагдахгүй (бусад виджетэд хэвээр).'))+'</div>':'')+
       /* Талбараас шууд сонгосон үед нэгж нь СОНГОЛТОО дагана — слотын
          "шаардах нэгж" (нислэг) хэвээр үлдвэл зорчигчийн тоог "нислэг"
          гэж ХУДАЛ шошголсон мэт харагдана. */
@@ -2833,6 +2844,14 @@ document.addEventListener('click',function(e){
   if((el=t.closest&&t.closest('[data-autoname]'))){
     var an=el.dataset.autoname, ti=document.querySelector('[data-tf="title"]');
     if(ti){ ti.value=an; ti.dispatchEvent(new Event('input',{bubbles:true})); ti.focus(); }
+    return;
+  }
+  if((el=t.closest&&t.closest('[data-hide]'))){
+    var hp=el.dataset.hide.split('|'), hid2=hp[0], hpath=hp[1]?hp[1].split(','):[];
+    var hsv=slotVal(hid2,hpath);
+    if(hsv.hidden) delete hsv.hidden; else hsv.hidden=true;
+    log(hid2,(hsv.hidden?'Салбар нуув: ':'Салбар буцаав: ')+hpath.join('.'));
+    render();
     return;
   }
   if(t.closest&&t.closest('[data-tsave]')){

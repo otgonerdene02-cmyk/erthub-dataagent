@@ -4970,6 +4970,20 @@ class Component extends DCLogic {
     if(!s) return {quality:'none',label:stxt('status.no_data','мэдээлэл алга')};
     return {quality:s.quality||'none',label:s.label||stxt('status.no_data','мэдээлэл алга')};
   }
+  // ── САЛБАРЫГ ВИДЖЕТЭЭС НУУХ (админаас тохируулна) ────────────────
+  // metric_registry.json → widgets.<id>.sectors.<key>.hidden = true
+  // Зарим салбар тухайн харьцуулалтад ХАМААРАЛГҮЙ байдаг (жиш. ачааны
+  // виджет дээр нийтийн тээвэр). Кодоос ХАСАХГҮЙ — админ өөрөө асаах/
+  // унтраах тохиргоо. Талбар байхгүй бол ХАРАГДАНА (өмнөх зан төлөв).
+  sectorHidden(widgetId,key){
+    const reg=this.state.metricRegistry;
+    const w=reg&&reg.widgets&&reg.widgets[widgetId];
+    const s=w&&w.sectors&&!Array.isArray(w.sectors)&&w.sectors[key];
+    return !!(s&&s.hidden);
+  }
+  visibleSectorKeys(widgetId,keys){
+    return (keys||Object.keys(SECTORS)).filter(k=>!this.sectorHidden(widgetId,k));
+  }
   // ── ЧАРТ БҮТЭЭГЧ (no-code) ────────────────────────────────────────
   // metric_registry.json → widgets.<id>.chart тохиргоог уншиж, түүнийг
   // ХУУДАСНЫ ШҮҮЛТЭД орсон мөрүүд дээр (this._airFilteredRows) нэгтгэж,
@@ -6563,7 +6577,9 @@ class Component extends DCLogic {
       // w2px/w2cx: air мөр — бодит үнэ (дээрх realVal/realDeltaPct), бусад
       // 4 мөр — registry-ээс sectorQuality уншиж 0 + "мэдээлэл алга"
       // (жинхэнэ 0 биш, эх сурвалж алга гэдгийг ил заана).
-      const delta=SECTOR_DELTA[wt].map(d=>{
+      /* Харьцуулалтаас нуусан салбарыг мөрөнд оруулахгүй (админаас
+         тохируулна — кодоос хасахгүй). */
+      const delta=SECTOR_DELTA[wt].filter(d=>!this.sectorHidden(deltaWidgetId,d[0])).map(d=>{
         const key=d[0];
         if(key==='air'){
           const v=realVal!=null?fmtWeekVal(realVal):d[1];
@@ -7346,7 +7362,9 @@ class Component extends DCLogic {
     // салбарыг 0 гэж үзнэ. Ганц агаар л verified тул нийлбэр агаарын
     // утгатай тэнцэж, агаар 100% гарна — энэ бол одоогийн бодит байдал,
     // тусгай стиль хэрэггүй.
-    const keys=Object.keys(SECTORS);
+    /* Админаас нуусан салбарыг донутад ОГТ оруулахгүй — нийлбэрт ч
+       орохгүй тул хувь нь үлдсэн салбаруудын дунд зөв хуваарилагдана. */
+    const keys=this.visibleSectorKeys('d05');
     const d05Spec=this.valueFromSpec('d05');
     const raw=keys.map(k=>{
       const q=this.sectorQuality('d05',k);
@@ -8028,7 +8046,10 @@ class Component extends DCLogic {
     // Утгын тохиргоо ЗӨВХӨН agaar (air) салбарт хамаарна — бусад 4
     // салбарын мөр түвшний дата хараахан алга (тоо ЗОХИОХГҮЙ).
     const lsSpec=this.valueFromSpec('ls');
-    const livestrip=keys.map(k=>{
+    /* Зурвасаас нуусан салбарыг гаргахгүй. Дээрх `sectorTabs` (навигаци)
+       нь ӨӨР зүйл тул хөндөхгүй — тэндээс салбар алга болвол хэрэглэгч
+       тухайн салбарын хуудас руу орох замаа алдана. */
+    const livestrip=this.visibleSectorKeys('ls',keys).map(k=>{
       const sk=SECTORS[k];
       const on=k===key, dir=sk.kpis[0][4];
       const q=this.sectorQuality('ls',k), verified=q.quality==='verified';

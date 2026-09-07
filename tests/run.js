@@ -1116,11 +1116,71 @@ async function groupJ() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   K. САЛБАРЫГ ВИДЖЕТЭЭС НУУХ (админаас тохируулна)
+
+   Зарим салбар тухайн харьцуулалтад хамааралгүй байдаг (жиш. ачааны
+   донут дээр нийтийн тээвэр). Үүнийг КОДООС ХАСАХГҮЙ — админ өөрөө
+   асаах/унтраах тохиргоо (widgets.<id>.sectors.<key>.hidden).
+     K1. Талбар байхгүй бол ХАРАГДАНА (өмнөх зан төлөв, эрсдэлгүй)
+     K2. Админд салбар бүрд нуух товч байна
+     K3. Нуухад preview-ээс шууд алга болно, товч буцаах болж солигдоно
+     K4. Нуусан нь сайтын виджетэд ч харагдахгүй, харин НАВИГАЦИД хэвээр
+   ══════════════════════════════════════════════════════════════════ */
+async function groupK() {
+  group('K. Салбарыг виджетээс нуух');
+  const idx = read('index.html'), adm = read('admin/index.html');
+
+  check('K1. Талбаргүй бол харагдана (hidden===true үед л нууна)',
+    /return !!\(s && s\.hidden\)/.test(idx.replace(/\s+/g, ' ')) ||
+    idx.includes('return !!(s&&s.hidden)'), 'sectorHidden хэрэгжээгүй');
+  check('K1. Донут ба зурвас нь нуултыг ХҮНДЭТГЭНЭ',
+    idx.includes("this.visibleSectorKeys('d05')") && idx.includes("this.visibleSectorKeys('ls',keys)"));
+  check('K1. Харьцуулалтын мөр ч шүүгдэнэ (w2px/w2cx)',
+    idx.includes('!this.sectorHidden(deltaWidgetId,d[0])'));
+  check('K1. НАВИГАЦИЙН таб хөндөгдөхгүй (салбар руу орох зам хаагдахгүй)',
+    idx.includes('const sectorTabs=keys.map'), 'sectorTabs шүүгдсэн байна — буруу');
+  check('K2. Preview нь нуусан салбарыг гаргахгүй',
+    adm.includes("!slotVal(id,s.path).hidden"));
+
+  if (!CHROME) { skipped('K3/K4. DOM шалгалт', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(4500);
+      d.querySelector('[data-section="sec-05"]').click(); await sleep(600);
+      d.querySelector('[data-widget="d05"]').click(); await sleep(1100);
+      const rows=()=>[].slice.call(d.querySelectorAll('#pvhost .pvrow'))
+        .map(function(r){return r.textContent.trim()});
+      const R={};
+      R.btnCount=d.querySelectorAll('[data-hide]').length;
+      R.before=rows();
+      const b=d.querySelector('[data-hide="d05|sectors,public"]');
+      R.hasPublicBtn=!!b;
+      if(b){ b.click(); await sleep(1000); }
+      R.after=rows();
+      const b2=d.querySelector('[data-hide="d05|sectors,public"]');
+      R.label=b2?b2.textContent.trim():null;
+      R.dirty=(d.getElementById('dirtyMsg')||{}).textContent||'';
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('K3. Нуух шалгалт ажиллав', R.__err); return; }
+    check('K2. Салбар бүрд нуух товч байна', R.btnCount === 5 && R.hasPublicBtn === true,
+      'товч: ' + R.btnCount);
+    check('K3. Нуухад preview-ээс ШУУД алга болно',
+      R.before.some((x) => /Нийтийн/.test(x)) && !R.after.some((x) => /Нийтийн/.test(x)),
+      JSON.stringify({ before: R.before.length, after: R.after.length }));
+    check('K3. Товч "буцаах" болж солигдоно', /буцаах/i.test(R.label || ''), R.label);
+    check('K3. Тохиргоо dirty болж экспортод орно', /өөрчлөлт/.test(R.dirty), R.dirty.trim());
+  } finally { srv.close(); }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
