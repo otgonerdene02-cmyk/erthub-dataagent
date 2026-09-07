@@ -328,6 +328,7 @@
   },
   "metrics": {
     "air.flight_count_last_month": {
+      "name": "Сүүлийн бүтэн сарын нислэгийн тоо",
       "source": "applyRealFlightsData",
       "dataset": "air_flights",
       "column": "*",
@@ -340,6 +341,7 @@
       "period_note": "Одоогийн сар дутуу тоо өгөх тул сүүлийн бүтэн сарыг тоолно. \"Одоо\" гэдгийг feed-ийн хамгийн сүүлийн бичлэгээр тодорхойлно, хэрэглэгчийн хөтчийн цагаар биш."
     },
     "air.kpi_set": {
+      "name": "Агаарын тээврийн үндсэн үзүүлэлтийн багц (KPI)",
       "source": "applyRealFlightsData",
       "dataset": "air_flights",
       "column": "*",
@@ -352,6 +354,7 @@
       "period_note": "k04 карт SECTORS.air.kpis 8 мөрийг бүгдийг харуулна. Эх сурвалж нэг ч дотоод хугацааны цонх ялгаатай (доор). Мөр бүр өөрийн compareLabel-аараа үнэн зөв тайлбарлагдсан тул хэрэглэгчид харагдах шошго зөрчилдөхгүй, гэхдээ registry түвшинд бүгд ижил 'verified' гэж энгийнээр бүртгэв — нарийвчилсан мөр тус бүрийн тусдаа метрик H4-ээс хойш шаардлагатай бол нэмж болно."
     },
     "air.feed_updated_at": {
+      "name": "Дата сүүлд шинэчлэгдсэн огноо",
       "source": "flightsMeta",
       "dataset": "air_flights_index",
       "column": "fetchedAt",
@@ -364,6 +367,7 @@
       "period_note": "flights-index.json-ий fetchedAt талбар — эх сурвалжийн indexer хамгийн сүүлд хэзээ ажилласныг заана. Датаны 'сүүлийн бичлэг' (lastRecord метрик, өөр) биш."
     },
     "air.monthly_flight_series": {
+      "name": "Сарын нислэгийн тоо (12 сарын цуврал)",
       "source": "applyRealFlightsData",
       "dataset": "air_flights",
       "column": "*",
@@ -376,6 +380,7 @@
       "period_note": "Ирээгүй сарыг 0-ээр биш, огт оруулахгүй (массивын урт хувьсна)."
     },
     "air.monthly_growth_index": {
+      "name": "Сарын өсөлтийн индекс (1-р сар=100)",
       "source": "compareWindow()",
       "dataset": "air_flights",
       "column": "*",
@@ -388,6 +393,7 @@
       "period_note": "Sector-хуудасны Он/Сар шүүлтээс ЗОРИУД тусгаарлагдсан — SECTORS.air.c1d биш, шууд _flightsCache-ээс тоолно."
     },
     "air.weekly_pax": {
+      "name": "7 хоногийн нийт зорчигчийн тоо",
       "source": "weeklyAirStats/weekFlightsSum",
       "dataset": "air_flights",
       "column": "pax",
@@ -400,6 +406,7 @@
       "period_note": "Одоогийн (дутуу) өдрийг оруулахгүй, hero_fl-ийн 'сүүлийн бүтэн сар' зарчимтай адил. WoW хувь lastFullWeekWindow(1)-тэй харьцуулна."
     },
     "air.weekly_cargo": {
+      "name": "7 хоногийн нийт ачааны хэмжээ",
       "source": "weeklyAirStats/weekFlightsSum",
       "dataset": "air_flights",
       "column": "cargo",
@@ -412,6 +419,7 @@
       "period_note": "cargo талбар аль хэдийн тонноор (cargoKg-ийн 1000-д хуваасантай тэнцүү). WoW хувь lastFullWeekWindow(1)-тэй харьцуулна."
     },
     "rail.wagon_loading": {
+      "name": "Төмөр замын вагон ачилтын хоногийн мэдээ",
       "source": "EHBackend.fetchRailWagonLoading (js/erthub-backend.js → GET /api/sectors/rail/summary)",
       "dataset": "silver.rail_wagon_loading",
       "column": "WIG_*/POG_*",

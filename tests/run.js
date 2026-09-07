@@ -651,6 +651,16 @@ const PROBE_H = `async function(d,w){
     R.usedByTitle=btns.some(b=>b.textContent.trim()==='Долоо хоногийн нийт зорчигч тээвэр');
     R.usedByRawId=btns.some(b=>b.textContent.trim()==='w2p');
   }
+  // H6 — гарчиг МОНГОЛ НЭРЭЭР (raw key биш), техникийн мэдээлэл анхнаасаа хаалттай <details>
+  const fuCard=d.querySelector('[data-metric="air.feed_updated_at"]');
+  if(fuCard){
+    const h3=fuCard.querySelector('h3');
+    R.headingHasName=!!h3&&/Дата сүүлд шинэчлэгдсэн огноо/.test(h3.textContent);
+    R.headingHasRawKey=!!h3&&h3.textContent.indexOf('air.feed_updated_at')>=0;
+    const det=fuCard.querySelector('details');
+    R.detailsClosed=!!det&&!det.open;
+    R.detailsHasSource=!!det&&/flightsMeta/.test(det.textContent);
+  }
   // H3 — метадата талбар засвар: dirty болж, экспортод тусна
   const unitInp=d.querySelector('[data-mf$="|unit"]');
   R.hasUnitField=!!unitInp;
@@ -717,6 +727,12 @@ async function groupH() {
     check('H5. "Ашиглагдаж буй" жагсаалт виджетийн ЖИНХЭНЭ гарчиг харуулна (raw id биш)',
       R.usedByTitle === true && R.usedByRawId === false,
       JSON.stringify({usedByTitle:R.usedByTitle,usedByRawId:R.usedByRawId}));
+    check('H6. Картын гарчиг МОНГОЛ нэрээр (raw key дэд мэдээлэл болно)',
+      R.headingHasName === true && R.headingHasRawKey === false,
+      JSON.stringify({headingHasName:R.headingHasName,headingHasRawKey:R.headingHasRawKey}));
+    check('H6. Техникийн мэдээлэл (эх сурвалж/датасэт) анхнаасаа хаалттай <details>-д',
+      R.detailsClosed === true && R.detailsHasSource === true,
+      JSON.stringify({detailsClosed:R.detailsClosed,detailsHasSource:R.detailsHasSource}));
   } finally { srv.close(); }
 }
 
