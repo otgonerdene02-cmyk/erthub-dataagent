@@ -4983,10 +4983,15 @@ class Component extends DCLogic {
   // Виджетийн байрлал/хэлбэр/өнгө ОГТ өөрчлөгдөхгүй — зөвхөн ямар
   // хэмжигдэхүүнийг харуулах нь солигдоно (жиш. нислэгийн тоо →
   // зорчигчийн нийлбэр). Тохиргоо байхгүй бол `null` → өмнөх зан төлөв.
+  // Түүхий тохиргоо (шалгаагүй) — өдрийн нарийвчлалтай виджет өөрийн
+  // замаар тооцоолдог тул зөвхөн тохиргоог нь авах хэрэгтэй болдог.
+  valueSpecRaw(widgetId){
+    const reg=this.state.metricRegistry;
+    return (reg&&reg.widgets&&reg.widgets[widgetId]&&reg.widgets[widgetId].value)||null;
+  }
   valueFromSpec(widgetId){
     if(typeof EHChart==='undefined') return null;
-    const reg=this.state.metricRegistry;
-    const spec=reg&&reg.widgets&&reg.widgets[widgetId]&&reg.widgets[widgetId].value;
+    const spec=this.valueSpecRaw(widgetId);
     if(!spec) return null;
     const rows=this._airFilteredRows;
     if(!rows||!rows.length) return null;
@@ -5085,7 +5090,10 @@ class Component extends DCLogic {
   // жилийн зааг давбал 2 жилийн cache-ээс уншина (аль хэдийн урьдчилан
   // татагдсан байдаг, loadFlightsData үз). Аль нэг жил cache-д алга бол
   // null буцаана — үр дүнг "мэдээлэл алга" гэж үзэхийн тулд.
-  weekFlightsSum(days,field){
+  // getFn — сонголтоор өгвөл түүхий талбарын нэрийн ОРОНД тэр гаргагчаар
+  // утга авна (чарт бүтээгчийн "Ачаа (кг)" мэтийн хэмжигдэхүүн feed-ийн
+  // талбарын нэртэй шууд таардаггүй тул).
+  weekFlightsSum(days,field,getFn){
     if(!days) return null;
     const byYear={};
     days.forEach(d=>{ (byYear[d.year]=byYear[d.year]||[]).push(d.month+'-'+d.day); });
@@ -5094,7 +5102,7 @@ class Component extends DCLogic {
       const cache=this._flightsCache[y];
       if(!cache) return null;
       const wanted=new Set(byYear[y]);
-      cache.forEach(f=>{ if(wanted.has(f.month+'-'+f.day)) sum+=(f[field]||0); });
+      cache.forEach(f=>{ if(wanted.has(f.month+'-'+f.day)) sum+=(getFn?(Number(getFn(f))||0):(f[field]||0)); });
     }
     return sum;
   }
@@ -6443,14 +6451,27 @@ class Component extends DCLogic {
       // НЭГ утгыг ашиглана) — эрэлт үед аль ч 4 mock салбарыг 0 гэж үзвэл
       // нийлбэрт нэмэгдэхгүй тул "Нийт дүн" автоматаар зөвхөн air-ийн
       // бодит дүн болно.
-      const realVal=weeklyAir?(wt==='pax'?weeklyAir.pax:weeklyAir.cargo):null;
-      const realDeltaPct=weeklyAir?(wt==='pax'?weeklyAir.paxDeltaPct:weeklyAir.cargoDeltaPct):null;
+      /* Утгын тохиргоо (widgets.<id>.value) — 7 хоногийн виджет нь ӨДӨР
+         тутмын нарийвчлалтай тул сарын цуваа ашиглахгүй, ЯГ ТЭР 7 хоногийн
+         цонхон дээр сонгосон хэмжигдэхүүнийг өдөр тус бүрээр нийлбэрлэнэ
+         (нийт дүн ба 7 багана хоёул нэг эх сурвалжаас — H5 зарчим). */
+      const wSpec=(typeof EHChart!=='undefined')?this.valueSpecRaw(widgetId):null;
+      const wGet=wSpec&&wSpec.measure?EHChart.accessor(wSpec.dataset,wSpec.measure):null;
+      const wDays=wGet?this.lastFullWeekWindow(0):null;
+      const wPrevDays=wGet?this.lastFullWeekWindow(1):null;
+      const specVal=(wGet&&wDays)?this.weekFlightsSum(wDays,null,wGet):null;
+      const specPrev=(wGet&&wPrevDays)?this.weekFlightsSum(wPrevDays,null,wGet):null;
+      const specDaily=(wGet&&wDays)?wDays.map(d=>this.weekFlightsSum([d],null,wGet)):null;
+      const realVal=specVal!=null?specVal:(weeklyAir?(wt==='pax'?weeklyAir.pax:weeklyAir.cargo):null);
+      const realDeltaPct=specVal!=null
+        ? ((specPrev==null||!specPrev)?null:(specVal-specPrev)/specPrev*100)
+        : (weeklyAir?(wt==='pax'?weeklyAir.paxDeltaPct:weeklyAir.cargoDeltaPct):null);
       // H5 (нэмэлт): 7 хоногийн өдөр тутмын багана ХУУЧИНДАА wd.bar
       // (WEEK_DATA-ийн статик зохиомол массив) ашигладаг байсан. Air-ийн
       // бодит долоо хоног холбогдсон үед weeklyAirStats()-ийн өдөр тус
       // бүрийн бодит нийлбэрийг ашиглана (бусад 4 салбар 0 тул нийт
       // дүнтэй адил зарчмаар "нийт багана" = зөвхөн air-ийн бодит дүн).
-      const realDaily=weeklyAir?(wt==='pax'?weeklyAir.dailyPax:weeklyAir.dailyCargo):null;
+      const realDaily=specDaily||(weeklyAir?(wt==='pax'?weeklyAir.dailyPax:weeklyAir.dailyCargo):null);
       const barVals=realDaily||wd.bar;
       const barLabels=realDaily?weeklyAir.dailyLabels:WEEK_LABELS;
       const bmax=Math.max.apply(null,barVals), bmin=Math.min.apply(null,barVals);
@@ -7317,9 +7338,12 @@ class Component extends DCLogic {
     // утгатай тэнцэж, агаар 100% гарна — энэ бол одоогийн бодит байдал,
     // тусгай стиль хэрэггүй.
     const keys=Object.keys(SECTORS);
+    const d05Spec=this.valueFromSpec('d05');
     const raw=keys.map(k=>{
       const q=this.sectorQuality('d05',k);
-      const v=q.quality==='verified'?(parseFloat(String(SECTORS[k].kpis[0][1]).replace(/[^0-9.]/g,''))||0):0;
+      let v=q.quality==='verified'?(parseFloat(String(SECTORS[k].kpis[0][1]).replace(/[^0-9.]/g,''))||0):0;
+      /* Утгын тохиргоо ЗӨВХӨН air салбарт (мөр түвшний дата зөвхөн тэнд). */
+      if(d05Spec&&k==='air'&&q.quality==='verified') v=d05Spec.raw;
       return {key:k,label:SECTORS[k].label,color:NEON[k],v};
     });
     const total=raw.reduce((s,r)=>s+r.v,0)||1;
@@ -7961,8 +7985,15 @@ class Component extends DCLogic {
     // тэмдэглэгээг (утгагүй болдог тул) нуун, тэдгээрийн оронд "мэдээлэл
     // алга" гэсэн тэмдэглэгээ үзүүлнэ.
     const t05Verified=this.sectorVerified('t05',key);
+    /* Утгын тохиргоо байвал ЦУВАА нь сонгосон хэмжигдэхүүний сар тутмын
+       бодит цуваа болно (жиш. нислэгийн тооны оронд зорчигчийн нийлбэр).
+       Графикийн ЗАГВАР (тэнхлэг, прогноз, оргил) хэвээр. */
+    const t05Spec=(key==='air')?this.valueFromSpec('t05'):null;
+    const t05Ser=(t05Spec&&t05Spec.series&&t05Spec.series.length>1)?t05Spec.series:null;
     const trend=t05Verified
-      ? buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0)
+      ? (t05Ser
+          ? buildTrendChart(t05Ser,0)
+          : buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0))
       : Object.assign(buildTrendChart(new Array(12).fill(0),0),
           {showForecast:false,dataNote:stxt('status.no_data','мэдээлэл алга')});
     if(t05Verified) trend.showForecast=true;
@@ -8059,11 +8090,23 @@ class Component extends DCLogic {
       // — {{ sector.label }}" гэх мэт холимог мөрүүдэд зөвхөн статик ЭХНИЙ
       // хэсгийг нь txt()-ээр орлуулж, динамик хэсгийг хэвээр үлдээсэн.
       d05Title:this.txt('d05','title','Салбарын харьцаа'),
-      heroFlTitle:this.txt('hero_fl','title','НИСЛЭГ / САР'),
+      /* Утгын тохиргоотой бол гарчиг ч сонголтоо дагана — "НИСЛЭГ / САР"
+         гэсэн гарчгийн доор зорчигчийн тоо гарвал ХУДАЛ тайлбарлана.
+         Админ гараар нэр бичсэн бол (spec.title) тэр давуу эрхтэй. */
+      heroFlTitle:(()=>{
+        const sp=this.valueSpecRaw('hero_fl');
+        const t=(sp&&typeof EHChart!=='undefined')?EHChart.valueTitle(sp):'';
+        return t||this.txt('hero_fl','title','НИСЛЭГ / САР');
+      })(),
       // H3: тоон утга нь val()-аар metric_registry.json-той холбогддог.
       // Fallback үед ("11,979") аль сар болохыг мэдэхгүй тул сарын
       // тэмдэглэгээг ердөө хоосон үлдээнэ — амьд үед л "(N-р сар)" гарна.
       ...(()=>{
+        /* Утгын тохиргоо (widgets.hero_fl.value) байвал түүнийг ДАВУУ
+           эрхтэйгээр хэрэглэнэ — сарын тэмдэглэгээ энэ үед утгагүй тул
+           хоосон (тохируулсан утга бүтэн хугацааны нийлбэр). */
+        const vs=this.valueFromSpec('hero_fl');
+        if(vs) return {heroFlValue:vs.value,heroFlFallback:'false',heroFlMonthSuffix:''};
         const hv=this.val('hero_fl','11,979');
         return {
           heroFlValue:hv.value,

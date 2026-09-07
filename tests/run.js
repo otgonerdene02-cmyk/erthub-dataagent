@@ -777,6 +777,85 @@ const PROBE_I = `async function(d,w){
   R.dirtyReverted=(d.getElementById('dirtyMsg')||{}).textContent||'';
   return R;
 }`;
+/* I6 — БҮХ виджетийг цувралаар шалгана. Өмнө нь зөвхөн `ls`-ийг шалгаж
+   "болсон" гэж дүгнэсэн тул бусад виджет дээр утга солих боломжгүй
+   байсныг тест ОГТ бариагүй. Энэ тест тэр цоорхойг хаана: слоттой
+   виджет БҮРД "датаны талбараас" сонголт байх ба сонгоход preview
+   ӨӨРЧЛӨГДӨХ ёстой. */
+const PROBE_I6 = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(4000);
+  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',
+    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',
+    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',
+    r06:'sec-06',u07:'sec-07'};
+  const norm=t=>(t||'').replace(/[\s\u00a0]+/g,' ').trim();
+  /* Текст ГАНЦААРАА хангалтгүй: шугаман график дээр сарын шошго ижил
+     хэвээр үлдэж, зөвхөн МУРУЙ өөрчлөгддөг. Иймд F бүлгийн адил
+     геометрийг (path/rect/өргөн) ч хамт харьцуулна. */
+  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost path,#pvhost rect,#pvhost circle,#pvhost .pvrk i,#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvticker .v'))
+    .map(function(e){return (e.getAttribute('d')||e.getAttribute('height')||e.getAttribute('style')||e.textContent||'')}).join('|');
+  const pv=()=>{var e=d.getElementById('pvhost');return norm(e?e.innerText:'')+'##'+geo()};
+  const rows=[];
+  for(const id of Object.keys(SEC)){
+    let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();
+    await sleep(280);
+    const s=d.querySelector('[data-section="'+SEC[id]+'"]'); if(!s){rows.push({id:id,nav:false});continue}
+    s.click(); await sleep(320);
+    const c=d.querySelector('[data-widget="'+id+'"]'); if(!c){rows.push({id:id,nav:false});continue}
+    c.click(); await sleep(600);
+    const row={id:id,nav:true};
+    const sel=d.querySelector('[data-slot^="'+id+'|sectors,air"]')||d.querySelector('[data-slot^="'+id+'|"]');
+    row.hasSlot=!!sel;
+    if(!sel){ rows.push(row); continue }
+    const og=sel.querySelector('optgroup');
+    row.hasFieldGroup=!!og;
+    if(og){
+      const before=pv();
+      /* Эхний сонголт нь "бичлэг тоолох (COUNT)" — t05/i06-д энэ нь яг
+         одоогийн метриктэй (нислэгийн тоо) ИЖИЛ үр дүн өгдөг тул
+         өөрчлөлт гарахгүй нь ЗӨВ. Иймд ХЭМЖИГДЭХҮҮНТЭЙ сонголт авна. */
+      const opts=[].slice.call(og.querySelectorAll('option'));
+      const opt=opts.filter(function(o){return o.value.indexOf('field:|')!==0})[0]||opts[0];
+      sel.value=opt.value; sel.dispatchEvent(new w.Event('change',{bubbles:true}));
+      await sleep(900);
+      row.changed=pv()!==before;
+      row.sample=opt.value;
+    }
+    rows.push(row);
+  }
+  return {rows:rows};
+}`;
+async function groupI3() {
+  if (!CHROME) { skipped('I6. Бүх виджет (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(PROBE_I6, 200000);
+    if (R.__err) { bad('I6. Бүх виджетийн шалгалт ажиллав', R.__err); return; }
+    const rows = R.rows || [];
+    check('I6. 16 виджет бүгд нээгдэнэ', rows.length === 16 && rows.every((r) => r.nav !== false),
+      'нээгдээгүй: ' + rows.filter((r) => r.nav === false).map((r) => r.id).join(', '));
+    /* Утга солих боломжтой виджетүүдийн жагсаалт админы эх кодоос —
+       hero_px (нийтийн тээвэр, мөр түвшний дата алга) ба u07 (зөвхөн
+       датасэтийн шинэчлэлт харуулдаг) энд ОРОХГҮЙ нь ЗӨВ. */
+    const admSrc = read('admin/index.html');
+    const vtBlock = admSrc.slice(admSrc.indexOf('var VALUE_TARGETS='), admSrc.indexOf('};', admSrc.indexOf('var VALUE_TARGETS=')));
+    const targets = (vtBlock.match(/([a-z0-9_]+)s*:s*'air_flights'/g) || []).map((m) => m.split(':')[0].trim());
+    check('I6. Утга солих виджетүүд бүртгэгдсэн (hero_px/u07 ЗОРИУД гадна)',
+      targets.length >= 10 && targets.indexOf('hero_px') < 0 && targets.indexOf('u07') < 0,
+      targets.join(','));
+    const withSlot = rows.filter((r) => r.hasSlot && targets.indexOf(r.id) >= 0);
+    const noGroup = withSlot.filter((r) => !r.hasFieldGroup).map((r) => r.id);
+    check('I6. Бүртгэгдсэн виджет БҮРД "датаны талбараас" сонголт байна',
+      noGroup.length === 0, 'дутуу: ' + noGroup.join(', '));
+    const notChanged = withSlot.filter((r) => r.hasFieldGroup && r.changed === false).map((r) => r.id);
+    check('I6. Талбар сонгоход виджет БҮРИЙН preview өөрчлөгдөнө',
+      notChanged.length === 0, 'өөрчлөгдөөгүй: ' + notChanged.join(', '));
+    console.log('        ' + withSlot.length + ' слоттой виджет · ' +
+      withSlot.filter((r) => r.hasFieldGroup).length + ' талбар сонголттой');
+  } finally { srv.close(); }
+}
+
 async function groupI2() {
   if (!CHROME) { skipped('I5. Админ preview (DOM)', 'Chrome олдсонгүй'); return; }
   const srv = serve();
@@ -881,7 +960,7 @@ function groupI() {
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2();
+  groupI(); await groupI2(); await groupI3();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

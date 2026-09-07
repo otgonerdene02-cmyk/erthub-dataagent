@@ -243,6 +243,25 @@
        spark line ҮҮГЭЭР зурагдана (өмнө нь зохиомол sin-муруй байсан —
        "тоо зохиохгүй" дүрэм зөрчиж байв). */
   function unitOf(measure) { return (measure && UNITS[measure]) || ''; }
+  /* Виджетийн ГАРЧИГ сонгосон утгаа дагана. Админ `title` гараар бичвэл
+     тэр давуу эрхтэй (автомат нэр ойлгомжгүй байвал гараас засах зам). */
+  function valueTitle(spec) {
+    if (!spec) return '';
+    if (spec.title) return String(spec.title);
+    var ag = String(spec.agg || 'SUM').toUpperCase();
+    if (ag === 'COUNT') return 'НИЙТ БИЧЛЭГ';
+    if (!spec.measure) return '';
+    var mn = AGG_MN[ag] || ag.toLowerCase();
+    return String(spec.measure).toUpperCase() + ' (' + mn + ')';
+  }
+  /* Хэмжигдэхүүний утга гаргагч — 7 хоногийн виджет (w2p/w2c) нь өдөр
+     тус бүрээр нийлбэрлэдэг тусдаа замтай тул түүхий мөрөөс утга авах
+     функцийг ил гаргана (талбарын нэр биш, ГАРГАГЧ — "Ачаа (кг)" мэтийн
+     нэр нь feed-ийн cargoKg талбартай шууд таардаггүй). */
+  function accessor(dataset, measure) {
+    var f = findField(cols(dataset || 'air_flights'), measure);
+    return (f && typeof f[3] === 'function') ? f[3] : null;
+  }
   function value(rows, valueSpec) {
     if (!valueSpec || typeof valueSpec !== 'object') return null;
     var ag = String(valueSpec.agg || 'SUM').toUpperCase();
@@ -292,6 +311,8 @@
     FIELDS: FIELDS,
     describe: describe,
     unitOf: unitOf,
+    valueTitle: valueTitle,
+    accessor: accessor,
     value: value,
     AIR_COLUMNS: AIR_COLUMNS,
     WEEKDAY_MN: WEEKDAY_MN,

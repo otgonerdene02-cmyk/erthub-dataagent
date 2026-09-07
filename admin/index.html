@@ -870,7 +870,7 @@ function unitLabel(u){
 /* Слотод ОДОО хүчинтэй нэгж. Талбараас шууд сонгосон бол сонгосон
    хэмжигдэхүүнийх, эс бөгөөс слотын өөрийн "шаардах нэгж". */
 function slotUnitNow(id,sectorKey){
-  if(typeof valueSpecOf==='function'&&typeof EHChart!=='undefined'&&sectorKey==='air'){
+  if(typeof valueSpecOf==='function'&&typeof EHChart!=='undefined'&&(sectorKey==='air'||sectorKey===null)){
     var sp=valueSpecOf(id);
     if(sp&&sp.measure) return EHChart.unitOf(sp.measure)||null;
   }
@@ -1091,7 +1091,7 @@ var UI_GROUPS=[
            dataset:'Датасэт',source:'Эх сурвалж',filter:'Шүүлт',required:'Шаардлагатай',
            single_slot:'Ганц метрик',warn_rule:'Дүрэм зөрчсөн анхааруулга',
            warn_sum:'Нийлбэрийн анхааруулга',why_no_def:'Тодорхойлолт алга',
-           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
+           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',value_title:'Виджетийн гарчгийн талбар',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
   {key:'text',title:'Админ · текстийн маягт', where:'Виджетийн засварын доод хэсэг',
    labels:{heading:'Хэсгийн гарчиг',apply:'Хэрэглэх товч',cancel:'Болих товч',
            location:'Байршил товч',history:'Түүх товч',changed:'Өөрчлөгдсөн тэмдэг'}},
@@ -1380,7 +1380,7 @@ function sectorParts(id){
     /* Сайт нь Math.round хийж харуулдаг тул preview ч ЯГ ижил тоо
        үзүүлнэ — эс тэгвэл preview "6,677,422.6", сайт "6,677,423" гэж
        зөрөх бөгөөд аль нь үнэн бэ гэсэн эргэлзээ төрүүлнэ. */
-    if(vres&&s.key==='air'&&q==='verified') v=Math.round(vres.raw);
+    if(vres&&(s.key==='air'||s.key===null)&&q==='verified') v=Math.round(vres.raw);
     return {k:s.key,n:SECN[s.key]||s.key,c:NEON[s.key]||'#8A93AB',v:v,q:q,
       label:q==='none'?(sv.label||'мэдээлэл алга'):(q==='mock'?'түр дата':'')};
   });
@@ -1435,7 +1435,9 @@ function previewFor(id,mini){
   /* ── Гүйдэг мөр: сайт дээр карт БИШ, hero баннерын дээд ирмэгийн
        харанхуй нимгэн зурвас. Иймд картын бүрхүүл огт өгөхгүй. ── */
   if(kind==='ticker'){
-    var tv=mk?metricValue(mk):null;
+    /* Утгын тохиргоотой бол ТҮҮНИЙ тоог харуулна (сайт дээр ч ижил). */
+    var tvRes=widgetValueRes(id);
+    var tv=tvRes?Math.round(tvRes.raw):(mk?metricValue(mk):null);
     var tu=TEXT_ONLY[id]?'':previewUnit(id,slotsOf(id)[0].key);
     return '<div class="sitepv'+(mini?' mini':'')+'" style="--sc:'+accent+'">'+
       '<div class="pvticker">'+
@@ -1519,7 +1521,11 @@ function previewFor(id,mini){
           (nt?'<div class="l" style="margin-top:2px">'+esc(nt)+'</div>':'')+
           '</div>'}).join('')+'</div>';
   } else if(kind==='line'||kind==='multiline'){
-    var ser=mk?metricSeries(mk):null;
+    /* Тохиргоотой бол цуваа нь сонгосон хэмжигдэхүүний сар тутмынх. */
+    var serRes=widgetValueRes(id);
+    var ser=(serRes&&serRes.series&&serRes.series.length>1)
+      ? serRes.series.map(function(v,i){return {label:serRes.labels[i],v:v}})
+      : (mk?metricSeries(mk):null);
     body=ser&&ser.length>1
       ? svgLine(ser,accent,W,H,false)+
         '<div class="pvax">'+esc(ser[0].label)+' — '+esc(ser[ser.length-1].label)+
@@ -1538,10 +1544,13 @@ function previewFor(id,mini){
     var tot=parts.reduce(function(a,p){return a+p.v},0);
     body='<div style="display:flex;align-items:center;gap:'+(mini?9:14)+'px">'+
       svgDonut(parts.length?parts:[{v:1,c:'rgba(20,32,58,.12)'}],mini?42:70)+
+      /* Хувийн хажууд БОДИТ ТООГ ч харуулна: зөвхөн air verified байхад
+         бүх мөр 100%/0% гардаг тул хувь нь утга солигдсоныг ОГТ
+         илэрхийлдэггүй (админ юу өөрчлөгдснийг харж чадахгүй байв). */
       '<div style="min-width:0;flex:1">'+parts.slice(0,mini?3:5).map(function(p){
         var pct=tot?(p.v/tot*100):0;
         return '<div class="pvrow"><i style="background:'+p.c+'"></i>'+
-          '<span>'+esc(p.n)+'</span><b>'+pct.toFixed(0)+'%</b></div>'}).join('')+
+          '<span>'+esc(p.n)+'</span><b>'+(p.v?esc(nf(p.v))+' · ':'')+pct.toFixed(0)+'%</b></div>'}).join('')+
       '</div></div>';
   } else if(kind==='bignum'){
     /* w2p/w2c — сайт дээр ТОМ ТОО + доор нь 7 хоногийн БОСОО баганан
@@ -1574,10 +1583,13 @@ function previewFor(id,mini){
     if(!rp.length){
       var rw=(REG.widgets&&REG.widgets[id])||{};
       var ok=Array.isArray(rw.sectors)?rw.sectors:[];
+      /* Утгын тохиргоотой бол air мөрийн тоо түүнээс гарна (сайттай ижил). */
+      var rkRes=widgetValueRes(id);
       rp=['air','road','rail','water','public'].map(function(k){
         var isOk=ok.indexOf(k)>=0;
-        return {k:k,n:SECN[k],c:NEON[k],q:isOk?'verified':'none',
-                v:isOk?(metricValue(headMetric(id))||0):0};
+        var rv=isOk?(metricValue(headMetric(id))||0):0;
+        if(rkRes&&k==='air'&&isOk) rv=Math.round(rkRes.raw);
+        return {k:k,n:SECN[k],c:NEON[k],q:isOk?'verified':'none',v:rv};
       });
     }
     var mx=Math.max.apply(null,rp.map(function(p){return p.v}).concat([1]));
@@ -2206,7 +2218,7 @@ function slotDisplay(sv,q){
 function metricSelect(id,path,sectorKey){
   var sv=slotVal(id,path), ru=requiredUnit(id,sectorKey);
   var vspec=(typeof valueSpecOf==='function')?valueSpecOf(id):null;
-  var vsActive=!!(vspec&&sectorKey==='air');
+  var vsActive=!!(vspec&&(sectorKey==='air'||sectorKey===null));
   var opts=['<option value=""'+(!vsActive&&!sv.metric?' selected':'')+'>'+
     esc(utxt('metric.unbound','— холбоогүй —'))+'</option>'];
   Object.keys(REG.metrics).forEach(function(mk){
@@ -2224,8 +2236,13 @@ function metricSelect(id,path,sectorKey){
      line нь сонголтоо ДАГАЖ өөрчлөгддөг тул "нэгж үл нийцэх" зөрчил
      үүсэхгүй. Тусдаа маягт нэмэхийн оронд ЯГ ЭНД байрлуулав: хэрэглэгч
      "энэ слот юу харуулах вэ" гэдгээ НЭГ л газраас шийднэ. */
+  /* air слот нь ХОЁР хэлбэртэй: (а) sectors:{air:{...}} — sectorKey==='air';
+     (б) ХАВТГАЙ sectors:['air'] (hero_fl/t05/i06/r06) — sectorKey===null.
+     Хоёуланд нь сонголт өгнө, эс тэгвэл "чиг хандлага" мэтийн виджет дээр
+     утга солих боломжгүй хэвээр үлдэнэ. */
   var ds=(typeof VALUE_TARGETS!=='undefined')&&VALUE_TARGETS[id];
-  if(ds&&sectorKey==='air'&&typeof EHChart!=='undefined'){
+  var isAirSlot=(sectorKey==='air')||(sectorKey===null&&ds);
+  if(ds&&isAirSlot&&typeof EHChart!=='undefined'){
     var aggNames={SUM:utxt('chart_tab.agg_sum','Нийлбэр (SUM)'),AVG:utxt('chart_tab.agg_avg','Дундаж (AVG)'),
                   MIN:utxt('chart_tab.agg_min','Хамгийн бага (MIN)'),MAX:utxt('chart_tab.agg_max','Хамгийн их (MAX)')};
     var fo=[];
@@ -2237,10 +2254,32 @@ function metricSelect(id,path,sectorKey){
           esc(c[0])+' · '+esc(aggNames[a]||a)+(EHChart.unitOf(c[0])?' · '+esc(EHChart.unitOf(c[0])):'')+'</option>');
       });
     });
+    /* Бичлэг ТООЛОХ — хэмжигдэхүүнгүй. Одоо байгаа метрикүүд (нислэгийн
+       тоо) үүнтэй ижил үр дүн өгдөг тул ТӨГСГӨЛД: энэ сонголтын гол
+       зорилго нь ХЭМЖИГДЭХҮҮН солих (нислэг → зорчигч). */
+    (function(){
+      var selC=vsActive&&!vspec.measure&&(vspec.agg==='COUNT');
+      fo.push('<option value="field:|COUNT"'+(selC?' selected':'')+'>'+
+        esc(utxt('chart_tab.count_only','— зөвхөн бичлэг тоолох (COUNT) —'))+'</option>');
+    })();
     opts.push('<optgroup label="'+esc(utxt('metric.from_field','Датаны талбараас шууд (нэгж автоматаар)'))+'">'+
       fo.join('')+'</optgroup>');
   }
   return '<select data-slot="'+esc(id)+'|'+path.join(',')+'|'+esc(sectorKey||'')+'">'+opts.join('')+'</select>';
+}
+
+/* Тохируулсан утгын ГАРЧИГ — хоосон бол автоматаар (жиш. "ЗОРЧИГЧ
+   (нийлбэр)"), ойлгомжгүй бол гараас засна. Зөвхөн утгын тохиргоо
+   идэвхтэй үед харагдана — эс тэгвэл хэрэггүй талбараар дүүрнэ. */
+function valueTitleField(id,sectorKey){
+  if(typeof valueSpecOf!=='function'||typeof EHChart==='undefined') return '';
+  if(sectorKey!=='air'&&sectorKey!==null) return '';
+  var sp=valueSpecOf(id);
+  if(!sp||!sp.measure) return '';
+  return '<div class="f" style="margin-bottom:8px"><label>'+
+    esc(utxt('metric.value_title','Виджетийн гарчиг (хоосон = автоматаар)'))+'</label>'+
+    '<input data-vt="'+esc(id)+'" placeholder="'+esc(EHChart.valueTitle({measure:sp.measure,agg:sp.agg}))+
+    '" value="'+esc(sp.title||'')+'"></div>';
 }
 /* Одоо холбогдсон метрик слотын дүрэм зөрчиж байгаа эсэх */
 /* Холбогдоогүй слотын РЕГИСТРИЙН текст. Preview дээрх "мэдээлэл алга"
@@ -2442,7 +2481,18 @@ function repaintPreview(){
    хүн) СОНГОХ БОЛОМЖГҮЙ байсан — тэр хамгаалалт зөв (буруу шошготой
    тоо гаргахаас сэргийлдэг). Энэ маягт нь нэгжийг УТГАТАЙГАА ХАМТ
    сольдог тул хамгаалалтыг зөрчихгүйгээр уян хатан байдал өгнө. */
-var VALUE_TARGETS={ls:'air_flights'};
+/* Утга солих боломжтой виджетүүд. Зөвхөн air-ийн МӨР ТҮВШНИЙ дата дээр
+   ажилладаг тул air слоттой (эсвэл air метриктэй) виджетүүд л энд орно.
+   `uk` (зөвхөн текст), `hero_px` (нийтийн тээвэр, эх сурвалжгүй),
+   `u07` (зөвхөн датасэтийн шинэчлэлт — доор тайлбар) ОРОХГҮЙ. */
+var VALUE_TARGETS={
+  hero_fl:'air_flights', ls:'air_flights', k04:'air_flights',
+  t05:'air_flights', d05:'air_flights',
+  w2p:'air_flights', w2c:'air_flights',
+  w2pb:'air_flights', w2cb:'air_flights',
+  w2px:'air_flights', w2cx:'air_flights',
+  i06:'air_flights', r06:'air_flights'
+};
 function valueSpecOf(id){
   var w=REG.widgets&&REG.widgets[id];
   return (w&&w.value)||null;
@@ -2483,6 +2533,7 @@ function lvEdit(){
          гэж ХУДАЛ шошголсон мэт харагдана. */
       '<div class="f" style="margin-bottom:8px"><label>'+esc(utxt('metric.unit_label','Метрик · шаардах нэгж:'))+' '+
         esc(unitLabel(slotUnitNow(id,s.key))||utxt('metric.unit_unknown','тодорхойгүй'))+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
+      valueTitleField(id,s.key)+
       (sv.metric?calcLine(sv.metric)
         :'<div class="acc" data-wn="1"'+(sv.would_need?'':' style="display:none"')+'><b>'+
            esc(utxt('metric.required','Шаардлагатай:'))+'</b> <span>'+esc(sv.would_need||'')+'</span></div>')+
@@ -2849,7 +2900,9 @@ document.addEventListener('change',function(e){
   if(mk&&mk.indexOf('field:')===0){
     var fp=mk.slice(6).split('|');
     REG.widgets[id]=REG.widgets[id]||{};
-    REG.widgets[id].value={dataset:VALUE_TARGETS[id]||'air_flights',measure:fp[0],agg:fp[1]||'SUM'};
+    REG.widgets[id].value=fp[0]
+      ? {dataset:VALUE_TARGETS[id]||'air_flights',measure:fp[0],agg:fp[1]||'SUM'}
+      : {dataset:VALUE_TARGETS[id]||'air_flights',agg:'COUNT'};
     log(id,'Виджетийн утга: '+fp[0]+' · '+(fp[1]||'SUM'));
     render();toast(utxt('toast.bound','Холбогдлоо:')+' '+fp[0]);
     return;
@@ -2914,6 +2967,17 @@ document.addEventListener('input',function(e){
     /* Виджетийн засварын дэлгэц дээрх "Preview-ийн нийтлэг текст"
        талбар — бичих даруйд preview шинэчлэгдэнэ. */
     repaintPreview();
+    return;
+  }
+  /* Виджетийн гарчгийг гараар засах — хоосон бол автомат нэр руу буцна */
+  var vt=el.closest&&el.closest('[data-vt]');
+  if(vt){
+    var vid=vt.dataset.vt, sp=REG.widgets[vid]&&REG.widgets[vid].value;
+    if(sp){ if(vt.value) sp.title=vt.value; else delete sp.title; }
+    var vn=dirtyCount();
+    $('dirtyMsg').innerHTML=vn?('<b>'+vn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
+    $('expBtn').disabled=vn===0; $('revBtn').disabled=vn===0;
+    if(typeof refreshPubBtn==='function') refreshPubBtn();
     return;
   }
   /* Чарт бүтээгчийн тоон талбар (Топ N) — бичих даруйд preview шинэчилнэ */
