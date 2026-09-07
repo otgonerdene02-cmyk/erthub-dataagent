@@ -856,6 +856,70 @@ async function groupI3() {
   } finally { srv.close(); }
 }
 
+/* I7 — Хэрэглэгчийн детэйл шаардлагууд (нэг бүрчлэн):
+     · Гарчгийн эх сурвалж ГАНЦ: автомат нэрийг САНАЛ болгож, нэг
+       товшилтоор ЗӨВХӨН тэр талбарт тавина (давхар эх сурвалж үүсгэхгүй)
+     · Талбар дээр очиход preview-ийн ТУХАЙН хэсэг тодорно
+     · График дээр очиход тоон утга гарна (сайт БА админ хоёулаа) */
+const PROBE_I7 = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(4000);
+  const R={};
+  d.querySelector('[data-section="sec-02"]').click(); await sleep(600);
+  d.querySelector('[data-widget="w2pb"]').click(); await sleep(900);
+  const sel=d.querySelector('[data-slot^="w2pb|"]');
+  const og=sel?sel.querySelector('optgroup'):null;
+  if(!og) return {__err:'талбарын бүлэг олдсонгүй'};
+  const opt=[].slice.call(og.querySelectorAll('option'))
+    .filter(function(o){return o.value.indexOf('field:|')!==0})[0];
+  sel.value=opt.value; sel.dispatchEvent(new w.Event('change',{bubbles:true}));
+  await sleep(1100);
+  /* 1) Автомат нэрийн САНАЛ гарах ба гарчгийн талбар ХАРААХАН хэвээр */
+  const btn=d.querySelector('[data-autoname]');
+  R.hasSuggestion=!!btn;
+  const pvT=()=>{const e=d.querySelector('#pvhost [data-ed="title"]');return e?e.textContent.trim():null};
+  R.titleBefore=pvT();
+  R.fieldBefore=(d.querySelector('[data-tf="title"]')||{}).value;
+  if(btn){ btn.click(); await sleep(700); }
+  R.titleAfter=pvT();
+  R.fieldAfter=(d.querySelector('[data-tf="title"]')||{}).value;
+  /* 2) Талбар дээр очиход preview тодрох */
+  const sl=d.querySelector('[data-slot^="w2pb|"]');
+  sl.dispatchEvent(new w.FocusEvent('focusin',{bubbles:true}));
+  await sleep(400);
+  R.hlOnSlot=d.querySelectorAll('#pvhost .pvhl,#pvhost .ed.hl').length;
+  const ti=d.querySelector('[data-tf="title"]');
+  ti.dispatchEvent(new w.FocusEvent('focusin',{bubbles:true}));
+  await sleep(400);
+  R.hlOnTitle=!!d.querySelector('#pvhost [data-ed="title"].hl');
+  /* 3) Админы preview-ийн график дээр тоон утга (SVG <title>) */
+  let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();
+  await sleep(300);
+  d.querySelector('[data-section="sec-05"]').click(); await sleep(400);
+  d.querySelector('[data-widget="t05"]').click(); await sleep(900);
+  R.adminChartTips=d.querySelectorAll('#pvhost svg title').length;
+  return R;
+}`;
+async function groupI4() {
+  if (!CHROME) { skipped('I7. Детэйл шалгалт (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(PROBE_I7, 120000);
+    if (R.__err) { bad('I7. Детэйл шалгалт ажиллав', R.__err); return; }
+    check('I7. Утга сольсны дараа гарчгийн САНАЛ гарна', R.hasSuggestion === true);
+    check('I7. Санал нь гарчгийг ӨӨРӨӨ дарж бичихгүй (ганц эх сурвалж)',
+      R.titleBefore === R.fieldBefore,
+      JSON.stringify({ preview: R.titleBefore, field: R.fieldBefore }));
+    check('I7. "Тавих" дархад гарчиг ба preview ХАМТ шинэчлэгдэнэ',
+      !!R.titleAfter && R.titleAfter === R.fieldAfter && R.titleAfter !== R.titleBefore,
+      JSON.stringify({ after: R.titleAfter, field: R.fieldAfter }));
+    check('I7. Слот дээр очиход preview-ийн тухайн хэсэг тодорно', R.hlOnSlot > 0, 'тодорсон: ' + R.hlOnSlot);
+    check('I7. Гарчгийн талбар дээр очиход preview-ийн гарчиг тодорно', R.hlOnTitle === true);
+    check('I7. Админы preview-ийн график дээр тоон утга гарна (SVG title)',
+      R.adminChartTips > 0, 'олдсон: ' + R.adminChartTips);
+  } finally { srv.close(); }
+}
+
 async function groupI2() {
   if (!CHROME) { skipped('I5. Админ preview (DOM)', 'Chrome олдсонгүй'); return; }
   const srv = serve();
@@ -960,7 +1024,7 @@ function groupI() {
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3();
+  groupI(); await groupI2(); await groupI3(); await groupI4();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

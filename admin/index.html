@@ -194,6 +194,9 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .ed{cursor:pointer;border-radius:4px;outline:1px dashed transparent;outline-offset:2px;transition:.12s}
 .ed:hover{outline-color:var(--sc);background:rgba(47,224,196,.1)}
 .ed.empty{color:#A7B0C6;font-style:italic}
+/* Талбар дээр очиход preview дэх ТУХАЙН хэсэг тодорно — олон донут/
+   "амьд утга" мөр давхардсан үед аль нь болохыг ялгах цорын ганц зам. */
+.ed.hl,.pvhl{outline:2px solid var(--sc)!important;outline-offset:2px;background:rgba(47,224,196,.16)!important;border-radius:5px}
 .secrow{display:grid;grid-template-columns:9px 1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(20,32,58,.09);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px}
 .secrow:last-child{border-bottom:0}
 .secrow-n{color:#465575}
@@ -1091,9 +1094,9 @@ var UI_GROUPS=[
            dataset:'Датасэт',source:'Эх сурвалж',filter:'Шүүлт',required:'Шаардлагатай',
            single_slot:'Ганц метрик',warn_rule:'Дүрэм зөрчсөн анхааруулга',
            warn_sum:'Нийлбэрийн анхааруулга',why_no_def:'Тодорхойлолт алга',
-           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',value_title:'Виджетийн гарчгийн талбар',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
+           why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
   {key:'text',title:'Админ · текстийн маягт', where:'Виджетийн засварын доод хэсэг',
-   labels:{heading:'Хэсгийн гарчиг',apply:'Хэрэглэх товч',cancel:'Болих товч',
+   labels:{heading:'Хэсгийн гарчиг',apply:'Хэрэглэх товч',cancel:'Болих товч',auto_name_hint:'Автомат нэрийн санал',auto_name_apply:'"Тавих" товч',
            location:'Байршил товч',history:'Түүх товч',changed:'Өөрчлөгдсөн тэмдэг'}},
   {key:'metrics_tab',title:'Админ · Дата холболт таб', where:'3-р таб — бүх бүртгэлтэй метрик',
    labels:{heading:'Бүртгэлтэй метрикүүд',
@@ -1319,8 +1322,10 @@ function svgLine(pts,color,w,h,asBar){
     return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:'+h+'px;display:block">'+
       pts.map(function(p,i){
         var bh=Math.max(1,h-pad-Y(p.v));
+        /* Багана дээр очиход ЯГ ТЭР тоо — сайт дээрхтэй ижил зарчим. */
+        var tip=(p.label?p.label+': ':'')+(nf(p.v)||'0');
         return '<rect x="'+(X(i)-bw/2).toFixed(1)+'" y="'+Y(p.v).toFixed(1)+'" width="'+bw.toFixed(1)+
-          '" height="'+bh.toFixed(1)+'" rx="1.5" fill="'+color+'" opacity=".85"></rect>'}).join('')+
+          '" height="'+bh.toFixed(1)+'" rx="1.5" fill="'+color+'" opacity=".85"><title>'+esc(tip)+'</title></rect>'}).join('')+
       '</svg>';
   }
   var d='M'+pts.map(function(p,i){return X(i).toFixed(1)+','+Y(p.v).toFixed(1)}).join(' L');
@@ -1330,7 +1335,13 @@ function svgLine(pts,color,w,h,asBar){
     '<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="1.8" '+
       'stroke-linecap="round" stroke-linejoin="round"></path>'+
     '<circle cx="'+X(pts.length-1).toFixed(1)+'" cy="'+Y(pts[pts.length-1].v).toFixed(1)+
-      '" r="2.6" fill="'+color+'"></circle></svg>';
+      '" r="2.6" fill="'+color+'"></circle>'+
+    /* Цэг бүрт ҮЛ ҮЗЭГДЭХ hover талбай — дээр нь очиход ЯГ ТЭР тоо гарна
+       (шугам дээр ганц <title> тавибал бүх цэгт нэг л тоо гарна). */
+    pts.map(function(p,i){
+      var tip=(p.label?p.label+': ':'')+(nf(p.v)||'0');
+      return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.v).toFixed(1)+'" r="4" fill="transparent">'+
+        '<title>'+esc(tip)+'</title></circle>'}).join('')+'</svg>';
 }
 function svgDonut(parts,size){
   var tot=parts.reduce(function(a,p){return a+p.v},0);
@@ -1475,7 +1486,7 @@ function previewFor(id,mini){
         ? svgLine(useSer,p.c,44,14,false)
         : '<svg viewBox="0 0 44 14" style="width:100%;height:14px;display:block">'+
           '<line x1="2" y1="11" x2="42" y2="11" stroke="#C6CEDD" stroke-width="1.4" stroke-linecap="round"></line></svg>';
-      return '<div class="pvsc'+(on?'':' z')+'" style="border-left-color:'+p.c+'">'+
+      return '<div class="pvsc'+(on?'':' z')+'" data-pvk="'+esc(p.k||'')+'" style="border-left-color:'+p.c+'">'+
         '<div class="l">'+esc(p.n)+'</div>'+
         '<div class="v">'+(on?esc(nf(p.v)||'0'):'0')+'</div>'+
         '<div class="sp">'+spark+'</div></div>';
@@ -1549,7 +1560,7 @@ function previewFor(id,mini){
          илэрхийлдэггүй (админ юу өөрчлөгдснийг харж чадахгүй байв). */
       '<div style="min-width:0;flex:1">'+parts.slice(0,mini?3:5).map(function(p){
         var pct=tot?(p.v/tot*100):0;
-        return '<div class="pvrow"><i style="background:'+p.c+'"></i>'+
+        return '<div class="pvrow" data-pvk="'+esc(p.k||'')+'"><i style="background:'+p.c+'"></i>'+
           '<span>'+esc(p.n)+'</span><b>'+(p.v?esc(nf(p.v))+' · ':'')+pct.toFixed(0)+'%</b></div>'}).join('')+
       '</div></div>';
   } else if(kind==='bignum'){
@@ -2268,19 +2279,6 @@ function metricSelect(id,path,sectorKey){
   return '<select data-slot="'+esc(id)+'|'+path.join(',')+'|'+esc(sectorKey||'')+'">'+opts.join('')+'</select>';
 }
 
-/* Тохируулсан утгын ГАРЧИГ — хоосон бол автоматаар (жиш. "ЗОРЧИГЧ
-   (нийлбэр)"), ойлгомжгүй бол гараас засна. Зөвхөн утгын тохиргоо
-   идэвхтэй үед харагдана — эс тэгвэл хэрэггүй талбараар дүүрнэ. */
-function valueTitleField(id,sectorKey){
-  if(typeof valueSpecOf!=='function'||typeof EHChart==='undefined') return '';
-  if(sectorKey!=='air'&&sectorKey!==null) return '';
-  var sp=valueSpecOf(id);
-  if(!sp||!sp.measure) return '';
-  return '<div class="f" style="margin-bottom:8px"><label>'+
-    esc(utxt('metric.value_title','Виджетийн гарчиг (хоосон = автоматаар)'))+'</label>'+
-    '<input data-vt="'+esc(id)+'" placeholder="'+esc(EHChart.valueTitle({measure:sp.measure,agg:sp.agg}))+
-    '" value="'+esc(sp.title||'')+'"></div>';
-}
 /* Одоо холбогдсон метрик слотын дүрэм зөрчиж байгаа эсэх */
 /* Холбогдоогүй слотын РЕГИСТРИЙН текст. Preview дээрх "мэдээлэл алга"
    badge ба "Шаардлагатай:" мөр ЯГ ЭНЭ хоёр талбараас гардаг
@@ -2435,6 +2433,21 @@ function chromeForm(id){
     '<div class="acc" style="margin-bottom:9px">'+esc(utxt('chrome.note','Эдгээр нь олон виджетэд давтагддаг ерөнхий шошго. Энд бичсэн даруйд preview шинэчлэгдэж, "Сайтын текст" таб дээрх ижил утга ч өөрчлөгдөнө (Хэрэглэх товч шаардлагагүй).'))+'</div>'+
     ps.map(function(p){return siteField(p.split('.'),pathLabel(p))}).join('');
 }
+/* Утга сольсны дараа ГАРЧИГ хуучнаараа үлдвэл хуудас ХУДАЛ тайлбарлана
+   (жиш. "НИСЛЭГ / САР" гэсэн доор зорчигчийн тоо). Гарчгийн эх сурвалж
+   ГАНЦ (content.json) хэвээр байлгахын тулд автоматаар ДАРЖ БИЧИХГҮЙ —
+   зөвхөн санал болгож, нэг товшилтоор тавих боломж өгнө. */
+function autoNameHint(id,cur){
+  if(typeof valueSpecOf!=='function'||typeof EHChart==='undefined') return '';
+  var sp=valueSpecOf(id); if(!sp) return '';
+  var auto=EHChart.valueTitle({measure:sp.measure,agg:sp.agg});
+  if(!auto||String(cur||'').trim()===auto) return '';
+  return '<div class="acc" style="margin-top:5px;display:flex;gap:8px;align-items:center">'+
+    '<span style="flex:1">'+esc(utxt('text.auto_name_hint','Сонгосон утгад тохирох нэр:'))+
+    ' <b>'+esc(auto)+'</b></span>'+
+    '<button class="btn sm" data-autoname="'+esc(auto)+'">'+
+    esc(utxt('text.auto_name_apply','Тавих'))+'</button></div>';
+}
 function textForm(id){
   var fields=textFields(id), d=dirtyTextFields(id);
   if(!fields.length) return '';
@@ -2445,7 +2458,8 @@ function textForm(id){
         (d.indexOf(f)>=0?' <b class="dt">'+esc(utxt('text.changed','өөрчлөгдсөн'))+'</b>':'')+'</label>'+
         ((f==='foot'||f==='foot2')
           ? '<textarea data-tf="'+f+'" rows="3">'+esc(v)+'</textarea>'
-          : '<input data-tf="'+f+'" value="'+esc(v)+'">')+'</div>';
+          : '<input data-tf="'+f+'" value="'+esc(v)+'">')+
+        (f==='title'?autoNameHint(id,v):'')+'</div>';
     }).join('')+
     '<div class="acts"><button class="btn pri sm" data-tsave="1"'+(d.length?'':' disabled')+'>'+
       esc(utxt('text.apply','Хэрэглэх'))+(d.length?' ('+d.length+')':'')+'</button>'+
@@ -2533,7 +2547,6 @@ function lvEdit(){
          гэж ХУДАЛ шошголсон мэт харагдана. */
       '<div class="f" style="margin-bottom:8px"><label>'+esc(utxt('metric.unit_label','Метрик · шаардах нэгж:'))+' '+
         esc(unitLabel(slotUnitNow(id,s.key))||utxt('metric.unit_unknown','тодорхойгүй'))+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
-      valueTitleField(id,s.key)+
       (sv.metric?calcLine(sv.metric)
         :'<div class="acc" data-wn="1"'+(sv.would_need?'':' style="display:none"')+'><b>'+
            esc(utxt('metric.required','Шаардлагатай:'))+'</b> <span>'+esc(sv.would_need||'')+'</span></div>')+
@@ -2805,6 +2818,11 @@ document.addEventListener('click',function(e){
     if(S.mo){closeMo();gotoWidget(S.mo,'full')}
     var i=document.querySelector('[data-tf="'+f+'"]');
     if(i){i.focus();i.select&&i.select();toast(FL[f]+' '+utxt('toast.field_active','талбар идэвхжлээ'))}return}
+  if((el=t.closest&&t.closest('[data-autoname]'))){
+    var an=el.dataset.autoname, ti=document.querySelector('[data-tf="title"]');
+    if(ti){ ti.value=an; ti.dispatchEvent(new Event('input',{bubbles:true})); ti.focus(); }
+    return;
+  }
   if(t.closest&&t.closest('[data-tsave]')){
     var id=S.widget,d=dirtyTextFields(id);
     if(!d.length)return;
@@ -2949,6 +2967,34 @@ document.addEventListener('change',function(e){
   render();toast(mk?(utxt('toast.bound','Холбогдлоо:')+' '+mk):utxt('toast.unbound','Холбоос салгагдлаа'));
 });
 
+/* ── ТАЛБАР → PREVIEW тодруулга ──────────────────────────────────
+   Хэрэглэгч доод талын талбар дээр очиход preview дэх ТУХАЙН хэсгийг
+   тодруулж, харагдац руу гүйлгэнэ. Preview дээр "амьд утга", донутын
+   мөр зэрэг ОЛОН УДАА давтагддаг тул аль талбар аль хэсэгт харгалзахыг
+   өөр аргаар мэдэх БОЛОМЖГҮЙ байв. (Урвуу чиглэл — preview дээр дарж
+   талбар руу очих — data-ed-ээр аль хэдийн ажилладаг.) */
+function clearPvHl(){
+  [].slice.call(document.querySelectorAll('.ed.hl,.pvhl')).forEach(function(e){
+    e.classList.remove('hl'); e.classList.remove('pvhl')});
+}
+function markPv(sel,cls){
+  var host=$('pvhost'); if(!host) return;
+  var t=host.querySelector(sel); if(!t) return;
+  t.classList.add(cls);
+  if(t.scrollIntoView) t.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+document.addEventListener('focusin',function(e){
+  var el=e.target; if(!el||!el.closest) return;
+  clearPvHl();
+  var tf=el.closest('[data-tf]');
+  if(tf){ markPv('[data-ed="'+tf.dataset.tf+'"]','hl'); return }
+  /* Слотын сонголт ба слотын текст — салбарын түлхүүрээр харгалзана */
+  var sl=el.closest('[data-slot]');
+  if(sl){ var k=sl.dataset.slot.split('|')[2]; if(k) markPv('[data-pvk="'+k+'"]','pvhl'); return }
+  var rf=el.closest('[data-rf]');
+  if(rf){ var p=rf.dataset.rf.split('|')[1]||''; var kk=p.split(',').pop();
+          if(kk) markPv('[data-pvk="'+kk+'"]','pvhl'); return }
+});
 document.addEventListener('input',function(e){
   var el=e.target;
   /* Сайтын текстийн талбар — бичих бүрд CON руу шууд тусгана. Бүтэн дахин
@@ -2967,17 +3013,6 @@ document.addEventListener('input',function(e){
     /* Виджетийн засварын дэлгэц дээрх "Preview-ийн нийтлэг текст"
        талбар — бичих даруйд preview шинэчлэгдэнэ. */
     repaintPreview();
-    return;
-  }
-  /* Виджетийн гарчгийг гараар засах — хоосон бол автомат нэр руу буцна */
-  var vt=el.closest&&el.closest('[data-vt]');
-  if(vt){
-    var vid=vt.dataset.vt, sp=REG.widgets[vid]&&REG.widgets[vid].value;
-    if(sp){ if(vt.value) sp.title=vt.value; else delete sp.title; }
-    var vn=dirtyCount();
-    $('dirtyMsg').innerHTML=vn?('<b>'+vn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
-    $('expBtn').disabled=vn===0; $('revBtn').disabled=vn===0;
-    if(typeof refreshPubBtn==='function') refreshPubBtn();
     return;
   }
   /* Чарт бүтээгчийн тоон талбар (Топ N) — бичих даруйд preview шинэчилнэ */

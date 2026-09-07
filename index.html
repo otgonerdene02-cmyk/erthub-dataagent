@@ -1141,7 +1141,7 @@
         <path d="{{ trend.fline }}" fill="none" stroke="{{ activeColor }}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="6 5" style="animation:dashFlow 1.6s linear infinite;"></path>
         </sc-if>
         <sc-for list="{{ trend.dotPts }}" as="dp" hint-placeholder-count="12">
-          <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="var(--surface)" stroke="{{ activeColor }}" stroke-width="1.6"></circle>
+          <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="var(--surface)" stroke="{{ activeColor }}" stroke-width="1.6"><title>{{ dp.tip }}</title></circle>
         </sc-for>
         <sc-if value="{{ trend.showForecast }}">
         <circle cx="{{ trend.peak.cx }}" cy="{{ trend.peak.cy }}" r="4.5" fill="{{ activeColor }}"></circle>
@@ -2506,11 +2506,11 @@
             </foreignObject>
           </sc-for>
           <sc-for list="{{ detail.airMonthly.barRects }}" as="br" hint-placeholder-count="12">
-            <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="var(--ink3)" opacity=".35" rx="2"></rect>
+            <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="var(--ink3)" opacity=".35" rx="2"><title>{{ br.tip }}</title></rect>
           </sc-for>
           <path d="{{ detail.airMonthly.line }}" fill="none" stroke="{{ activeColor }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
           <sc-for list="{{ detail.airMonthly.dotPts }}" as="dp" hint-placeholder-count="12">
-            <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ activeColor }}"></circle>
+            <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ activeColor }}"><title>{{ dp.tip }}</title></circle>
           </sc-for>
           <sc-for list="{{ detail.airMonthly.xTicks }}" as="xt" hint-placeholder-count="6">
             <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14">
@@ -2534,11 +2534,11 @@
             </foreignObject>
           </sc-for>
           <sc-for list="{{ detail.airCargoMonthly.barRects }}" as="cbr" hint-placeholder-count="12">
-            <rect x="{{ cbr.x }}" y="{{ cbr.y }}" width="{{ cbr.w }}" height="{{ cbr.h }}" fill="var(--ink3)" opacity=".35" rx="2"></rect>
+            <rect x="{{ cbr.x }}" y="{{ cbr.y }}" width="{{ cbr.w }}" height="{{ cbr.h }}" fill="var(--ink3)" opacity=".35" rx="2"><title>{{ cbr.tip }}</title></rect>
           </sc-for>
           <path d="{{ detail.airCargoMonthly.line }}" fill="none" stroke="{{ activeColor }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
           <sc-for list="{{ detail.airCargoMonthly.dotPts }}" as="cdp" hint-placeholder-count="12">
-            <circle cx="{{ cdp.cx }}" cy="{{ cdp.cy }}" r="2.6" fill="{{ activeColor }}"></circle>
+            <circle cx="{{ cdp.cx }}" cy="{{ cdp.cy }}" r="2.6" fill="{{ activeColor }}"><title>{{ cdp.tip }}</title></circle>
           </sc-for>
           <sc-for list="{{ detail.airCargoMonthly.xTicks }}" as="cxt" hint-placeholder-count="6">
             <foreignObject x="{{ cxt.fx }}" y="{{ cxt.fy }}" width="40" height="14">
@@ -4409,7 +4409,11 @@ function buildTrendChart(data,off){
   });
   const every=data.length>8?2:1;
   const xTicks=data.map((v,i)=>({x:X(i).toFixed(1),label:MONTHS[i+off]||'',fx:(X(i)-19).toFixed(1),fy:(h-padB+6).toFixed(1)})).filter((_,i)=>i%every===0);
-  const dotPts=xy.map(p=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1)}));
+  /* Цэг дээр очиход ЯГ ТЭР сарын тоо гарна (SVG <title> — нэмэлт JS-гүй,
+     гар/скрин ридерт ч уншигдана). Өмнө нь график дээр тоо ОГТ харагддаггүй
+     байсан тул "энэ цэг хэдийг заасан бэ" гэдгийг мэдэх аргагүй байв. */
+  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),
+    tip:(MONTHS[i+off]?MONTHS[i+off]+': ':'')+Math.round(data[i]).toLocaleString('en-US')}));
 
   // peak annotation
   const pi=data.indexOf(Math.max.apply(null,data));
@@ -4451,14 +4455,19 @@ function buildDualAxisChart(barSeries,lineSeries,labels){
   const Y2=v=>padT+plotH*(1-(v-lineNiceMin)/lineRange);
 
   const X=i=>padL+i*slot+slot/2;
+  /* Hover-ийн тайлбар — багана/цэг дээр очиход ЯГ ТЭР тоо гарна. SVG-ийн
+     төрөлх <title> ашигласнаар нэмэлт JS, санамсаргүй давхарга шаардахгүй
+     бөгөөд гар/скрин ридерт ч уншигдана. */
+  const tipAt=(i,v)=>(labels&&labels[i]?labels[i]+': ':'')+Math.round(v).toLocaleString('en-US');
   const barRects=barSeries.map((v,i)=>{
     const y=Y1(v);
-    return {x:(padL+i*slot+(slot-barW)/2).toFixed(1),y:y.toFixed(1),w:barW.toFixed(1),h:(padT+plotH-y).toFixed(1)};
+    return {x:(padL+i*slot+(slot-barW)/2).toFixed(1),y:y.toFixed(1),w:barW.toFixed(1),h:(padT+plotH-y).toFixed(1),
+      tip:tipAt(i,v)};
   });
 
   const xy=lineSeries.map((v,i)=>[X(i),Y2(v)]);
   const line=xy.length?'M'+xy.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L'):'';
-  const dotPts=xy.map(p=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1)}));
+  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),tip:tipAt(i,lineSeries[i])}));
 
   const yTicksLeft=[0,0.25,0.5,0.75,1].map(fr=>{
     const val=barNiceMax*fr, y=Y1(val);
@@ -8090,14 +8099,12 @@ class Component extends DCLogic {
       // — {{ sector.label }}" гэх мэт холимог мөрүүдэд зөвхөн статик ЭХНИЙ
       // хэсгийг нь txt()-ээр орлуулж, динамик хэсгийг хэвээр үлдээсэн.
       d05Title:this.txt('d05','title','Салбарын харьцаа'),
-      /* Утгын тохиргоотой бол гарчиг ч сонголтоо дагана — "НИСЛЭГ / САР"
-         гэсэн гарчгийн доор зорчигчийн тоо гарвал ХУДАЛ тайлбарлана.
-         Админ гараар нэр бичсэн бол (spec.title) тэр давуу эрхтэй. */
-      heroFlTitle:(()=>{
-        const sp=this.valueSpecRaw('hero_fl');
-        const t=(sp&&typeof EHChart!=='undefined')?EHChart.valueTitle(sp):'';
-        return t||this.txt('hero_fl','title','НИСЛЭГ / САР');
-      })(),
+      /* Гарчгийн эх сурвалж ГАНЦ: content.json. Утга сольсны дараа
+         гарчиг хуучин үлдвэл админ дээр "Сонгосон утгад тохирох нэр"
+         санал гарч, нэг товшилтоор энэ талбарт тавигдана — автоматаар
+         ДАРЖ БИЧВЭЛ хоёр эх сурвалж үүсч, аль нь үнэн нь эргэлзээтэй
+         болно (өмнөх алдаа). */
+      heroFlTitle:this.txt('hero_fl','title','НИСЛЭГ / САР'),
       // H3: тоон утга нь val()-аар metric_registry.json-той холбогддог.
       // Fallback үед ("11,979") аль сар болохыг мэдэхгүй тул сарын
       // тэмдэглэгээг ердөө хоосон үлдээнэ — амьд үед л "(N-р сар)" гарна.
