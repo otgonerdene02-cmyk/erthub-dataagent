@@ -67,10 +67,32 @@
     ['Төлөв', 'enum', 'Нислэгийн хуваарийн төлөв', null]
   ];
 
+  /* ГАРГАЖ АВСАН бүлэглэх талбарууд — зөвхөн чарт/утга бүлэглэхэд
+     ашиглана, хүснэгтийн схемд (DS_SCHEMA / Excel татах) ОРОХГҮЙ.
+     Тиймээс AIR_COLUMNS-д биш, тусад нь: "Сар"-аар бүлэглэх нь цаг
+     хугацааны цуваа (spark line) гаргахад зайлшгүй хэрэгтэй ч датасэтийн
+     хүснэгтэд нэмэлт багана болж гарах ёсгүй. */
+  var MONTHS_MN = ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар',
+    '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'];
+  var AIR_DERIVED = [
+    ['Сар', 'string', 'Огнооны сар (цаг хугацааны цуваа)', function (f) { return MONTHS_MN[(f.month || 1) - 1] || '—'; }],
+    ['Он', 'string', 'Огнооны он', function (f) { return String(f.year || '—'); }]
+  ];
+
+  /* Хэмжигдэхүүн бүрийн ХАРАГДАХ нэгж — виджет дээрх "2,450 нислэг"
+     гэсэн шошго сонгосон хэмжигдэхүүнээ дагах ёстой (эс тэгвэл зорчигчийн
+     тоог "нислэг" гэж ХУДАЛ шошголно). Бүртгэгдээгүй бол хоосон. */
+  var UNITS = {
+    'Зорчигч': 'хүн', 'Том хүн': 'хүн', 'Хүүхэд': 'хүн', 'Нялх': 'хүн',
+    'Транзит': 'хүн', 'VIP': 'хүн', 'Дипломат': 'хүн', 'Багийн гишүүн': 'хүн',
+    'Ачаа (кг)': 'кг', 'Шуудан (кг)': 'кг', 'Суудал': 'суудал'
+  };
+
   /* Датасэтийн түлхүүр нь metric_registry.json-ий `dataset` талбартай
      ижил байна ("air_flights") — шинэ салбар нэмэгдэхэд энд нэг мөрөөр
      бүртгэгдэнэ. */
   var FIELDS = { air_flights: AIR_COLUMNS };
+  var DERIVED = { air_flights: AIR_DERIVED };
 
   var AGGS = { SUM: 1, COUNT: 1, AVG: 1, MIN: 1, MAX: 1 };
   var TYPES = { bar: 1, line: 1, donut: 1, dual: 1 };
@@ -79,7 +101,13 @@
   var DIM_TYPES = { string: 1, date: 1 };
   var MEASURE_TYPES = { int: 1, float: 1 };
 
-  function cols(dataset) { return FIELDS[dataset] || null; }
+  /* Бүлэглэх/нэгтгэхэд ашиглагдах БҮХ талбар = хүснэгтийн багана +
+     гаргаж авсан (Сар/Он). Хүснэгтийн схем нь зөвхөн FIELDS-ээс. */
+  function cols(dataset) {
+    var base = FIELDS[dataset];
+    if (!base) return null;
+    return base.concat(DERIVED[dataset] || []);
+  }
   function findField(list, name) {
     if (!list) return null;
     for (var i = 0; i < list.length; i++) if (list[i][0] === name) return list[i];
@@ -170,7 +198,12 @@
       return [k, v];
     });
 
-    if (s.sort === 'asc') pairs.sort(function (x, y) { return x[1] - y[1]; });
+    /* "Сар"-аар бүлэглэсэн үед ЦАГ ХУГАЦААНЫ дараалал л утгатай —
+       цагаан толгойгоор эрэмбэлбэл "10-р сар" нь "2-р сар"-аас өмнө орж
+       цуваа гажина. Иймд сарын индексээр эрэмбэлнэ. */
+    var monthIdx = function (lb) { return MONTHS_MN.indexOf(lb); };
+    if (s.dim === 'Сар') pairs.sort(function (x, y) { return monthIdx(x[0]) - monthIdx(y[0]); });
+    else if (s.sort === 'asc') pairs.sort(function (x, y) { return x[1] - y[1]; });
     else if (s.sort === 'label') pairs.sort(function (x, y) { return x[0] < y[0] ? -1 : (x[0] > y[0] ? 1 : 0); });
     else pairs.sort(function (x, y) { return y[1] - x[1]; });
 
@@ -198,9 +231,68 @@
     return s.dim + ' · ' + s.measure + ' (' + (AGG_MN[s.agg] || s.agg.toLowerCase()) + ')';
   }
 
+  /* ── ВИДЖЕТИЙН УТГА (чартын ЗАГВАР хэвээр, зөвхөн УТГА солигдоно) ──
+     Виджет дээр аль хэдийн байгаа "том тоо + бяцхан муруй" загварыг
+     ХЭВЭЭР үлдээж, зөвхөн ЯМАР хэмжигдэхүүнийг харуулахыг сольдог зам.
+     Жишээ: `ls` виджет одоо нислэгийн ТООГ харуулж байгааг зорчигчийн
+     НИЙЛБЭР болгоход загвар өөрчлөгдөхгүй, тоо ба нэгж нь л солигдоно.
+
+     valueSpec = {dataset, measure, agg}   (measure байхгүй бол COUNT)
+     Буцаах: {value, raw, unit, series[], n} эсвэл null.
+       series — "Сар"-аар бүлэглэсэн ЦАГ ХУГАЦААНЫ цуваа. Виджетийн
+       spark line ҮҮГЭЭР зурагдана (өмнө нь зохиомол sin-муруй байсан —
+       "тоо зохиохгүй" дүрэм зөрчиж байв). */
+  function unitOf(measure) { return (measure && UNITS[measure]) || ''; }
+  function value(rows, valueSpec) {
+    if (!valueSpec || typeof valueSpec !== 'object') return null;
+    var ag = String(valueSpec.agg || 'SUM').toUpperCase();
+    if (!AGGS[ag]) return null;
+    var dataset = valueSpec.dataset || 'air_flights';
+    if (!cols(dataset)) return null;
+    if (ag !== 'COUNT' && !findField(cols(dataset), valueSpec.measure)) return null;
+    if (!rows || !rows.length) return null;
+    /* Нийт дүн — БҮХ мөрийг нэг бүлэгт цуглуулж нэгтгэнэ ("Он"-оор
+       бүлэглээд нийлбэрлэвэл AVG/MIN/MAX буруу гарна). */
+    var one = agg(rows, { dataset: dataset, dim: 'Он', measure: valueSpec.measure, agg: ag, topN: 0 });
+    if (!one.n) return null;
+    var total;
+    if (ag === 'SUM' || ag === 'COUNT') total = one.total;
+    else if (ag === 'MIN') total = Math.min.apply(null, one.values);
+    else if (ag === 'MAX') total = Math.max.apply(null, one.values);
+    else total = one.values.reduce(function (a, b) { return a + b; }, 0) / one.n;   /* AVG */
+    var ser = agg(rows, { dataset: dataset, dim: 'Сар', measure: valueSpec.measure, agg: ag, topN: 0 });
+    /* Өөрчлөлтийн хувь — сүүлийн БҮТЭН сарыг өмнөхтэй нь харьцуулна.
+       ЯАГААД ЗААВАЛ ЭНД: хэмжигдэхүүнээ сольсон хэрнээ виджет дээр
+       ХУУЧИН метрикийн хувь үлдвэл өөр үзүүлэлтийн өөрчлөлтийг
+       буруу зүйлд наасан ХУДАЛ мэдээлэл болно. Тооцох боломжгүй бол
+       null — дуудагч тал "—" харуулна (тоо ЗОХИОХГҮЙ). */
+    var delta = null, dir = 'flat';
+    if (ser.n >= 3) {                       /* сүүлийн сар дутуу байж болзошгүй тул алгасна */
+      var cur = ser.values[ser.n - 2], prev = ser.values[ser.n - 3];
+      if (prev) {
+        var pct = (cur - prev) / Math.abs(prev) * 100;
+        delta = (pct > 0 ? '+' : '') + pct.toFixed(1) + '%';
+        dir = pct > 0.05 ? 'up' : (pct < -0.05 ? 'down' : 'flat');
+      }
+    }
+    return {
+      raw: total,
+      value: Math.round(total).toLocaleString('en-US'),
+      unit: ag === 'COUNT' ? '' : unitOf(valueSpec.measure),
+      /* Виджет дээрх метрикийн НЭР ч хэмжигдэхүүнээ дагана — эс тэгвэл
+         "НИЙТ НИСЛЭГ" гэсэн шошгын доор зорчигчийн тоо гарч ХУДАЛ
+         тайлбарлана. */
+      label: ag === 'COUNT' ? 'НИЙТ БИЧЛЭГ' : String(valueSpec.measure || '').toUpperCase(),
+      delta: delta, dir: dir,
+      series: ser.values, labels: ser.labels, n: ser.n
+    };
+  }
+
   window.EHChart = {
     FIELDS: FIELDS,
     describe: describe,
+    unitOf: unitOf,
+    value: value,
     AIR_COLUMNS: AIR_COLUMNS,
     WEEKDAY_MN: WEEKDAY_MN,
     AGG_LIST: ['SUM', 'COUNT', 'AVG', 'MIN', 'MAX'],

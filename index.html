@@ -4977,6 +4977,26 @@ class Component extends DCLogic {
     if(!this._airFilteredRows||!this._airFilteredRows.length) return null;
     return EHChart.describe(raw)||null;
   }
+  // ── ВИДЖЕТИЙН УТГА СОЛИХ (загвар нь ХЭВЭЭР) ───────────────────────
+  // metric_registry.json → widgets.<id>.value = {measure, agg} тохиргоо
+  // байвал виджетийн ТОО, НЭГЖ, spark line-ыг бодит датанаас гаргана.
+  // Виджетийн байрлал/хэлбэр/өнгө ОГТ өөрчлөгдөхгүй — зөвхөн ямар
+  // хэмжигдэхүүнийг харуулах нь солигдоно (жиш. нислэгийн тоо →
+  // зорчигчийн нийлбэр). Тохиргоо байхгүй бол `null` → өмнөх зан төлөв.
+  valueFromSpec(widgetId){
+    if(typeof EHChart==='undefined') return null;
+    const reg=this.state.metricRegistry;
+    const spec=reg&&reg.widgets&&reg.widgets[widgetId]&&reg.widgets[widgetId].value;
+    if(!spec) return null;
+    const rows=this._airFilteredRows;
+    if(!rows||!rows.length) return null;
+    const v=EHChart.value(rows,spec);
+    if(!v) return null;
+    // Spark line — ӨМНӨ нь miniSpark() зохиомол sin-муруй зурдаг байсан
+    // ("тоо зохиохгүй" дүрэм зөрчиж байв). Одоо сар тутмын БОДИТ цуваа.
+    v.spark=v.series.length>1?pathFor(v.series,120,32,3).line:null;
+    return v;
+  }
   chartFromSpec(widgetId){
     if(typeof EHChart==='undefined') return null;
     const reg=this.state.metricRegistry;
@@ -7965,24 +7985,32 @@ class Component extends DCLogic {
     // 4 нь SECTORS тогтмол статик тоо (48,210 км гэх мэт) тул үнэн шошгогүй
     // үзүүлбэл буруу мэдээлэл болно (энэ session-ий d05/w2p-тэй ижил дүрэм).
     const flatSpark=pathFor(new Array(10).fill(0),120,32,3).line;
+    // Утгын тохиргоо ЗӨВХӨН agaar (air) салбарт хамаарна — бусад 4
+    // салбарын мөр түвшний дата хараахан алга (тоо ЗОХИОХГҮЙ).
+    const lsSpec=this.valueFromSpec('ls');
     const livestrip=keys.map(k=>{
       const sk=SECTORS[k];
       const on=k===key, dir=sk.kpis[0][4];
       const q=this.sectorQuality('ls',k), verified=q.quality==='verified';
+      const vs=(k==='air'&&verified)?lsSpec:null;
       return {key:k,label:sk.label,
-        value:verified?sk.kpis[0][1]:'0',
-        unit:sk.kpis[0][2],color:verified?NEON[k]:'#828EA8',on,
+        value:vs?vs.value:(verified?sk.kpis[0][1]:'0'),
+        unit:vs?(vs.unit||sk.kpis[0][2]):sk.kpis[0][2],color:verified?NEON[k]:'#828EA8',on,
         select:()=>this.setState({activeSector:k}),
         glyph:GLYPH[k],
-        metric:verified?sk.kpis[0][0]:(sk.kpis[0][0]+' · '+q.label),
-        delta:verified?sk.kpis[0][3]:'—',
+        // Тохиргоотой бол шошго ба өөрчлөлтийн хувь ХОЁУЛАА сонгосон
+        // хэмжигдэхүүнийхээ дагуу гарна (хуучин метрикийн хувийг өөр
+        // үзүүлэлтэд наавал ХУДАЛ мэдээлэл болно).
+        metric:vs?vs.label:(verified?sk.kpis[0][0]:(sk.kpis[0][0]+' · '+q.label)),
+        delta:vs?(vs.delta||'—'):(verified?sk.kpis[0][3]:'—'),
         // ls-ийн богино нэр — content.json → site.sector_short-оос.
         // Өмнө нь ЭНД хатуу бичигдсэн байсан тул салбарын нэрийг
         // админаас сольсон ч 01-р хэсэгт ХЭВЭЭР үлддэг байв.
         short:this.stxt('sector_short.'+k,
           {road:'Авто зам',rail:'Төмөр зам',air:'Агаар',water:'Усан замын',public:'Нийтийн'}[k]),
-        deltaColor:verified?(dir==='up'?'#0E8F63':(dir==='down'?'#C8443A':'#6B7896')):'#828EA8',
-        spark:verified?miniSpark(dir,k.length):flatSpark,
+        deltaColor:(function(d){return verified?(d==='up'?'#0E8F63':(d==='down'?'#C8443A':'#6B7896')):'#828EA8'})(vs?vs.dir:dir),
+        // Тохиргоотой бол сар тутмын БОДИТ цуваа; үгүй бол өмнөх зан төлөв.
+        spark:(vs&&vs.spark)||(verified?miniSpark(dir,k.length):flatSpark),
         cellStyle:'position:relative;display:flex;flex-direction:column;gap:0;align-items:stretch;text-align:left;background:'
           +(on?NEON[k]+'12':'transparent')+';border:none;border-radius:14px;cursor:pointer;font-family:inherit;padding:15px 10px 12px 13px;transition:.18s var(--ease);',
         railStyle:'position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:2px;background:'+(on?NEON[k]:'transparent')+';',

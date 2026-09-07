@@ -797,6 +797,35 @@ function groupI() {
     idx.includes('this._airFilteredRows=filtered'));
   check('I3. index.html ба admin ХОЁУЛАА нэг модулиас уншина',
     idx.includes('js/erthub-chart.js') && read('admin/index.html').includes('js/erthub-chart.js'));
+
+  /* ── I4. ВИДЖЕТИЙН УТГА СОЛИХ (загвар хэвээр, утга солигдоно) ── */
+  const many = [];
+  for (let m = 1; m <= 4; m++) for (let i = 0; i < 3; i++)
+    many.push({ carr: 'A', pax: m * 10, cargoKg: 5, year: 2026, month: m, day: 1 });
+  const v = E.value(many, { measure: 'Зорчигч', agg: 'SUM' });
+  check('I4. Утга нь нийт нийлбэрийг зөв гаргана (10+20+30+40)*3 = 300',
+    v && v.raw === 300, JSON.stringify(v && { raw: v.raw, unit: v.unit }));
+  check('I4. Нэгжийн шошго хэмжигдэхүүнээ ДАГАНА (Зорчигч → хүн)',
+    v.unit === 'хүн', v.unit);
+  check('I4. Метрикийн НЭР ч хэмжигдэхүүнээ дагана (ЗОРЧИГЧ)',
+    v.label === 'ЗОРЧИГЧ', v.label);
+  check('I4. Spark line-д сар тутмын БОДИТ цуваа гарна (зохиомол биш)',
+    v.n === 4 && v.series.join(',') === '30,60,90,120', JSON.stringify(v.series));
+  check('I4. "Сар" цаг хугацааны дарааллаар эрэмбэлэгдэнэ (10-р сар < 2-р сар БИШ)',
+    v.labels[0] === '1-р сар' && v.labels[3] === '4-р сар', JSON.stringify(v.labels));
+  check('I4. Өөрчлөлтийн хувь СОНГОСОН хэмжигдэхүүнээс тооцогдоно',
+    v.delta === '+50.0%' && v.dir === 'up', JSON.stringify({ delta: v.delta, dir: v.dir }));
+  const vc = E.value(many, { agg: 'COUNT' });
+  check('I4. COUNT үед нэгжгүй, нэр нь "НИЙТ БИЧЛЭГ"',
+    vc.raw === 12 && vc.unit === '' && vc.label === 'НИЙТ БИЧЛЭГ', JSON.stringify(vc && vc.raw));
+  check('I4. Тохиргоогүй/хоосон мөр → null (тоо ЗОХИОХГҮЙ)',
+    E.value(many, null) === null && E.value([], { measure: 'Зорчигч', agg: 'SUM' }) === null);
+  check('I4. Сайт нь виджетийн утгыг тохиргооноос уншина',
+    idx.includes('valueFromSpec(\'ls\')') && idx.includes('vs?vs.value:'),
+    'livestrip холболт олдсонгүй');
+  check('I4. Admin виджет засварлах дэлгэцэд "Утга" маягт нэмэгдсэн',
+    read('admin/index.html').includes('valueForm(id)') &&
+    read('admin/index.html').includes('data-vf='), 'valueForm олдсонгүй');
 }
 
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */

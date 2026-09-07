@@ -969,7 +969,8 @@ function metricsDirtyKeys(){
   return out;
 }
 function dirtyCount(){return regDirtyKeys().length+conDirtyKeys().length+siteDirtyKeys().length+
-  metricsDirtyKeys().length+(typeof chartDirtyKeys==='function'?chartDirtyKeys().length:0)}
+  metricsDirtyKeys().length+(typeof chartDirtyKeys==='function'?chartDirtyKeys().length:0)+
+  (typeof valueDirtyKeys==='function'?valueDirtyKeys().length:0)}
 /* content.json өөрчлөгдсөн эсэх — виджетийн текст ЭСВЭЛ site{} */
 function contentDirty(){return conDirtyKeys().length+siteDirtyKeys().length}
 
@@ -1097,6 +1098,10 @@ var UI_GROUPS=[
            key_required:'Түлхүүр заавал бичнэ үү',
            empty:'Метрик бүртгэгдээгүй байна',
            search_ph:'Хайлтын сануулга'}},
+  {key:'value_form',title:'Админ · виджетийн утга солих', where:'Виджет засварлах дэлгэцийн дээд хэсэг',
+   labels:{heading:'Хэсгийн гарчиг',note:'Хэсгийн тайлбар',measure_label:'Хэмжигдэхүүний шошго',
+           agg_label:'Нэгтгэлийн шошго',default:'"Өмнөх хэвээр" сонголт',
+           now:'"Одоо гарах утга" шошго',months:'"сарын цуваа" бичвэр'}},
   {key:'chart_tab',title:'Админ · Чарт бүтээгч', where:'Дата холболт табын доод хэсэг',
    labels:{heading:'Хэсгийн гарчиг',note:'Хэсгийн тайлбар',
            type_label:'Чартын төрлийн шошго',type_dual:'"Хосолсон" төрлийн нэр',
@@ -2358,6 +2363,60 @@ function repaintPreview(){
   applyContentText();   /* SHAPEN/SECN/FL… нь CON-оос амьдаар дүүрнэ */
   var h=$('pvhost'); if(h) h.innerHTML=pvInner(S.widget);
 }
+/* ══════════════════ ВИДЖЕТИЙН УТГА СОЛИХ ═══════════════════════════
+   Виджетийн ЗАГВАР (байрлал, хэлбэр, өнгө, spark line) ХЭВЭЭР үлдэж,
+   ЗӨВХӨН ямар хэмжигдэхүүнийг харуулах нь солигдоно. Жишээ: `ls` виджет
+   нислэгийн ТООГ харуулж байгааг "Зорчигч · нийлбэр" болгоно — тоо ба
+   нэгжийн шошго (нислэг → хүн) хамт солигдож, spark line нь сар тутмын
+   БОДИТ цуваагаар зурагдана.
+
+   ЯАГААД ЭНЭ ХЭРЭГТЭЙ: слот бүр FIXED_UNIT-аар "шаардах нэгж"-тэй тул
+   метрикийн жагсаалтаас нэгж таарахгүй зүйлийг (жиш. air.weekly_pax ·
+   хүн) СОНГОХ БОЛОМЖГҮЙ байсан — тэр хамгаалалт зөв (буруу шошготой
+   тоо гаргахаас сэргийлдэг). Энэ маягт нь нэгжийг УТГАТАЙГАА ХАМТ
+   сольдог тул хамгаалалтыг зөрчихгүйгээр уян хатан байдал өгнө. */
+var VALUE_TARGETS={ls:'air_flights'};
+function valueSpecOf(id){
+  var w=REG.widgets&&REG.widgets[id];
+  return (w&&w.value)||null;
+}
+function valueDirtyKeys(){
+  var out=[];
+  Object.keys(VALUE_TARGETS).forEach(function(id){
+    var a=(REG.widgets&&REG.widgets[id]&&REG.widgets[id].value)||null;
+    var b=(REG0.widgets&&REG0.widgets[id]&&REG0.widgets[id].value)||null;
+    if(JSON.stringify(a)!==JSON.stringify(b)) out.push(id);
+  });
+  return out;
+}
+function valueForm(id){
+  var ds=VALUE_TARGETS[id];
+  if(!ds||typeof EHChart==='undefined') return '';
+  var sp=valueSpecOf(id)||{};
+  var meas=EHChart.measures(ds).map(function(c){return c[0]});
+  var aggNames={SUM:utxt('chart_tab.agg_sum','Нийлбэр (SUM)'),COUNT:utxt('chart_tab.agg_count','Тоолох (COUNT)'),
+                AVG:utxt('chart_tab.agg_avg','Дундаж (AVG)'),MIN:utxt('chart_tab.agg_min','Хамгийн бага (MIN)'),
+                MAX:utxt('chart_tab.agg_max','Хамгийн их (MAX)')};
+  /* Одоо ямар тоо гарахыг ТУХАЙН ГАЗАРТ нь харуулна — сонгоод сайт
+     руу гарахыг хүлээхгүй. */
+  var now='';
+  if(FEED.state==='ready'&&FEED.rows){
+    var v=EHChart.value(FEED.rows,{dataset:ds,measure:sp.measure,agg:sp.agg||'SUM'});
+    if(v) now='<div class="acc" style="margin-top:6px"><b>'+esc(utxt('value_form.now','Одоо гарах утга:'))+
+      '</b> '+esc(v.value)+(v.unit?' '+esc(v.unit):'')+' · '+v.n+' '+esc(utxt('value_form.months','сарын цуваа'))+'</div>';
+  }
+  return '<div class="sedit"><div class="sedit-h"><b>'+esc(utxt('value_form.heading','Виджетийн утга — юуг харуулах вэ'))+'</b></div>'+
+    '<div class="acc">'+esc(utxt('value_form.note','Чартын ЗАГВАР хэвээр үлдэнэ — зөвхөн харуулах хэмжигдэхүүн солигдоно. Нэгжийн шошго ба spark line автоматаар дагаж өөрчлөгдөнө. Хоосон орхивол виджет өмнөх хэвээрээ.'))+'</div>'+
+    '<div class="f"><label>'+esc(utxt('value_form.measure_label','Хэмжигдэхүүн'))+'</label>'+
+    '<select data-vf="'+esc(id)+'|measure"><option value="">'+
+    esc(utxt('value_form.default','— өмнөх хэвээр (нислэгийн тоо) —'))+'</option>'+
+    meas.map(function(m){return '<option value="'+esc(m)+'"'+(sp.measure===m?' selected':'')+'>'+esc(m)+
+      (EHChart.unitOf(m)?' · '+esc(EHChart.unitOf(m)):'')+'</option>'}).join('')+'</select></div>'+
+    '<div class="f"><label>'+esc(utxt('value_form.agg_label','Нэгтгэл'))+'</label>'+
+    '<select data-vf="'+esc(id)+'|agg">'+
+    EHChart.AGG_LIST.map(function(a){return '<option value="'+a+'"'+((sp.agg||'SUM')===a?' selected':'')+'>'+
+      esc(aggNames[a]||a)+'</option>'}).join('')+'</select></div>'+now+'</div>';
+}
 function lvEdit(){
   var id=S.widget;
   if(!S.td) resetTd(id);
@@ -2389,6 +2448,7 @@ function lvEdit(){
       '</div>';
   }).join('');
   return '<div class="edit2"><div class="e-pv" id="pvhost">'+pvInner(id)+'</div><div class="e-fm">'+
+    valueForm(id)+
     (bw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_rule','Одоогийн холбоос дүрэм зөрчиж байна'))+'</b>'+
         esc(bw.join(' · '))+'</div>':'')+
     (gw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_sum','Нийлбэрийн анхааруулга'))+'</b>'+esc(gw)+'</div>':'')+
@@ -2723,6 +2783,22 @@ document.addEventListener('change',function(e){
   var t=e.target;
   var cf=t.closest&&t.closest('[data-cf]');
   if(cf){ cfApply(cf); return }
+  /* Виджетийн утга (хэмжигдэхүүн / нэгтгэл) — REG.widgets[id].value */
+  var vf=t.closest&&t.closest('[data-vf]');
+  if(vf){
+    var vp=vf.dataset.vf.split('|'), vid=vp[0], vfield=vp[1];
+    REG.widgets=REG.widgets||{};
+    REG.widgets[vid]=REG.widgets[vid]||{};
+    var vspec=REG.widgets[vid].value||{};
+    if(vf.value) vspec[vfield]=vf.value; else delete vspec[vfield];
+    /* Хэмжигдэхүүн сонгоогүй бол тохиргоо утгагүй — бүрэн арилгаж,
+       виджетийг өмнөх зан төлөв рүү нь буцаана. */
+    if(!vspec.measure&&(vspec.agg||'SUM')!=='COUNT') delete REG.widgets[vid].value;
+    else { vspec.dataset=vspec.dataset||VALUE_TARGETS[vid]; REG.widgets[vid].value=vspec }
+    if(!REG.widgets[vid].value&&!Object.keys(REG.widgets[vid]).length) delete REG.widgets[vid];
+    log(vid,'Виджетийн утга: '+(vspec.measure||'—')+' · '+(vspec.agg||'SUM'));
+    render();return;
+  }
   var mfq=t.closest&&t.closest('[data-mfq]');
   if(mfq){
     var mk2=mfq.dataset.mfq, prevQ=REG.metrics[mk2].quality;
@@ -2866,7 +2942,7 @@ function download(obj,name){
 }
 $('expBtn').addEventListener('click',function(){
   var today=new Date().toISOString().slice(0,10), files=[];
-  if(regDirtyKeys().length||metricsDirtyKeys().length||chartDirtyKeys().length){REG.updated=today;download(REG,'metric_registry.json');files.push('metric_registry.json')}
+  if(regDirtyKeys().length||metricsDirtyKeys().length||chartDirtyKeys().length||valueDirtyKeys().length){REG.updated=today;download(REG,'metric_registry.json');files.push('metric_registry.json')}
   if(contentDirty()){CON.updated=today;download(CON,'content.json');files.push('content.json')}
   toast(utxt('toast.downloaded','Татагдлаа:')+' '+files.join(' + ')+' '+
     utxt('toast.downloaded_note','— репод хуулж commit хийнэ үү'));

@@ -345,7 +345,19 @@ async function main() {
   if (!CHROME) { bad('Chrome олдсонгүй — DOM тест ажиллуулах боломжгүй'); return; }
   const con = readJson('content.json');
   const reg = readJson('metric_registry.json');
-  const corpus = corpusOf([con, reg]);
+  /* Чарт бүтээгчийн ТАЛБАРЫН КАТАЛОГ (js/erthub-chart.js) — эдгээр нь
+     UI-ийн орчуулга БИШ, эх сурвалжийн feed-ийн БОДИТ талбарын нэрс
+     (metric_registry.json-ий метрик/датасэтийн нэртэй ижил зэрэглэл).
+     Кодод хатуу бичигдээгүй, ганц бүртгэлтэй газраасаа уншигддаг тул
+     хүчинтэй эх сурвалж — corpus-д хамт оруулна. */
+  const chartSandbox = { window: {} };
+  try { new Function('window', read('js/erthub-chart.js'))(chartSandbox.window); } catch (e) { /* доор алдаа мэдэгдэнэ */ }
+  const EH = chartSandbox.window.EHChart;
+  const fieldTexts = EH
+    ? EH.dims('air_flights').concat(EH.measures('air_flights'))
+        .map((c) => c[0]).concat(EH.measures('air_flights').map((c) => EH.unitOf(c[0])))
+    : [];
+  const corpus = corpusOf([con, reg, fieldTexts]);
   const srv = serve();
   try {
     /* ── F1/F2. Хамрах хүрээ ── */
