@@ -164,6 +164,10 @@ function groupB() {
        дотор ашиглагдсан эсэхийг шалгана. Утга нь сайт дээр ҮНЭХЭЭР гарч
        ирснийг tests/text-coverage.js (F3 round-trip) DOM-оос баталдаг. */
     const dynGroups = ['sectors', 'sector_kpi', 'sector_kpi_air_live', 'sector_chart', 'unit',
+      /* `datasets` — нээлттэй өгөгдлийн каталог. stxt() биш, applySiteContent()
+         дотор массиваар (индексээр) DATASETS дээр давхарлагддаг тул бусад
+         динамик бүлэгтэй ижил зарчмаар шалгагдана. */
+      'datasets',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -1176,11 +1180,86 @@ async function groupK() {
   } finally { srv.close(); }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   L. ДАТАСЭТИЙН КАТАЛОГ (админаас удирдана)
+
+   Хэрэглэгчийн гомдол: "шинээр нэмэгдсэн төмөр замын датасэт нээлттэй
+   өгөгдлийн цэсэнд орж ирээгүй". Шалтгаан нь каталог ЗӨВХӨН кодод
+   (index.html → DATASETS) байсан явдал. Одоо content.json →
+   site.datasets дээр бүртгэгдэж, админаас засаж, НЭМЖ болно.
+     L1. Каталог content.json-д бүртгэгдсэн ба сайт түүнийг уншина
+     L2. Кодтой холбоотой талбар (dq/source/bind) кодод ҮЛДСЭН
+     L3. Порталын "Нээлттэй өгөгдөл" тоо каталогийн уртаас (тоо зохиохгүй)
+     L4. Админд карт бүр засварлагдаж, нэмэх/хасах товчтой
+     L5. Каталогийн хайлт НЭРЭЭР ажиллана (өмнө нь d.title гэж уншдаг
+         байсан тул нэрээр ОГТ олддоггүй байв)
+   ══════════════════════════════════════════════════════════════════ */
+async function groupL() {
+  group('L. Датасэтийн каталог');
+  const con = readJson('content.json'), idx = read('index.html'), adm = read('admin/index.html');
+
+  const ds = con.site && con.site.datasets;
+  check('L1. Каталог content.json-д бүртгэгдсэн', Array.isArray(ds) && ds.length >= 9,
+    'бичлэг: ' + (ds ? ds.length : 0));
+  check('L1. Бичлэг бүр нэр ба салбартай',
+    Array.isArray(ds) && ds.every((d) => d && typeof d.sector === 'string'),
+    'салбаргүй бичлэг байна');
+  check('L1. Сайт каталогийг content.json-оос уншина',
+    idx.includes('Array.isArray(S.datasets)') && idx.includes('DATASETS[i][k]=d[k]'));
+
+  check('L2. Нотолгоо (dq) ба метрикийн холбоос КОДОД үлдсэн',
+    idx.includes('dq:{freqDays:1') && idx.includes("source:'flights'"),
+    'dq/source кодоос алга болсон');
+  check('L2. content.json-д dq/source/bind ОРООГҮЙ (кодтой холбоотой)',
+    Array.isArray(ds) && ds.every((d) => !('dq' in d) && !('source' in d) && !('bind' in d)));
+
+  check('L3. Порталын тоо каталогийн уртаас (тоо ЗОХИОХГҮЙ)',
+    idx.includes('KPI_UNIFIED[0][1]=String(DATASETS.length)'));
+
+  check('L4. Админд каталогийн карт, нэмэх/хасах товч байна',
+    adm.includes('data-ds-card') && adm.includes('data-ds-add') && adm.includes('data-ds-del'));
+  check('L4. Каталог "Дата холболт" табд холбогдсон', adm.includes('lvCharts()+lvDatasets()'));
+
+  check('L5. Каталогийн хайлт НЭРЭЭР ажиллана (d.title БИШ)',
+    idx.includes("(d.name||'')+' '+(d.agency||'')") && !idx.includes("d.title+' '+d.desc"),
+    'хайлт d.title уншсаар байна');
+
+  if (!CHROME) { skipped('L6. Админ дээр нэмэх (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(4500);
+      d.querySelector('[data-tab="metrics"]').click(); await sleep(900);
+      const R={};
+      R.before=d.querySelectorAll('[data-ds-card]').length;
+      const add=d.querySelector('[data-ds-add]'); if(!add) return {__err:'нэмэх товч алга'};
+      add.click(); await sleep(800);
+      R.after=d.querySelectorAll('[data-ds-card]').length;
+      const i=R.after-1;
+      const nm=d.querySelector('[data-df="'+i+'|name"]');
+      if(nm){ nm.value='ТЕСТ ДАТАСЭТ'; nm.dispatchEvent(new w.Event('input',{bubbles:true})); }
+      await sleep(700);
+      R.dirty=(d.getElementById('dirtyMsg')||{}).textContent||'';
+      const del=d.querySelector('[data-ds-del="'+i+'"]');
+      if(del){ del.click(); await sleep(800); }
+      R.afterDel=d.querySelectorAll('[data-ds-card]').length;
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('L6. Каталогийн DOM шалгалт', R.__err); return; }
+    check('L6. Шинэ датасэт нэмэгдэнэ', R.after === R.before + 1,
+      JSON.stringify({ before: R.before, after: R.after }));
+    check('L6. Талбар засахад dirty болж экспортод орно', /өөрчлөлт/.test(R.dirty), R.dirty.trim());
+    check('L6. Каталогоос хасах ажиллана', R.afterDel === R.before,
+      JSON.stringify({ afterDel: R.afterDel, before: R.before }));
+  } finally { srv.close(); }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

@@ -4202,6 +4202,24 @@ function applySiteContent(){
       if(key) r[2]=stxt('unit.'+key,r[2]);
     });
   });
+  /* Нээлттэй өгөгдлийн КАТАЛОГ — админаас засах ба ШИНЭЭР НЭМЭХ.
+     Индексээр давхарлана: код дээрх бичлэгийн `dq`/`source`/`bind`
+     (кодтой холбоотой нотолгоо, метрикийн холбоос) ХЭВЭЭР үлдэж,
+     зөвхөн ТЕКСТ талбарууд солигдоно. Жагсаалтаас илүү гарсан бичлэг
+     нь ШИНЭ датасэт — админ өөрөө нэмсэн гэсэн үг.
+     ӨМНӨ НЬ: каталог зөвхөн кодод байсан тул шинэ датасэт нэмэхийн
+     тулд хөгжүүлэгч index.html засах шаардлагатай байв. */
+  if(Array.isArray(S.datasets)){
+    const TXT=['sector','name','agency','fmt','badges','freq','use','desc'];
+    S.datasets.forEach((d,i)=>{
+      if(!d||typeof d!=='object') return;
+      if(!DATASETS[i]) DATASETS[i]={sector:'road',name:'',agency:'',fmt:'',badges:[],freq:'',use:'',desc:''};
+      TXT.forEach(k=>{ if(d[k]!==undefined&&d[k]!=='') DATASETS[i][k]=d[k] });
+    });
+    /* Каталогийн тоо нь порталын "НЭЭЛТТЭЙ ӨГӨГДӨЛ" картад шууд тусна —
+       тоо ЗОХИОХГҮЙ, бодит жагсаалтын уртаас. */
+    if(typeof KPI_UNIFIED!=='undefined'&&KPI_UNIFIED[0]) KPI_UNIFIED[0][1]=String(DATASETS.length);
+  }
   /* Порталын 4 карт (uk) */
   const pk=S.portal_kpi, pkeys=['open_data','eservice','research','orgs'];
   if(pk) pkeys.forEach((pkk,i)=>{
@@ -6809,7 +6827,10 @@ class Component extends DCLogic {
         +(c.id===filter?'border:1.5px solid '+(c.id==='all'?'var(--ink2)':NEON[c.id])+';background:'+(c.id==='all'?'var(--surface2)':NEON[c.id]+'22')+';color:'+(c.id==='all'?'var(--ink)':NEON[c.id])+';font-weight:600;'
                        :'border:1px solid var(--line);background:transparent;color:var(--ink2);')
     }));
-    const datasetsAll=DATASETS.filter(d=>(filter==='all'||d.sector===filter)&&(!dsListQ||(d.title+' '+d.desc+' '+SECTORS[d.sector].label).toLowerCase().includes(dsListQ))).map(d=>({
+    const datasetsAll=DATASETS.filter(d=>(filter==='all'||d.sector===filter)&&/* Датасэтийн талбар нь `name` (`title` БИШ) — өмнө нь `d.title` уншиж
+   байсан тул хайлт нэрээр ОГТ олдохгүй, зөвхөн тайлбар/салбараар
+   олддог байв (undefined нь мөрөнд "undefined" болж ордог). */
+(!dsListQ||((d.name||'')+' '+(d.agency||'')+' '+(d.desc||'')+' '+SECTORS[d.sector].label).toLowerCase().includes(dsListQ))).map(d=>({
       ...d,color:NEON[d.sector],sectorLabel:SECTORS[d.sector].label,glyph:GLYPH[d.sector],
       badgeList:d.badges.map(b=>({label:b,live:b==='Шууд',premium:b==='Premium'})),
       open:()=>{ this.trackDatasetView(d); this.loadFollow(d); this.setState({dsIndex:DATASETS.indexOf(d)}); this.go('detail'); }

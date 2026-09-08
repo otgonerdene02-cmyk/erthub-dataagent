@@ -1980,6 +1980,69 @@ function lvCharts(){
     '<p class="pvnote">'+esc(utxt('chart_tab.note','X тэнхлэгт бүлэглэх талбар (жиш. Компани), Y тэнхлэгт нэгтгэх тоон талбар (жиш. Зорчигч) сонгоод нэгтгэлийн төрлийг заана. Сайт нь хуудасны Он/Сар/Бүсийн шүүлтийг дагаж ЯГ ЭНЭ тохиргоогоор зурна. Тохируулаагүй бол өмнөх чарт хэвээр үлдэнэ.'))+'</p>'+
     body;
 }
+/* ══════════════════ ДАТАСЭТИЙН КАТАЛОГ ═══════════════════════════
+   Нээлттэй өгөгдлийн каталог (сайтын "Нээлттэй өгөгдөл" хуудас) нь
+   өмнө нь ЗӨВХӨН index.html-ийн кодод байсан тул шинэ датасэт нэмэхийн
+   тулд хөгжүүлэгч шаардлагатай байв. Одоо content.json → site.datasets
+   дээр бүртгэгдэж, ЭНДЭЭС засаж, ШИНЭЭР нэмж болно.
+   `dq`/`source`/`bind` (нотолгоо, метрикийн холбоос) нь КОДТОЙ холбоотой
+   тул энд ОРОХГҮЙ — index.html-д үлдэнэ. */
+/* Шошго бүрийг ЛИТЕРАЛ utxt()-ээр авна — түлхүүрийг хувьсагчаар угсарвал
+   tests/text-coverage.js статик шинжилгээгээр 'кодод уншигдахгүй' гэж
+   тооцно (F4/F5). Функц болгосон нь content.json дахин ачаалагдахад
+   шинэ утга нь шууд тусахын тулд. */
+function dsFieldDefs(){
+  return [
+    ['name',   utxt('ds_cat.f_name','Нэр'), false],
+    ['agency', utxt('ds_cat.f_agency','Эрхлэгч байгууллага'), false],
+    ['fmt',    utxt('ds_cat.f_fmt','Формат'), false],
+    ['freq',   utxt('ds_cat.f_freq','Шинэчлэлтийн давтамж'), false],
+    ['use',    utxt('ds_cat.f_use','Ашиглалт'), false],
+    ['desc',   utxt('ds_cat.f_desc','Тайлбар'), true]
+  ];
+}
+function dsList(){ return (CON.site&&CON.site.datasets)||[] }
+function dsField(i,f,lab,long){
+  var d=dsList()[i]||{}, v=d[f]==null?'':d[f];
+  var b=((CON0.site&&CON0.site.datasets)||[])[i]||{};
+  var dirty=String(v)!==String(b[f]==null?'':b[f]);
+  return '<div class="sfield'+(dirty?' dirty':'')+'"><div class="lbl">'+esc(lab)+
+    (dirty?' <b class="dt">'+esc(utxt('site_tab.changed','өөрчлөгдсөн'))+'</b>':'')+'</div>'+
+    (long?'<textarea data-df="'+i+'|'+f+'" rows="2">'+esc(v)+'</textarea>'
+         :'<input data-df="'+i+'|'+f+'" value="'+esc(v)+'">')+'</div>';
+}
+function lvDatasets(){
+  var list=dsList(), q=(S.q||'').trim().toLowerCase();
+  var secOpts=Object.keys(SECN).filter(function(k){return k!=='plan'&&k!=='other'});
+  var html='', shown=0;
+  list.forEach(function(d,i){
+    var hay=((d.name||'')+' '+(d.agency||'')+' '+(d.desc||'')).toLowerCase();
+    if(q&&hay.indexOf(q)<0) return;
+    shown++;
+    html+='<div class="sgroup" data-ds-card="'+i+'"><h3>'+esc(d.name||('#'+(i+1)))+
+      ' <span class="badge b-zero">'+esc(SECN[d.sector]||d.sector||'—')+'</span></h3>'+
+      '<div class="sfield"><div class="lbl">'+esc(utxt('ds_cat.f_sector','Салбар'))+'</div>'+
+      '<select data-df="'+i+'|sector">'+secOpts.map(function(k){
+        return '<option value="'+esc(k)+'"'+(d.sector===k?' selected':'')+'>'+esc(SECN[k]||k)+'</option>'
+      }).join('')+'</select></div>'+
+      dsFieldDefs().map(function(f){return dsField(i,f[0],f[1],f[2])}).join('')+
+      '<div class="sfield"><div class="lbl">'+esc(utxt('ds_cat.f_badges','Шошго (таслалаар)'))+'</div>'+
+      '<input data-df="'+i+'|badges" value="'+esc((d.badges||[]).join(', '))+'"></div>'+
+      '<div class="acts"><button class="btn sm" data-ds-del="'+i+'">'+
+      esc(utxt('ds_cat.remove','Каталогоос хасах'))+'</button></div>'+
+      '</div>';
+  });
+  if(!shown&&q) html='<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
+  return '<p class="ph" style="margin-top:22px">'+esc(utxt('ds_cat.heading','Нээлттэй өгөгдлийн каталог'))+' '+
+    '<span style="font-family:var(--mono)">'+list.length+'</span></p>'+
+    '<p class="pvnote">'+esc(utxt('ds_cat.note','Сайтын "Нээлттэй өгөгдөл" хуудсанд гарах жагсаалт. Эндээс засаж, шинэ датасэт НЭМЖ болно — порталын "Нээлттэй өгөгдөл" картын тоо ч автоматаар дагана. Нотолгоо (dq) ба метрикийн холбоос нь кодод үлдэнэ.'))+'</p>'+
+    html+
+    '<div class="sgroup"><h3>'+esc(utxt('ds_cat.add','+ Шинэ датасэт'))+'</h3>'+
+    '<div class="acc">'+esc(utxt('ds_cat.add_note','Хоосон бичлэг нэмнэ — дараа нь талбаруудыг нь бөглөнө. Нэр хоосон бол сайтад харагдахгүй.'))+'</div>'+
+    '<div class="acts"><button class="btn pri sm" data-ds-add="1">'+
+    esc(utxt('ds_cat.add','+ Шинэ датасэт'))+'</button></div></div>';
+}
+
 function lvMetrics(){
   var mm=REG.metrics||{}, keys=Object.keys(mm).sort();
   var q=(S.q||'').trim().toLowerCase();
@@ -2035,7 +2098,7 @@ function lvMetrics(){
     '<div class="sfield"><textarea id="mNewWn" rows="2" placeholder="'+esc(utxt('metrics_tab.add_would_need_ph','Ямар эх сурвалж хэрэгтэйг бичнэ үү'))+'"></textarea></div>'+
     '<div class="acts"><button class="btn pri sm" data-madd="1">'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</button></div>'+
     '</div>'+
-    lvCharts();
+    lvCharts()+lvDatasets();
 }
 
 /* ══════════════════ ХАЙЛТ + ШҮҮЛТ ══════════════════
@@ -2854,6 +2917,16 @@ document.addEventListener('click',function(e){
     render();
     return;
   }
+  if((el=t.closest&&t.closest('[data-ds-add]'))){
+    CON.site=CON.site||{}; CON.site.datasets=CON.site.datasets||[];
+    CON.site.datasets.push({sector:'road',name:'',agency:'',fmt:'',freq:'',use:'',desc:''});
+    log('datasets','Каталогт шинэ датасэт нэмэв'); render(); return;
+  }
+  if((el=t.closest&&t.closest('[data-ds-del]'))){
+    var dIdx=+el.dataset.dsDel;
+    if(CON.site&&Array.isArray(CON.site.datasets)) CON.site.datasets.splice(dIdx,1);
+    log('datasets','Каталогоос хасав: #'+(dIdx+1)); render(); return;
+  }
   if(t.closest&&t.closest('[data-tsave]')){
     var id=S.widget,d=dirtyTextFields(id);
     if(!d.length)return;
@@ -2922,6 +2995,8 @@ function cfApply(el){
 }
 document.addEventListener('change',function(e){
   var t=e.target;
+  var dfSel=t.closest&&t.closest('[data-df]');
+  if(dfSel&&dfSel.tagName==='SELECT'){ dfSel.dispatchEvent(new Event('input',{bubbles:true})); render(); return }
   var cf=t.closest&&t.closest('[data-cf]');
   if(cf){ cfApply(cf); return }
   var mfq=t.closest&&t.closest('[data-mfq]');
@@ -3044,6 +3119,29 @@ document.addEventListener('input',function(e){
     /* Виджетийн засварын дэлгэц дээрх "Preview-ийн нийтлэг текст"
        талбар — бичих даруйд preview шинэчлэгдэнэ. */
     repaintPreview();
+    return;
+  }
+  /* Датасэтийн каталогийн талбар — бичих даруйд content.json руу тусна.
+     `badges` нь массив тул таслалаар задлана. */
+  var df=el.closest&&el.closest('[data-df]');
+  if(df){
+    var dp=df.dataset.df.split('|'), di=+dp[0], dfield=dp[1];
+    CON.site=CON.site||{}; CON.site.datasets=CON.site.datasets||[];
+    CON.site.datasets[di]=CON.site.datasets[di]||{};
+    if(dfield==='badges'){
+      var bl=String(df.value||'').split(',').map(function(x){return x.trim()}).filter(Boolean);
+      if(bl.length) CON.site.datasets[di].badges=bl; else delete CON.site.datasets[di].badges;
+    } else if(df.value!=='') CON.site.datasets[di][dfield]=df.value;
+    else delete CON.site.datasets[di][dfield];
+    var drow=df.closest('.sfield');
+    if(drow){
+      var b0=((CON0.site&&CON0.site.datasets)||[])[di]||{};
+      drow.classList.toggle('dirty',String(df.value)!==String(b0[dfield]==null?'':(dfield==='badges'?(b0.badges||[]).join(', '):b0[dfield])));
+    }
+    var dn=dirtyCount();
+    $('dirtyMsg').innerHTML=dn?('<b>'+dn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
+    $('expBtn').disabled=dn===0; $('revBtn').disabled=dn===0;
+    if(typeof refreshPubBtn==='function') refreshPubBtn();
     return;
   }
   /* Чарт бүтээгчийн тоон талбар (Топ N) — бичих даруйд preview шинэчилнэ */
