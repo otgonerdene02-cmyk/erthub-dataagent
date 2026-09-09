@@ -1669,11 +1669,54 @@ function groupP() {
     'хатуу бичсэн тоо үлдсэн');
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   Q. ДЭЛГЭРЭНГҮЙ (ДАТАСЭТ) ХУУДСЫН БИЧИГ
+
+   Каталогоос датасэт дээр дарахад нээгддэг хамгийн том хуудас (720
+   мөр). Шүүлтийн шошго, хүснэгтийн толгой, лиценз, эрхийн мэдэгдэл,
+   товчнууд бүгд ТЕМПЛЕЙТЭД хатуу бичигдсэн тул админ засаж чаддаггүй
+   байв.
+     Q1. Бичиг бүр content.json → site.detail дээр
+     Q2. Темплейт нэг объектоор холбогдоно (detail.t.*)
+     Q3. Админд бүлэг болж бүртгэгдсэн
+     Q4. Хатуу бичсэн текст ҮЛДЭЭГҮЙ
+   ══════════════════════════════════════════════════════════════════ */
+function groupQ() {
+  group('Q. Дэлгэрэнгүй хуудасны бичиг');
+  const idx = read('index.html'), adm = read('admin/index.html'), con = readJson('content.json');
+  const d = con.site && con.site.detail;
+
+  check('Q1. site.detail бүртгэгдсэн', !!d && Object.keys(d).length >= 30,
+    'түлхүүр: ' + (d ? Object.keys(d).length : 0));
+  check('Q1. Бичиг бүр stxt()-ээр уншигдана',
+    Object.keys(d || {}).every((k) => idx.includes("stxt('detail." + k + "'")),
+    'зарим түлхүүр кодод уншигдахгүй');
+
+  check('Q2. Нэг объектоор холбогдоно',
+    idx.includes('const detailT={') && idx.includes('t:detailT,'));
+  check('Q2. Темплейт detail.t.* ашиглана',
+    ['{{ detail.t.year }}', '{{ detail.t.filter }}', '{{ detail.t.license }}',
+      '{{ detail.t.schema_head }}', '{{ detail.t.excel_btn }}']
+      .every((b) => idx.includes(b)));
+
+  check('Q3. Админд "Дэлгэрэнгүй хуудас" бүлэгтэй',
+    adm.includes("{key:'detail', title:'Дэлгэрэнгүй (датасэт) хуудас'"));
+  check('Q3. ui_form-д ч бүртгэгдсэн (файлын тодорхойлолт давуу эрхтэй)',
+    (con.ui_form.site || []).some((g) => g.key === 'detail'));
+
+  check('Q4. Темплейтэд хатуу бичсэн текст ҮЛДЭЭГҮЙ',
+    ['>Жил:</div>', '>Багануудын тодорхойлолт<', '>Татах боломжтой хувилбарууд<',
+      'Лиценз: CC-BY 4.0 — эх сурвалжийг дурдана.</',
+      '>⇩ Excel татах<', '>Түлхүүр авах<']
+      .every((t) => !idx.includes(t)),
+    'хатуу бичсэн текст үлдсэн');
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
