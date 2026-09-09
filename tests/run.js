@@ -1480,11 +1480,123 @@ async function groupN() {
   } finally { srv.close(); }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   O. ДАТА САН — ДАТА ТӨВТЭЙ ХОЛБООС (MAP)
+
+   Хэрэглэгчийн шаардлага: "Ирсэн датаг нэг жагсаалтаар харуулах.
+   Түүнээс сонгоод виджеттэй MAP үүсгээд шууд нийтлэх. Бүх төрлөөр нь,
+   салбараар нь шүүж хардаг байх."
+
+   Архитектур: ХОЁР ХАРАГДАЦ, НЭГ ХОЛБООСЫН ЗАГВАР. Виджетийн талаас ч,
+   датаны талаас ч ЯГ НЭГ газар (metric_registry.json) бичнэ — тусдаа
+   хадгалалт үүсгэвэл "виджетээс өөр, датанаас өөр" гэсэн зөрүү гарна.
+     O1. Мөр бүр холбогдож болох НЭГ утга (метрик ба түүхий талбар)
+     O2. Шүүлт нь МӨРҮҮДЭЭС өөрөө гарна (шинэ датасэт нэмэхэд дагана)
+     O3. Зөвхөн НЭГЖ НЬ ТОХИРОХ байрлал санал болгоно (why() дахин)
+     O4. Холбох → салгах нэг товчоор, нэг өөрчлөлт нэг л удаа тоологдоно
+     O5. Хоёр тал ТОХИРНО: датанаас холбосон нь виджетийн дэлгэцэд гарна
+   ══════════════════════════════════════════════════════════════════ */
+async function groupO() {
+  group('O. Дата сан — дата төвтэй холбоос');
+  const adm = read('admin/index.html'), con = readJson('content.json');
+
+  check('O1. Дата сан хоёр төрлийн мөр үүсгэнэ (метрик + талбар)',
+    adm.includes('function invRows()') &&
+    adm.includes("kind:'metric'") && adm.includes("kind:'field'"));
+  check('O1. Түүхий талбар нь МАССИВ хэлбэрээр уншигдана (f[0], f.name БИШ)',
+    adm.includes('var fn=f[0]') && !adm.includes('invFieldUsers(ds,f.name,ag)'),
+    'measures() массив буцаадаг — f.name уншвал undefined');
+  check('O1. Дата сан "Дата холболт" табын ЭХЭНД',
+    adm.includes('var invHtml=lvInventory();') && adm.includes('return invHtml+'));
+
+  check('O2. Таван шүүлт (салбар, датасэт, нэгж, төрөл, төлөв)',
+    ["'sector'", "'dataset'", "'unit'", "'kind'", "'state'"]
+      .every((k) => adm.includes('[' + k + ',')),
+    'шүүлтийн бүрдэл дутуу');
+  check('O2. Шүүлтийн утга мөрүүдээс тооцогдоно (гараар бүртгээгүй)',
+    adm.includes('all.forEach(function(r){var v=invValue(r,fk);'));
+
+  check('O3. Зөвхөн нэгж нийцэх байрлал (why() дахин ашиглана)',
+    adm.includes('function invTargets(r)') &&
+    adm.includes('if(why(r.metric,requiredUnit(id,s.key))!==null) return;'));
+  check('O3. Ижил нэртэй виджет байрлалаараа ялгагдана',
+    adm.includes("+' · '+posInSection(id)"),
+    'w2pb/w2cb хоёр ижил нэртэй тул ялгах боломжгүй болно');
+
+  check('O4. Нэг товч холбох ба салгах',
+    adm.includes('data-invbind') && adm.includes("log(wid,'Метрик салгав: '") &&
+    adm.includes("delete w.value"));
+  check('O4. Хавтгай виджетийн өөрчлөлт ДАВХАР тоологдохгүй',
+    adm.includes('function slotCmp(v,path)') &&
+    adm.includes("if(k!=='value'&&k!=='chart')"),
+    'slotVal нь хавтгай виджетэд БҮХЭЛ объект буцаадаг тул value давхар тоологдоно');
+  check('O4. Мөрөөс шууд нийтлэх боломжтой',
+    adm.includes('data-invpub') && adm.includes("$('pubBtn')"));
+
+  check('O5. Дата сангийн текст content.json-д бүртгэгдсэн',
+    !!(con.ui && con.ui.inv && con.ui.inv.heading && con.ui.inv.map && con.ui.inv.f_sector));
+
+  if (!CHROME) { skipped('O6. Дата сан (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(4500);
+      d.querySelector('[data-tab="metrics"]').click(); await sleep(1400);
+      const R={};
+      R.rows=d.querySelectorAll('[data-inv-card]').length;
+      R.facets=d.querySelectorAll('.invf').length;
+      /* Шүүлт — зөвхөн түүхий талбар */
+      const kf=d.querySelector('[data-invf="kind|field"]');
+      if(!kf) return {__err:'төрлийн шүүлт алга'};
+      kf.click(); await sleep(800);
+      R.fieldRows=d.querySelectorAll('[data-inv-card]').length;
+      const cards=[...d.querySelectorAll('[data-inv-card]')];
+      const card=cards.filter(c=>/Зорчигч · SUM/.test(c.textContent))[0];
+      if(!card) return {__err:'"Зорчигч · SUM" мөр алга'};
+      R.label=card.querySelector('h3').textContent.trim();
+      card.querySelector('[data-invopen]').click(); await sleep(800);
+      R.targets=d.querySelectorAll('[data-invbind]').length;
+      R.dirty0=(d.getElementById('dirtyMsg')||{}).textContent||'';
+      const t=[...d.querySelectorAll('[data-invbind]')][0];
+      t.click(); await sleep(1200);
+      R.dirty1=(d.getElementById('dirtyMsg')||{}).textContent||'';
+      const again=[...d.querySelectorAll('[data-inv-card]')]
+        .filter(c=>/Зорчигч · SUM/.test(c.textContent))[0];
+      R.used=again?again.textContent.replace(/\s+/g,' '):'';
+      /* Хоёр тал тохирох эсэх — виджет рүү очиж слотын сонголтыг харна */
+      const go=[...again.querySelectorAll('[data-mgoto]')][0];
+      if(go){ go.click(); await sleep(1600) }
+      R.slotText=[...d.querySelectorAll('select')]
+        .map(s=>s.options[s.selectedIndex]?s.options[s.selectedIndex].text:'').join(' | ');
+      /* Салгах — буцаад дата сан руу */
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('O6. Дата сангийн DOM шалгалт', R.__err); return; }
+    check('O6. Ирсэн бүх дата нэг жагсаалтад', R.rows >= 50, 'мөр: ' + R.rows);
+    check('O6. Таван шүүлтийн мөр зурагдана', R.facets === 5, 'шүүлт: ' + R.facets);
+    check('O6. Төрлөөр шүүхэд жагсаалт хумигдана',
+      R.fieldRows > 0 && R.fieldRows < R.rows,
+      JSON.stringify({ all: R.rows, field: R.fieldRows }));
+    check('O6. Талбарын нэр зөв (undefined БИШ)',
+      /^Зорчигч · SUM/.test(R.label) && !/undefined/.test(R.label), R.label);
+    check('O6. Нэгж нийцэх байрлал санал болгоно', R.targets > 0, 'байрлал: ' + R.targets);
+    check('O6. Холбоход ЯГ НЭГ өөрчлөлт тоологдоно',
+      /Өөрчлөлт алга/.test(R.dirty0) && /^1 /.test(R.dirty1.trim()),
+      JSON.stringify({ before: R.dirty0.trim(), after: R.dirty1.trim() }));
+    check('O6. Холбосны дараа мөр "холбогдсон" болно',
+      /1 виджетэд холбогдсон/.test(R.used),
+      R.used.slice(0, 140));
+    check('O6. Датанаас холбосон нь ВИДЖЕТИЙН дэлгэцэд ч гарна',
+      /Зорчигч/.test(R.slotText) && /SUM/.test(R.slotText), R.slotText.slice(0, 120));
+  } finally { srv.close(); }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

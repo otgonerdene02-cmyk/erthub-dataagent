@@ -39,6 +39,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 /* ── зүүн: датасэт ── */
 .srch{width:100%;font-family:var(--mono);font-size:11.5px;padding:7px 10px;border:1px solid var(--line2);border-radius:7px;background:var(--card);margin-bottom:9px;color:var(--ink)}
 .srch:focus{outline:2px solid var(--road);outline-offset:1px;border-color:transparent}
+/* дата сан — шүүлтийн мөр */
+.invf{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 7px}
+.invf-l{font-family:var(--mono);font-size:9.5px;color:var(--ink3);min-width:64px;text-transform:uppercase;letter-spacing:.05em}
+.invf .fc .ct{font-family:var(--mono);font-size:9px;color:var(--ink3)}
 /* каталогийн мод + өнцгийн сонголт */
 .fct{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px}
 .fc{font-family:inherit;font-size:11px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:999px;padding:5px 11px;transition:.15s}
@@ -571,6 +575,8 @@ var REG=null, CON=null, REG0=null, CON0=null;
 var S={tab:'data',ds:null,level:'sections',section:null,widget:null,td:null,q:'',
        /* каталогийн мод: сонгосон өнцөг, идэвхтэй зангилаа, дэлгэсэн мөчир */
        facet:'page',node:null,twOpen:{},
+       /* дата сан: шүүлт ба нээлттэй мөр */
+       invF:{},invOpen:null,
        mo:null,mt:'view',flash:null,viz:{},
        /* виджет жагсаалтын хайлт+шүүлт (lvWidgets, lvAll хоёуланд) */
        wq:'',wQuality:'all',wPage:'all',wViz:'all'};
@@ -991,13 +997,26 @@ function miniBar(t,n){
    ЖИНХЭНЭЭР харьцуулж тодорхойлно. Ингэснээр салгаад буцааж ижил утгаар
    холбосон тохиолдол (файл эцсийн дүнд өөрчлөгдөөгүй) худал "өөрчлөгдсөн"
    гэж тоологдохгүй — экспорт яг юу бичихийг тоо нь үнэн харуулна. */
+/* ХАВТГАЙ (sectors:['air']) виджетийн слотын "зам" нь ХООСОН тул
+   slotVal() нь виджетийн БҮХЭЛ объектыг буцаана. Тэр объект дотор
+   утгын тохиргоо (value) ба чартын тохиргоо (chart) ч байдаг бөгөөд
+   тэдгээр нь ӨӨРСДИЙН тоологчтой (valueDirtyKeys / chartDirtyKeys) —
+   иймд эндээс хасахгүй бол нэг өөрчлөлт ХОЁР удаа тоологдож "2
+   өөрчлөлт" гэж ХУДАЛ харуулна. */
+function slotCmp(v,path){
+  if(path.length||!v||typeof v!=='object') return v;
+  var o={};
+  Object.keys(v).forEach(function(k){ if(k!=='value'&&k!=='chart') o[k]=v[k] });
+  return o;
+}
 function regDirtyKeys(){
   var out=[];
   SCOPE.forEach(function(id){
     slotsOf(id).forEach(function(s){
       var a=slotVal(id,s.path), b=REG0.widgets[id];
       s.path.forEach(function(p){b=b&&b[p]});
-      if(JSON.stringify(a)!==JSON.stringify(b)) out.push(id+'|'+s.path.join(','));
+      if(JSON.stringify(slotCmp(a,s.path))!==JSON.stringify(slotCmp(b,s.path)))
+        out.push(id+'|'+s.path.join(','));
     });
   });
   return out;
@@ -2319,7 +2338,201 @@ function lvServices(){
     esc(utxt('svc_cat.add','+ Шинэ үйлчилгээ'))+'</button></div></div>';
 }
 
+/* ══════════════════ ДАТА САН — ДАТА ТӨВТЭЙ ХАРАГДАЦ ═══════════════════
+   ХОЁР ХАРАГДАЦ, НЭГ ХОЛБООСЫН ЗАГВАР.
+
+   Одоо хүртэл холбоос нь ЗӨВХӨН виджетийн талаас үүсдэг байв: виджетээ
+   нээж → слотоо олж → метрикээ сонгоно. Гэтэл датаны портал дээр эсрэг
+   асуулт илүү олон гардаг: "ИНЕГ-ээс ирсэн ЭНЭ талбарыг хаана харуулах
+   вэ?". Тиймд ЭНЭ харагдац нь ирсэн бүх датаг НЭГ ЖАГСААЛТААР үзүүлж,
+   мөрөөс нь шууд виджет рүү холбоос (MAP) үүсгэнэ.
+
+   Хоёр харагдац НЭГ Л газар бичдэг — metric_registry.json. Тусдаа
+   хадгалалт үүсгэхгүй тул "виджетээс өөр, датанаас өөр" гэсэн зөрүү
+   гарах боломжгүй.
+
+   Мөр бүр нь ХОЛБОГДОЖ БОЛОХ НЭГ УТГА:
+     kind='metric' — registry-д бүртгэлтэй метрик (нэр, нэгж, чанартай)
+     kind='field'  — feed-ийн ТҮҮХИЙ талбар × нэгтгэл (Зорчигч·SUM г.м.)
+   Хоёулаа ижил мөрийн форматтай тул шүүлт, хайлт, холболт нэг код. */
+function invSectorOfMetric(mk){
+  var p=String(mk).split('.')[0];
+  return SECN[p]?p:((DSMETA[(REG.metrics[mk]||{}).dataset]||{}).s||'');
+}
+function invRows(){
+  var out=[];
+  /* (1) Бүртгэлтэй метрикүүд */
+  Object.keys(REG.metrics||{}).forEach(function(mk){
+    var m=REG.metrics[mk];
+    out.push({id:'m:'+mk, kind:'metric', metric:mk,
+      label:m.name||mk, note:mk,
+      dataset:m.dataset||'', unit:m.unit||'',
+      sector:invSectorOfMetric(mk), quality:m.quality||'mock',
+      used:mUsedBy(mk)});
+  });
+  /* (2) Датаны ТҮҮХИЙ талбар × нэгтгэл. Виджетийн слотын жагсаалтад
+     аль хэдийн байдаг сонголтууд — энд ДАТАНЫ талаас нь харуулж байна. */
+  if(typeof EHChart!=='undefined'){
+    Object.keys(EHChart.FIELDS||{}).forEach(function(ds){
+      var sec=(DSMETA[ds]||{}).s||'';
+      EHChart.measures(ds).forEach(function(f){
+        EHChart.AGG_LIST.forEach(function(ag){
+          if(ag==='COUNT') return;   /* COUNT нь талбараас хамаарахгүй — доор нэг удаа */
+          /* measures() нь [нэр, төрөл, тайлбар, гаргагч] гэсэн МАССИВ
+             буцаана (объект БИШ) — f.name гэж уншвал undefined болно. */
+          var fn=f[0], u=EHChart.unitOf(fn)||'';
+          out.push({id:'f:'+ds+'|'+fn+'|'+ag, kind:'field',
+            dataset:ds, field:fn, agg:ag,
+            label:fn+' · '+ag, note:f[2]||'',
+            unit:u, sector:sec, quality:'verified',
+            used:invFieldUsers(ds,fn,ag)});
+        });
+      });
+      out.push({id:'f:'+ds+'|*|COUNT', kind:'field', dataset:ds, field:null, agg:'COUNT',
+        label:utxt('inv.count_row','Бичлэгийн тоо · COUNT'), note:'',
+        unit:'', sector:sec, quality:'verified', used:invFieldUsers(ds,null,'COUNT')});
+    });
+  }
+  return out;
+}
+/* Энэ талбар+нэгтгэл ОДОО аль виджетэд тавигдсан байна вэ */
+function invFieldUsers(ds,field,ag){
+  if(typeof VALUE_TARGETS==='undefined') return [];
+  return Object.keys(VALUE_TARGETS).filter(function(id){
+    var v=(REG.widgets[id]||{}).value;
+    return !!(v&&v.dataset===ds&&(v.measure||null)===(field||null)&&v.agg===ag);
+  });
+}
+/* ── Шүүлт (facet). Утгууд нь МӨРҮҮДЭЭС өөрсдөө гарна — шинэ датасэт
+   эсвэл салбар нэмэгдэхэд шүүлт ӨӨРӨӨ дагана, гараар бүртгэхгүй. ── */
+function invFacetDefs(){
+  return [
+    ['sector', utxt('inv.f_sector','Салбар')],
+    ['dataset',utxt('inv.f_dataset','Датасэт')],
+    ['unit',   utxt('inv.f_unit','Нэгж')],
+    ['kind',   utxt('inv.f_kind','Төрөл')],
+    ['state',  utxt('inv.f_state','Төлөв')]
+  ];
+}
+function invValue(r,fk){
+  if(fk==='sector')  return r.sector||'—';
+  if(fk==='dataset') return r.dataset||'—';
+  if(fk==='unit')    return r.unit||'—';
+  if(fk==='kind')    return r.kind;
+  return r.used.length?'bound':'free';
+}
+function invValueLabel(fk,v){
+  if(v==='—') return utxt('inv.none','тодорхойгүй');
+  if(fk==='sector')  return SECN[v]||v;
+  if(fk==='dataset') return (DSMETA[v]||{}).n||v;
+  if(fk==='unit')    return unitLabel(v);
+  if(fk==='kind')    return v==='metric'?utxt('inv.kind_metric','Бүртгэлтэй метрик')
+                                        :utxt('inv.kind_field','Датаны талбар');
+  return v==='bound'?utxt('inv.state_bound','Холбогдсон'):utxt('inv.state_free','Сул');
+}
+function invMatch(r){
+  var q=(S.q||'').trim().toLowerCase();
+  if(q&&((r.label+' '+r.note+' '+r.dataset+' '+r.unit).toLowerCase().indexOf(q)<0)) return false;
+  var f=S.invF||{};
+  return invFacetDefs().every(function(d){
+    var sel=f[d[0]];
+    return !sel||invValue(r,d[0])===sel;
+  });
+}
+/* ── Холбох боломжит байрлалууд ──
+   Метрик → нэгж нь ТОХИРОХ слотууд (why() дахин ашиглана — хоёр газар
+   өөр дүрэм бичихгүй). Талбар → утгын тохиргоо дэмждэг виджетүүд. */
+function invTargets(r){
+  var out=[];
+  if(r.kind==='metric'){
+    SCOPE.forEach(function(id){
+      slotsOf(id).forEach(function(s){
+        if(why(r.metric,requiredUnit(id,s.key))!==null) return;
+        var cur=slotVal(id,s.path).metric===r.metric;
+        out.push({widget:id,path:s.path,key:s.key,cur:cur,
+          label:(curText(id,'title')||id)+(s.key?(' · '+(SECN[s.key]||s.key)):'')});
+      });
+    });
+  } else if(typeof VALUE_TARGETS!=='undefined'){
+    Object.keys(VALUE_TARGETS).forEach(function(id){
+      if(VALUE_TARGETS[id]!==r.dataset) return;
+      var v=(REG.widgets[id]||{}).value;
+      out.push({widget:id,value:true,
+        cur:!!(v&&v.dataset===r.dataset&&(v.measure||null)===(r.field||null)&&v.agg===r.agg),
+        label:(curText(id,'title')||id)+' · '+posInSection(id)});
+    });
+  }
+  return out;
+}
+
+/* ── Зурагч ── */
+function invChips(rows,all){
+  return invFacetDefs().map(function(d){
+    var fk=d[0], vals=[], cnt={};
+    all.forEach(function(r){var v=invValue(r,fk); if(vals.indexOf(v)<0)vals.push(v); cnt[v]=(cnt[v]||0)+1});
+    if(vals.length<2) return '';
+    var sel=(S.invF||{})[fk];
+    return '<div class="invf"><span class="invf-l">'+esc(d[1])+'</span>'+
+      '<button class="fc'+(sel?'':' on')+'" data-invf="'+esc(fk)+'|">'+esc(utxt('inv.all','Бүгд'))+'</button>'+
+      vals.sort().map(function(v){
+        return '<button class="fc'+(sel===v?' on':'')+'" data-invf="'+esc(fk)+'|'+esc(v)+'">'+
+          esc(invValueLabel(fk,v))+' <span class="ct">'+cnt[v]+'</span></button>';
+      }).join('')+'</div>';
+  }).join('');
+}
+function invRowHtml(r){
+  var open=S.invOpen===r.id;
+  var badge=r.kind==='metric'
+    ? '<span class="badge '+({verified:'b-ok',pending:'b-warn'}[r.quality]||'b-zero')+'">'+esc(qualityLabel(r.quality))+'</span>'
+    : '<span class="badge b-ok">'+esc(utxt('inv.kind_field','Датаны талбар'))+'</span>';
+  var h='<div class="sgroup" data-inv-card="'+esc(r.id)+'">'+
+    '<h3>'+esc(r.label)+' '+badge+'</h3>'+
+    '<div class="where" style="font-family:var(--mono)">'+
+      esc(invValueLabel('dataset',r.dataset||'—'))+
+      (r.unit?' · '+esc(unitLabel(r.unit)):'')+
+      (r.sector?' · '+esc(SECN[r.sector]||r.sector):'')+
+      (r.note?' · '+esc(r.note):'')+'</div>'+
+    '<div class="where">'+
+      (r.used.length
+        ? esc(r.used.length+' '+utxt('inv.used_n','виджетэд холбогдсон'))
+        : esc(utxt('inv.used_none','Одоогоор ямар ч виджетэд холбогдоогүй')))+
+      '</div>'+
+    (r.used.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'+
+      r.used.map(function(id){return '<button class="btn sm" data-mgoto="'+esc(id)+'">'+
+        esc(curText(id,'title')||id)+'</button>'}).join('')+'</div>':'')+
+    '<div class="acts"><button class="btn'+(open?'':' pri')+' sm" data-invopen="'+esc(r.id)+'">'+
+      esc(open?utxt('inv.close','Хаах'):utxt('inv.map','Виджеттэй холбох (MAP)'))+'</button></div>';
+  if(open){
+    var tg=invTargets(r);
+    h+='<div class="acc" style="margin-top:8px">'+esc(utxt('inv.map_note','Зөвхөн НЭГЖ НЬ ТОХИРОХ байрлал жагсана — үл нийцэх холбоос үүсгэх боломжгүй. Холбосон даруйд preview болон урьдчилан харах тоо шинэчлэгдэнэ.'))+'</div>'+
+      (tg.length
+        ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+tg.map(function(t){
+            return '<button class="btn sm'+(t.cur?' pri':'')+'" data-invbind="'+esc(r.id)+'@@'+esc(t.widget)+'@@'+esc((t.path||[]).join(','))+'">'+
+              esc(t.label)+(t.cur?' ✓':'')+'</button>';
+          }).join('')+'</div>'
+        : '<div class="empty" style="margin-top:8px">'+esc(utxt('inv.no_target','Нэгж нь тохирох байрлал алга — эхлээд нэгжийг нь тохируулна уу.'))+'</div>')+
+      '<div class="acts" style="margin-top:8px">'+
+        '<button class="btn pri sm" data-invpub="1">'+esc(utxt('publish.button','Сайтад нийтлэх'))+'</button>'+
+        '<span class="acc" style="margin-left:8px">'+esc(utxt('inv.pub_note','Холбоод шууд порталд гаргана. Эрхгүй эсвэл нэвтрээгүй бол доод мөрөнд шалтгааныг хэлнэ.'))+'</span>'+
+      '</div>';
+  }
+  return h+'</div>';
+}
+function lvInventory(){
+  var all=invRows(), rows=all.filter(invMatch);
+  return '<p class="ph">'+esc(utxt('inv.heading','Дата сан — ирсэн бүх өгөгдөл'))+' '+
+    '<span style="font-family:var(--mono)">'+rows.length+'/'+all.length+'</span></p>'+
+    '<p class="pvnote">'+esc(utxt('inv.note','Вэб сервисээс ирж буй бүх утга нэг жагсаалтад. Мөрөө сонгоод виджеттэй холбоод (MAP) шууд нийтэлж болно. Холбоос нь metric_registry.json дээр бичигдэх тул виджетийн засварын дэлгэцэд ч ижилхэн харагдана.'))+'</p>'+
+    invChips(rows,all)+
+    (rows.length?rows.map(invRowHtml).join('')
+      :'<div class="empty">'+esc(utxt('inv.empty','Шүүлтэд тохирох дата олдсонгүй'))+'</div>');
+}
+
 function lvMetrics(){
+  /* "Дата сан" ЭНД, хамгийн дээр. Мөрөө сонгоод шууд холбоод нийтлэх
+     урсгал нь табын ГОЛ үйлдэл — метрикийн метадатаг засах нь түүний
+     ард ирнэ. */
+  var invHtml=lvInventory();
   var mm=REG.metrics||{}, keys=Object.keys(mm).sort();
   var q=(S.q||'').trim().toLowerCase();
   var badgeCls={verified:'b-ok',pending:'b-warn',mock:'b-zero'};
@@ -2362,7 +2575,8 @@ function lvMetrics(){
   });
   if(!shown && q) html='<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
   if(!keys.length) html='<div class="empty">'+esc(utxt('metrics_tab.empty','Метрик бүртгэгдээгүй байна'))+'</div>';
-  return '<p class="ph">'+esc(utxt('metrics_tab.heading','Бүртгэлтэй метрикүүд'))+' '+
+  return invHtml+
+    '<p class="ph" style="margin-top:26px">'+esc(utxt('metrics_tab.heading','Бүртгэлтэй метрикүүд'))+' '+
     '<span style="font-family:var(--mono)">'+keys.length+'</span></p>'+html+
     '<p class="pvnote">'+esc(utxt('metrics_tab.note','Эдгээрийг виджетийн засварын дэлгэц дэх "Метрик холбох" сонголтод ашиглана. Эх сурвалж/датасэт/багана нь кодтой холбоотой тул зөвхөн хөгжүүлэгч өөрчилнө — нэгж, чанар, тайлбарыг энд шууд засаж болно.'))+'</p>'+
     '<div class="sgroup"><h3>'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</h3>'+
@@ -3224,6 +3438,48 @@ document.addEventListener('click',function(e){
     var dIdx=+el.dataset.dsDel;
     if(CON.site&&Array.isArray(CON.site.datasets)) CON.site.datasets.splice(dIdx,1);
     log('datasets','Каталогоос хасав: #'+(dIdx+1)); render(); return;
+  }
+  /* ── Дата сан ── */
+  if((el=t.closest&&t.closest('[data-invf]'))){
+    var ip=el.dataset.invf.split('|');
+    S.invF=S.invF||{};
+    if(ip[1]) S.invF[ip[0]]=ip[1]; else delete S.invF[ip[0]];
+    render(); return;
+  }
+  if((el=t.closest&&t.closest('[data-invopen]'))){
+    var ik=el.dataset.invopen;
+    S.invOpen=(S.invOpen===ik)?null:ik;
+    render(); return;
+  }
+  if((el=t.closest&&t.closest('[data-invbind]'))){
+    var bp=el.dataset.invbind.split('@@'), rid=bp[0], wid=bp[1],
+        bpath=bp[2]?bp[2].split(','):[];
+    var rr=invRows().filter(function(x){return x.id===rid})[0];
+    if(!rr) return;
+    if(rr.kind==='metric'){
+      var sv=slotVal(wid,bpath);
+      /* Дахин дарвал САЛГАНА — нэг товч холбох/салгах хоёуланг хийнэ */
+      if(sv.metric===rr.metric){ sv.metric=null; log(wid,'Метрик салгав: '+rr.metric) }
+      else { sv.metric=rr.metric; sv.quality='verified'; log(wid,'Метрик холбов: '+rr.metric) }
+    } else {
+      var w=REG.widgets[wid]||(REG.widgets[wid]={});
+      var same=w.value&&w.value.dataset===rr.dataset&&
+               (w.value.measure||null)===(rr.field||null)&&w.value.agg===rr.agg;
+      if(same){ delete w.value; log(wid,'Датаны талбарын холбоос салгав') }
+      else {
+        w.value={dataset:rr.dataset,agg:rr.agg};
+        if(rr.field) w.value.measure=rr.field;
+        log(wid,'Датаны талбар холбов: '+rr.label);
+      }
+    }
+    render(); toast(utxt('inv.mapped','Холбоос шинэчлэгдлээ — нийтлэхэд порталд гарна'));
+    return;
+  }
+  if(t.closest&&t.closest('[data-invpub]')){
+    var pbtn=$('pubBtn');
+    if(pbtn&&!pbtn.disabled){ pbtn.click(); return }
+    toast(($('saveHint')||{}).textContent||utxt('publish.disabled','Firebase тохируулаагүй — нийтлэх боломжгүй'));
+    return;
   }
   if((el=t.closest&&t.closest('[data-sv-add]'))){
     CON.site=CON.site||{}; CON.site.services=CON.site.services||[];
