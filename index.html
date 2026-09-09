@@ -1702,52 +1702,52 @@
         <div style="min-width:0;">
           <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px;">
             <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(140deg,#0FA37F3d,#0FA37F14);border:1px solid #0FA37F59;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🗂️</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">Нээлттэй өгөгдөл</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">{{ browseHero.kicker }}</div>
             <div style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,#0FA37F55,transparent);"></div>
           </div>
-          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">Өгөгдлийн сан ба <span style="background:linear-gradient(105deg,#0FA37F,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">API</span></h2>
-          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:60ch;line-height:1.65;text-wrap:pretty;">Каталогоос датасет татах, эсвэл API-аар шууд холбогдож бодит цагийн урсгал авах.</p>
+          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">{{ browseHero.head_a }} <span style="background:linear-gradient(105deg,#0FA37F,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">{{ browseHero.head_b }}</span></h2>
+          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:60ch;line-height:1.65;text-wrap:pretty;">{{ browseHero.lead }}</p>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
           <div style="position:relative;overflow:hidden;min-width:132px;background:linear-gradient(158deg,#0FA37F1f 0%,rgba(var(--surface-rgb),.94) 46%,rgba(var(--surface-rgb),.8) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:14px 16px 13px;box-shadow:var(--shadow);transition:.2s var(--ease);" style-hover="box-shadow:var(--shadow-lg);transform:translateY(-2px);">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#0FA37F,#0FA37F00);"></div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <div style="width:24px;height:24px;border-radius:8px;background:#0FA37F1f;border:1px solid #0FA37F4d;display:flex;align-items:center;justify-content:center;font-size:11.5px;flex-shrink:0;">🗂️</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">датасет</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ browseHero.c1.label }}</div>
             </div>
             <div style="display:flex;align-items:baseline;gap:6px;">
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">24</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">+3</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ browseHero.c1.value }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">{{ browseHero.c1.delta }}</div>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-top:9px;">
-              <div style="flex:1;height:4px;border-radius:3px;background:var(--surface2);overflow:hidden;"><div style="height:100%;width:78%;border-radius:3px;background:linear-gradient(90deg,#0FA37Faa,#0FA37F);"></div></div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);white-space:nowrap;">19 нээлттэй</div>
+              <div style="flex:1;height:4px;border-radius:3px;background:var(--surface2);overflow:hidden;"><div style="height:100%;width:{{ browseHero.c1.barWidth }};border-radius:3px;background:linear-gradient(90deg,#0FA37Faa,#0FA37F);"></div></div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);white-space:nowrap;">{{ browseHero.c1.sub }}</div>
             </div>
           </div>
           <div style="position:relative;overflow:hidden;min-width:132px;background:linear-gradient(158deg,#2E7CF61f 0%,rgba(var(--surface-rgb),.94) 46%,rgba(var(--surface-rgb),.8) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:14px 16px 13px;box-shadow:var(--shadow);transition:.2s var(--ease);" style-hover="box-shadow:var(--shadow-lg);transform:translateY(-2px);">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#2E7CF6,#2E7CF600);"></div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <div style="width:24px;height:24px;border-radius:8px;background:#2E7CF61f;border:1px solid #2E7CF64d;display:flex;align-items:center;justify-content:center;font-size:11.5px;flex-shrink:0;">📡</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">endpoint</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ browseHero.c2.label }}</div>
             </div>
             <div style="display:flex;align-items:baseline;gap:6px;">
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">9</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">v2</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ browseHero.c2.value }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">{{ browseHero.c2.delta }}</div>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-top:9px;">
               <div style="width:5px;height:5px;border-radius:50%;background:#0FA37F;animation:pulseGlow 1.8s infinite;flex-shrink:0;"></div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);white-space:nowrap;">99.9% uptime</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);white-space:nowrap;">{{ browseHero.c2.sub }}</div>
             </div>
           </div>
           <div style="position:relative;overflow:hidden;min-width:132px;background:linear-gradient(158deg,#7C5CF01f 0%,rgba(var(--surface-rgb),.94) 46%,rgba(var(--surface-rgb),.8) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:14px 16px 13px;box-shadow:var(--shadow);transition:.2s var(--ease);" style-hover="box-shadow:var(--shadow-lg);transform:translateY(-2px);">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7C5CF0,#7C5CF000);"></div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <div style="width:24px;height:24px;border-radius:8px;background:#7C5CF01f;border:1px solid #7C5CF04d;display:flex;align-items:center;justify-content:center;font-size:11.5px;flex-shrink:0;">📈</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">дуудлага/сар</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ browseHero.c3.label }}</div>
             </div>
             <div style="display:flex;align-items:baseline;gap:6px;">
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">1.1M</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">+12%</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ browseHero.c3.value }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">{{ browseHero.c3.delta }}</div>
             </div>
             <svg sc-camel-view-box="0 0 120 32" sc-camel-preserve-aspect-ratio="none" style="width:100%;height:17px;display:block;margin-top:8px;">
               <path d="M0,26 L20,23 L40,25 L60,17 L80,14 L100,9 L120,4" fill="none" stroke="#7C5CF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
@@ -2785,7 +2785,7 @@
     <div style="position:relative;z-index:1;display:flex;align-items:center;gap:16px;margin-bottom:10px;">
       <div style="width:52px;height:52px;border-radius:15px;background:{{ sectorPage.color }}1c;display:flex;align-items:center;justify-content:center;font-size:24px;">{{ sectorPage.glyph }}</div>
       <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px;">Салбарын дэлгэрэнгүй</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px;">{{ sectorPage.kicker }}</div>
         <h2 style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;letter-spacing:-.025em;margin:0;">{{ sectorPage.label }}</h2>
       </div>
     </div>
@@ -2876,7 +2876,7 @@
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
       <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px;">Салбарын нээлттэй өгөгдөл</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px;">{{ sectorPage.dataHead }}</div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <sc-for list="{{ sectorPage.datasets }}" as="sd" hint-placeholder-count="2">
             <div style="background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.74));box-shadow:var(--shadow);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);backdrop-filter:blur(18px) saturate(1.3);border-left:3px solid {{ sd.color }};border-radius:14px;padding:16px 20px;">
@@ -2890,7 +2890,7 @@
         </div>
       </div>
       <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px;">Холбогдох цахим үйлчилгээ</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px;">{{ sectorPage.svcHead }}</div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <sc-for list="{{ sectorPage.services }}" as="ss" hint-placeholder-count="3">
             <div style="background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.76));border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:16px;box-shadow:var(--shadow);backdrop-filter:blur(16px) saturate(1.3);padding:16px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">
@@ -2977,24 +2977,24 @@
         <div style="min-width:0;">
           <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px;">
             <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(140deg,#7C5CF03d,#7C5CF014);border:1px solid #7C5CF059;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🤝</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">Community · Нээлттэй шилэн төр</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">{{ commHero.kicker }}</div>
             <div style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,#7C5CF055,transparent);"></div>
           </div>
-          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">Төр, иргэнийг холбосон <span style="background:linear-gradient(105deg,#7C5CF0,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">өгөгдлийн гүүр</span></h2>
-          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:62ch;line-height:1.65;text-wrap:pretty;">Нээлттэй өгөгдөл дээр бүтсэн чарт, дашбоардаа хуваалцаж, өгөгдөлд үндэслэсэн бодлогын санал гаргана. Санал бүр яаманд хүрч, хариу нь ил тод бүртгэгдэнэ.</p>
+          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">{{ commHero.head_a }} <span style="background:linear-gradient(105deg,#7C5CF0,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">{{ commHero.head_b }}</span></h2>
+          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:62ch;line-height:1.65;text-wrap:pretty;">{{ commHero.lead }}</p>
         </div>
         <div style="display:flex;gap:10px;flex-shrink:0;">
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">18</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">бүтээл</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ commHero.c1.value }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ commHero.c1.label }}</div>
           </div>
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">3.3K</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">санал дэмжсэн</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ commHero.c2.value }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ commHero.c2.label }}</div>
           </div>
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">7</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">хэрэгжсэн</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ commHero.c3.value }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ commHero.c3.label }}</div>
           </div>
         </div>
       </div>
@@ -3171,37 +3171,37 @@
         <div style="min-width:0;">
           <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px;">
             <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(140deg,#2F5D733d,#2F5D7314);border:1px solid #2F5D7359;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🏛️</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">Салбарын түүх</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">{{ histHero.kicker }}</div>
             <div style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,#2F5D7355,transparent);"></div>
           </div>
-          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">1925 оноос <span style="background:linear-gradient(105deg,#2F5D73,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">өнөөг хүртэл</span></h2>
-          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:60ch;line-height:1.65;text-wrap:pretty;">Хөгжлийн замнал, шийдвэрлэх үйл явдлууд ба салбарыг тодорхойлсон хүмүүс.</p>
+          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">{{ histHero.head_a }} <span style="background:linear-gradient(105deg,#2F5D73,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">{{ histHero.head_b }}</span></h2>
+          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:60ch;line-height:1.65;text-wrap:pretty;">{{ histHero.lead }}</p>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
           <div style="position:relative;overflow:hidden;min-width:132px;background:linear-gradient(158deg,#2F5D731f 0%,rgba(var(--surface-rgb),.94) 46%,rgba(var(--surface-rgb),.8) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:14px 16px 13px;box-shadow:var(--shadow);transition:.2s var(--ease);" style-hover="box-shadow:var(--shadow-lg);transform:translateY(-2px);">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#2F5D73,#2F5D7300);"></div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <div style="width:24px;height:24px;border-radius:8px;background:#2F5D731f;border:1px solid #2F5D734d;display:flex;align-items:center;justify-content:center;font-size:11.5px;flex-shrink:0;">🕰️</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">жил</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ histHero.c1.label }}</div>
             </div>
             <div style="display:flex;align-items:baseline;gap:6px;">
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">101</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">1925→</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ histHero.c1.value }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">{{ histHero.c1.delta }}</div>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-top:9px;">
               <div style="flex:1;height:4px;border-radius:3px;background:var(--surface2);overflow:hidden;"><div style="height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#2F5D7333,#2F5D73);"></div></div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);white-space:nowrap;">6 эрин</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);white-space:nowrap;">{{ histHero.c1.sub }}</div>
             </div>
           </div>
           <div style="position:relative;overflow:hidden;min-width:132px;background:linear-gradient(158deg,#B9903A1f 0%,rgba(var(--surface-rgb),.94) 46%,rgba(var(--surface-rgb),.8) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:14px 16px 13px;box-shadow:var(--shadow);transition:.2s var(--ease);" style-hover="box-shadow:var(--shadow-lg);transform:translateY(-2px);">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#B9903A,#B9903A00);"></div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <div style="width:24px;height:24px;border-radius:8px;background:#B9903A1f;border:1px solid #B9903A4d;display:flex;align-items:center;justify-content:center;font-size:11.5px;flex-shrink:0;">📜</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">үйл явдал</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ histHero.c2.label }}</div>
             </div>
             <div style="display:flex;align-items:baseline;gap:6px;">
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">32</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">бүртгэл</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ histHero.c2.value }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">{{ histHero.c2.sub }}</div>
             </div>
             <div style="display:flex;align-items:flex-end;gap:3px;height:17px;margin-top:8px;">
               <div style="flex:1;height:38%;border-radius:2px 2px 0 0;background:#B9903A66;"></div>
@@ -3216,11 +3216,11 @@
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#2E5CE6,#2E5CE600);"></div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <div style="width:24px;height:24px;border-radius:8px;background:#2E5CE61f;border:1px solid #2E5CE64d;display:flex;align-items:center;justify-content:center;font-size:11.5px;flex-shrink:0;">🎖️</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">нэр</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ histHero.c3.label }}</div>
             </div>
             <div style="display:flex;align-items:baseline;gap:6px;">
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">24</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">алдартан</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ histHero.c3.value }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">{{ histHero.c3.sub }}</div>
             </div>
             <div style="display:flex;align-items:center;gap:4px;margin-top:9px;">
               <div style="display:flex;">
@@ -3228,7 +3228,7 @@
                 <div style="width:15px;height:15px;border-radius:50%;background:#2F5D73;border:1.5px solid #FFFFFF;margin-left:-5px;"></div>
                 <div style="width:15px;height:15px;border-radius:50%;background:#B9903A;border:1.5px solid #FFFFFF;margin-left:-5px;"></div>
               </div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);white-space:nowrap;">+21 бусад</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);white-space:nowrap;">{{ histHero.c3.more }}</div>
             </div>
           </div>
         </div>
@@ -3448,24 +3448,24 @@
         <div style="min-width:0;">
           <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px;">
             <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(140deg,#1B7FA63d,#1B7FA614);border:1px solid #1B7FA659;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">📰</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">Мэдээ мэдээлэл</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">{{ newsHero.kicker }}</div>
             <div style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,#1B7FA655,transparent);"></div>
           </div>
-          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">Баримт бичгийн сан <span style="background:linear-gradient(105deg,#1B7FA6,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">ба мэдээ</span></h2>
-          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:60ch;line-height:1.65;text-wrap:pretty;">Судалгаа, дүрэм журам, олон улсын гэрээ — салбарын бүх баримт нэг санд.</p>
+          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">{{ newsHero.head_a }} <span style="background:linear-gradient(105deg,#1B7FA6,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">{{ newsHero.head_b }}</span></h2>
+          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:60ch;line-height:1.65;text-wrap:pretty;">{{ newsHero.lead }}</p>
         </div>
         <div style="display:flex;gap:10px;flex-shrink:0;">
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">86</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">баримт</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ newsHero.c1.value }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ newsHero.c1.label }}</div>
           </div>
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">5</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">ангилал</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ newsHero.c2.value }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ newsHero.c2.label }}</div>
           </div>
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">12</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">шинэ мэдээ</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ newsHero.c3.value }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ newsHero.c3.label }}</div>
           </div>
         </div>
       </div>
@@ -3786,6 +3786,13 @@ const SERVICE_STEPS=[
   ['03','Хүсэлт илгээх','Маягтыг бөглөж, хураамжийг цахимаар төлнө. Дундаж бөглөх хугацаа 4 минут.'],
   ['04','Хариу авах','Шийдвэрлэх дундаж хугацаа 1.8 хоног. Мэдэгдэл SMS болон и-мэйлээр ирнэ.']
 ];
+/* Дэд хуудсуудын таб. Хуудас бүр өөрийн site.<хуудас>.tabs дээрээ
+   давхарлагдана — темплейтэд хатуу бичвэл админ засаж чадахгүй. */
+const BROWSE_TABS=[
+  ['catalog','Каталог','Бүх нээлттэй датасет'],
+  ['api','API лавлах','Endpoint, эрхийн хязгаар'],
+  ['dev','Хөгжүүлэгчид','Эхлэх заавар, лиценз']
+];
 const API_ENDPOINTS=[
   ['road','GET','/v1/traffic/live','Замын хөдөлгөөний бодит ачаалал','20 сек','86,400/сар'],
   ['road','GET','/v1/accidents','Замын ослын бүртгэл','Сар','12,400/сар'],
@@ -3814,6 +3821,15 @@ const DEV_CODE={
   js:'const res = await fetch("https://api.erthub.gov.mn/v1/bus/positions", {\n  headers: { "X-Api-Key": process.env.ERTHUB_KEY }\n});\nconst data = await res.json();',
   py:'import requests\n\nr = requests.get(\n  "https://api.erthub.gov.mn/v1/bus/positions",\n  headers={"X-Api-Key": ERTHUB_KEY}\n)\nprint(r.json())'
 };
+const COMM_TABS=[
+  ['projects','Бүтээлүүд','Дата дээр бүтсэн чарт, дашбоард'],
+  ['policy','Бодлогын санал','Өгөгдөлд үндэслэсэн санал'],
+  ['requests','Дата хүсэлт','Шинэ өгөгдөл нээх хүсэлт']
+];
+const NEWS_TABS=[
+  ['docs','Баримт бичиг','Судалгаа, журам, гэрээ'],
+  ['news','Салбарын мэдээ','Сүүлийн үеийн мэдээлэл']
+];
 const NEWS_ITEMS=[
   ['road','2026-08-10','Улаанбаатар–Дархан чиглэлийн 4 эгнээт замын ажил 62%-тай явж байна','Шинэ хурдны зам 2027 оны эхээр ашиглалтад орж, аяллын хугацааг 40 минутаар богиносгоно.'],
   ['air','2026-08-04','Чингис хаан ОУНБ-ын зорчигчийн урсгал түүхэн дээд амжилт тогтоолоо','7-р сард 412,000 зорчигч үйлчлүүлж, өмнөх оны мөн үеэс 18.4%-иар өссөн байна.'],
@@ -4107,7 +4123,8 @@ const PEOPLE=[
   {cat:'notable',name:'Гавьяат нисгэгчид',role:'Иргэний нисэхийн анхдагчид',term:'1956',bio:'1956 онд Монголын дотоодын анхны тогтмол нислэгийг үйлдэж, иргэний нисэхийн салбарыг хөл дээр нь босгосон нисгэгчид.'}
 ];
 const PEOPLE_CATS=[['all','Бүгд'],['minister','Сайд'],['deputy','Дэд сайд'],['secretary','ТНБД'],['notable','Бахархал']];
-const DOC_CATS=[['research','Судалгаа',119],['rules','Дүрэм, журам',86],['scholarship','Салбарын тэтгэлэг',14],['events','Арга хэмжээ',42],['glassindex','Шилэн индексийн үзүүлэлт',9],['treaty','Олон улсын гэрээ, конвенц',37],['agreement','Улс хоорондын хэлэлцээр',28]];
+/* Мөр: [түлхүүр, нэр]. Тоог ЭНД бичихгүй — DOCS сангаас өөрөө гарна. */
+const DOC_CATS=[['research','Судалгаа'],['rules','Дүрэм, журам'],['scholarship','Салбарын тэтгэлэг'],['events','Арга хэмжээ'],['glassindex','Шилэн индексийн үзүүлэлт'],['treaty','Олон улсын гэрээ, конвенц'],['agreement','Улс хоорондын хэлэлцээр']];
 const DOCS={
   research:[['air','Зүүн Өмнөд Азийн орнуудын тээврийн корридор, худалдааны судалгаа','ЗТЯ','2024','PDF'],['water','Зүүн хойд Азийн олон улсын боомтуудын хүчин чадлын судалгаа','ЗТЯ','2023','PDF'],['road','Монгол Улсын замын хөдөлгөөний аюулгүйн төлөв байдал 2010-2019','ЗТХЕГ','2023','PDF'],['air','ОХУ-аас баруун бүсээр агаарын хөлгийн шатахуун импортлох судалгаа','ИНЕГ','2023','PDF'],['road','Зам, тээврийн салбарын хүлэмжийн хийн судалгаа','ЗТЯ','2022','PDF'],['rail','Тээвэр, логистик, дижитал шилжилтийн салбарын тайлан','ЗТЯ','2024','PDF'],['road','Улаанбаатарын түгжрэлийн эдийн засгийн өртөг','ЗТЯ','2025','PDF'],['rail','Транс-Монголын коридорын ачаа урсгалын судалгаа','УБТЗ','2023','PDF'],['public','Нийтийн тээврийн хэрэглээний зан төлөвийн судалгаа','УБ хот','2025','PDF'],['water','Хөвсгөл нуурын аялал жуулчлалын ачааллын судалгаа','БОАЖЯ','2022','PDF'],['air','Бүсийн нисэх буудлуудын хүчин чадлын судалгаа','ИНЕГ','2024','PDF'],['road','Хөдөө орон нутгийн замын сүлжээний хүртээмж','ЗТЯ','2021','PDF'],['rail','Ачааны галт тэрэгний энергийн үр ашгийн судалгаа','УБТЗ','2025','PDF'],['public','Хотын автобусны маршрутын оновчлолын судалгаа','УБ хот','2024','PDF']],
   rules:[['road','Авто замын хөдөлгөөний дүрэм (шинэчилсэн найруулга)','ЗТЯ','2024','PDF'],['air','Иргэний нисэхийн дүрэм ИНД-121','ИНЕГ','2023','PDF'],['public','Нийтийн тээврийн үйлчилгээний журам','НТБГ','2024','PDF'],['rail','Төмөр замын тээврийн аюулгүй байдлын журам','УБТЗ','2022','PDF'],['water','Дотоодын усан замын тээврийн аюулгүй ажиллагааны журам','БОАЖЯ','2023','PDF'],['public','Нийтийн тээврийн үйлчилгээний стандарт','УБ хот','2025','PDF'],['rail','Төмөр замын ачаа тээврийн гэрээний загвар','УБТЗ','2022','PDF'],['road','Ачааны тээврийн зөвшөөрлийн журам','ЗТЯ','2024','PDF'],['air','Нисэх буудлын аюулгүй байдлын журам','ИНЕГ','2023','PDF'],['public','Такси үйлчилгээний зохицуулалтын журам','УБ хот','2025','PDF']],
@@ -4224,6 +4241,20 @@ function applySiteContent(){
   /* Цахим үйлчилгээний хуудасны таб ба алхмууд. Индексээр давхарлана —
      түлхүүр (tabs[i].key) нь SERVICES-ийн бүлэгтэй холбоотой тул
      ЗӨВХӨН нэр/тайлбар солигдоно, түлхүүр кодод үлдэнэ. */
+  /* Дэд хуудсуудын таб — хуудас бүр site.<хуудас>.tabs дээрээ.
+     Түлхүүр (эхний багана) КОДОД үлдэнэ: тэр нь төлөвийн утга тул
+     засвал хуудас ажиллахаа болино. Зөвхөн нэр, тайлбар солигдоно. */
+  const tabOverlay=(list,arr)=>{
+    if(!Array.isArray(arr)) return;
+    arr.forEach((t,i)=>{
+      if(!t||!list[i]) return;
+      if(t.label) list[i][1]=t.label;
+      if(t.sub)   list[i][2]=t.sub;
+    });
+  };
+  if(S.browse)    tabOverlay(BROWSE_TABS,S.browse.tabs);
+  if(S.community) tabOverlay(COMM_TABS,S.community.tabs);
+  if(S.news)      tabOverlay(NEWS_TABS,S.news.tabs);
   const es=S.eservices;
   if(es&&Array.isArray(es.tabs)) es.tabs.forEach((t,i)=>{
     if(!t||!SVC_TABS[i]) return;
@@ -6445,7 +6476,29 @@ class Component extends DCLogic {
 
     // ---- BROWSE ----
     const bt=this.state.browseTab;
-    const browseTabs=this.subNav([['catalog','Каталог','Бүх нээлттэй датасет'],['api','API лавлах','Endpoint, эрхийн хязгаар'],['dev','Хөгжүүлэгчид','Эхлэх заавар, лиценз']],bt,v=>({browseTab:v}));
+    const browseTabs=this.subNav(BROWSE_TABS,bt,v=>({browseTab:v}));
+    /* Толгойн 3 карт. Датасэт ба endpoint-ийн тоо нь ЖАГСААЛТААСАА гарна —
+       өмнө нь темплейтэд "24" ба "9" гэж ХАТУУ бичигдсэн байсан тул
+       каталогт 10 датасэт байхад хуудас 24 гэж ХУДАЛ бичдэг байв.
+       Дуудлагын тоо, uptime, өсөлтийн хувь нь кодод ямар ч эх сурвалжгүй
+       тул content.json-д бүртгэгдэж, хоосон бол "—" гарна (ТОО ЗОХИОХГҮЙ). */
+    const dsOpen=DATASETS.filter(d=>!(d.badges||[]).some(b=>/удахгүй/i.test(b))).length;
+    const browseHero={
+      kicker:stxt('browse.hero.kicker','Нээлттэй өгөгдөл'),
+      head_a:stxt('browse.hero.head_a','Өгөгдлийн сан ба'),
+      head_b:stxt('browse.hero.head_b','API'),
+      lead:  stxt('browse.hero.lead','Каталогоос датасет татах, эсвэл API-аар шууд холбогдож бодит цагийн урсгал авах.'),
+      c1:{label:stxt('browse.hero.c1_label','датасет'), value:String(DATASETS.length),
+          delta:stxt('browse.hero.c1_delta','')||'—',
+          sub:dsOpen+' '+stxt('browse.hero.c1_sub_word','нээлттэй'),
+          barWidth:(DATASETS.length?Math.round(dsOpen/DATASETS.length*100):0)+'%'},
+      c2:{label:stxt('browse.hero.c2_label','endpoint'), value:String(API_ENDPOINTS.length),
+          delta:stxt('browse.hero.c2_delta','')||'—',
+          sub:stxt('browse.hero.c2_sub','')||'—'},
+      c3:{label:stxt('browse.hero.c3_label','дуудлага/сар'),
+          value:stxt('browse.hero.c3_value','')||'—',
+          delta:stxt('browse.hero.c3_delta','')||'—'}
+    };
     const apiRows=API_ENDPOINTS.map(a=>({sector:a[0],method:a[1],path:a[2],desc:a[3],freq:a[4],use:a[5],
       color:NEON[a[0]],glyph:GLYPH[a[0]],sectorLabel:SECTORS[a[0]].label}));
     const devGuide=DEV_GUIDE.map((d,i)=>({num:String(i+1).padStart(2,'0'),title:d[0],body:d[1],isLast:i===DEV_GUIDE.length-1}));
@@ -6470,11 +6523,37 @@ class Component extends DCLogic {
 
     // ---- COMMUNITY ----
     const ct=this.state.commTab;
-    const commTabs=this.subNav([['projects','Бүтээлүүд','Дата дээр бүтсэн чарт, дашбоард'],['policy','Бодлогын санал','Өгөгдөлд үндэслэсэн санал'],['requests','Дата хүсэлт','Шинэ өгөгдөл нээх хүсэлт']],ct,v=>({commTab:v}));
+    const commTabs=this.subNav(COMM_TABS,ct,v=>({commTab:v}));
+    /* Толгойн 3 карт. Бүтээлийн тоо нь ЖАГСААЛТААС гарна — өмнө нь "18"
+       гэж хатуу бичигдсэн байсан тул бодит 6 бүтээлтэй үед хуудас 18
+       гэж ХУДАЛ бичдэг байв. Дэмжсэн санал, хэрэгжсэн тоо нь кодод эх
+       сурвалжгүй тул content.json-д бүртгэгдэж, хоосон бол "—". */
+    const commHero={
+      kicker:stxt('community.hero.kicker','Community · Нээлттэй шилэн төр'),
+      head_a:stxt('community.hero.head_a','Төр, иргэнийг холбосон'),
+      head_b:stxt('community.hero.head_b','өгөгдлийн гүүр'),
+      lead:  stxt('community.hero.lead','Нээлттэй өгөгдөл дээр бүтсэн чарт, дашбоардаа хуваалцаж, өгөгдөлд үндэслэсэн бодлогын санал гаргана. Санал бүр яаманд хүрч, хариу нь ил тод бүртгэгдэнэ.'),
+      c1:{value:String(PROJECTS.length), label:stxt('community.hero.c1_label','бүтээл')},
+      c2:{value:stxt('community.hero.c2_value','')||'—', label:stxt('community.hero.c2_label','санал дэмжсэн')},
+      c3:{value:String(POLICIES.length), label:stxt('community.hero.c3_label','бодлогын санал')}
+    };
 
     // ---- NEWS ----
     const nt=this.state.newsTab;
-    const newsTabs=this.subNav([['docs','Баримт бичиг','Судалгаа, журам, гэрээ'],['news','Салбарын мэдээ','Сүүлийн үеийн мэдээлэл']],nt,v=>({newsTab:v}));
+    const newsTabs=this.subNav(NEWS_TABS,nt,v=>({newsTab:v}));
+    /* Баримтын тоо нь DOCS сангаас, ангиллын тоо DOC_CATS-аас, мэдээний
+       тоо NEWS_ITEMS-ээс. Өмнө нь 86/5/12 гэж хатуу бичигдсэн байсан ч
+       бодит тоо огт өөр байв. */
+    const docTotal=Object.keys(DOCS).reduce((n,k)=>n+(DOCS[k]||[]).length,0);
+    const newsHero={
+      kicker:stxt('news.hero.kicker','Мэдээ мэдээлэл'),
+      head_a:stxt('news.hero.head_a','Баримт бичгийн сан'),
+      head_b:stxt('news.hero.head_b','ба мэдээ'),
+      lead:  stxt('news.hero.lead','Судалгаа, дүрэм журам, олон улсын гэрээ — салбарын бүх баримт нэг санд.'),
+      c1:{value:String(docTotal), label:stxt('news.hero.c1_label','баримт')},
+      c2:{value:String(DOC_CATS.length), label:stxt('news.hero.c2_label','ангилал')},
+      c3:{value:String(NEWS_ITEMS.length), label:stxt('news.hero.c3_label','мэдээ')}
+    };
     const nf=this.state.newsFilter||'all';
     const newsAll=NEWS_ITEMS.map(n=>({sector:n[0],date:n[1],title:n[2],body:n[3],
       color:NEON[n[0]],glyph:GLYPH[n[0]],sectorLabel:SECTORS[n[0]].label}));
@@ -6495,12 +6574,32 @@ class Component extends DCLogic {
 
     // ---- HISTORY eras ----
     const eras=ERAS.map((e,i)=>({range:e[0],title:e[1],body:e[2],color:NEON[keys[i%keys.length]]}));
+    /* Жилийн тоо нь ЭХНИЙ бүртгэлээс өнөөдрийг хүртэл. Үйл явдал ба
+       нэрийн тоо жагсаалтаасаа. Өмнө нь 101/32/24 гэж хатуу бичигдсэн ч
+       бодит бүртгэл 9 үйл явдал, 8 нэр байв. */
+    const histFrom=parseInt(String(HISTORY[0]&&HISTORY[0][0]).slice(0,4),10)||0;
+    const histYears=histFrom?(new Date().getFullYear()-histFrom+1):0;
+    const histHero={
+      kicker:stxt('history.hero.kicker','Салбарын түүх'),
+      head_a:stxt('history.hero.head_a','1925 оноос'),
+      head_b:stxt('history.hero.head_b','өнөөг хүртэл'),
+      lead:  stxt('history.hero.lead','Хөгжлийн замнал, шийдвэрлэх үйл явдлууд ба салбарыг тодорхойлсон хүмүүс.'),
+      c1:{value:String(histYears), label:stxt('history.hero.c1_label','жил'),
+          delta:histFrom?(histFrom+'→'):'—',
+          sub:ERAS.length+' '+stxt('history.hero.c1_sub_word','эрин')},
+      c2:{value:String(HISTORY.length), label:stxt('history.hero.c2_label','үйл явдал'),
+          sub:stxt('history.hero.c2_sub','бүртгэл')},
+      c3:{value:String(PEOPLE.length), label:stxt('history.hero.c3_label','нэр'),
+          sub:stxt('history.hero.c3_sub','хүн'),
+          /* Дугуй зурагт 3 хүн харагдана — үлдсэн нь ЖАГСААЛТААС. */
+          more:'+'+Math.max(0,PEOPLE.length-3)+' '+stxt('history.hero.c3_more_word','бусад')}
+    };
 
     return {svcTabs,svcHero,svcList:svcListShown,svcFeatured,svcSteps,svcCount,svcQuery,onSvcQuery,svcEmpty,
       svcListShowPager,svcListPageLabel,svcListPrev,svcListNext,
       isSvcCitizen:st==='citizen',showFeatured:svcList.length>1,
-      browseTabs,apiRows,devGuide,devTiers,devCodeTabs,devCode,isCatalog:bt==='catalog',isApi:bt==='api',isDev:bt==='dev',
-      commTabs,isProjects:ct==='projects',isRequests:ct==='requests',isPolicy:ct==='policy',
+      browseTabs,browseHero,apiRows,devGuide,devTiers,devCodeTabs,devCode,isCatalog:bt==='catalog',isApi:bt==='api',isDev:bt==='dev',
+      commTabs,commHero,newsHero,histHero,isProjects:ct==='projects',isRequests:ct==='requests',isPolicy:ct==='policy',
       newsTabs,newsList,newsFilters,newsEmpty,newsDetailOpen:!!newsDetail,newsDetail,isDocs:nt==='docs',isNews2:nt==='news',eras,
       newsQuery:this.state.newsQ||'',onNewsQuery:(e)=>this.setState({newsQ:e.target.value})};
   }
@@ -6993,7 +7092,10 @@ class Component extends DCLogic {
     })():null;
     const dcat=this.state.docCat;
     const docCats=DOC_CATS.map(c=>({
-      id:c[0],label:c[1],count:c[2],pick:()=>this.setState({docCat:c[0],docListPage:0,docQ:''}),
+      /* Ангиллын тоо нь БОДИТ баримтын сангаас. Өмнө нь DOC_CATS-ийн
+         3 дахь баганад гараар бичсэн тоо (119, 86 …) гарч, бодит 14, 10
+         бичлэгтэй үед хуудас ХУДАЛ тоо үзүүлдэг байв. */
+      id:c[0],label:c[1],count:(DOCS[c[0]]||[]).length,pick:()=>this.setState({docCat:c[0],docListPage:0,docQ:''}),
       style:'width:100%;text-align:left;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-radius:10px;font-size:13px;transition:.16s var(--ease);'
         +(c[0]===dcat?'border:1px solid var(--line2);background:var(--surface2);color:var(--ink);font-weight:600;':'border:1px solid transparent;background:transparent;color:var(--ink2);')
     }));
@@ -7245,6 +7347,11 @@ class Component extends DCLogic {
     };
     const ak=this.state.activeSector, as=SECTORS[ak];
     const sectorPage={
+      /* Хуудасны хэсгийн гарчиг — өмнө нь темплейтэд хатуу бичигдсэн тул
+         админ засаж чаддаггүй байв. */
+      kicker:stxt('sector.kicker','Салбарын дэлгэрэнгүй'),
+      dataHead:stxt('sector.data_head','Салбарын нээлттэй өгөгдөл'),
+      svcHead:stxt('sector.svc_head','Холбогдох цахим үйлчилгээ'),
       key:ak,label:as.label,color:NEON[ak],glyph:GLYPH[ak],c1:as.c1,rt:as.rt,c2:as.c2,
       kpis:as.kpis.map(k=>({label:k[0],value:k[1],unit:k[2],delta:k[3],
         deltaColor:k[4]==='down'?'#D2564A':(k[4]==='flat'?'#828EA8':'#2FA37B')})),

@@ -174,7 +174,7 @@ function groupB() {
       'services',
       /* `eservices` — цахим үйлчилгээний хуудасны таб ба алхмууд. Таб нь
          SVC_TABS, алхам нь SERVICE_STEPS тогтмол дээр давхарлагдана. */
-      'eservices',
+      'eservices','browse','community','news','history',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -1592,11 +1592,88 @@ async function groupO() {
   } finally { srv.close(); }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   P. ДЭД ХУУДСУУДЫН ТОЛГОЙ — ЗОХИОМОЛ ТООГ БОДИТ БОЛГОСОН
+
+   Хуудсуудын толгойн тоо бүгд ТЕМПЛЕЙТЭД ХАТУУ бичигдсэн байсан бөгөөд
+   бодит агуулгатай ЗӨРЖ байв:
+     Нээлттэй өгөгдөл "24 датасет"  ← каталогт 10
+     Коммунити        "18 бүтээл"   ← жагсаалтад 6
+     Салбарын түүх    "32 үйл явдал" ← бүртгэлд 9,  "24 нэр" ← 8
+     Мэдээ            "86 баримт"   ← санд 46,      "5 ангилал" ← 7
+     Баримтын ангилал "119 / 86 …"  ← бодит 14 / 10 …
+   Энэ бол "Тоо ЗОХИОХГҮЙ" дүрмийн зөрчил — хуудас өөрийнхөө хэмжээг
+   ХУДАЛ бичиж байсан.
+     P1. Тоо бүр ЖАГСААЛТААСАА гарна
+     P2. Эх сурвалжгүй тоо "—" болно, content.json-оос л утга авна
+     P3. Толгойн текст ба таб админаас засварлагдана
+     P4. Хатуу бичсэн тоо ҮЛДЭЭГҮЙ
+   ══════════════════════════════════════════════════════════════════ */
+function groupP() {
+  group('P. Дэд хуудсуудын толгой');
+  const idx = read('index.html'), adm = read('admin/index.html'), con = readJson('content.json');
+
+  check('P1. Датасэт ба endpoint-ийн тоо жагсаалтаас',
+    idx.includes('value:String(DATASETS.length)') &&
+    idx.includes('value:String(API_ENDPOINTS.length)'));
+  check('P1. Бүтээл ба бодлогын саналын тоо жагсаалтаас',
+    idx.includes('value:String(PROJECTS.length)') &&
+    idx.includes('value:String(POLICIES.length)'));
+  check('P1. Түүхийн жил, үйл явдал, нэрийн тоо бүртгэлээс',
+    idx.includes('new Date().getFullYear()-histFrom+1') &&
+    idx.includes('value:String(HISTORY.length)') &&
+    idx.includes('value:String(PEOPLE.length)'));
+  check('P1. Баримт, ангилал, мэдээний тоо сангаасаа',
+    idx.includes('const docTotal=Object.keys(DOCS).reduce') &&
+    idx.includes('value:String(DOC_CATS.length)') &&
+    idx.includes('value:String(NEWS_ITEMS.length)'));
+  check('P1. Ангилал бүрийн тоо БОДИТ баримтаас',
+    idx.includes('count:(DOCS[c[0]]||[]).length') &&
+    !/const DOC_CATS=\[\['research','Судалгаа',\d/.test(idx),
+    'DOC_CATS-д гараар бичсэн тоо үлдсэн');
+  check('P1. Алдартны "+N бусад" жагсаалтаас',
+    idx.includes("more:'+'+Math.max(0,PEOPLE.length-3)"));
+
+  check('P2. Эх сурвалжгүй тоо "—" болно',
+    ["browse.hero.c3_value", "browse.hero.c2_sub", "community.hero.c2_value"]
+      .every((k) => idx.includes("stxt('" + k + "','')||'—'")),
+    'эх сурвалжгүй утга хатуу тоогоор үлдсэн');
+  check('P2. content.json-д тэдгээр хоосон бүртгэгдсэн',
+    con.site.browse.hero.c3_value === '' &&
+    con.site.community.hero.c2_value === '',
+    'зохиомол тоо content.json-д бичигдсэн байна');
+
+  check('P3. Дөрвөн хуудасны толгой content.json-д',
+    ['browse', 'community', 'news', 'history']
+      .every((p) => con.site[p] && con.site[p].hero && con.site[p].hero.lead));
+  check('P3. Таб тогтмол болж, content.json-оос давхарлагдана',
+    idx.includes('const BROWSE_TABS=[') && idx.includes('const COMM_TABS=[') &&
+    idx.includes('const NEWS_TABS=[') && idx.includes('const tabOverlay=('));
+  check('P3. Табын түлхүүр КОДОД үлдэнэ (зөвхөн нэр солигдоно)',
+    idx.includes('if(t.label) list[i][1]=t.label;') &&
+    !idx.includes('list[i][0]='),
+    'түлхүүр засагдвал хуудас ажиллахаа болино');
+  check('P3. Админд хуудас бүрийн толгой ба таб бүлэгтэй',
+    adm.includes("{path:['browse','hero']") && adm.includes("{path:['community','hero']") &&
+    adm.includes("{path:['news','hero']") && adm.includes("{path:['history','hero']") &&
+    adm.includes('var PAGE_TABS=['));
+  check('P3. Табын бүлгийг хуудас бүрд ХУУЛЖ бичээгүй (нэг давталт)',
+    (adm.match(/Array\.isArray\(node\.tabs\)/g) || []).length === 1 &&
+    !adm.includes('if(esv&&Array.isArray(esv.tabs)){'),
+    'eservices-ийн хуучин блок үлдсэн — давхар зурагдана');
+
+  check('P4. Темплейтэд хатуу тоо ҮЛДЭЭГҮЙ',
+    ['>24</div>', '>18</div>', '>3.3K</div>', '>101</div>', '>32</div>',
+      '>86</div>', '>1.1M</div>', '+21 бусад', '19 нээлттэй', '99.9% uptime']
+      .every((t) => !idx.includes(t)),
+    'хатуу бичсэн тоо үлдсэн');
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

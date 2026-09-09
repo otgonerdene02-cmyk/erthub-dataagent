@@ -1059,6 +1059,8 @@ function contentDirty(){return conDirtyKeys().length+siteDirtyKeys().length}
    Бүлэг бүрийг ГАЗРЫН НЭРТЭЙГЭЭ хамт үзүүлнэ — засварлагч сайт дээр
    яг хаана байгааг нь мэдэж байж засна. Метрик/тооцоолол ЭНД БАЙХГҮЙ. */
 var SITE_GROUPS=[
+  {key:'sector', title:'Салбарын хуудас', where:'Салбар бүрийн дэлгэрэнгүй хуудас',
+   labels:{kicker:'Дээд шошго',data_head:'Өгөгдлийн хэсгийн гарчиг',svc_head:'Үйлчилгээний хэсгийн гарчиг'}},
   {key:'brand',   title:'Брэнд',           where:'Толгой хэсэг · зүүн дээд булан',
    labels:{mark:'Лого товчлол',name:'Брэнд нэр',tagline:'Лого доод тайлбар'}},
   {key:'nav',     title:'Үндсэн цэс',      where:'Толгой хэсэг · дээд мөр',
@@ -1099,6 +1101,35 @@ var SITE_NESTED=[
    labels:{label:'Гарчиг',unit:'Нэгж',note:'Тэмдэглэл'}},
   {path:['portal_kpi','orgs'],     title:'Портал 4 карт · Оролцогч байгууллага',where:'uk виджет — 4-р карт',
    labels:{label:'Гарчиг',unit:'Нэгж'}},
+  {path:['browse','hero'], title:'Нээлттэй өгөгдөл · толгой',
+   where:'Нээлттэй өгөгдөл хуудасны дээд баннер',
+   labels:{kicker:'Дээд шошго',head_a:'Гарчгийн эхний хэсэг',head_b:'Гарчгийн онцолсон хэсэг',
+           lead:'Тайлбар догол',
+           c1_label:'1-р карт · шошго (тоо нь каталогоос)',c1_delta:'1-р карт · өөрчлөлт',
+           c1_sub_word:'1-р карт · "нээлттэй" үг',
+           c2_label:'2-р карт · шошго (тоо нь API жагсаалтаас)',c2_delta:'2-р карт · хувилбар',
+           c2_sub:'2-р карт · доод бичиг',
+           c3_label:'3-р карт · шошго',c3_value:'3-р карт · тоо (эх сурвалжгүй)',
+           c3_delta:'3-р карт · өөрчлөлт'}},
+  {path:['community','hero'], title:'Коммунити · толгой',
+   where:'Коммунити хуудасны дээд баннер',
+   labels:{kicker:'Дээд шошго',head_a:'Гарчгийн эхний хэсэг',head_b:'Гарчгийн онцолсон хэсэг',
+           lead:'Тайлбар догол',
+           c1_label:'1-р карт · шошго (тоо нь бүтээлээс)',
+           c2_value:'2-р карт · тоо (эх сурвалжгүй)',c2_label:'2-р карт · шошго',
+           c3_label:'3-р карт · шошго (тоо нь саналаас)'}},
+  {path:['news','hero'], title:'Мэдээ мэдээлэл · толгой',
+   where:'Мэдээ мэдээлэл хуудасны дээд баннер',
+   labels:{kicker:'Дээд шошго',head_a:'Гарчгийн эхний хэсэг',head_b:'Гарчгийн онцолсон хэсэг',
+           lead:'Тайлбар догол',c1_label:'1-р карт · шошго',c2_label:'2-р карт · шошго',
+           c3_label:'3-р карт · шошго'}},
+  {path:['history','hero'], title:'Салбарын түүх · толгой',
+   where:'Салбарын түүх хуудасны дээд баннер',
+   labels:{kicker:'Дээд шошго',head_a:'Гарчгийн эхний хэсэг',head_b:'Гарчгийн онцолсон хэсэг',
+           lead:'Тайлбар догол',c1_label:'1-р карт · шошго',c1_sub_word:'1-р карт · "эрин" үг',
+           c2_label:'2-р карт · шошго',c2_sub:'2-р карт · доод бичиг',
+           c3_label:'3-р карт · шошго',c3_sub:'3-р карт · доод бичиг',
+           c3_more_word:'3-р карт · "бусад" үг'}},
   {path:['eservices','hero'], title:'Цахим үйлчилгээ · толгой',
    where:'Цахим үйлчилгээ хуудасны дээд баннер',
    labels:{kicker:'Дээд шошго',head_a:'Гарчгийн эхний хэсэг',head_b:'Гарчгийн онцолсон хэсэг',
@@ -1962,20 +1993,36 @@ function lvSite(){
   /* Цахим үйлчилгээний хуудасны ТАБ ба АЛХАМ — массив тул тусад нь.
      Табын нэр нь "Дата холболт" табын үйлчилгээний бүлгийн сонголтод ч
      шууд тусна (нэг үг хоёр газар бичигдэхгүй). */
-  var esv=siteGet(['eservices']);
-  if(esv&&Array.isArray(esv.tabs)){
-    var er='';
-    esv.tabs.forEach(function(_,i){
-      var pl=['eservices','tabs',String(i),'label'],
-          ll=utxt('site_tab.svc_tab_word','Бүлэг')+' '+(i+1)+' '+utxt('site_tab.chip_title','· гарчиг');
-      if(siteGet(pl)!==undefined&&match(ll,pl)){ er+=siteField(pl,ll); shown++; }
-      var ps=['eservices','tabs',String(i),'sub'],
-          ls=utxt('site_tab.svc_tab_word','Бүлэг')+' '+(i+1)+' '+utxt('site_tab.chip_body','· тайлбар');
-      if(siteGet(ps)!==undefined&&match(ls,ps)){ er+=siteField(ps,ls); shown++; }
+  var PAGE_TABS=[
+    ['eservices',utxt('site_tab.svc_tab_group','Цахим үйлчилгээ · хэрэглэгчийн бүлэг'),
+                 utxt('site_tab.svc_tab_where','Цахим үйлчилгээ хуудасны дээд таб'),
+                 utxt('site_tab.svc_tab_word','Бүлэг')],
+    ['browse',   utxt('site_tab.browse_tab_group','Нээлттэй өгөгдөл · таб'),
+                 utxt('site_tab.browse_tab_where','Нээлттэй өгөгдөл хуудасны дээд таб'),
+                 utxt('site_tab.tab_word','Таб')],
+    ['community',utxt('site_tab.comm_tab_group','Коммунити · таб'),
+                 utxt('site_tab.comm_tab_where','Коммунити хуудасны дээд таб'),
+                 utxt('site_tab.tab_word','Таб')],
+    ['news',     utxt('site_tab.news_tab_group','Мэдээ мэдээлэл · таб'),
+                 utxt('site_tab.news_tab_where','Мэдээ мэдээлэл хуудасны дээд таб'),
+                 utxt('site_tab.tab_word','Таб')]
+  ];
+  PAGE_TABS.forEach(function(pg){
+    var node=siteGet([pg[0]]);
+    if(!node||!Array.isArray(node.tabs)) return;
+    var tr='';
+    node.tabs.forEach(function(_,i){
+      var pl=[pg[0],'tabs',String(i),'label'],
+          ll=pg[3]+' '+(i+1)+' '+utxt('site_tab.chip_title','· гарчиг');
+      if(siteGet(pl)!==undefined&&match(ll,pl)){ tr+=siteField(pl,ll); shown++; }
+      var ps=[pg[0],'tabs',String(i),'sub'],
+          ls=pg[3]+' '+(i+1)+' '+utxt('site_tab.chip_body','· тайлбар');
+      if(siteGet(ps)!==undefined&&match(ls,ps)){ tr+=siteField(ps,ls); shown++; }
     });
-    if(er) html+='<div class="sgroup"><h3>'+esc(utxt('site_tab.svc_tab_group','Цахим үйлчилгээ · хэрэглэгчийн бүлэг'))+'</h3>'+
-      '<div class="where">'+esc(utxt('site_tab.svc_tab_where','Цахим үйлчилгээ хуудасны дээд таб'))+'</div>'+er+'</div>';
-  }
+    if(tr) html+='<div class="sgroup"><h3>'+esc(pg[1])+'</h3>'+
+      '<div class="where">'+esc(pg[2])+'</div>'+tr+'</div>';
+  });
+  var esv=siteGet(['eservices']);
   if(esv&&Array.isArray(esv.steps)){
     var sr='';
     esv.steps.forEach(function(_,i){
