@@ -1040,6 +1040,16 @@ var SITE_NESTED=[
    labels:{label:'Гарчиг',unit:'Нэгж',note:'Тэмдэглэл'}},
   {path:['portal_kpi','orgs'],     title:'Портал 4 карт · Оролцогч байгууллага',where:'uk виджет — 4-р карт',
    labels:{label:'Гарчиг',unit:'Нэгж'}},
+  {path:['eservices','hero'], title:'Цахим үйлчилгээ · толгой',
+   where:'Цахим үйлчилгээ хуудасны дээд баннер',
+   labels:{kicker:'Дээд шошго',head_a:'Гарчгийн эхний хэсэг',head_b:'Гарчгийн онцолсон хэсэг',
+           lead:'Тайлбар догол',total_label:'1-р картын шошго (тоо нь жагсаалтаас)',
+           taken:'2-р картын тоо (хоосон бол "—" гарна)',taken_label:'2-р картын шошго'}},
+  {path:['eservices'], title:'Цахим үйлчилгээ · хуудасны бичиг',
+   where:'Цахим үйлчилгээ хуудас',
+   labels:{count_word:'Тоолуурын үг ("12 үйлчилгээ")',
+           stat_fallback:'Ашиглалтын тоогүй үед гарах бичиг',
+           featured_stat:'Онцлох картын нөхөх бичиг'}},
   {path:['hero','ticker'], title:'Hero · гүйдэг мөр', where:'Hero дээд ирмэг — код 2 газар ашиглана',
    labels:{ai:'AI мөр',road:'Авто замын мөр',live:'Шууд мэдээллийн мөр'}},
   {path:['hero','diagram'],title:'Hero · AI CORE диаграм', where:'Hero баруун тал',
@@ -1767,6 +1777,36 @@ function lvSite(){
     if(rows) html+='<div class="sgroup"><h3>'+esc(utxt('site_tab.chip_group','Hero · чип'))+'</h3>'+
       '<div class="where">'+esc(utxt('site_tab.chip_where','Hero диаграмын доод эгнээ'))+'</div>'+rows+'</div>';
   }
+  /* Цахим үйлчилгээний хуудасны ТАБ ба АЛХАМ — массив тул тусад нь.
+     Табын нэр нь "Дата холболт" табын үйлчилгээний бүлгийн сонголтод ч
+     шууд тусна (нэг үг хоёр газар бичигдэхгүй). */
+  var esv=siteGet(['eservices']);
+  if(esv&&Array.isArray(esv.tabs)){
+    var er='';
+    esv.tabs.forEach(function(_,i){
+      var pl=['eservices','tabs',String(i),'label'],
+          ll=utxt('site_tab.svc_tab_word','Бүлэг')+' '+(i+1)+' '+utxt('site_tab.chip_title','· гарчиг');
+      if(siteGet(pl)!==undefined&&match(ll,pl)){ er+=siteField(pl,ll); shown++; }
+      var ps=['eservices','tabs',String(i),'sub'],
+          ls=utxt('site_tab.svc_tab_word','Бүлэг')+' '+(i+1)+' '+utxt('site_tab.chip_body','· тайлбар');
+      if(siteGet(ps)!==undefined&&match(ls,ps)){ er+=siteField(ps,ls); shown++; }
+    });
+    if(er) html+='<div class="sgroup"><h3>'+esc(utxt('site_tab.svc_tab_group','Цахим үйлчилгээ · хэрэглэгчийн бүлэг'))+'</h3>'+
+      '<div class="where">'+esc(utxt('site_tab.svc_tab_where','Цахим үйлчилгээ хуудасны дээд таб'))+'</div>'+er+'</div>';
+  }
+  if(esv&&Array.isArray(esv.steps)){
+    var sr='';
+    esv.steps.forEach(function(_,i){
+      var pt=['eservices','steps',String(i),'title'],
+          lt=utxt('site_tab.svc_step_word','Алхам')+' '+(i+1)+' '+utxt('site_tab.chip_title','· гарчиг');
+      if(siteGet(pt)!==undefined&&match(lt,pt)){ sr+=siteField(pt,lt); shown++; }
+      var pb2=['eservices','steps',String(i),'body'],
+          lb2=utxt('site_tab.svc_step_word','Алхам')+' '+(i+1)+' '+utxt('site_tab.chip_body','· тайлбар');
+      if(siteGet(pb2)!==undefined&&match(lb2,pb2)){ sr+=siteField(pb2,lb2); shown++; }
+    });
+    if(sr) html+='<div class="sgroup"><h3>'+esc(utxt('site_tab.svc_step_group','Цахим үйлчилгээ · 4 алхам'))+'</h3>'+
+      '<div class="where">'+esc(utxt('site_tab.svc_step_where','Цахим үйлчилгээ хуудасны "Хэрхэн авах вэ?" хэсэг'))+'</div>'+sr+'</div>';
+  }
   /* months — 01-р хэсгийн хугацааны шүүлтийн сарын шошго (2 сонголтод адил) */
   var mo=siteGet(['months']);
   if(Array.isArray(mo)){
@@ -1828,7 +1868,12 @@ function lvSite(){
   Object.keys(ufBy).sort().forEach(function(grp){
     var rows='';
     ufBy[grp].forEach(function(x){ rows+=siteField(x.p,x.l); ufShown++ });
-    if(rows) ufHtml+='<div class="sgroup"><h3>'+esc(grp)+'</h3>'+rows+'</div>';
+    /* Гарчигт дагавар нэмнэ: энэ бүлэг нь дээрх жинхэнэ текстийн бүлэгтэй
+       ЯГ ижил нэртэй (ui_form нь тэр бүлгийн НЭРИЙГ хадгалдаг) тул дагаваргүй
+       бол засварлагч нэг хуудсан дээр ижил гарчиг хоёр удаа хараад аль нь
+       сайт дээр гарахыг ялгаж чадахгүй. */
+    if(rows) ufHtml+='<div class="sgroup"><h3>'+esc(grp)+' '+
+      esc(utxt('site_tab.ufh_suffix','· бүлгийн нэрлэлт'))+'</h3>'+rows+'</div>';
   });
   shown+=uiShown+autoShown+ufShown;
   if(!shown) return '<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
@@ -2043,6 +2088,74 @@ function lvDatasets(){
     esc(utxt('ds_cat.add','+ Шинэ датасэт'))+'</button></div></div>';
 }
 
+/* ЦАХИМ ҮЙЛЧИЛГЭЭНИЙ каталог — датасэтийнхтэй ЯГ ижил хэв маяг.
+   Хэрэглэгчийн шаардлага: "датасэт, ҮЙЛЧИЛГЭЭ зэрэг текстүүд засварлах
+   боломжгүй байна". Хэрэглэгчийн бүлэг (иргэн/бизнес/тээвэрлэгч) нь
+   бичлэг дээрээ байх тул нэр солиход бүлэг алдагдахгүй. */
+function svcFieldDefs(){
+  /* Шошго бүр ЛИТЕРАЛ utxt() — динамик түлхүүр бол text-coverage
+     статик шинжилгээгээр 'уншигдахгүй' гэж тооцогдоно (F4/F5). */
+  return [
+    ['name', utxt('svc_cat.f_name','Нэр'), false],
+    ['desc', utxt('svc_cat.f_desc','Тайлбар'), true],
+    ['hits', utxt('svc_cat.f_hits','Ашиглалт (жиш. "4,685,647 хандалт")'), false]
+  ];
+}
+/* Бүлгийн нэрийг САЙТЫН табнаас (site.eservices.tabs) уншина — админд
+   тусад нь бичвэл нэг үг хоёр газар давхардаж, сайт дээрх нэрийг
+   өөрчилсөн ч энэ сонголт хуучнаараа үлдэнэ. */
+function svcAudDefs(){
+  var FB=[['citizen','Иргэнд'],['business','Бизнест'],['carrier','Тээвэрлэгчид']];
+  var t=(CON.site&&CON.site.eservices&&CON.site.eservices.tabs)||[];
+  return FB.map(function(f,i){ return [f[0],(t[i]&&t[i].label)||f[1]] });
+}
+function svcList(){ return (CON.site&&CON.site.services)||[] }
+function svcField(i,f,lab,long){
+  var d=svcList()[i]||{}, v=d[f]==null?'':d[f];
+  var b=((CON0.site&&CON0.site.services)||[])[i]||{};
+  var dirty=String(v)!==String(b[f]==null?'':b[f]);
+  return '<div class="sfield'+(dirty?' dirty':'')+'"><div class="lbl">'+esc(lab)+
+    (dirty?' <b class="dt">'+esc(utxt('site_tab.changed','өөрчлөгдсөн'))+'</b>':'')+'</div>'+
+    (long?'<textarea data-vf="'+i+'|'+f+'" rows="2">'+esc(v)+'</textarea>'
+         :'<input data-vf="'+i+'|'+f+'" value="'+esc(v)+'">')+'</div>';
+}
+function lvServices(){
+  var list=svcList(), q=(S.q||'').trim().toLowerCase();
+  var secOpts=Object.keys(SECN).filter(function(k){return k!=='plan'&&k!=='other'});
+  var auds=svcAudDefs();
+  var audName=function(a){ for(var i=0;i<auds.length;i++) if(auds[i][0]===a) return auds[i][1]; return a||'—' };
+  var html='', shown=0;
+  list.forEach(function(d,i){
+    var hay=((d.name||'')+' '+(d.desc||'')).toLowerCase();
+    if(q&&hay.indexOf(q)<0) return;
+    shown++;
+    html+='<div class="sgroup" data-sv-card="'+i+'"><h3>'+esc(d.name||('#'+(i+1)))+
+      ' <span class="badge b-zero">'+esc(SECN[d.sector]||d.sector||'—')+'</span>'+
+      ' <span class="badge b-zero">'+esc(audName(d.aud))+'</span></h3>'+
+      '<div class="sfield"><div class="lbl">'+esc(utxt('svc_cat.f_sector','Салбар'))+'</div>'+
+      '<select data-vf="'+i+'|sector">'+secOpts.map(function(k){
+        return '<option value="'+esc(k)+'"'+(d.sector===k?' selected':'')+'>'+esc(SECN[k]||k)+'</option>'
+      }).join('')+'</select></div>'+
+      '<div class="sfield"><div class="lbl">'+esc(utxt('svc_cat.f_aud','Хэрэглэгчийн бүлэг'))+'</div>'+
+      '<select data-vf="'+i+'|aud">'+auds.map(function(a){
+        return '<option value="'+esc(a[0])+'"'+((d.aud||'citizen')===a[0]?' selected':'')+'>'+esc(a[1])+'</option>'
+      }).join('')+'</select></div>'+
+      svcFieldDefs().map(function(f){return svcField(i,f[0],f[1],f[2])}).join('')+
+      '<div class="acts"><button class="btn sm" data-sv-del="'+i+'">'+
+      esc(utxt('svc_cat.remove','Каталогоос хасах'))+'</button></div>'+
+      '</div>';
+  });
+  if(!shown&&q) html='<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
+  return '<p class="ph" style="margin-top:22px">'+esc(utxt('svc_cat.heading','Цахим үйлчилгээний каталог'))+' '+
+    '<span style="font-family:var(--mono)">'+list.length+'</span></p>'+
+    '<p class="pvnote">'+esc(utxt('svc_cat.note','Сайтын "Цахим үйлчилгээ" хуудсанд гарах жагсаалт. Эндээс засаж, шинэ үйлчилгээ НЭМЖ болно — порталын "Цахим үйлчилгээ" картын тоо ч автоматаар дагана.'))+'</p>'+
+    html+
+    '<div class="sgroup"><h3>'+esc(utxt('svc_cat.add','+ Шинэ үйлчилгээ'))+'</h3>'+
+    '<div class="acc">'+esc(utxt('svc_cat.add_note','Хоосон бичлэг нэмнэ — дараа нь талбаруудыг нь бөглөнө. Нэр хоосон бол сайтад харагдахгүй.'))+'</div>'+
+    '<div class="acts"><button class="btn pri sm" data-sv-add="1">'+
+    esc(utxt('svc_cat.add','+ Шинэ үйлчилгээ'))+'</button></div></div>';
+}
+
 function lvMetrics(){
   var mm=REG.metrics||{}, keys=Object.keys(mm).sort();
   var q=(S.q||'').trim().toLowerCase();
@@ -2098,7 +2211,7 @@ function lvMetrics(){
     '<div class="sfield"><textarea id="mNewWn" rows="2" placeholder="'+esc(utxt('metrics_tab.add_would_need_ph','Ямар эх сурвалж хэрэгтэйг бичнэ үү'))+'"></textarea></div>'+
     '<div class="acts"><button class="btn pri sm" data-madd="1">'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</button></div>'+
     '</div>'+
-    lvCharts()+lvDatasets();
+    lvCharts()+lvDatasets()+lvServices();
 }
 
 /* ══════════════════ ХАЙЛТ + ШҮҮЛТ ══════════════════
@@ -2927,6 +3040,16 @@ document.addEventListener('click',function(e){
     if(CON.site&&Array.isArray(CON.site.datasets)) CON.site.datasets.splice(dIdx,1);
     log('datasets','Каталогоос хасав: #'+(dIdx+1)); render(); return;
   }
+  if((el=t.closest&&t.closest('[data-sv-add]'))){
+    CON.site=CON.site||{}; CON.site.services=CON.site.services||[];
+    CON.site.services.push({sector:'road',name:'',desc:'',hits:'',aud:'citizen'});
+    log('services','Каталогт шинэ үйлчилгээ нэмэв'); render(); return;
+  }
+  if((el=t.closest&&t.closest('[data-sv-del]'))){
+    var vIdx=+el.dataset.svDel;
+    if(CON.site&&Array.isArray(CON.site.services)) CON.site.services.splice(vIdx,1);
+    log('services','Каталогоос хасав: #'+(vIdx+1)); render(); return;
+  }
   if(t.closest&&t.closest('[data-tsave]')){
     var id=S.widget,d=dirtyTextFields(id);
     if(!d.length)return;
@@ -2997,6 +3120,8 @@ document.addEventListener('change',function(e){
   var t=e.target;
   var dfSel=t.closest&&t.closest('[data-df]');
   if(dfSel&&dfSel.tagName==='SELECT'){ dfSel.dispatchEvent(new Event('input',{bubbles:true})); render(); return }
+  var vfSel=t.closest&&t.closest('[data-vf]');
+  if(vfSel&&vfSel.tagName==='SELECT'){ vfSel.dispatchEvent(new Event('input',{bubbles:true})); render(); return }
   var cf=t.closest&&t.closest('[data-cf]');
   if(cf){ cfApply(cf); return }
   var mfq=t.closest&&t.closest('[data-mfq]');
@@ -3141,6 +3266,25 @@ document.addEventListener('input',function(e){
     var dn=dirtyCount();
     $('dirtyMsg').innerHTML=dn?('<b>'+dn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
     $('expBtn').disabled=dn===0; $('revBtn').disabled=dn===0;
+    if(typeof refreshPubBtn==='function') refreshPubBtn();
+    return;
+  }
+  /* Цахим үйлчилгээний каталогийн талбар — датасэтийнхтэй ижил урсгал. */
+  var vf=el.closest&&el.closest('[data-vf]');
+  if(vf){
+    var vp=vf.dataset.vf.split('|'), vi=+vp[0], vfield=vp[1];
+    CON.site=CON.site||{}; CON.site.services=CON.site.services||[];
+    CON.site.services[vi]=CON.site.services[vi]||{};
+    if(vf.value!=='') CON.site.services[vi][vfield]=vf.value;
+    else delete CON.site.services[vi][vfield];
+    var vrow=vf.closest('.sfield');
+    if(vrow){
+      var vb0=((CON0.site&&CON0.site.services)||[])[vi]||{};
+      vrow.classList.toggle('dirty',String(vf.value)!==String(vb0[vfield]==null?'':vb0[vfield]));
+    }
+    var vn=dirtyCount();
+    $('dirtyMsg').innerHTML=vn?('<b>'+vn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
+    $('expBtn').disabled=vn===0; $('revBtn').disabled=vn===0;
     if(typeof refreshPubBtn==='function') refreshPubBtn();
     return;
   }

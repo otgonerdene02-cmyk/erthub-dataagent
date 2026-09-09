@@ -168,6 +168,13 @@ function groupB() {
          дотор массиваар (индексээр) DATASETS дээр давхарлагддаг тул бусад
          динамик бүлэгтэй ижил зарчмаар шалгагдана. */
       'datasets',
+      /* `services` — цахим үйлчилгээний каталог. datasets-тэй ЯГ ижил
+         зарчим: applySiteContent() дотор индексээр SERVICES дээр
+         давхарлагддаг тул stxt() хайлтад орохгүй. */
+      'services',
+      /* `eservices` — цахим үйлчилгээний хуудасны таб ба алхмууд. Таб нь
+         SVC_TABS, алхам нь SERVICE_STEPS тогтмол дээр давхарлагдана. */
+      'eservices',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -1255,11 +1262,124 @@ async function groupL() {
   } finally { srv.close(); }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   M. ЦАХИМ ҮЙЛЧИЛГЭЭНИЙ КАТАЛОГ (админаас удирдана)
+
+   Хэрэглэгчийн шаардлага: "виджетийн датасэт, ҮЙЛЧИЛГЭЭ зэрэг текстүүд
+   засварлах боломжгүй байна". Датасэтийг L бүлэгт шийдсэн — энэ нь
+   түүний хосорсон тал: цахим үйлчилгээний жагсаалт.
+     M1. Каталог content.json-д бүртгэгдэж, сайт түүнийг уншина
+     M2. Хэрэглэгчийн БҮЛЭГ (иргэн/бизнес/тээвэрлэгч) бичлэг ДЭЭРЭЭ —
+         нэрээр хайдаг зураглал байхгүй. Нэр солиход бүлэг чимээгүй
+         "Иргэнд" рүү унах алдаанаас хамгаална.
+     M3. Порталын "Цахим үйлчилгээ" тоо жагсаалтын уртаас — тоо ЗОХИОХГҮЙ
+     M4. Админд карт бүр засварлагдаж, нэмэх/хасах товчтой
+     M5. Админ дээр нэмэх/засах/хасах бодитоор ажиллана (DOM)
+   ══════════════════════════════════════════════════════════════════ */
+async function groupM() {
+  group('M. Цахим үйлчилгээний каталог');
+  const con = readJson('content.json'), idx = read('index.html'), adm = read('admin/index.html');
+
+  const sv = con.site && con.site.services;
+  check('M1. Каталог content.json-д бүртгэгдсэн', Array.isArray(sv) && sv.length >= 11,
+    'бичлэг: ' + (sv ? sv.length : 0));
+  check('M1. Бичлэг бүр нэр ба салбартай',
+    Array.isArray(sv) && sv.every((s) => s && typeof s.sector === 'string' && typeof s.name === 'string'),
+    'дутуу бичлэг байна');
+  check('M1. Сайт каталогийг content.json-оос уншина',
+    idx.includes('Array.isArray(S.services)') && idx.includes('SERVICES[i]'));
+
+  check('M2. Бүлэг бичлэг дээрээ (нэрээр хайдаг зураглал УСТСАН)',
+    !idx.includes('SERVICE_AUDIENCE'),
+    'SERVICE_AUDIENCE хэвээр байна — нэр солиход бүлэг алдагдана');
+  check('M2. Бүлгийн утга бичлэгээс уншигдана', idx.includes("aud:s[4]||'citizen'"));
+  check('M2. content.json дахь бүлэг зөвхөн 3 утгын нэг',
+    Array.isArray(sv) && sv.every((s) => !s.aud || ['citizen', 'business', 'carrier'].includes(s.aud)),
+    'танихгүй бүлгийн утга');
+
+  check('M3. Порталын тоо жагсаалтын уртаас (тоо ЗОХИОХГҮЙ)',
+    idx.includes('KPI_UNIFIED[1][1]=String(SERVICES.length)'));
+
+  check('M4. Админд үйлчилгээний карт, нэмэх/хасах товч байна',
+    adm.includes('data-sv-card') && adm.includes('data-sv-add') && adm.includes('data-sv-del'));
+  check('M4. Каталог "Дата холболт" табд холбогдсон', adm.includes('lvDatasets()+lvServices()'));
+
+  /* M6. Хуудасны бусад текст (таб, алхам, тоолуурын үг) ч засварлагдана —
+     каталог засварлагдаж мөртөө хажуугийн бичиг код дотор үлдвэл
+     "хагас засварлагдах" байдал үүснэ. */
+  const es = con.site && con.site.eservices;
+  check('M6. Хуудасны таб ба алхам content.json-д бүртгэгдсэн',
+    !!es && Array.isArray(es.tabs) && es.tabs.length === 3 &&
+    Array.isArray(es.steps) && es.steps.length === 4);
+  check('M6. Сайт табыг тогтмолоос уншина (темплейтэд хатуу бичээгүй)',
+    idx.includes('this.subNav(SVC_TABS,st') && !idx.includes("[['citizen','Иргэнд'"));
+  check('M6. Таб ба алхам content.json-оос давхарлагдана',
+    idx.includes('SVC_TABS[i][1]=t.label') && idx.includes('SERVICE_STEPS[i][1]=t.title'));
+  check('M6. Тоолуурын үг ба нөхөх текст ч stxt()-ээр',
+    idx.includes("stxt('eservices.count_word'") &&
+    idx.includes("stxt('eservices.stat_fallback'") &&
+    idx.includes("stxt('eservices.featured_stat'"));
+  check('M6. Бүлгийн нэр админд ДАВХАРДААГҮЙ (сайтын табнаас уншина)',
+    adm.includes('CON.site.eservices.tabs') && !adm.includes('svc_cat.aud_citizen'),
+    'админ бүлгийн нэрийг тусад нь хадгалсаар байна');
+
+  /* M8. Хуудасны толгойн тоо. Өмнө нь темплейтэд "11" гэж ХАТУУ бичигдсэн
+     тул админ үйлчилгээ нэмэхэд толгойн тоо хуучнаараа үлдэж байв. */
+  check('M8. Толгойн тоо ЖАГСААЛТААС гарна (темплейтэд хатуу бичээгүй)',
+    idx.includes('total:      String(SERVICES.length)') &&
+    idx.includes('{{ svcHero.total }}'));
+  check('M8. Эх сурвалжгүй тоо ЗОХИОХГҮЙ — хоосон бол "—"',
+    idx.includes("taken:      svcTaken||'—'") &&
+    !!(con.site.eservices.hero) && con.site.eservices.hero.taken === '',
+    'эх сурвалжгүй тоо хэвээр бичигдсэн байна');
+  check('M8. Толгойн текст бүр content.json-оос',
+    idx.includes("stxt('eservices.hero.kicker'") &&
+    idx.includes("stxt('eservices.hero.lead'") &&
+    !idx.includes('>Хэнд ямар <span'));
+
+  /* M7. Сайтын текст табд ui_form-ын НЭРЛЭЛТИЙН бүлэг нь жинхэнэ текстийн
+     бүлэгтэй ЯГ ижил гарчигтай гарч, засварлагч аль нь сайт дээр
+     харагдахыг ялгаж чаддаггүй байв. */
+  check('M7. Нэрлэлтийн бүлгийн гарчиг ялгагдана',
+    adm.includes("utxt('site_tab.ufh_suffix'"),
+    'ui_form бүлэг жинхэнэ бүлэгтэй ижил гарчигтай хэвээр');
+
+  if (!CHROME) { skipped('M5. Админ дээр нэмэх (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(4500);
+      d.querySelector('[data-tab="metrics"]').click(); await sleep(900);
+      const R={};
+      R.before=d.querySelectorAll('[data-sv-card]').length;
+      const add=d.querySelector('[data-sv-add]'); if(!add) return {__err:'нэмэх товч алга'};
+      add.click(); await sleep(800);
+      R.after=d.querySelectorAll('[data-sv-card]').length;
+      const i=R.after-1;
+      const nm=d.querySelector('[data-vf="'+i+'|name"]');
+      if(nm){ nm.value='ТЕСТ ҮЙЛЧИЛГЭЭ'; nm.dispatchEvent(new w.Event('input',{bubbles:true})); }
+      await sleep(700);
+      R.dirty=(d.getElementById('dirtyMsg')||{}).textContent||'';
+      const del=d.querySelector('[data-sv-del="'+i+'"]');
+      if(del){ del.click(); await sleep(800); }
+      R.afterDel=d.querySelectorAll('[data-sv-card]').length;
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('M5. Үйлчилгээний DOM шалгалт', R.__err); return; }
+    check('M5. Шинэ үйлчилгээ нэмэгдэнэ', R.after === R.before + 1,
+      JSON.stringify({ before: R.before, after: R.after }));
+    check('M5. Талбар засахад dirty болж экспортод орно', /өөрчлөлт/.test(R.dirty), R.dirty.trim());
+    check('M5. Каталогоос хасах ажиллана', R.afterDel === R.before,
+      JSON.stringify({ afterDel: R.afterDel, before: R.before }));
+  } finally { srv.close(); }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

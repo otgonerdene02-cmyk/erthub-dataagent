@@ -1578,21 +1578,21 @@
         <div style="min-width:0;">
           <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px;">
             <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(140deg,#2E7CF63d,#2E7CF614);border:1px solid #2E7CF659;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🪪</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">Цахим үйлчилгээ</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;">{{ svcHero.kicker }}</div>
             <div style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,#2E7CF655,transparent);"></div>
           </div>
-          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">Хэнд ямар <span style="background:linear-gradient(105deg,#2E7CF6,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">үйлчилгээ вэ</span></h2>
-          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:60ch;line-height:1.65;text-wrap:pretty;">Лавлагаа, зөвшөөрөл, хураамжийн үйлчилгээг хэрэглэгчийн төрлөөр ангилж, эхнээс дуустал цахимаар.</p>
+          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0 0 12px;max-width:22ch;text-wrap:pretty;">{{ svcHero.head_a }} <span style="background:linear-gradient(105deg,#2E7CF6,#2E5CE6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">{{ svcHero.head_b }}</span></h2>
+          <p style="font-size:15px;color:var(--ink2);margin:0;max-width:60ch;line-height:1.65;text-wrap:pretty;">{{ svcHero.lead }}</p>
         </div>
         <div style="display:flex;gap:10px;flex-shrink:0;">
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">11</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">үйлчилгээ</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ svcHero.total }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ svcHero.total_label }}</div>
           </div>
           
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">25</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">ҮЙЛЧИЛГЭЭ АВСАН ТОО</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ svcHero.taken }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ svcHero.taken_label }}</div>
           </div>
         </div>
       </div>
@@ -3771,19 +3771,15 @@ const SECTOR_TABLES={
 const YEARS=['2026','2025','2024','2023','2022','2021','2020'];
 const FMONTHS=['Бүгд','1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар','7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
 
-const SERVICE_AUDIENCE={
-  'Хот хоорондын авто замын хураамжийн мэдэгдэл':'citizen',
-  'Тээврийн хэрэгслийн торгуулийн мэдээлэл':'citizen',
-  'Гэрчилгээ солих / нөхөн олгох хүсэлт':'citizen',
-  'Мэргэшсэн жолоочийн үнэмлэх':'citizen',
-  'Оношилгоо, техникийн хяналт':'citizen',
-  'Нислэгийн үйл ажиллагааны зөвшөөрөл':'business',
-  'Аэродром, нисэх буудлын үйлчилгээ':'business',
-  'Галт тэрэгний тасалбар':'citizen',
-  'Усан тээврийн хэрэгслийн бүртгэл':'business',
-  'U-Money / Ubcard цахим тасалбар':'citizen',
-  '"ЕС", "ТҮР" замын хуудас':'carrier'
-};
+/* Цахим үйлчилгээний хуудасны ХЭРЭГЛЭГЧИЙН БҮЛГИЙН таб.
+   Мөр: [түлхүүр, нэр, тайлбар]. Түлхүүр нь SERVICES-ийн 5 дахь баганатай
+   тохирно. Админ энэ нэрийг засвал үйлчилгээний бүлгийн сонголт ч дагана
+   (админ талд ЭНЭ жагсаалтаас уншина — нэг үг хоёр газар бичигдэхгүй). */
+const SVC_TABS=[
+  ['citizen','Иргэнд','Лавлагаа, үнэмлэх, тасалбар'],
+  ['business','Бизнест','Зөвшөөрөл, бүртгэл, лиценз'],
+  ['carrier','Тээвэрлэгчид','Замын хуудас, хяналт']
+];
 const SERVICE_STEPS=[
   ['01','Нэвтрэх','E-Mongolia эсвэл ErtHub бүртгэлээрээ нэвтэрнэ. Иргэний үнэмлэхний мэдээлэл автоматаар татагдана.'],
   ['02','Үйлчилгээ сонгох','Шаардлагатай үйлчилгээгээ сонгож, шаардах баримтын жагсаалтыг урьдчилан харна.'],
@@ -3924,18 +3920,23 @@ const PAGES=[
   {id:'history',label:'Салбарын түүх'},
   {id:'news',label:'Мэдээ мэдээлэл'}
 ];
+/* Цахим үйлчилгээний каталог. Мөр: [салбар, нэр, тайлбар, ашиглалт,
+   ХЭРЭГЛЭГЧИЙН БҮЛЭГ]. Бүлэг нь мөр дээрээ байх ЁСТОЙ — өмнө нь
+   бүлгийг НЭРЭЭР хайдаг тусдаа зураглал байсан тул админ
+   нэрийг засмагц үйлчилгээ чимээгүйхэн "Иргэнд" бүлэг рүү унадаг байв.
+   Текст талбарууд content.json → site.services-ээс давхарлагдана. */
 const SERVICES=[
-  ['road','Хот хоорондын авто замын хураамжийн мэдэгдэл','Улс, хот хоорондын авто замын хураамжийн мэдэгдлийг цахимаар авах.','4,685,647 хандалт'],
-  ['road','Тээврийн хэрэгслийн торгуулийн мэдээлэл','Авто тээврийн хэрэгслийн замын хөдөлгөөний торгуулийн лавлагаа шалгах.','2,292,513 хандалт'],
-  ['road','Гэрчилгээ солих / нөхөн олгох хүсэлт','Тээврийн хэрэгслийн бүртгэлийн гэрчилгээ солиулах, дахин авах хүсэлт гаргах.',''],
-  ['road','Мэргэшсэн жолоочийн үнэмлэх','Жолоочийн үнэмлэхийн лавлагаа шалгах, сунгалтын хүсэлт илгээх.',''],
-  ['road','Оношилгоо, техникийн хяналт','Тээврийн хэрэгслийн техникийн үзлэгийн бүртгэл, мэдээлэл харах.',''],
-  ['air','Нислэгийн үйл ажиллагааны зөвшөөрөл','Иргэний агаарын хөлгөөр нислэгийн үйл ажиллагаа эрхлэх зөвшөөрөл хүсэх.',''],
-  ['air','Аэродром, нисэх буудлын үйлчилгээ','Иргэний нисэхэд ашиглах аэродром, нисэх буудлын үйлчилгээ эрхлэх зөвшөөрөл.',''],
-  ['rail','Галт тэрэгний тасалбар','Улс, хот хоорондын зорчигч тээврийн тасалбарыг онлайнаар захиалах.',''],
-  ['water','Усан тээврийн хэрэгслийн бүртгэл','Усан замын тээврийн хэрэгслийн бүртгэл, эзэмшлийн шилжилт хөдөлгөөн.',''],
-  ['public','U-Money / Ubcard цахим тасалбар','Нийтийн тээврийн цахим карт цэнэглэх, үлдэгдэл шалгах, гүйлгээний түүх.',''],
-  ['public','"ЕС", "ТҮР" замын хуудас','Хязгаарласан, хориглосон гудамж зам руу нэвтрэх зөвшөөрлийн хуудас авах.','']
+  ['road','Хот хоорондын авто замын хураамжийн мэдэгдэл','Улс, хот хоорондын авто замын хураамжийн мэдэгдлийг цахимаар авах.','4,685,647 хандалт','citizen'],
+  ['road','Тээврийн хэрэгслийн торгуулийн мэдээлэл','Авто тээврийн хэрэгслийн замын хөдөлгөөний торгуулийн лавлагаа шалгах.','2,292,513 хандалт','citizen'],
+  ['road','Гэрчилгээ солих / нөхөн олгох хүсэлт','Тээврийн хэрэгслийн бүртгэлийн гэрчилгээ солиулах, дахин авах хүсэлт гаргах.','','citizen'],
+  ['road','Мэргэшсэн жолоочийн үнэмлэх','Жолоочийн үнэмлэхийн лавлагаа шалгах, сунгалтын хүсэлт илгээх.','','citizen'],
+  ['road','Оношилгоо, техникийн хяналт','Тээврийн хэрэгслийн техникийн үзлэгийн бүртгэл, мэдээлэл харах.','','citizen'],
+  ['air','Нислэгийн үйл ажиллагааны зөвшөөрөл','Иргэний агаарын хөлгөөр нислэгийн үйл ажиллагаа эрхлэх зөвшөөрөл хүсэх.','','business'],
+  ['air','Аэродром, нисэх буудлын үйлчилгээ','Иргэний нисэхэд ашиглах аэродром, нисэх буудлын үйлчилгээ эрхлэх зөвшөөрөл.','','business'],
+  ['rail','Галт тэрэгний тасалбар','Улс, хот хоорондын зорчигч тээврийн тасалбарыг онлайнаар захиалах.','','citizen'],
+  ['water','Усан тээврийн хэрэгслийн бүртгэл','Усан замын тээврийн хэрэгслийн бүртгэл, эзэмшлийн шилжилт хөдөлгөөн.','','business'],
+  ['public','U-Money / Ubcard цахим тасалбар','Нийтийн тээврийн цахим карт цэнэглэх, үлдэгдэл шалгах, гүйлгээний түүх.','','citizen'],
+  ['public','"ЕС", "ТҮР" замын хуудас','Хязгаарласан, хориглосон гудамж зам руу нэвтрэх зөвшөөрлийн хуудас авах.','','carrier']
 ];
 // Датасэтийн тогтвортой түлхүүр (үзэлтийн тоолуурын баримтын нэр). Нэр нь
 // өөрчлөгдвөл тоо тэглэгдэх тул салбар+нэрээс гаргаж, ASCII-д буулгана.
@@ -4219,6 +4220,33 @@ function applySiteContent(){
     /* Каталогийн тоо нь порталын "НЭЭЛТТЭЙ ӨГӨГДӨЛ" картад шууд тусна —
        тоо ЗОХИОХГҮЙ, бодит жагсаалтын уртаас. */
     if(typeof KPI_UNIFIED!=='undefined'&&KPI_UNIFIED[0]) KPI_UNIFIED[0][1]=String(DATASETS.length);
+  }
+  /* Цахим үйлчилгээний хуудасны таб ба алхмууд. Индексээр давхарлана —
+     түлхүүр (tabs[i].key) нь SERVICES-ийн бүлэгтэй холбоотой тул
+     ЗӨВХӨН нэр/тайлбар солигдоно, түлхүүр кодод үлдэнэ. */
+  const es=S.eservices;
+  if(es&&Array.isArray(es.tabs)) es.tabs.forEach((t,i)=>{
+    if(!t||!SVC_TABS[i]) return;
+    if(t.label) SVC_TABS[i][1]=t.label;
+    if(t.sub)   SVC_TABS[i][2]=t.sub;
+  });
+  if(es&&Array.isArray(es.steps)) es.steps.forEach((t,i)=>{
+    if(!t||!SERVICE_STEPS[i]) return;
+    if(t.title) SERVICE_STEPS[i][1]=t.title;
+    if(t.body)  SERVICE_STEPS[i][2]=t.body;
+  });
+  /* Цахим ҮЙЛЧИЛГЭЭНИЙ каталог — датасэтийнхтэй ЯГ ижил зарчим:
+     индексээр давхарлана, жагсаалтаас илүү гарсан бичлэг нь админы
+     нэмсэн ШИНЭ үйлчилгээ. Хэрэглэгчийн бүлэг (aud) ч эндээс солигдоно. */
+  if(Array.isArray(S.services)){
+    const SF=['sector','name','desc','hits','aud'];
+    S.services.forEach((v,i)=>{
+      if(!v||typeof v!=='object') return;
+      if(!SERVICES[i]) SERVICES[i]=['road','','','','citizen'];
+      SF.forEach((k,c)=>{ if(v[k]!==undefined&&v[k]!=='') SERVICES[i][c]=v[k] });
+    });
+    /* Порталын "ЦАХИМ ҮЙЛЧИЛГЭЭ" карт — тоо ЗОХИОХГҮЙ, жагсаалтын уртаас. */
+    if(typeof KPI_UNIFIED!=='undefined'&&KPI_UNIFIED[1]) KPI_UNIFIED[1][1]=String(SERVICES.length);
   }
   /* Порталын 4 карт (uk) */
   const pk=S.portal_kpi, pkeys=['open_data','eservice','research','orgs'];
@@ -6376,16 +6404,33 @@ class Component extends DCLogic {
     const keys=Object.keys(SECTORS);
     // ---- E-SERVICES ----
     const st=this.state.svcTab;
-    const svcTabs=this.subNav([['citizen','Иргэнд','Лавлагаа, үнэмлэх, тасалбар'],['business','Бизнест','Зөвшөөрөл, бүртгэл, лиценз'],['carrier','Тээвэрлэгчид','Замын хуудас, хяналт']],st,v=>({svcTab:v,svcListPage:0}));
+    const svcTabs=this.subNav(SVC_TABS,st,v=>({svcTab:v,svcListPage:0}));
     const svcAll=SERVICES.map((s,i)=>({num:String(i+1).padStart(2,'0'),sector:s[0],name:s[1],desc:s[2],hits:s[3],
-      aud:SERVICE_AUDIENCE[s[1]]||'citizen',color:NEON[s[0]],glyph:GLYPH[s[0]],sectorLabel:SECTORS[s[0]].label,
-      stat:s[3]||'Цахимаар шийдвэрлэнэ',hasHits:!!s[3]}));
+      aud:s[4]||'citizen',color:NEON[s[0]],glyph:GLYPH[s[0]],sectorLabel:SECTORS[s[0]].label,
+      stat:s[3]||stxt('eservices.stat_fallback','Цахимаар шийдвэрлэнэ'),hasHits:!!s[3]}));
     const sq=(this.state.svcQ||'').toLowerCase().trim();
     const svcList=svcAll.filter(s=>s.aud===st&&(!sq||(s.name+' '+s.desc+' '+s.sectorLabel).toLowerCase().includes(sq)));
     const svcFeatured=svcList.slice().sort((a,b)=>(b.hits?parseInt(b.hits.replace(/\D/g,'')):0)-(a.hits?parseInt(a.hits.replace(/\D/g,'')):0))[0]||svcAll[0];
-    if(svcFeatured) svcFeatured.stat=svcFeatured.hits||'Цахимаар 100% шийдвэрлэнэ';
+    if(svcFeatured) svcFeatured.stat=svcFeatured.hits||stxt('eservices.featured_stat','Цахимаар 100% шийдвэрлэнэ');
     const svcSteps=SERVICE_STEPS.map(s=>({num:s[0],title:s[1],body:s[2]}));
-    const svcCount=svcList.length+' үйлчилгээ';
+    const svcCount=svcList.length+' '+stxt('eservices.count_word','үйлчилгээ');
+    /* Хуудасны толгойн 2 карт. Үйлчилгээний ТОО нь ЖАГСААЛТААС гарна —
+       өмнө нь темплейтэд "11" гэж хатуу бичигдсэн байсан тул админ
+       үйлчилгээ нэмэхэд толгойн тоо хуучнаараа үлдэж хуудас ХУДАЛ
+       тайлбарлах байв. Хоёр дахь карт (үйлчилгээ авсан тоо) нь кодод
+       эх сурвалжгүй тул content.json-д бүртгэгдэж, портал эзэмшигч
+       өөрөө хариуцна — хоосон бол "—" гарна (тоо ЗОХИОХГҮЙ). */
+    const svcTaken=stxt('eservices.hero.taken','');
+    const svcHero={
+      kicker:     stxt('eservices.hero.kicker','Цахим үйлчилгээ'),
+      head_a:     stxt('eservices.hero.head_a','Хэнд ямар'),
+      head_b:     stxt('eservices.hero.head_b','үйлчилгээ вэ'),
+      lead:       stxt('eservices.hero.lead','Лавлагаа, зөвшөөрөл, хураамжийн үйлчилгээг хэрэглэгчийн төрлөөр ангилж, эхнээс дуустал цахимаар.'),
+      total:      String(SERVICES.length),
+      total_label:stxt('eservices.hero.total_label','үйлчилгээ'),
+      taken:      svcTaken||'—',
+      taken_label:stxt('eservices.hero.taken_label','Үйлчилгээ авсан тоо')
+    };
     const svcQuery=this.state.svcQ||'';
     const onSvcQuery=(e)=>this.setState({svcQ:e.target.value,svcListPage:0});
     const svcEmpty=svcList.length===0;
@@ -6451,7 +6496,7 @@ class Component extends DCLogic {
     // ---- HISTORY eras ----
     const eras=ERAS.map((e,i)=>({range:e[0],title:e[1],body:e[2],color:NEON[keys[i%keys.length]]}));
 
-    return {svcTabs,svcList:svcListShown,svcFeatured,svcSteps,svcCount,svcQuery,onSvcQuery,svcEmpty,
+    return {svcTabs,svcHero,svcList:svcListShown,svcFeatured,svcSteps,svcCount,svcQuery,onSvcQuery,svcEmpty,
       svcListShowPager,svcListPageLabel,svcListPrev,svcListNext,
       isSvcCitizen:st==='citizen',showFeatured:svcList.length>1,
       browseTabs,apiRows,devGuide,devTiers,devCodeTabs,devCode,isCatalog:bt==='catalog',isApi:bt==='api',isDev:bt==='dev',
