@@ -774,7 +774,7 @@
         <div style="flex:1;min-width:12px;height:1px;background:var(--line);"></div>
         
       </div>
-      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;">
+      <div style="display:grid;grid-template-columns:repeat({{ lsCols }},minmax(0,1fr));gap:0;">
         <sc-for list="{{ livestrip }}" as="ls" hint-placeholder-count="5">
           <button sc-camel-on-click="{{ ls.select }}" style="{{ ls.cellStyle }}">
             <div style="{{ ls.railStyle }}"></div>
@@ -887,7 +887,7 @@
         <div data-eh-card="w2px" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2pxTitle }}{{ w2pxMark }}</div>
         <div data-eh-card="w2px" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ w2pxFoot }}</div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:10px;">
+      <div style="display:grid;grid-template-columns:repeat({{ weekPaxDeltaCols }},minmax(0,1fr));gap:10px;margin-top:10px;">
         <sc-for list="{{ weekPaxDelta }}" as="dl" hint-placeholder-count="5">
           <div style="border-left:2px solid {{ dl.color }};padding-left:12px;{{ dl.rowStyle }}">
             <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ dl.glyph }} {{ dl.label }}</div>
@@ -978,7 +978,7 @@
         <div data-eh-card="w2cx" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2cxTitle }}{{ w2cxMark }}</div>
         <div data-eh-card="w2cx" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ w2cxFoot }}</div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:10px;">
+      <div style="display:grid;grid-template-columns:repeat({{ weekCargoDeltaCols }},minmax(0,1fr));gap:10px;margin-top:10px;">
         <sc-for list="{{ weekCargoDelta }}" as="dl" hint-placeholder-count="5">
           <div style="border-left:2px solid {{ dl.color }};padding-left:12px;{{ dl.rowStyle }}">
             <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ dl.glyph }} {{ dl.label }}</div>
@@ -6802,11 +6802,11 @@ class Component extends DCLogic {
           deltaColor:/^\+/.test(k[2])?'#0E8F63':'var(--ink3)',
           spark:sp,area:sp+' L120,32 L0,32 Z'};
       }),
-      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,weekPaxAirOnlyNote:wPax.airOnlyNote,
+      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,weekPaxDeltaCols:String(Math.max(1,wPax.delta.length)),weekPaxAirOnlyNote:wPax.airOnlyNote,
       section02MockNote,
       w2pMark:section02Marks.w2p,w2pbMark:section02Marks.w2pb,w2pxMark:section02Marks.w2px,
       w2cMark:section02Marks.w2c,w2cbMark:section02Marks.w2cb,w2cxMark:section02Marks.w2cx,
-      weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,weekCargoAirOnlyNote:wCargo.airOnlyNote,
+      weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,weekCargoDeltaCols:String(Math.max(1,wCargo.delta.length)),weekCargoAirOnlyNote:wCargo.airOnlyNote,
       compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareLastLabel,
       showLeadLag,
       f04:{open:!!this.state.f04Open,toggle:()=>this.setState(s=>({f04Open:!s.f04Open})),
@@ -8285,6 +8285,9 @@ class Component extends DCLogic {
         };
       }),
       livestrip,
+      /* Салбар нуухад grid-ийн багана дагаж багасна — эс тэгвэл
+         нуусан нүд ХООСОН үлдэж, харагдац цоорхойтой болно. */
+      lsCols:String(Math.max(1,livestrip.length)),
       particles,
       inlineStats,
       ratioLabels:ratio.labels,

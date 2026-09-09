@@ -39,6 +39,21 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 /* ── зүүн: датасэт ── */
 .srch{width:100%;font-family:var(--mono);font-size:11.5px;padding:7px 10px;border:1px solid var(--line2);border-radius:7px;background:var(--card);margin-bottom:9px;color:var(--ink)}
 .srch:focus{outline:2px solid var(--road);outline-offset:1px;border-color:transparent}
+/* каталогийн мод + өнцгийн сонголт */
+.fct{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px}
+.fc{font-family:inherit;font-size:11px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:999px;padding:5px 11px;transition:.15s}
+.fc:hover{background:#F7F9FF}
+.fc.on{background:#EDF2FF;border-color:#BFD0FA;color:var(--ink);font-weight:600}
+.twn{margin:0}
+.tn{display:flex;align-items:center;gap:7px;width:100%;background:none;border:none;font-family:inherit;text-align:left;cursor:pointer;padding:6px 8px;border-radius:7px;color:var(--ink2);font-size:12px;line-height:1.3}
+.tn:hover{background:#F7F9FF}
+.tn.on{background:#EDF2FF;color:var(--ink);font-weight:600;box-shadow:inset 2px 0 0 var(--road)}
+.tn.leaf .nm{color:var(--ink3)}
+.tn.leaf.on .nm{color:var(--ink)}
+.tn .cr{width:11px;flex-shrink:0;color:var(--ink3);font-size:9px;text-align:center}
+.tn .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tn .ct{font-family:var(--mono);font-size:9px;color:var(--ink3);flex-shrink:0}
+.tkids{margin-left:9px;border-left:1px solid var(--line)}
 .dsi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:5px;cursor:pointer;display:grid;grid-template-columns:8px 1fr auto;gap:9px;align-items:start;text-align:left;width:100%;font-family:var(--sans)}
 .dsi:hover{background:#F7F9FF}
 .dsi.on{background:#EDF2FF;border-color:#BFD0FA;box-shadow:inset 3px 0 0 var(--road)}
@@ -340,7 +355,14 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 
 /* ── экспорт ── */
 .expbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line2);padding:11px 18px;display:none;align-items:center;gap:12px;flex-wrap:wrap;z-index:25;box-shadow:0 -3px 14px rgba(19,26,46,.06)}
+.expbar{flex-direction:column;align-items:stretch;gap:8px}
+.expbar .sv-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .expbar .d{font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
+.sv-hint{font-size:11.5px;color:var(--ink2);line-height:1.4}
+.sv-hint b{color:var(--ink)}
+.sv-dot{width:8px;height:8px;border-radius:50%;background:var(--line2);flex-shrink:0}
+.sv-dot.warn{background:var(--warn)}
+.sv-dot.ok{background:var(--ok)}
 .expbar .d b{color:var(--warn)}
 /* нийтлэх · нэвтрэлт */
 .pubwho{font-family:var(--mono);font-size:10px;color:var(--ink3);display:flex;align-items:center;gap:7px}
@@ -397,11 +419,12 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 
 <div class="grid" id="gridWrap">
   <div class="pane l" id="paneL">
+    <div class="fct" id="fct" role="tablist" aria-label="Каталогийн ангилал" data-ui-aria="cat.aria"></div>
     <input class="srch" id="q" placeholder="Датасэт хайх…" aria-label="Датасэт хайх"
       data-ui-ph="left.search_ph" data-ui-aria="left.search_ph">
-    <p class="ph"><span data-ui="left.heading">Датасэт</span> <span id="dsn" style="font-family:var(--mono)"></span></p>
+    <p class="ph"><span id="catHead">Каталог</span> <span id="dsn" style="font-family:var(--mono)"></span></p>
     <div id="dsList"></div>
-    <p class="pvnote" style="margin-top:12px" data-ui="left.note">Датасэт нь metric_registry.json-ий метрик бүрийн dataset талбараас автоматаар гарна — шинэ эх сурвалж нэмэгдмэгц энд өөрөө гарч ирнэ.</p>
+    <p class="pvnote" style="margin-top:12px" id="catNote"></p>
   </div>
   <div class="pane r">
     <div id="state"></div>
@@ -412,12 +435,18 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 </div>
 
 <div class="expbar" id="expbar">
-  <button class="btn pri" id="expBtn" disabled data-ui="app.export">Экспортлох</button>
-  <button class="btn sm" id="revBtn" disabled data-ui="app.revert">Бүх өөрчлөлтийг буцаах</button>
-  <span class="d" id="dirtyMsg">Өөрчлөлт алга</span>
-  <button class="btn" id="pubBtn" disabled data-ui="publish.button">Сайтад нийтлэх</button>
-  <span class="pubst" id="pubMsg"></span>
-  <span class="d" style="margin-left:auto" data-ui="app.export_note">Файл руу шууд бичихгүй — татаж аваад commit хийнэ</span>
+  <div class="sv-row">
+    <span class="sv-dot" id="saveDot"></span>
+    <span class="d" id="dirtyMsg">Өөрчлөлт алга</span>
+    <span class="sv-hint" id="saveHint"></span>
+    <span class="pubst" id="pubMsg"></span>
+  </div>
+  <div class="sv-row">
+    <button class="btn pri" id="pubBtn" disabled data-ui="publish.button">Сайтад нийтлэх</button>
+    <button class="btn sm" id="expBtn" disabled data-ui="app.export">Экспортлох</button>
+    <button class="btn sm" id="revBtn" disabled data-ui="app.revert">Бүх өөрчлөлтийг буцаах</button>
+    <span class="d" style="margin-left:auto" data-ui="app.export_note">Файл руу шууд бичихгүй — татаж аваад commit хийнэ</span>
+  </div>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -540,6 +569,8 @@ var SWAPPABLE={line:['line','bar'],donut:['donut','bar'],bignum:['bignum','bar']
 /* ══════════════════ ТӨЛӨВ ══════════════════ */
 var REG=null, CON=null, REG0=null, CON0=null;
 var S={tab:'data',ds:null,level:'sections',section:null,widget:null,td:null,q:'',
+       /* каталогийн мод: сонгосон өнцөг, идэвхтэй зангилаа, дэлгэсэн мөчир */
+       facet:'page',node:null,twOpen:{},
        mo:null,mt:'view',flash:null,viz:{},
        /* виджет жагсаалтын хайлт+шүүлт (lvWidgets, lvAll хоёуланд) */
        wq:'',wQuality:'all',wPage:'all',wViz:'all'};
@@ -919,7 +950,16 @@ function anchorOf(id){var c=CON.widgets[id];return (c&&c.anchor)||'hero'}
 /* Датасэт сонгоогүй үед uk-г ч жагсаана (текст засах хэрэгцээ бодит).
    Датасэт сонгосон үед uk ОРОХГҮЙ — тэр ямар ч метрик датасэттэй
    холбоогүй тул хамаарал нь худал болно. */
-function scopeIds(){return S.ds?widgetsOfDs(S.ds):ALL_IDS}
+/* Хамрах хүрээ нь каталогийн МОДНЫ сонгосон зангилаанаас гарна. Ингэснээр
+   шинэ ангилал (өнцөг) нэмэхэд хэсэг/виджет/зам мөр/хамралтын тоолол
+   бүгд ӨӨРСДӨӨ дагана — доод урсгалд гар хүрэхгүй. */
+function scopeIds(){
+  if(S.node&&typeof findNode==='function'){
+    var n=findNode(S.node);
+    if(n&&n.ids&&n.ids.length) return n.ids;
+  }
+  return S.ds?widgetsOfDs(S.ds):ALL_IDS;
+}
 function sectionKeys(){
   var seen=[];
   scopeIds().forEach(function(id){var k=anchorOf(id);if(seen.indexOf(k)<0)seen.push(k)});
@@ -1080,7 +1120,7 @@ var UI_GROUPS=[
    labels:{search_ph:'Хайлтын сануулга',heading:'Багананы гарчиг',note:'Доод тайлбар',
            none:'Илэрц алга',source_unknown:'Эх сурвалж тодорхойгүй'}},
   {key:'crumb',title:'Админ · зам мөр ба тоо', where:'Дэлгэц бүрийн дээд мөр',
-   labels:{back:'Буцах товч',back_title:'Буцах товчны тайлбар',all_datasets:'Бүх датасэт',
+   labels:{back:'Буцах товч',back_title:'Буцах товчны тайлбар',all_widgets:'Бүх виджет',
            all_views:'Бүх харагдац',home_page:'Нүүр хуудас',widget_word:'"виджет" үг',
            metric_word:'"метрик" үг',data_word:'"дата" үг',full:'Бүрэн холбогдсон шошго',
            partial:'Хэсэгчлэн шошго',none:'Холбогдоогүй шошго',textonly:'Зөвхөн текст шошго'}},
@@ -1658,33 +1698,151 @@ function previewFor(id,mini){
 function dsLabel(k){return (DSMETA[k]&&DSMETA[k].n)||k}
 function dsAgency(k){return (DSMETA[k]&&DSMETA[k].a)||utxt('left.source_unknown','эх сурвалж тодорхойгүй')}
 function dsColor(k){return NEON[(DSMETA[k]&&DSMETA[k].s)||'air']}
-function rDs(){
-  var all=datasets();
-  var list=all.filter(function(k){
-    if(!S.q)return true;
-    return (dsLabel(k)+' '+dsAgency(k)+' '+k).toLowerCase().indexOf(S.q)>=0;
+
+/* ══════════════════ КАТАЛОГИЙН МОД — ОЛОН ӨНЦӨГТ АНГИЛАЛ ═══════════════
+   Нэг ижил виджетүүдийг ДӨРВӨН ӨӨР ангиллаар харна. Нээлттэй өгөгдлийн
+   портал дээр ижил зүйлийг "цэсээр нь" ч, "датагаар нь" ч хайх хэрэгцээ
+   ЗЭРЭГ гардаг (data.gov, Tableau-гийн facet зарчим) — иймд ганц хатуу
+   мод биш, СОНГОДОГ өнцөг. Өмнө нь зөвхөн "датасэтээр" гэсэн хавтгай
+   жагсаалт байсан тул "02-р хэсгийн виджетүүд" гэж хайхад зам байхгүй
+   байв.
+
+   Мод бүр ижил зангилааны формат буцаана:
+     {id, label, note, ids:[виджетийн id], children:[…], widget?, ds?}
+   Дараагийн бүх код (хэсэг, виджет, зам мөр, хамралтын тоолол) нь
+   scopeIds()-ээр дамжина — иймд шинэ өнцөг нэмэхэд зөвхөн ЭНД мод
+   нэмнэ, доод урсгалд гар хүрэхгүй. */
+function facetDefs(){
+  return [
+    ['page',  utxt('cat.facet_page','Цэсээр'),     utxt('cat.note_page','Сайтын хуудас ба хэсгийн дарааллаар — виджетийг сайт дээрх байрлалаар нь олно.')],
+    ['data',  utxt('left.heading','Датасэт'),      utxt('left.note','Датасэт нь metric_registry.json-ий метрик бүрийн dataset талбараас автоматаар гарна — шинэ эх сурвалж нэмэгдмэгц энд өөрөө гарч ирнэ.')],
+    ['sector',utxt('cat.facet_sector','Салбараар'),utxt('cat.note_sector','Тээврийн салбараар — тухайн салбарын утга харуулдаг виджетүүд.')],
+    ['state', utxt('cat.facet_state','Төлөвөөр'),  utxt('cat.note_state','Дата холболтын төлөвөөр — юуг эхлээд засах вэ гэдгийг эндээс хардаг.')]
+  ];
+}
+function facetOf(){ var f=S.facet||'page'; return facetDefs().some(function(x){return x[0]===f})?f:'page' }
+function twLeaf(id){
+  return {id:'w:'+id,label:curText(id,'title')||id,note:id,ids:[id],children:[],widget:id};
+}
+function treePage(){
+  var secs=[];
+  ALL_IDS.forEach(function(id){var k=anchorOf(id); if(secs.indexOf(k)<0) secs.push(k)});
+  return secs.map(function(k){
+    var ids=ALL_IDS.filter(function(id){return anchorOf(id)===k});
+    return {id:'page:'+k,label:sectionLabel(k),note:utxt('cat.section_word','хэсэг'),
+            ids:ids,section:k,children:ids.map(twLeaf)};
   });
-  $('dsn').textContent=list.length+'/'+all.length;
-  $('dsList').innerHTML=list.map(function(k){
-    var ids=widgetsOfDs(k), t=tally(ids);
-    var cls=t.ok===ids.length&&ids.length?'ok':(t.ok?'mix':'no');
-    var gl={ok:'✓',mix:'!',no:'✕'}[cls];
-    return '<button class="dsi '+(k===S.ds?'on':'')+'" data-ds="'+esc(k)+'">'+
-      '<span class="dsi-i" style="background:'+dsColor(k)+'"></span>'+
-      '<span><span class="dsi-n">'+esc(dsLabel(k))+'</span>'+
-        '<span class="dsi-a" style="display:block">'+esc(dsAgency(k))+'</span>'+
-        '<span class="dsi-s" style="display:block">'+metricsOfDs(k).length+' '+esc(utxt('crumb.metric_word','метрик'))+' · '+
-          t.ok+'/'+ids.length+' '+esc(utxt('crumb.widget_word','виджет'))+'</span></span>'+
-      '<span class="st '+cls+'">'+gl+'</span></button>';
-  }).join('')||'<div class="empty" style="padding:18px">'+esc(utxt('left.none','Тохирох датасэт олдсонгүй'))+'</div>';
+}
+function treeData(){
+  return datasets().map(function(ds){
+    var ids=widgetsOfDs(ds);
+    return {id:'data:'+ds,label:dsLabel(ds),note:dsAgency(ds),ids:ids,ds:ds,
+      children:metricsOfDs(ds).map(function(mk){
+        var m=REG.metrics[mk]||{};
+        var mids=SCOPE.filter(function(id){return boundMetrics(id).indexOf(mk)>=0});
+        return {id:'metric:'+mk,label:m.name||mk,note:mk,ids:mids,ds:ds,
+                children:mids.map(twLeaf)};
+      })};
+  });
+}
+/* Салбар — registry-ийн sectors түлхүүрээс. Хавтгай (sectors:[…]) хэлбэр
+   ч мөн салбарын жагсаалт тул хоёуланг нь уншина. */
+function widgetSectors(id){
+  var w=REG.widgets[id]; if(!w||!w.sectors) return [];
+  return Array.isArray(w.sectors)?w.sectors.slice():Object.keys(w.sectors);
+}
+function treeSector(){
+  var keys=[];
+  ALL_IDS.forEach(function(id){widgetSectors(id).forEach(function(k){
+    if(k!=='other'&&k!=='plan'&&keys.indexOf(k)<0) keys.push(k)})});
+  return keys.map(function(k){
+    var ids=ALL_IDS.filter(function(id){return widgetSectors(id).indexOf(k)>=0});
+    return {id:'sector:'+k,label:SECN[k]||k,note:(GLYPH[k]||''),ids:ids,children:ids.map(twLeaf)};
+  });
+}
+function treeState(){
+  var defs=[['ok',utxt('crumb.full','бүрэн холбогдсон')],
+            ['mix',utxt('crumb.partial','хэсэгчлэн')],
+            ['no',utxt('crumb.none','холбогдоогүй')],
+            ['txt',utxt('crumb.textonly','зөвхөн текст')]];
+  return defs.map(function(d){
+    var ids=ALL_IDS.filter(function(id){return statOf(id)===d[0]});
+    return {id:'state:'+d[0],label:d[1],note:utxt('cat.state_word','төлөв'),
+            ids:ids,children:ids.map(twLeaf)};
+  }).filter(function(n){return n.ids.length});
+}
+function treeRoots(){
+  var f=facetOf();
+  return f==='data'?treeData():f==='sector'?treeSector():f==='state'?treeState():treePage();
+}
+/* Зангилааг id-гаар нь олох (мод дахин байгуулагдсан ч id тогтвортой) */
+function findNode(nid,list){
+  list=list||treeRoots();
+  for(var i=0;i<list.length;i++){
+    if(list[i].id===nid) return list[i];
+    var f=findNode(nid,list[i].children||[]);
+    if(f) return f;
+  }
+  return null;
+}
+
+/* Хайлт — зангилаа өөрөө эсвэл дэд мөчрийн аль нэг нь тохирвол үлдэнэ. */
+function twMatch(n,q){
+  if(!q) return true;
+  if((n.label+' '+(n.note||'')+' '+n.id).toLowerCase().indexOf(q)>=0) return true;
+  return (n.children||[]).some(function(c){return twMatch(c,q)});
+}
+function twRow(n,depth,q){
+  var kids=(n.children||[]).filter(function(c){return twMatch(c,q)});
+  /* Хайж байх үед тохирсон салааг өөрөө нээнэ — эс тэгвэл "олдсон" гэж
+     тоо гарсан ч хэрэглэгч гараар дэлгэж байж хардаг. */
+  var open=q?true:!!S.twOpen[n.id];
+  var sel=S.node===n.id;
+  var t=tally(n.ids), cls=t.ok===n.ids.length&&n.ids.length?'ok':(t.ok?'mix':'no');
+  var gl={ok:'✓',mix:'!',no:'✕'}[cls];
+  var caret=kids.length?(open?'▾':'▸'):'·';
+  var h='<div class="twn">'+
+    '<button class="tn'+(sel?' on':'')+(n.widget?' leaf':'')+'" data-node="'+esc(n.id)+'"'+
+      ' style="padding-left:'+(6+depth*11)+'px">'+
+      '<span class="cr"'+(kids.length?' data-twx="'+esc(n.id)+'"':'')+'>'+caret+'</span>'+
+      '<span class="nm">'+esc(n.label)+'</span>'+
+      (n.widget?'':'<span class="ct">'+n.ids.length+'</span>')+
+      '<span class="st '+cls+'">'+gl+'</span>'+
+    '</button>';
+  if(kids.length&&open)
+    h+='<div class="tkids">'+kids.map(function(c){return twRow(c,depth+1,q)}).join('')+'</div>';
+  return h+'</div>';
+}
+/* Зүүн багана — өнцгийн сонголт + мод. Функцийн НЭР rDs хэвээр:
+   render() энэ нэрээр дууддаг бөгөөд дуудагдах ГАЗАР нь өөрчлөгдөөгүй. */
+function rDs(){
+  var q=(S.q||'').trim().toLowerCase();
+  var f=facetOf(), defs=facetDefs();
+  var roots=treeRoots().filter(function(n){return twMatch(n,q)});
+  var allN=treeRoots().length;
+  $('fct').innerHTML=defs.map(function(d){
+    return '<button class="fc'+(d[0]===f?' on':'')+'" data-facet="'+esc(d[0])+'">'+esc(d[1])+'</button>';
+  }).join('');
+  var cur=defs.filter(function(d){return d[0]===f})[0];
+  $('catHead').textContent=cur[1];
+  $('catNote').textContent=cur[2];
+  $('dsn').textContent=roots.length+'/'+allN;
+  $('dsList').innerHTML=roots.length
+    ? roots.map(function(n){return twRow(n,0,q)}).join('')
+    : '<div class="empty" style="padding:18px">'+esc(utxt('left.none','Тохирох датасэт олдсонгүй'))+'</div>';
 }
 
 /* ══════════════════ ЗАМ МӨР ══════════════════ */
 function crumb(){
   var ids=scopeIds(), t=tally(ids);
   var bits=[];
-  bits.push('<button class="cb'+(S.level==='sections'&&!S.ds?' on':'')+'" data-lv="all">'+esc(utxt('crumb.all_datasets','Бүх датасэт'))+'</button>');
-  if(S.ds){
+  bits.push('<button class="cb'+(S.level==='sections'&&!S.ds&&!S.node?' on':'')+'" data-lv="all">'+esc(utxt('crumb.all_widgets','Бүх виджет'))+'</button>');
+  /* Каталогаас сонгосон зангилаа (өнцөг ямар ч байсан) */
+  var cn=S.node&&typeof findNode==='function'?findNode(S.node):null;
+  if(cn){
+    bits.push('<span class="cbs">›</span><button class="cb'+(S.level==='sections'?' on':'')+
+      '" data-lv="sections">'+esc(cn.label)+'</button>');
+  } else if(S.ds){
     bits.push('<span class="cbs">›</span><button class="cb'+(S.level==='sections'?' on':'')+
       '" data-lv="sections">'+esc(dsLabel(S.ds))+'</button>');
   }
@@ -1692,9 +1850,14 @@ function crumb(){
     bits.push('<span class="cbs">›</span><button class="cb on">'+esc(utxt('crumb.all_views','Бүх харагдац'))+'</button>');
   }
   if(S.level!=='sections'&&S.level!=='all'){
-    if(!S.ds) bits.push('<span class="cbs">›</span><button class="cb" data-lv="sections">'+esc(utxt('crumb.home_page','Нүүр хуудас'))+'</button>');
-    bits.push('<span class="cbs">›</span><button class="cb'+(S.level==='widgets'?' on':'')+
-      '" data-lv="widgets">'+esc(sectionLabel(S.section))+'</button>');
+    /* Сонгосон зангилаа нь ЯГ ЭНЭ хэсэг бол дахин бичихгүй — өмнө нь
+       "… › 02-р хэсэг › Нүүр хуудас › 02-р хэсэг" гэж давхардаж байв. */
+    var sameSec=!!(cn&&cn.section===S.section);
+    if(!sameSec){
+      if(!S.ds&&!cn) bits.push('<span class="cbs">›</span><button class="cb" data-lv="sections">'+esc(utxt('crumb.home_page','Нүүр хуудас'))+'</button>');
+      bits.push('<span class="cbs">›</span><button class="cb'+(S.level==='widgets'?' on':'')+
+        '" data-lv="widgets">'+esc(sectionLabel(S.section))+'</button>');
+    }
   }
   if(S.level==='edit')
     bits.push('<span class="cbs">›</span><button class="cb on" data-lv="edit">'+
@@ -2978,14 +3141,36 @@ document.addEventListener('click',function(e){
     if($('q')) $('q').value='';
     $('cov').innerHTML='';           /* хуучин табын хайлт/зам мөрийг арилгана */
     render();return}
-  if((el=t.closest&&t.closest('[data-ds]'))){
-    var k=el.dataset.ds;
-    S.ds=(S.ds===k)?null:k;S.level='sections';S.section=null;S.td=null;
-    render();toast(S.ds?dsLabel(S.ds):utxt('toast.all_datasets','Бүх датасэт'));return}
+  /* Каталогийн ӨНЦӨГ солих — ижил виджетүүдийг өөр ангиллаар харна.
+     Сонголт цэвэрлэгдэнэ (өмнөх өнцгийн зангилааны id шинэ модонд алга). */
+  if((el=t.closest&&t.closest('[data-facet]'))){
+    S.facet=el.dataset.facet; S.node=null; S.ds=null; S.twOpen={};
+    S.level='sections'; S.section=null; S.td=null;
+    render(); return}
+  /* Мөчрийг зөвхөн ДЭЛГЭХ (сонголт өөрчлөхгүй) — сум дээр дарахад */
+  if((el=t.closest&&t.closest('[data-twx]'))){
+    var xk=el.dataset.twx; S.twOpen[xk]=!S.twOpen[xk];
+    rDs(); return}
+  if((el=t.closest&&t.closest('[data-node]'))){
+    var nid=el.dataset.node, nd=findNode(nid);
+    if(!nd) return;
+    /* Навч (виджет) → шууд засварын дэлгэц. Мөчир → түүний хамрах
+       хүрээгээр хэсгүүдийг харуулна. */
+    if(nd.widget){ gotoWidget(nd.widget,'text'); return }
+    S.node=(S.node===nid)?null:nid;
+    if(S.node) S.twOpen[nid]=true;
+    /* Датасэтийн өнцөгт S.ds-ийг ч тавина — зам мөр, агентлагийн нэр
+       гэх мэт одоо байгаа бүх харагдац түүнээс уншдаг. */
+    S.ds=(S.node&&nd.ds)?nd.ds:null;
+    if(S.node&&nd.section){ S.section=nd.section; S.level='widgets' }
+    else { S.section=null; S.level='sections' }
+    S.td=null;
+    render(); toast(S.node?nd.label:utxt('toast.all_datasets','Бүх датасэт'));
+    return}
   if(t.closest&&t.closest('[data-back]')){ goBack(); return }
   if((el=t.closest&&t.closest('[data-lv]'))){
     var lv=el.dataset.lv;
-    if(lv==='all'){S.ds=null;S.level='sections';S.section=null;S.td=null}
+    if(lv==='all'){S.ds=null;S.node=null;S.level='sections';S.section=null;S.td=null}
     else if(lv==='sections'){S.level='sections';S.section=null;S.td=null}
     else if(lv==='widgets'){S.level='widgets';S.td=null}
     render();return}
@@ -3112,7 +3297,7 @@ function cfApply(el){
   if(box) box.classList.toggle('dirty',chartDirtyKeys().indexOf(id)>=0);
   var n2=dirtyCount();
   $('dirtyMsg').innerHTML=n2?('<b>'+n2+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
-  $('expBtn').disabled=n2===0; $('revBtn').disabled=n2===0;
+  $('expBtn').disabled=n2===0; $('revBtn').disabled=n2===0; if(typeof refreshSaveHint==='function') refreshSaveHint();
   if(typeof refreshPubBtn==='function') refreshPubBtn();
   $('metricsN').textContent=(metricsDirtyKeys().length+chartDirtyKeys().length)||'';
 }
@@ -3265,7 +3450,7 @@ document.addEventListener('input',function(e){
     }
     var dn=dirtyCount();
     $('dirtyMsg').innerHTML=dn?('<b>'+dn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
-    $('expBtn').disabled=dn===0; $('revBtn').disabled=dn===0;
+    $('expBtn').disabled=dn===0; $('revBtn').disabled=dn===0; if(typeof refreshSaveHint==='function') refreshSaveHint();
     if(typeof refreshPubBtn==='function') refreshPubBtn();
     return;
   }
@@ -3284,7 +3469,7 @@ document.addEventListener('input',function(e){
     }
     var vn=dirtyCount();
     $('dirtyMsg').innerHTML=vn?('<b>'+vn+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
-    $('expBtn').disabled=vn===0; $('revBtn').disabled=vn===0;
+    $('expBtn').disabled=vn===0; $('revBtn').disabled=vn===0; if(typeof refreshSaveHint==='function') refreshSaveHint();
     if(typeof refreshPubBtn==='function') refreshPubBtn();
     return;
   }
@@ -3416,6 +3601,36 @@ function renderAuth(){
 function refreshPubBtn(){
   var pb=$('pubBtn'); if(!pb) return;
   pb.disabled=!PUBSTATE.canPublish||dirtyCount()===0;
+  refreshSaveHint();
+}
+/* Хадгалалтын ДАРААГИЙН АЛХАМ. Засварлагч "өөрчлөлт хадгалагдаагүй"
+   гэдгийг хараад ЮУ дарахаа мэдэхгүй байсан — товчнууд нь ямар
+   дараалалтайг ил хэлдэггүй байв. Төлөв бүрт ганц тодорхой заавар
+   өгнө. */
+function refreshSaveHint(){
+  var el=$('saveHint'), dot=$('saveDot'); if(!el) return;
+  var n=dirtyCount(), pubOn=(typeof EHPublish!=='undefined'&&EHPublish.enabled);
+  var t, cls='';
+  if(!n){
+    t=PUBSTATE.lastAt
+      ? utxt('save.hint_done','Нийтлэгдлээ — сайтаа сэргээж (F5) шалгана уу.')
+      : utxt('save.hint_clean','Өөрчлөлт алга. Засвар хийвэл энд гарч ирнэ.');
+    cls=PUBSTATE.lastAt?'ok':'';
+  } else if(!pubOn){
+    t=utxt('save.hint_off','Шууд нийтлэх тохируулагдаагүй — «Экспортлох» дарж татсан файлыг хөгжүүлэгчид өгнө.');
+    cls='warn';
+  } else if(!PUBSTATE.signedIn){
+    t=utxt('save.hint_login','Нийтлэхийн тулд эхлээд баруун дээд буланд «Нэвтрэх (Google)» дарна уу.');
+    cls='warn';
+  } else if(!PUBSTATE.canPublish){
+    t=utxt('save.hint_norights','Таны бүртгэлд нийтлэх эрх алга — «Экспортлох»-оор татаж хөгжүүлэгчид өгнө.');
+    cls='warn';
+  } else {
+    t=utxt('save.hint_ready','«Сайтад нийтлэх» дарвал амьд сайтад шууд тусна. «Экспортлох» нь git-д бүртгэх нөөц файл.');
+    cls='warn';
+  }
+  el.innerHTML='<b>'+esc(utxt('save.next_step','Дараагийн алхам:'))+'</b> '+esc(t);
+  if(dot) dot.className='sv-dot'+(cls?' '+cls:'');
 }
 if(typeof EHPublish!=='undefined'&&EHPublish.enabled&&window.auth){
   window.auth.onAuthStateChanged(function(){

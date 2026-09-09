@@ -1375,11 +1375,116 @@ async function groupM() {
   } finally { srv.close(); }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   N. КАТАЛОГИЙН МОД · ХАДГАЛАХ МӨР · НУУСАН КАРТЫН ЗАЙ
+
+   Хэрэглэгчийн 3 гомдол:
+     (1) "hide хийсэн картын зай шууд хоосон үлдэж байна" — grid-ийн
+         багана repeat(5,…) гэж ХАТУУ бичигдсэн тул салбар нуухад
+         нүд хоосон үлдэж, үлдсэн нь шахагдахгүй байв.
+     (2) "өөрчлөлтийг яаж хадгалах нь ойлгомжгүй" — "Экспортлох" нь
+         цэнхэр (гол) товч мэт харагдаж байсан ч тэр нь хөгжүүлэгчийн
+         зам. Эцсийн хэрэглэгчийн гол үйлдэл нь "Сайтад нийтлэх".
+     (3) "виджет каталогийг ангилах шаардлагатай, шатлалтай байх" —
+         зүүн багана зөвхөн ХАВТГАЙ датасэтийн жагсаалт байв.
+   ══════════════════════════════════════════════════════════════════ */
+async function groupN() {
+  group('N. Каталогийн мод ба хадгалах мөр');
+  const idx = read('index.html'), adm = read('admin/index.html'), con = readJson('content.json');
+
+  /* ── N1. Нуусан салбарын зай ── */
+  check('N1. Grid-ийн багана ХАРАГДАХ мөрийн тооноос',
+    idx.includes('repeat({{ lsCols }}') &&
+    idx.includes('repeat({{ weekPaxDeltaCols }}') &&
+    idx.includes('repeat({{ weekCargoDeltaCols }}'),
+    'багана хатуу бичигдсэн хэвээр');
+  check('N1. Тоо жагсаалтын уртаас, 0 үед ч grid эвдрэхгүй',
+    idx.includes('lsCols:String(Math.max(1,livestrip.length))') &&
+    idx.includes('Math.max(1,wPax.delta.length)') &&
+    idx.includes('Math.max(1,wCargo.delta.length)'));
+  check('N1. repeat(5, … хатуу бичиглэл ҮЛДЭЭГҮЙ',
+    !idx.includes('repeat(5,minmax(0,1fr))'),
+    'хаа нэгтээ 5 багана хатуу үлдсэн');
+
+  /* ── N2. Хадгалах мөр ── */
+  check('N2. "Сайтад нийтлэх" нь ГОЛ товч (Экспортлох биш)',
+    adm.includes('<button class="btn pri" id="pubBtn"') &&
+    adm.includes('<button class="btn sm" id="expBtn"'),
+    'Экспортлох хэвээр гол товч');
+  check('N2. Төлөв бүрт дараагийн алхам ил гарна',
+    adm.includes('function refreshSaveHint()') &&
+    ["save.hint_clean","save.hint_ready","save.hint_login",
+     "save.hint_norights","save.hint_off","save.hint_done"]
+      .every((k) => adm.includes("utxt('" + k + "'")));
+  check('N2. Зааврын текст content.json-д бүртгэгдсэн',
+    !!(con.ui && con.ui.save && con.ui.save.hint_ready && con.ui.save.next_step));
+
+  /* ── N3. Каталогийн мод ── */
+  check('N3. Дөрвөн өнцөг тодорхойлогдсон',
+    adm.includes('function facetDefs()') && adm.includes("['page',") &&
+    adm.includes("['data',") && adm.includes("['sector',") && adm.includes("['state',"));
+  check('N3. Өнцөг бүрд мод байгуулагчтай',
+    ['treePage', 'treeData', 'treeSector', 'treeState']
+      .every((f) => adm.includes('function ' + f + '(')));
+  check('N3. Хамрах хүрээ сонгосон ЗАНГИЛААНААС гарна',
+    adm.includes('function scopeIds()') && adm.includes('findNode(S.node)'),
+    'scopeIds хуучнаараа зөвхөн датасэтээс уншиж байна');
+  check('N3. Мод дэлгэх ба сонгох тусдаа үйлдэл',
+    adm.includes('data-twx') && adm.includes('data-node') && adm.includes('data-facet'));
+  check('N3. Өнцгийн нэр/тайлбар content.json-д',
+    !!(con.ui && con.ui.cat && con.ui.cat.facet_page && con.ui.cat.note_sector));
+
+  if (!CHROME) { skipped('N4. Каталогийн мод (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(4500);
+      const R={};
+      R.facets=[...d.querySelectorAll('[data-facet]')].map(b=>b.dataset.facet);
+      R.roots={};
+      for(const f of ['page','data','sector','state']){
+        const b=d.querySelector('[data-facet="'+f+'"]'); if(!b) return {__err:'өнцөг алга: '+f};
+        b.click(); await sleep(700);
+        R.roots[f]=d.querySelectorAll('[data-node]').length;
+      }
+      /* Цэсээр — мөчир дэлгэх, зангилаа сонгох, навч дарж засвар нээх */
+      d.querySelector('[data-facet="page"]').click(); await sleep(700);
+      R.before=d.querySelectorAll('[data-node]').length;
+      const x=d.querySelector('[data-twx]'); if(!x) return {__err:'дэлгэх сум алга'};
+      x.click(); await sleep(500);
+      R.afterExpand=d.querySelectorAll('[data-node]').length;
+      const sec=d.querySelector('[data-node^="page:"]'); sec.click(); await sleep(900);
+      R.scoped=d.querySelectorAll('[data-cd]').length;
+      R.crumb=(d.querySelector('.crumbnav')||{}).textContent||'';
+      const leaf=d.querySelector('[data-node^="w:"]');
+      if(leaf){ leaf.click(); await sleep(1100) }
+      R.editor=!!d.querySelector('[data-tf]');
+      R.hint=(d.getElementById('saveHint')||{}).textContent||'';
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('N4. Каталогийн модны DOM шалгалт', R.__err); return; }
+    check('N4. Дөрвөн өнцөг зурагдана',
+      R.facets.join(',') === 'page,data,sector,state', R.facets.join(','));
+    check('N4. Өнцөг бүр зангилаа гаргана',
+      ['page', 'data', 'sector', 'state'].every((f) => R.roots[f] > 0),
+      JSON.stringify(R.roots));
+    check('N4. Мөчир дэлгэхэд дэд зангилаа нэмэгдэнэ', R.afterExpand > R.before,
+      JSON.stringify({ before: R.before, after: R.afterExpand }));
+    check('N4. Зангилаа сонгоход хамрах хүрээ хумигдана', R.scoped > 0 && R.scoped < 17,
+      'виджет: ' + R.scoped);
+    check('N4. Зам мөр давхардахгүй',
+      (R.crumb.match(/02 · Долоо/g) || []).length <= 1, R.crumb.replace(/\s+/g, ' '));
+    check('N4. Навч дарахад засварын дэлгэц нээгдэнэ', R.editor === true);
+    check('N4. Хадгалах мөр дараагийн алхмыг хэлнэ', /Дараагийн алхам/.test(R.hint), R.hint);
+  } finally { srv.close(); }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
