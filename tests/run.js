@@ -1712,11 +1712,57 @@ function groupQ() {
     'хатуу бичсэн текст үлдсэн');
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   R. API ЛАВЛАХ, БАРИМТЫН ХУУДАС БА НИЙТЛЭГ ҮГ
+
+   Хуудсуудын сүүлчийн үлдэгдэл бичиг. Онцлох нь: "Илгээх" гэсэн ганц
+   үг ДӨРВӨН өөр газар хатуу бичигдсэн байв. Тус бүрд нь тусдаа
+   түлхүүр үүсгэвэл засварлагч нэг үгийг дөрвөн газар засах болно —
+   иймд НЭГ түлхүүр, үндсэн түвшинд.
+     R1. Нийтлэг үг нэг эх сурвалжтай
+     R2. API лавлахын хүснэгт ба хөгжүүлэгчийн бичиг content.json-д
+     R3. Баримтын дэлгэрэнгүй хуудасны бичиг content.json-д
+     R4. Хатуу бичсэн текст ҮЛДЭЭГҮЙ
+   ══════════════════════════════════════════════════════════════════ */
+function groupR() {
+  group('R. API лавлах, баримт ба нийтлэг үг');
+  const idx = read('index.html'), adm = read('admin/index.html'), con = readJson('content.json');
+
+  check('R1. "Илгээх" НЭГ түлхүүрээр, дөрвүүлэнд нь',
+    (idx.match(/\{\{ t\.send \}\}/g) || []).length >= 4 &&
+    idx.includes("t:{send:stxt('common.send','Илгээх')}"),
+    'дөрвөн газар тус тусдаа бичигдсэн хэвээр');
+  check('R1. Нийтлэг үг content.json-д', !!(con.site.common && con.site.common.send));
+
+  check('R2. API лавлахын бичиг stxt()-ээр',
+    ["browse.h_method", "browse.h_desc", "browse.h_freq", "browse.h_use",
+      "browse.start_head", "browse.tier_head", "browse.more"]
+      .every((k) => idx.includes("stxt('" + k + "'")));
+  check('R3. Баримтын хуудасны бичиг stxt()-ээр',
+    ["doc.read", "doc.share", "doc.your_rating", "doc.same_cat", "doc.reviews",
+      "doc.cite", "doc.license", "doc.export", "doc.license_note", "doc.demo_note"]
+      .every((k) => idx.includes("stxt('" + k + "'")));
+  check('R3. Баримтын бичиг нэг объектоор холбогдоно',
+    idx.includes('{{ docDetail.t.read }}') && idx.includes('{{ docDetail.t.demoNote }}'));
+
+  check('R2/R3. Админд гурван шинэ бүлэг',
+    ["{key:'common', title:'Нийтлэг үг'",
+      "{key:'doc', title:'Баримтын дэлгэрэнгүй хуудас'",
+      "{key:'browse', title:'Нээлттэй өгөгдөл · API лавлах'"]
+      .every((t) => adm.includes(t)));
+
+  check('R4. Хатуу бичсэн текст ҮЛДЭЭГҮЙ',
+    ['>Илгээх</button>', '<div>Метод</div>', '>Онлайн унших</div>',
+      '>Эшлэл (APA)</div>', '>Ижил ангиллын баримтууд</div>']
+      .every((t) => !idx.includes(t)),
+    'хатуу бичсэн текст үлдсэн');
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
