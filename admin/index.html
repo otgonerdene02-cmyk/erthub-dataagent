@@ -1198,7 +1198,8 @@ var UI_GROUPS=[
            export_note:'Хөлийн тайлбар',close:'Хаах товч (aria)'}},
   {key:'left',title:'Админ · зүүн багана', where:'Датасэтийн жагсаалт',
    labels:{search_ph:'Хайлтын сануулга',heading:'Багананы гарчиг',note:'Доод тайлбар',
-           none:'Илэрц алга',source_unknown:'Эх сурвалж тодорхойгүй'}},
+           none:'Илэрц алга',source_unknown:'Эх сурвалж тодорхойгүй',
+           status_ok:'Төлөв · бүрэн',status_mix:'Төлөв · хэсэгчлэн',status_no:'Төлөв · холбогдоогүй'}},
   {key:'crumb',title:'Админ · зам мөр ба тоо', where:'Дэлгэц бүрийн дээд мөр',
    labels:{back:'Буцах товч',back_title:'Буцах товчны тайлбар',all_widgets:'Бүх виджет',
            all_views:'Бүх харагдац',home_page:'Нүүр хуудас',widget_word:'"виджет" үг',
@@ -1235,6 +1236,7 @@ var UI_GROUPS=[
            key_label:'Кодны түлхүүрийн шошго',name_label:'Монгол нэрний талбар',
            technical_summary:'Техникийн эвхэгддэг хэсгийн гарчиг',
            add_name_ph:'Шинэ метрикийн нэрний сануулга',
+           name_required:'Нэр хоосон үеийн мессеж',
            source_label:'Эх сурвалж',dataset_label:'Датасэт',column_label:'Багана',
            unit_label:'Нэгж',quality_label:'Чанар',filter_label:'Шүүлт (тайлбар)',
            period_note_label:'Тайлбар — энэ юу вэ',would_need_label:'Шаардлагатай эх сурвалж',
@@ -1275,7 +1277,7 @@ var UI_GROUPS=[
   {key:'filter',title:'Админ · хайлт ба шүүлт', where:'Виджет жагсаалтын дээд мөр',
    labels:{search_ph:'Хайлтын сануулга',search_aria:'Хайлтын aria',quality:'Чанар шүүлт',
            page:'Хуудас шүүлт',type:'Төрөл шүүлт',all:'"Бүгд" сонголт',clear:'Цэвэрлэх товч',
-           none:'Илэрц алга'}},
+           none:'Илэрц алга',verified:'Чанар · баталгаажсан',mock:'Чанар · түр дата'}},
   {key:'list',title:'Админ · виджет жагсаалт', where:'Хэсэг ба бүх харагдацын дэлгэц',
    labels:{all_heading:'Бүх харагдац гарчиг',sections_heading:'Хэсгүүдийн гарчиг',
            widgets_suffix:'Хэсгийн виджет дагавар',none_for_ds:'Виджет алга',open:'Нээх холбоос',
@@ -1304,12 +1306,14 @@ var UI_GROUPS=[
            chip_group:'Чипийн бүлэг',chip_where:'Чипийн байршил',chip_word:'"Чип" үг',
            chip_title:'Чип · гарчиг',chip_body:'Чип · тайлбар',month_group:'Сарын бүлэг',
            month_where:'Сарын байршил',month_label:'Сарын шошгын дагавар',changed:'Өөрчлөгдсөн тэмдэг',
-           ufh_heading:'ui_form блокийн гарчиг',ufh_note:'ui_form блокийн тайлбар'}},
+           ufh_heading:'ui_form блокийн гарчиг',ufh_note:'ui_form блокийн тайлбар',
+           count_word:'Гарчгийн тооны үг'}},
   {key:'toast',title:'Админ · мэдэгдэл (toast)', where:'Зүүн доод буланд түр гарах мөр',
    labels:{field_active:'Талбар идэвхжлээ',text_applied:'Текст хэрэглэгдлээ',
            text_cancelled:'Текст цуцлагдлаа',viz_changed:'Хэлбэр солигдлоо',bound:'Холбогдлоо',
            unbound:'Салгагдлаа',downloaded:'Татагдлаа',downloaded_note:'Татсаны дараах сануулга',
            reverted:'Бүгд буцаагдлаа',moved:'Шилжлээ',out_of_scope:'Хүрээнээс гадуур',
+           metric_planned:'Төлөвлөгөөнд нэмэгдлээ',
            all_datasets:'Бүх датасэт'}},
   {key:'boot',title:'Админ · ачаалалтын дэлгэц', where:'Эхлэх үе ба алдааны дэлгэц',
    labels:{loading:'Ачааллаж байна',loading_body:'Ачаалалтын тайлбар',
@@ -1880,6 +1884,11 @@ function twRow(n,depth,q){
   var sel=S.node===n.id;
   var t=tally(n.ids), cls=t.ok===n.ids.length&&n.ids.length?'ok':(t.ok?'mix':'no');
   var gl={ok:'✓',mix:'!',no:'✕'}[cls];
+  /* Тэмдэгт дангаараа юу гэсэн үг болохыг хэлдэггүй — дээд тоолууртай
+     ЯГ ижил үгээр title (хулгана) ба aria-label (дэлгэц уншигч). */
+  var stl=cls==='ok'?utxt('left.status_ok','Бүрэн холбогдсон')
+         :cls==='mix'?utxt('left.status_mix','Хэсэгчлэн холбогдсон')
+         :utxt('left.status_no','Холбогдоогүй');
   var caret=kids.length?(open?'▾':'▸'):'·';
   var h='<div class="twn">'+
     '<button class="tn'+(sel?' on':'')+(n.widget?' leaf':'')+'" data-node="'+esc(n.id)+'"'+
@@ -1887,7 +1896,7 @@ function twRow(n,depth,q){
       '<span class="cr"'+(kids.length?' data-twx="'+esc(n.id)+'"':'')+'>'+caret+'</span>'+
       '<span class="nm">'+esc(n.label)+'</span>'+
       (n.widget?'':'<span class="ct">'+n.ids.length+'</span>')+
-      '<span class="st '+cls+'">'+gl+'</span>'+
+      '<span class="st '+cls+'" role="img" title="'+esc(stl)+'" aria-label="'+esc(stl)+'">'+gl+'</span>'+
     '</button>';
   if(kids.length&&open)
     h+='<div class="tkids">'+kids.map(function(c){return twRow(c,depth+1,q)}).join('')+'</div>';
@@ -2136,8 +2145,9 @@ function lvSite(){
   });
   shown+=uiShown+autoShown+ufShown;
   if(!shown) return '<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
-  return (html?'<p class="ph">'+esc(utxt('site_tab.heading','Сайтын текст · content.json → site'))+' '+
-    '<span style="font-family:var(--mono)">'+(shown-uiShown)+'</span></p>'+html+
+  return (html?'<p class="ph">'+esc(utxt('site_tab.heading','Сайтын текст · сайт дээр харагдах бичиг'))+' '+
+    '<span style="font-family:var(--mono)">'+(shown-uiShown)+'</span> '+
+    esc(utxt('site_tab.count_word','бичиг'))+'</p>'+html+
     '<p class="pvnote">'+esc(utxt('site_tab.note','Эдгээр нь виджетийн БУС текст. 04/05/07/08 хэсгийн гарчиг энд байхгүй — тэдгээр виджетээсээ гарчигаа авдаг тул давхардуулбал хоёр эх сурвалж үүснэ.'))+'</p>':'')+
     (uiHtml?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.ui_heading','Админы интерфейсийн текст · content.json → ui'))+' '+
     '<span style="font-family:var(--mono)">'+uiShown+'</span></p>'+uiHtml+
@@ -2578,7 +2588,7 @@ function invRowHtml(r){
       r.used.map(function(id){return '<button class="btn sm" data-mgoto="'+esc(id)+'">'+
         esc(curText(id,'title')||id)+'</button>'}).join('')+'</div>':'')+
     '<div class="acts"><button class="btn'+(open?'':' pri')+' sm" data-invopen="'+esc(r.id)+'">'+
-      esc(open?utxt('inv.close','Хаах'):utxt('inv.map','Виджеттэй холбох (MAP)'))+'</button></div>';
+      esc(open?utxt('inv.close','Хаах'):utxt('inv.map','Виджеттэй холбох'))+'</button></div>';
   if(open){
     var tg=invTargets(r);
     h+='<div class="acc" style="margin-top:8px">'+esc(utxt('inv.map_note','Зөвхөн НЭГЖ НЬ ТОХИРОХ байрлал жагсана — үл нийцэх холбоос үүсгэх боломжгүй. Холбосон даруйд preview болон урьдчилан харах тоо шинэчлэгдэнэ.'))+'</div>'+
@@ -2599,7 +2609,7 @@ function lvInventory(){
   var all=invRows(), rows=all.filter(invMatch);
   return '<p class="ph">'+esc(utxt('inv.heading','Дата сан — ирсэн бүх өгөгдөл'))+' '+
     '<span style="font-family:var(--mono)">'+rows.length+'/'+all.length+'</span></p>'+
-    '<p class="pvnote">'+esc(utxt('inv.note','Вэб сервисээс ирж буй бүх утга нэг жагсаалтад. Мөрөө сонгоод виджеттэй холбоод (MAP) шууд нийтэлж болно. Холбоос нь metric_registry.json дээр бичигдэх тул виджетийн засварын дэлгэцэд ч ижилхэн харагдана.'))+'</p>'+
+    '<p class="pvnote">'+esc(utxt('inv.note','Вэб сервисээс ирж буй бүх утга нэг жагсаалтад. Мөрөө сонгоод виджеттэй холбоод шууд нийтэлж болно. Холбоос нь metric_registry.json дээр бичигдэх тул виджетийн засварын дэлгэцэд ч ижилхэн харагдана.'))+'</p>'+
     invChips(rows,all)+
     (rows.length?rows.map(invRowHtml).join('')
       :'<div class="empty">'+esc(utxt('inv.empty','Шүүлтэд тохирох дата олдсонгүй'))+'</div>');
@@ -2711,8 +2721,11 @@ function filterBar(scopeIdsForOptions){
       'aria-label="'+esc(utxt('filter.search_aria','Виджет хайх'))+'" value="'+esc(S.wq||'')+'">'+
     '<select id="fQuality" aria-label="'+esc(utxt('filter.quality','Чанар'))+'">'+
       '<option value="all"'+(S.wQuality==='all'?' selected':'')+'>'+esc(utxt('filter.quality','Чанар'))+': '+esc(utxt('filter.all','Бүгд'))+'</option>'+
-      '<option value="verified"'+(S.wQuality==='verified'?' selected':'')+'>Verified</option>'+
-      '<option value="mock"'+(S.wQuality==='mock'?' selected':'')+'>Mock</option>'+
+      /* filter.quality нь аль хэдийн МӨР ("Чанар") тул дэд түлхүүр болгож
+         болохгүй — ах дүү түвшинд (filter.verified / filter.mock). Үг нь
+         Дата холболт табын чанарын шошготой ижил. */
+      '<option value="verified"'+(S.wQuality==='verified'?' selected':'')+'>'+esc(utxt('filter.verified','Баталгаажсан'))+'</option>'+
+      '<option value="mock"'+(S.wQuality==='mock'?' selected':'')+'>'+esc(utxt('filter.mock','Түр дата'))+'</option>'+
     '</select>'+
     '<select id="fPage" aria-label="'+esc(utxt('filter.page','Хуудас'))+'">'+
       '<option value="all"'+(S.wPage==='all'?' selected':'')+'>'+esc(utxt('filter.page','Хуудас'))+': '+esc(utxt('filter.all','Бүгд'))+'</option>'+
@@ -3582,10 +3595,16 @@ document.addEventListener('click',function(e){
     var newKey=(kIn&&kIn.value||'').trim();
     if(!newKey){ toast(utxt('metrics_tab.key_required','Түлхүүр заавал бичнэ үү')); return }
     if(REG.metrics[newKey]){ toast(utxt('metrics_tab.key_exists','Энэ түлхүүр аль хэдийн бүртгэлтэй байна')); return }
+    /* Монгол нэргүй метрик жагсаалтад зөвхөн кодоороо гарч, энгийн
+       хэрэглэгч юу болохыг нь ойлгохгүй — түлхүүрийн шалгалттай ижил. */
+    if(!(nmIn&&nmIn.value||'').trim()){ toast(utxt('metrics_tab.name_required','Монгол нэрийг заавал бичнэ үү')); return }
     REG.metrics[newKey]={name:(nmIn&&nmIn.value||''),source:null,dataset:null,column:null,agg:null,filter:'',
       transform:'',unit:'',additive:false,quality:'mock',would_need:(wnIn&&wnIn.value||'')};
     log(newKey,'Шинэ метрик (төлөвлөгөө) нэмэгдлээ');
-    render();toast(utxt('toast.bound','Холбогдлоо:')+' '+newKey);return}
+    /* ЗӨВХӨН төлөвлөгөө (source:null) — юу ч холбогдоогүй. Өмнө нь
+       "Холбогдлоо:" гэж ХУДАЛ хэлдэг байв; toast.bound нь жинхэнэ
+       холболтод л хэрэглэгдэнэ. */
+    render();toast(utxt('toast.metric_planned','Төлөвлөгөөнд нэмэгдлээ:')+' '+newKey);return}
 });
 
 /* Гар талбараар (Enter/Space) виджет нээх */

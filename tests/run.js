@@ -706,6 +706,9 @@ const PROBE_H = `async function(d,w){
   if(kIn&&wnIn&&add){
     kIn.value='test.probe_metric'; kIn.dispatchEvent(new w.Event('input',{bubbles:true}));
     wnIn.value='H4 туршилт'; wnIn.dispatchEvent(new w.Event('input',{bubbles:true}));
+    /* Монгол нэр ЗААВАЛ (UX QA T1) — нэргүй метрик нэмэгдэхгүй. Нэргүй
+       үеийн татгалзлыг S6 тусад нь шалгана. */
+    const nmIn=d.getElementById('mNewName'); if(nmIn){ nmIn.value='H4 туршилтын метрик'; nmIn.dispatchEvent(new w.Event('input',{bubbles:true})); }
     add.click(); await sleep(500);
     R.cardsAfterAdd=d.querySelectorAll('[data-metric]').length;
     const newCard=d.querySelector('[data-metric="test.probe_metric"]');
@@ -1758,11 +1761,133 @@ function groupR() {
     'хатуу бичсэн текст үлдсэн');
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   S. UX QA-ИЙН 5 ЗАСВАР (qa-backlog.md)
+
+   Техникийн мэдлэггүй хэрэглэгчийн нүдээр хийсэн QA тестээс гарсан:
+     S1 (T1 Major). "+ Шинэ метрик" нь ЗӨВХӨН төлөвлөгөө нэмдэг ч
+         "Холбогдлоо:" гэсэн ХУДАЛ мэдэгдэл гардаг байв. Мөн монгол
+         нэр хоосон үед шалгалт алга.
+     S2 (T2 Major). Чанарын шүүлтэд "Verified" / "Mock" гэсэн англи үг
+         хатуу бичигдсэн — зэргэлдээх сонголтууд монгол.
+     S3 (T3 Minor). "Виджеттэй холбох (MAP)" — тайлбаргүй товчлол,
+         53 мөр бүр дээр давтагддаг.
+     S4 (T4 Minor). Гарчигт "content.json → site" гэсэн файлын зам
+         (uppercase болж "CONTENT.JSON → SITE" гэж гардаг).
+     S5 (T5 Minor). Каталогийн мод дахь ✓ / ! / ✕ тэмдэгт тайлбаргүй.
+   ══════════════════════════════════════════════════════════════════ */
+async function groupS() {
+  group('S. UX QA засвар (T1–T5)');
+  const adm = read('admin/index.html'), con = readJson('content.json');
+
+  /* ── S1 ── */
+  const addStart = adm.indexOf("if(t.closest&&t.closest('[data-madd]')){");
+  const addBlock = addStart >= 0 ? adm.slice(addStart, adm.indexOf('return}', adm.indexOf("log(newKey,", addStart)) + 7) : '';
+  check('S1. Төлөвлөгөөт метрик нэмэхэд "Холбогдлоо" гэж хэлэхгүй',
+    !!addBlock && !addBlock.includes("utxt('toast.bound'") &&
+    addBlock.includes("utxt('toast.metric_planned'"),
+    'төлөвлөгөө нэмэхэд холболтын мэдэгдэл гарсаар байна');
+  check('S1. "toast.bound" жинхэнэ холболтод хэвээр',
+    (adm.match(/utxt\('toast\.bound'/g) || []).length >= 2);
+  check('S1. Монгол нэр хоосон үед шалгана',
+    addBlock.includes("utxt('metrics_tab.name_required'"),
+    'нэр хоосон ч метрик нэмэгдэнэ');
+  check('S1. Шинэ мессеж content.json-д',
+    !!(con.ui.toast.metric_planned && con.ui.metrics_tab.name_required));
+
+  /* ── S2 ── */
+  check('S2. Чанарын шүүлтэд англи үг ХАТУУ бичигдээгүй',
+    !adm.includes('>Verified</option>') && !adm.includes('>Mock</option>'),
+    'Verified / Mock хэвээр');
+  check('S2. Сонголт utxt()-ээр, filter.* ах дүү түвшинд',
+    adm.includes("utxt('filter.verified'") && adm.includes("utxt('filter.mock'") &&
+    typeof con.ui.filter.quality === 'string' &&
+    typeof con.ui.filter.verified === 'string' && typeof con.ui.filter.mock === 'string',
+    'filter.quality мөр хэвээр байх ёстой — дэд түлхүүр болговол эвдэрнэ');
+  check('S2. Сонголтын үгэнд латин үсэг алга',
+    !/[A-Za-z]/.test(con.ui.filter.verified + con.ui.filter.mock));
+
+  /* ── S3 ── */
+  check('S3. "(MAP)" товчлол ҮЛДЭЭГҮЙ',
+    !/\(MAP\)/.test(con.ui.inv.map) && !/\(MAP\)/.test(con.ui.inv.note) &&
+    !adm.includes("utxt('inv.map','Виджеттэй холбох (MAP)')") &&
+    !adm.includes('виджеттэй холбоод (MAP)'),
+    'товчлол хэвээр');
+
+  /* ── S4 ── */
+  check('S4. Гарчигт файлын зам ҮЛДЭЭГҮЙ',
+    !/content\.json/i.test(con.ui.site_tab.heading) &&
+    !adm.includes("utxt('site_tab.heading','Сайтын текст · content.json → site')"),
+    con.ui.site_tab.heading);
+  check('S4. Гарчгийн дэргэдэх тоо шошготой',
+    adm.includes("utxt('site_tab.count_word'") && !!con.ui.site_tab.count_word);
+
+  /* ── S5 ── */
+  check('S5. ✓ / ! / ✕ тэмдэгт тайлбартай (title + aria-label)',
+    adm.includes("utxt('left.status_ok'") && adm.includes("utxt('left.status_mix'") &&
+    adm.includes("utxt('left.status_no'") &&
+    /<span class="st '\+cls\+'" role="img" title="'\+esc\(stl\)\+'" aria-label="'\+esc\(stl\)\+'">/.test(adm),
+    'тэмдэгт тайлбаргүй');
+  check('S5. Тайлбарын үг дээд тоолууртай ЯГ ижил',
+    con.ui.left.status_ok === 'Бүрэн холбогдсон' &&
+    con.ui.left.status_mix === 'Хэсэгчлэн холбогдсон' &&
+    con.ui.left.status_no === 'Холбогдоогүй');
+
+  if (!CHROME) { skipped('S6. QA засвар (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(4500);
+      const R={};
+      /* S5 — модны тэмдэгт */
+      const st=d.querySelector('#dsList .st');
+      R.stTitle=st?(st.getAttribute('title')||''):'';
+      R.stAria=st?(st.getAttribute('aria-label')||''):'';
+      /* S2 — чанарын шүүлт (хэсэг сонгоод виджетийн түвшинд гарна) */
+      const sec=d.querySelector('[data-section]');
+      if(sec){ sec.click(); await sleep(900) }
+      const fq=d.getElementById('fQuality');
+      R.qOpts=fq?[...fq.options].map(o=>o.text):[];
+      /* S1 — төлөвлөгөөт метрик нэмэх */
+      d.querySelector('[data-tab="metrics"]').click(); await sleep(1300);
+      const k=d.getElementById('mNewKey'), nm=d.getElementById('mNewName');
+      const add=d.querySelector('[data-madd]');
+      if(!k||!add) return {__err:'метрик нэмэх маягт алга'};
+      k.value='qa.test_planned'; if(nm) nm.value='';
+      add.click(); await sleep(400);
+      R.toastNoName=(d.getElementById('toast')||{}).textContent||'';
+      R.addedNoName=d.querySelectorAll('[data-metric="qa.test_planned"]').length;
+      const k2=d.getElementById('mNewKey'), nm2=d.getElementById('mNewName');
+      k2.value='qa.test_planned'; nm2.value='QA туршилтын метрик';
+      d.querySelector('[data-madd]').click(); await sleep(400);
+      R.toastOk=(d.getElementById('toast')||{}).textContent||'';
+      R.added=d.querySelectorAll('[data-metric="qa.test_planned"]').length;
+      /* S3 — MAP товч */
+      R.mapBtn=((d.querySelector('[data-invopen]')||{}).textContent||'').trim();
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('S6. QA засварын DOM шалгалт', R.__err); return; }
+    check('S6. Модны тэмдэгт title ба aria-label-тай',
+      /холбогдсон|Холбогдоогүй/.test(R.stTitle) && R.stTitle === R.stAria,
+      JSON.stringify({ title: R.stTitle, aria: R.stAria }));
+    check('S6. Чанарын шүүлтэд англи үг гарахгүй',
+      R.qOpts.length >= 3 && R.qOpts.every((t) => !/[A-Za-z]/.test(t)),
+      R.qOpts.join(' | '));
+    check('S6. Нэргүй метрик нэмэгдэхгүй, шалтгааныг хэлнэ',
+      R.addedNoName === 0 && /нэр/i.test(R.toastNoName), R.toastNoName);
+    check('S6. Төлөвлөгөө нэмэхэд "Холбогдлоо" гэж ХЭЛЭХГҮЙ',
+      R.added === 1 && !/Холбогдлоо/.test(R.toastOk) && /Төлөвлөгөө/.test(R.toastOk),
+      R.toastOk);
+    check('S6. MAP товчинд товчлол алга', !!R.mapBtn && !/MAP/.test(R.mapBtn), R.mapBtn);
+  } finally { srv.close(); }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
