@@ -6148,7 +6148,7 @@ class Component extends DCLogic {
       }
       const rv=Object.assign({},this.state.docReviews||{});
       rv[dkey]=(rv[dkey]||[]).concat([{by:this.state.authFull||'Уншигч',stars:myStars||5,text:txt}]);
-      this.setState({docReviews:rv,docReviewDraft:'', docSaved:null, docShareOpen:false,toast:'Сэтгэгдэл нэмэгдлээ'});
+      this.setState({docReviews:rv,docReviewDraft:'',docShareOpen:false,toast:'Сэтгэгдэл нэмэгдлээ'});
       this.fadeToast&&this.fadeToast();
     };
     const abstractFull='Энэхүү баримт бичиг '+d[3]+' онд '+d[2]+'-аас гаргасан бөгөөд зам, тээврийн '+SECTORS[d[0]].label.toLowerCase()+

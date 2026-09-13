@@ -305,6 +305,42 @@ function groupE() {
      site.sectors-оос ирнэ (01-р виджетийн 5 салбарын нэр гэх мэт) */
   check('T5: admin салбарын нэрийг site.sectors-оос авна',
     /CON\.site&&CON\.site\.sectors/.test(adm) && /SECN\[k\]=sec\[k\]/.test(adm));
+  /* E7 — Сэтгэгдэл нэмэхэд "Хадгалах" төлөв АРЧИГДАХГҮЙ (регресс).
+     Өмнө нь submitDocReview-ийн локал замд `docSaved:null` байсан тул
+     баримт хадгалсан хэрэглэгч сэтгэгдэл бичмэгц БҮХ хадгалсан баримт
+     нь алга болдог байв. Функцийг эх кодоос нь салгаж, жижиг фикстур
+     дээр (2 хадгалсан баримт, 1 сэтгэгдэл) ЖИНХЭНЭЭР ажиллуулна. */
+  const srM = src.match(/const submitDocReview=\(\)=>\{[\s\S]*?\n    \};/);
+  if (!srM) {
+    bad('E7: submitDocReview эх кодонд олдсонгүй');
+  } else {
+    const saved0 = { 'research:Өөр баримт': 1, 'research:Энэ баримт': 1 };
+    const runReview = (storeStub) => {
+      const ctx = {
+        state: { authed: true, authFull: 'Тест хэрэглэгч', docReviewDraft: 'Хэрэгтэй судалгаа',
+          docReviews: null, docSaved: Object.assign({}, saved0), docShareOpen: true },
+        setState(p) { Object.assign(this.state, typeof p === 'function' ? p(this.state) : p); },
+        fadeToast() {}, docItemId() { return 'doc__research-энэ-баримт'; }, loadDocData() {}
+      };
+      const make = new Function('cat', 'd', 'dkey', 'myStars', 'window',
+        srM[0] + '\nreturn submitDocReview;');
+      const fn = make.call(ctx, 'research', ['road', 'Энэ баримт'], 'research:Энэ баримт', 4,
+        { erthubStore: storeStub });
+      fn();
+      return ctx.state;
+    };
+    const sLocal = runReview(undefined);
+    const rows = (sLocal.docReviews && sLocal.docReviews['research:Энэ баримт']) || [];
+    check('E7: локал горим — сэтгэгдэл нэмэгдэнэ (1 ш, 4 од)',
+      rows.length === 1 && rows[0].stars === 4, JSON.stringify(sLocal.docReviews));
+    check('E7: локал горим — хадгалсан 2 баримт ХЭВЭЭР (docSaved арчигдахгүй)',
+      JSON.stringify(sLocal.docSaved) === JSON.stringify(saved0), JSON.stringify(sLocal.docSaved));
+    check('E7: локал горим — ноорог цэвэрлэгдэж, хуваалцах цэс хаагдана',
+      sLocal.docReviewDraft === '' && sLocal.docShareOpen === false);
+    const sRemote = runReview({ available: true, addReview: () => Promise.resolve({}) });
+    check('E7: Firestore горим — хадгалсан 2 баримт ХЭВЭЭР',
+      JSON.stringify(sRemote.docSaved) === JSON.stringify(saved0), JSON.stringify(sRemote.docSaved));
+  }
 }
 
 /* ───────────────────── C. ADMIN UI (толгойгүй Chrome) ───────────────────── */
