@@ -262,7 +262,10 @@ function groupE() {
   /* H5 — verified бус салбар 0/"—"/мэдээлэл алга */
   check('H5: sectorVerified() registry-ийн 2 бүтцийг барина',
     /sectorVerified\(widgetId,sectorKey\)/.test(src) && /Array\.isArray\(w\.sectors\)/.test(src));
-  check('H5: verified бус үед хувь "—" болно', /delta:verified\?[^:]+:'—'/.test(src));
+  /* k04-ийн эхний карт утгын тохиргоог дагадаг болсон тул бичиглэл нь
+     delta:vs?(…):(verified?…:'—') хэлбэртэй байж болно — ЗОРИЛГО нь
+     хэвээр: баталгаажаагүй үед хувь "—" гарна. */
+  check('H5: verified бус үед хувь "—" болно', /delta:(?:vs\?\(vs\.delta\|\|'—'\):\()?verified\?[^:]+:'—'/.test(src));
   check('H5: хавтгай спарклайн (flatSpark) ашиглагдана', /flatSpark/.test(src));
   check('H5: w2p/w2c өдөр тутмын БОДИТ багана', /dailyPax|dailyCargo/.test(src));
   /* T2/T3 — site{} блок ба admin таб */
@@ -1995,11 +1998,118 @@ async function groupU() {
   } finally { srv.close(); }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   W. k04 / i06 / r06 — УТГЫН ТОХИРГОО САЙТ ДЭЭР ТУСАХ (preview ↔ сайт)
+
+   Админы preview эдгээр 3 виджетэд утгын тохиргоог хэрэглэдэг байсан ч
+   сайт огт уншдаггүй байв: админ "Зорчигч · SUM" сонгоод нийтэлсэн ч
+   сайт дээр ЮУ Ч өөрчлөгддөггүй. CLAUDE.md: "preview зөв мөртөө сайт
+   буруу — энэ төсөлд хамгийн олон давтагдсан алдаа".
+     W1. k04 эхний карт — тоо, нэгж, шошго, хувь, spark хамт
+     W2. i06 агаарын шугам сонгосон хэмжигдэхүүний сар тутмын индекс
+     W3. r06 эрэмбэ ӨӨРИЙН тохиргоотой (i06-ийг хуваалцахгүй)
+     W4. Тооцоолол нэг модулиас (EHChart.agg) — сар бүрийг дахин нэмэхгүй
+     W5. Сайт дээр бодитоор тусна (registry-г санах ойд орлуулж)
+   ══════════════════════════════════════════════════════════════════ */
+const PROBE_W = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(9000);
+  const R={};
+  /* Runtime нь style атрибутыг ХЭВИЙН болгож бичдэг ("font-size: 40px",
+     өнгийг rgb(...)) тул текстэн style сонгогч барихгүй — тооцоолсон
+     style ба data-eh-card хүрээгээр олно. */
+  const cs=(x)=>w.getComputedStyle(x);
+  const tab=[...d.querySelectorAll('button')].find(b=>b.textContent.trim().replace(/\\uFE0F/g,'')==='✈');
+  if(!tab) return {__err:'агаарын салбарын таб алга'};
+  tab.click(); await sleep(2000);
+  const kh=d.querySelector('[data-eh-card="k04"][data-eh-field="title"]');
+  if(!kh) return {__err:'k04 гарчиг алга'};
+  const grid=kh.closest('div').nextElementSibling, card=grid&&grid.firstElementChild;
+  const val=card&&[...card.querySelectorAll('div')].find(x=>cs(x).fontSize==='40px');
+  const lab=card&&[...card.querySelectorAll('div')].find(x=>cs(x).fontSize==='10px'&&cs(x).textTransform==='uppercase');
+  R.k04Value=val?val.textContent.trim():null;
+  R.k04Unit=val&&val.nextElementSibling?val.nextElementSibling.textContent.trim():null;
+  R.k04Label=lab?lab.textContent.trim():null;
+  let i6=d.querySelector('[data-eh-card="i06"][data-eh-field="title"]');
+  while(i6&&!(i6.querySelector&&i6.querySelector('svg foreignObject'))) i6=i6.parentElement;
+  const airFO=i6?[...i6.querySelectorAll('foreignObject div')].filter(x=>cs(x).color==='rgb(47, 224, 196)'):[];
+  R.i06End=airFO.length?airFO[0].textContent.trim():null;
+  const isRow=(x)=>cs(x).display==='grid'&&/^22px 20px /.test(cs(x).gridTemplateColumns);
+  let r6=d.querySelector('[data-eh-card="r06"][data-eh-field="title"]');
+  while(r6&&![...r6.querySelectorAll('div')].some(isRow)) r6=r6.parentElement;
+  const rows=r6?[...r6.querySelectorAll('div')].filter(isRow):[];
+  const air=rows.find(x=>x.textContent.includes('✈'));
+  R.r06Ch=air?air.lastElementChild.firstElementChild.textContent.trim():null;
+  R.r06SE=air?air.lastElementChild.lastElementChild.textContent.trim():null;
+  return R;
+}`;
+async function groupW() {
+  group('W. k04 / i06 / r06 — утгын тохиргоо сайтад тусах');
+  const idx = read('index.html');
+
+  check('W1. k04 утгын тохиргоог сайт уншина',
+    idx.includes("(key==='air')?this.valueFromSpec('k04'):null") &&
+    idx.includes('buildKpis(kpis,color,verified,spec)') &&
+    idx.includes('const vs=(i===0&&verified&&spec)?spec:null;'));
+  check('W1. Тоо, нэгж, шошго, хувь, spark ХАМТ сонголтыг дагана',
+    ['label:vs?vs.label:k[0]', 'value:vs?vs.value:', "unit:vs?(vs.unit||''):k[2]",
+      "delta:vs?(vs.delta||'—')", '(vs&&vs.spark)?vs.spark:']
+      .every((t) => idx.includes(t)));
+  check('W2. i06 агаарын шугам утгын тохиргооноос',
+    idx.includes("const airI06=airFromSpec(this.valueSpecRaw('i06'))||cw.airCounts;") &&
+    idx.includes('const src=(air===undefined)?airI06:air;'));
+  check('W3. r06 эрэмбэ ӨӨРИЙН тохиргоотой',
+    idx.includes("const airR06=airFromSpec(this.valueSpecRaw('r06'))||cw.airCounts;") &&
+    idx.includes('const t=trendFor(k,airR06),a=t[0],b=t[lastIdx];'));
+  const hStart = idx.indexOf('const airFromSpec=(spec)=>{');
+  const helper = hStart >= 0 ? idx.slice(hStart, idx.indexOf('};', hStart)) : '';
+  check('W4. Тооцоолол EHChart.agg-аар (дахин нэмж бичээгүй)',
+    helper.includes('EHChart.agg(raw,') && !helper.includes('+='),
+    'сар бүрийг гараар нэмж бичсэн');
+
+  if (!CHROME) { skipped('W5. Сайт дээр тусах (DOM)', 'Chrome олдсонгүй'); return; }
+  const reg = readJson('metric_registry.json');
+  const spec = { dataset: 'air_flights', measure: 'Зорчигч', agg: 'SUM' };
+  const withSpec = (ids) => {
+    const r = JSON.parse(JSON.stringify(reg));
+    ids.forEach((id) => { r.widgets[id] = r.widgets[id] || {}; r.widgets[id].value = spec; });
+    return JSON.stringify(r);
+  };
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html';
+    SERVE_OVERRIDE = null;
+    const r0 = await runProbe(PROBE_W, 120000);
+    SERVE_OVERRIDE = { '/metric_registry.json': withSpec(['k04', 'i06', 'r06']) };
+    const r1 = await runProbe(PROBE_W, 120000);
+    SERVE_OVERRIDE = { '/metric_registry.json': withSpec(['i06']) };
+    const r2 = await runProbe(PROBE_W, 120000);
+    const err = r0.__err || r1.__err || r2.__err;
+    if (err) { bad('W5. Сайтын DOM шалгалт', err); return; }
+    check('W5. Анхны утгууд уншигдав',
+      !!r0.k04Value && !!r0.i06End && !!r0.r06Ch, JSON.stringify(r0));
+    check('W5. k04 — тоо өөрчлөгдөж, нэгж "хүн", шошго ЗОРЧИГЧ',
+      r1.k04Value !== r0.k04Value && r1.k04Unit === 'хүн' && /ЗОРЧИГЧ/i.test(r1.k04Label || ''),
+      JSON.stringify({ before: [r0.k04Value, r0.k04Unit, r0.k04Label], after: [r1.k04Value, r1.k04Unit, r1.k04Label] }));
+    check('W5. i06 — агаарын шугамын индекс өөрчлөгдөнө',
+      r1.i06End !== r0.i06End, JSON.stringify({ before: r0.i06End, after: r1.i06End }));
+    check('W5. r06 — агаарын өсөлтийн хувь өөрчлөгдөнө',
+      r1.r06Ch !== r0.r06Ch, JSON.stringify({ before: [r0.r06Ch, r0.r06SE], after: [r1.r06Ch, r1.r06SE] }));
+    check('W5. Зөвхөн i06-г солиход r06 ХӨНДӨГДӨХГҮЙ (тусдаа тохиргоо)',
+      r2.i06End === r1.i06End && r2.r06Ch === r0.r06Ch && r2.k04Value === r0.k04Value,
+      JSON.stringify({ i06: r2.i06End, r06: r2.r06Ch, k04: r2.k04Value }));
+  } finally {
+    SERVE_OVERRIDE = null;
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

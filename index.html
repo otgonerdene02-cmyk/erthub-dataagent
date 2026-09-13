@@ -6816,12 +6816,34 @@ class Component extends DCLogic {
     // хуучин статик 12 сарын массиваар (аль аль нь ижил уртад тайрагдана).
     const cw=this.compareWindow();
     const months=cw.months, lastIdx=months-1;
-    const airBase=cw.airCounts?(cw.airCounts[0]||1):1;
     // verified бус (эх сурвалжгүй) салбарыг ХАВТГАЙ 0 гэж үзнэ — тусгай
     // стиль (тасархай зураас, саарал) шаардлагагүй, 0 бол зүгээр л
     // одоогийн бодит байдал (H5).
-    const trendFor=(k)=>{
-      if(k==='air'&&cw.airCounts) return cw.airCounts.slice(0,months).map(v=>v/airBase*100);
+    /* Утгын тохиргоотой бол агаарын шугам нь СОНГОСОН хэмжигдэхүүний сар
+       тутмын цуваа (жиш. нислэгийн тооны оронд зорчигчийн нийлбэр) —
+       мөн тэр цонх (compareWindow-ын он), мөн тэр индекс (1-р сар = 100).
+       Тооцоолол EHChart.agg-аар — админы preview-тэй НЭГ модуль, энд
+       сар бүрийг дахин нэмж бичихгүй. Админы preview i06/r06-д утгын
+       тохиргоог аль хэдийн хэрэглэдэг байсан ч сайт огт уншдаггүй тул
+       нийтэлсний дараа сайт дээр юу ч өөрчлөгддөггүй байв. */
+    const airFromSpec=(spec)=>{
+      if(!spec||typeof EHChart==='undefined'||!cw.year) return null;
+      const raw=this._flightsCache[cw.year];
+      if(!raw||!raw.length) return null;
+      const r=EHChart.agg(raw,{dataset:spec.dataset||'air_flights',dim:'Сар',
+        measure:spec.measure,agg:spec.agg||'SUM',topN:0});
+      if(!r||!r.n) return null;
+      const arr=new Array(12).fill(0);
+      r.labels.forEach((lb,i)=>{ const m=MONTHS.indexOf(lb); if(m>=0) arr[m]=r.values[i]; });
+      return arr;
+    };
+    /* i06 ба r06 нь ТУСДАА тохиргоотой — нэгийг нь сольход нөгөө нь
+       өөрчлөгдөх ёсгүй (өмнө нь хоёулаа i06-ийн trendFor-ыг хуваалцдаг). */
+    const airI06=airFromSpec(this.valueSpecRaw('i06'))||cw.airCounts;
+    const airR06=airFromSpec(this.valueSpecRaw('r06'))||cw.airCounts;
+    const trendFor=(k,air)=>{
+      const src=(air===undefined)?airI06:air;
+      if(k==='air'&&src){ const b=src[0]||1; return src.slice(0,months).map(v=>v/b*100); }
       if(!verifiedSet.has(k)) return new Array(months).fill(0);
       return TREND[k].slice(0,months);
     };
@@ -6850,7 +6872,7 @@ class Component extends DCLogic {
       l.endLabelY=y.toFixed(1); prevY=y;
     });
     const cRank=ckeys.map(k=>{
-      const t=trendFor(k),a=t[0],b=t[lastIdx];
+      const t=trendFor(k,airR06),a=t[0],b=t[lastIdx];
       // a===0 үед (0)-той харьцуулж хувь ТООЦООХГүй — 0÷0 тодорхойгүй
       // тул ch=null (w2p/w2c-ийн plan-той адил зарчим), NaN үүсэхгүй.
       const ch=a===0?null:(b-a)/a*100;
@@ -8196,18 +8218,22 @@ class Component extends DCLogic {
   // ls-тэй ижил зарчмаар 0/"—"/хавтгай шугам болно. "AI ИТГЭЛ" (conf%)
   // хэвээр үлдэнэ — энэ нь үргэлж чимэглэлийн шинжтэй тоо, air үед ч
   // бодит тоо БИШ (өөрчлөлт шаардлагагүй).
-  buildKpis(kpis,color,verified){
+  buildKpis(kpis,color,verified,spec){
     const flatSpark=pathFor(new Array(10).fill(0),120,32,3).line;
     return kpis.map((k,i)=>{
-      const dir=verified?k[4]:'flat';
+      /* Утгын тохиргоо ЗӨВХӨН агаарын ЭХНИЙ картад (ls-тэй ижил зарчим) —
+         тоо, нэгж, шошго, өөрчлөлтийн хувь, spark ХАМТ сонгосон
+         хэмжигдэхүүнээс гарна. Бусад 7 карт хэвээр. */
+      const vs=(i===0&&verified&&spec)?spec:null;
+      const dir=vs?(vs.dir||'flat'):(verified?k[4]:'flat');
       const deltaColor = verified?(dir==='up'?'#0E8F63':dir==='down'?'#C8443A':'#6B7896'):'#828EA8';
       const deltaGlyph = verified?(dir==='up'?'▲':dir==='down'?'▼':'•'):'';
       const conf=[94,88,91,86,83][i%5];
-      const spark=verified?miniSpark(dir,i):flatSpark;
-      return {label:k[0],
-        value:verified?k[1]:'0',
-        unit:k[2],
-        delta:verified?k[3]:'—',
+      const spark=(vs&&vs.spark)?vs.spark:(verified?miniSpark(dir,i):flatSpark);
+      return {label:vs?vs.label:k[0],
+        value:vs?vs.value:(verified?k[1]:'0'),
+        unit:vs?(vs.unit||''):k[2],
+        delta:vs?(vs.delta||'—'):(verified?k[3]:'—'),
         dir,deltaColor,deltaGlyph,
         compareLabel:verified?(k[5]||'өмнөх сартай харьцуулбал'):stxt('status.no_data','мэдээлэл алга'),
         spark,sparkArea:spark+' L120,32 L0,32 Z',
@@ -8462,7 +8488,7 @@ class Component extends DCLogic {
       ratioLabels:ratio.labels,
       ratioPct:ratio.pct.toFixed(1)+'%',
       ratioDasharray:ratioDash.toFixed(1)+' '+ratioCirc.toFixed(1),
-      kpis:this.buildKpis(s.kpis,color,this.sectorVerified('k04',key)),
+      kpis:this.buildKpis(s.kpis,color,this.sectorVerified('k04',key),(key==='air')?this.valueFromSpec('k04'):null),
       rings:this.buildRings(s.rank),
       bars:this.buildBars(this.state.f04Sort==='name'?[...s.bars].sort((a,b)=>a[0].localeCompare(b[0])):s.bars),
       status:this.buildStatus(s.bars),
