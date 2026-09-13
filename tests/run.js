@@ -2105,11 +2105,92 @@ async function groupW() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   X. ПОРТАЛЫН 4 КАРТ — ЭХ СУРВАЛЖГҮЙ "+N ЭНЭ УЛИРАЛД"
+
+   Картын тэмдэглэл "+12 энэ улиралд", "+3", "+5", "0.0%" гэж кодод ба
+   content.json-д хатуу бичигдсэн байв. Датасэт/үйлчилгээнд нэмэгдсэн
+   огноо бүртгэгддэггүй тул тооцох эх сурвалж ОГТ алга — каталогт нийт
+   10 датасэт байхад "+12 энэ улиралд" гэж бичдэг байсан. Мөн тэмдэглэл
+   "+"-ээр эхэлбэл miniSpark() өгсөх муруй ЗОХИОЖ зурдаг байв.
+     X1. Кодын тогтмолд зохиомол тэмдэглэл үлдээгүй
+     X2. content.json-д тоон тэмдэглэл үлдээгүй (талбар засварлагдах хэвээр)
+     X3. Жижиг график тэмдэглэлээс хамаарахгүй, хэвтээ шугам
+     X4. Сайт дээр "энэ улиралд" гарахгүй, бодит тоо хэвээр
+   ══════════════════════════════════════════════════════════════════ */
+const PROBE_X = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(7000);
+  /* Шошго цэс/hero-д ч давтагддаг тул "дээш алхаж текст агуулсан хүрээ"
+     гэвэл хэт том элемент сонгогдоно. Порталын карт = ЯГ НЭГ жижиг
+     график (svg path fill=none) ба 36px тоотой хамгийн ойрын эцэг. */
+  const cs=x=>w.getComputedStyle(x);
+  const norm=s=>s.replace(/\\s+/g,' ').trim().toUpperCase();
+  const leaves=[...d.querySelectorAll('div,span')].filter(x=>x.children.length===0);
+  const labels=['НЭЭЛТТЭЙ ӨГӨГДӨЛ','ЦАХИМ ҮЙЛЧИЛГЭЭ','СУДАЛГАА','ОРОЛЦОГЧ БАЙГУУЛЛАГА'];
+  const cards=labels.map(lb=>{
+    for(const lab of leaves.filter(x=>norm(x.textContent)===lb)){
+      let c=lab;
+      for(let h=0;h<6&&c;h++,c=c.parentElement){
+        const paths=c.querySelectorAll('svg path[fill="none"]');
+        const big=[...c.querySelectorAll('div')].find(x=>cs(x).fontSize==='36px');
+        if(paths.length===1&&big){
+          const dd=paths[0].getAttribute('d')||'';
+          const ys=[...dd.matchAll(/[ML]\\s*[-\\d.]+[ ,]\\s*([-\\d.]+)/g)].map(m=>+m[1]);
+          const chip=[...c.querySelectorAll('div')].find(x=>cs(x).fontSize==='10.5px'&&cs(x).fontWeight==='600');
+          return {lb, value:big.textContent.trim(), note:chip?chip.textContent.trim():null,
+                  flat:ys.length>1&&ys.every(y=>Math.abs(y-ys[0])<0.01)};
+        }
+      }
+    }
+    return {lb, err:'карт олдсонгүй'};
+  });
+  return {cards, pageQuarter:/энэ улиралд/i.test(d.body.innerText)};
+}`;
+async function groupX() {
+  group('X. Порталын картын эх сурвалжгүй тэмдэглэл');
+  const idx = read('index.html'), con = readJson('content.json');
+
+  const blk = (idx.match(/const KPI_UNIFIED=\[[\s\S]*?\n\];/) || [''])[0];
+  check('X1. KPI_UNIFIED-д "энэ улиралд" ба зохиомол хувь алга',
+    !!blk && !/энэ улиралд/.test(blk) && !/'[+-]?\d+(\.\d+)?%'/.test(blk), blk.slice(0, 200));
+  const notes = ['open_data', 'eservice', 'research', 'orgs']
+    .map((k) => (con.site.portal_kpi[k] || {}).note);
+  check('X2. content.json-ийн тэмдэглэл тоогүй, талбар хэвээр',
+    notes.every((n) => typeof n === 'string' && !/\d/.test(n)), JSON.stringify(notes));
+  const mapStart = idx.indexOf('return {unifiedKpis:KPI_UNIFIED.map(');
+  const mapBody = mapStart >= 0 ? idx.slice(mapStart, idx.indexOf('}),', mapStart)) : '';
+  check('X3. Жижиг график тэмдэглэлээс ЗОХИОГДОХГҮЙ (хэвтээ шугам)',
+    !!mapBody && !mapBody.includes('miniSpark(') && mapBody.includes('const sp=ukFlat;'));
+
+  if (!CHROME) { skipped('X4. Сайт дээр (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html';
+    const r = await runProbe(PROBE_X, 120000);
+    if (r.__err) { bad('X4. Сайтын DOM шалгалт', r.__err); return; }
+    const byLb = Object.fromEntries((r.cards || []).map((c) => [c.lb, c]));
+    check('X4. Порталын 4 карт олдов',
+      (r.cards || []).length === 4 && r.cards.every((c) => !c.err), JSON.stringify(r.cards));
+    check('X4. Сайтын АЛЬ Ч хэсэгт "энэ улиралд" гарахгүй', r.pageQuarter === false);
+    check('X4. 4 картын тэмдэглэл хоосон',
+      (r.cards || []).every((c) => c.note === ''), JSON.stringify((r.cards || []).map((c) => c.note)));
+    check('X4. Жижиг график хэвтээ шугам (зохиомол муруй алга)',
+      (r.cards || []).every((c) => c.flat === true), JSON.stringify((r.cards || []).map((c) => c.flat)));
+    check('X4. Бодит тоо хэвээр (10 датасет, 11 үйлчилгээ)',
+      (byLb['НЭЭЛТТЭЙ ӨГӨГДӨЛ'] || {}).value === '10' && (byLb['ЦАХИМ ҮЙЛЧИЛГЭЭ'] || {}).value === '11',
+      JSON.stringify((r.cards || []).map((c) => c.lb + '=' + c.value)));
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
