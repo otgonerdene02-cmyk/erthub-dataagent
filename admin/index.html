@@ -520,7 +520,10 @@ function widgetPath(id){
    түлхүүрийг өөрийг нь харуулна (шинэ датасэт нэмэгдэхэд ч ажиллана). */
 var DSMETA={
   air_flights:      {n:'Агаарын тээврийн статистик', a:'ИНЕГ · Вэбсервис', s:'air'},
-  air_flights_index:{n:'Нислэгийн индекс (feed мета)', a:'ИНЕГ · Вэбсервис', s:'air'}
+  air_flights_index:{n:'Нислэгийн индекс (feed мета)', a:'ИНЕГ · Вэбсервис', s:'air'},
+  /* rail.wagon_loading метрикийн датасэт — бүртгэлгүй байсан тул каталогт
+     "silver.rail_wagon_loading" гэсэн түүхий код гарч байв. */
+  'silver.rail_wagon_loading':{n:'Төмөр замын вагон ачилт (хоногийн мэдээ)', a:'УБТЗ · дотоод сүлжээ', s:'rail'}
 };
 /* Слот бүр ЮУ ХАРУУЛДАГ, түүнээсээ шалтгаалан ямар нэгж шаардахыг энд
    тунхаглана. Одоогийн холбоосоос НЬ УНШИХГҮЙ — эс тэгвэл "одоо юу
@@ -644,8 +647,11 @@ function applyContentText(skipDom){
   Object.keys(FL     ).forEach(function(k){ FL[k]     =utxt('field.'+k, DEF.FL[k]) });
   Object.keys(KIND).forEach(function(k){ KIND[k]=utxt('kind.'+k,DEF.KIND[k]) });
   Object.keys(DSMETA).forEach(function(k){
-    DSMETA[k].n=utxt('dataset.'+k+'.name',  DEF.DSMETA[k].n);
-    DSMETA[k].a=utxt('dataset.'+k+'.agency',DEF.DSMETA[k].a);
+    /* utxt() зам цэгээр хуваагддаг тул "silver.rail_wagon_loading" мэт
+       цэгтэй түлхүүрийг доогуур зураасаар орлуулна (content.json-д ч мөн). */
+    var dk=k.replace(/\./g,'_');
+    DSMETA[k].n=utxt('dataset.'+dk+'.name',  DEF.DSMETA[k].n);
+    DSMETA[k].a=utxt('dataset.'+dk+'.agency',DEF.DSMETA[k].a);
   });
   Object.keys(FIXED_UNIT).forEach(function(k){
     FIXED_UNIT[k]=utxt('required_unit.'+DEF.FIXED_UNIT[k],DEF.FIXED_UNIT[k]);
@@ -1220,7 +1226,7 @@ var UI_GROUPS=[
    labels:{live_value:'Амьд утга',live_service:'Амьд · вэб сервис',live:'Амьд',
            mock:'Түр дата',no_source:'Эх сурвалж алга',no_data:'Мэдээлэл алга'}},
   {key:'metric',title:'Админ · метрик холбох', where:'Виджетийн засварын баруун тал',
-   labels:{heading:'Хэсгийн гарчиг',single:'Ганц слотын гарчиг',unbound:'Холбоогүй сонголт',
+   labels:{title_mismatch:'Гарчиг таарахгүй анхааруулга',title_mismatch_note:'Гарчиг таарахгүй тайлбар',heading:'Хэсгийн гарчиг',single:'Ганц слотын гарчиг',unbound:'Холбоогүй сонголт',
            unit_label:'Нэгжийн шошго',unit_unknown:'Нэгж тодорхойгүй',calc:'Тооцоолол',
            dataset:'Датасэт',source:'Эх сурвалж',filter:'Шүүлт',required:'Шаардлагатай',
            single_slot:'Ганц метрик',warn_rule:'Дүрэм зөрчсөн анхааруулга',
@@ -1408,9 +1414,25 @@ function vizOf(id){return S.viz[id]||PKIND[id]||'counter'}
    боловч preview-д ОГТ тусдаггүй ҮХМЭЛ талбар байв.
    src: 'content' | 'fixed' | 'registry' — аль эх сурвалжаас гарсныг
    chromeFields() мэдэж, зөв засварын талбарыг санал болгоно. */
+/* Утгын тохиргоо (датаны талбар × нэгтгэл) идэвхтэй слотын нэгж —
+   СОНГОСОН хэмжигдэхүүнээс. Тохиргоогүй бол null (өмнөх зан төлөв).
+   Өмнө нь preview нэгжийг зөвхөн content.json эсвэл FIXED_UNIT-аас
+   уншдаг тул "Зорчигч · SUM" сонгоход тоо нь 1,870,846 болж, нэгж нь
+   "нислэг" хэвээр үлдэж ХУДАЛ тайлбарладаг байв (UX QA олдвор). */
+function valueUnitOf(id,sectorKey){
+  if(typeof EHChart==='undefined'||typeof valueSpecOf!=='function') return null;
+  if(typeof VALUE_TARGETS==='undefined'||!VALUE_TARGETS[id]) return null;
+  if(sectorKey&&sectorKey!=='air') return null;
+  var sp=valueSpecOf(id); if(!sp) return null;
+  return String(sp.agg||'').toUpperCase()==='COUNT'?'':(EHChart.unitOf(sp.measure)||'');
+}
 function previewUnitInfo(id,sectorKey){
   var t=(S.widget===id&&S.td&&S.td.unit!=null)?S.td.unit:curText(id,'unit');
   if(t) return {u:t,src:'content'};
+  /* content.json-ийн нэгж ДАВУУ эрхтэй хэвээр (засварлагч гараар
+     бичсэн бол түүнийг хүндэтгэнэ); түүний дараа сонгосон утгын нэгж. */
+  var vu=valueUnitOf(id,sectorKey);
+  if(vu!==null) return {u:vu,src:'value'};
   var base=DERIVES_FROM[id]||id, key=DERIVES_FROM[id]?'air':(sectorKey||'');
   var u=requiredUnit(id,sectorKey)||'';
   return {u:u,src:FIXED_UNIT[base+'.'+key]?'fixed':'registry'};
@@ -1656,16 +1678,24 @@ function previewFor(id,mini){
                eservice:{label:'ЦАХИМ ҮЙЛЧИЛГЭЭ',unit:'үйлчилгээ'},
                research:{label:'СУДАЛГАА',unit:'судалгаа'},
                orgs:{label:'ОРОЛЦОГЧ БАЙГУУЛЛАГА',unit:'байгууллага'}},
-        pkComputed={open_data:1,eservice:1};
+        /* Сайт эдгээрийг каталогийн жагсаалтын уртаас тооцдог — админд ч
+           ЯГ тэр жагсаалт (site.datasets / site.services) байгаа тул бодит
+           тоог нь харуулна. Өмнө нь "тооцоологдоно" гэсэн үгийн ард нэгж
+           залгагдаж "тооцоологдоно датасет" гэж эвгүй гардаг байв. */
+        pkComputed={open_data:(CON.site&&Array.isArray(CON.site.datasets))?CON.site.datasets.length:null,
+                    eservice:(CON.site&&Array.isArray(CON.site.services))?CON.site.services.length:null};
     body='<div class="pvgrid8" style="grid-template-columns:repeat(4,1fr)">'+
       pk4.map(function(k){
         var lb=siteGet(['portal_kpi',k,'label'])||pkDef[k].label,
             un=siteGet(['portal_kpi',k,'unit'])||pkDef[k].unit,
             nt=siteGet(['portal_kpi',k,'note']);
         return '<div class="pvgc"><div class="l">'+esc(lb)+'</div>'+
-          '<div class="v"'+(pkComputed[k]?'':' style="color:#A7B0C6"')+'>'+
-          (pkComputed[k]?esc(utxt('portal_kpi.computed','тооцоологдоно')):'—')+
-          ' <span style="font-weight:400">'+esc(un)+'</span></div>'+
+          '<div class="v"'+((k in pkComputed)?'':' style="color:#A7B0C6"')+'>'+
+          ((k in pkComputed)
+            ? (pkComputed[k]!=null
+                ? esc(String(pkComputed[k]))+' <span style="font-weight:400">'+esc(un)+'</span>'
+                : esc(utxt('portal_kpi.computed','тооцоологдоно')))
+            : '—')+'</div>'+
           (nt?'<div class="l" style="margin-top:2px">'+esc(nt)+'</div>':'')+
           '</div>'}).join('')+'</div>';
   } else if(kind==='line'||kind==='multiline'){
@@ -3095,6 +3125,19 @@ function chromeForm(id){
    (жиш. "НИСЛЭГ / САР" гэсэн доор зорчигчийн тоо). Гарчгийн эх сурвалж
    ГАНЦ (content.json) хэвээр байлгахын тулд автоматаар ДАРЖ БИЧИХГҮЙ —
    зөвхөн санал болгож, нэг товшилтоор тавих боломж өгнө. */
+var TITLE_IS_LABEL={hero_fl:1};
+function titleMismatchWarn(id){
+  if(!TITLE_IS_LABEL[id]||typeof EHChart==='undefined'||typeof valueSpecOf!=='function') return '';
+  var sp=valueSpecOf(id); if(!sp) return '';
+  var auto=EHChart.valueTitle({measure:sp.measure,agg:sp.agg});
+  var cur=(S.widget===id&&S.td&&S.td.title!=null)?S.td.title:curText(id,'title');
+  if(!auto||String(cur||'').trim()===auto) return '';
+  return '<div class="warnbox" data-titlewarn="1"><b>'+
+    esc(utxt('metric.title_mismatch','Гарчиг сонгосон утгатай таарахгүй байна'))+'</b>'+
+    esc(utxt('metric.title_mismatch_note','Сайт дээр гарчиг нь тооны дэргэд шошго болж гардаг тул одоогийн нэр тоог худал тайлбарлана:'))+
+    ' «'+esc(cur)+'» → «'+esc(auto)+'» '+
+    '<button class="btn sm" data-autoname="'+esc(auto)+'">'+esc(utxt('text.auto_name_apply','Тавих'))+'</button></div>';
+}
 function autoNameHint(id,cur){
   if(typeof valueSpecOf!=='function'||typeof EHChart==='undefined') return '';
   var sp=valueSpecOf(id); if(!sp) return '';
@@ -3223,7 +3266,7 @@ function lvEdit(){
     (bw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_rule','Одоогийн холбоос дүрэм зөрчиж байна'))+'</b>'+
         esc(bw.join(' · '))+'</div>':'')+
     (gw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_sum','Нийлбэрийн анхааруулга'))+'</b>'+esc(gw)+'</div>':'')+
-    '<p class="ph">'+esc(utxt('metric.heading','Эх сурвалж'))+'</p>'+slotForm+textForm(id)+chromeForm(id)+'</div></div>';
+    '<p class="ph">'+esc(utxt('metric.heading','Эх сурвалж'))+'</p>'+titleMismatchWarn(id)+slotForm+textForm(id)+chromeForm(id)+'</div></div>';
 }
 
 /* ══════════════════ МОДАЛЬ ══════════════════ */
@@ -3509,6 +3552,8 @@ document.addEventListener('click',function(e){
   if((el=t.closest&&t.closest('[data-autoname]'))){
     var an=el.dataset.autoname, ti=document.querySelector('[data-tf="title"]');
     if(ti){ ti.value=an; ti.dispatchEvent(new Event('input',{bubbles:true})); ti.focus(); }
+    /* Санал тавигдсан тул анхааруулга хуучирна — дахин зурахыг хүлээхгүй. */
+    var twb=document.querySelector('[data-titlewarn]'); if(twb) twb.style.display='none';
     return;
   }
   if((el=t.closest&&t.closest('[data-hide]'))){

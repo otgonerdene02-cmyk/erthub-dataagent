@@ -1883,11 +1883,123 @@ async function groupS() {
   } finally { srv.close(); }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   U. UX QA ДАХИН ТЕСТИЙН 3 ОЛДВОР (qa-backlog.md)
+
+   ux-qa-persona агент T1–T5-ийг баталгаажуулах явцдаа илрүүлсэн:
+     U1 [Major] Виджетийн утгыг датаны талбараар солиход ТОО өөрчлөгддөг
+        ч НЭГЖ нь хуучнаараа ("нислэг") үлддэг — "1,870,846 нислэг/сар"
+        гэсэн боломжгүй тоо нийтлэгдэх эрсдэлтэй. Гарчиг нь тооны шошго
+        болдог виджетэд (hero_fl) анхааруулга ч гардаггүй байв.
+        Гарчгийг ӨӨРӨӨ дарж бичихгүй (ганц эх сурвалж — I7) — санал л.
+     U2 [Minor] Каталогт "silver.rail_wagon_loading" түүхий код гарна.
+     U3 [Minor] Админы preview-д "тооцоологдоно датасет" эвгүй хэллэг.
+   ══════════════════════════════════════════════════════════════════ */
+async function groupU() {
+  group('U. UX QA дахин тестийн олдвор');
+  const adm = read('admin/index.html'), con = readJson('content.json');
+
+  check('U1. Preview-ийн нэгж сонгосон утгын нэгжээс гарна',
+    adm.includes('function valueUnitOf(id,sectorKey)') &&
+    adm.includes("if(vu!==null) return {u:vu,src:'value'};"),
+    'previewUnitInfo утгын тохиргоог хардаггүй хэвээр');
+  check('U1. content.json-ийн нэгж ДАВУУ эрхтэй хэвээр',
+    adm.indexOf("if(t) return {u:t,src:'content'};") < adm.indexOf("if(vu!==null) return {u:vu,src:'value'};"));
+  const twStart = adm.indexOf('function titleMismatchWarn(id){');
+  const twBody = twStart >= 0 ? adm.slice(twStart, adm.indexOf('function autoNameHint', twStart)) : '';
+  check('U1. Гарчиг таарахгүй үед анхааруулга + "Тавих" санал',
+    !!twBody && twBody.includes('data-titlewarn') && twBody.includes('data-autoname') &&
+    adm.includes("+titleMismatchWarn(id)+slotForm+"));
+  check('U1. Гарчгийг ӨӨРӨӨ дарж бичихгүй (ганц эх сурвалж)',
+    !!twBody && !/CON\.widgets\[[^\]]+\]\.title\s*=/.test(twBody) && !/S\.td\.title\s*=/.test(twBody));
+  check('U1. Анхааруулгын текст content.json-д',
+    !!(con.ui.metric.title_mismatch && con.ui.metric.title_mismatch_note));
+
+  check('U2. Төмөр замын датасэт монгол нэртэй',
+    adm.includes("'silver.rail_wagon_loading':{n:") &&
+    !!(con.ui.dataset.silver_rail_wagon_loading && con.ui.dataset.silver_rail_wagon_loading.name));
+  check('U2. Цэгтэй түлхүүр utxt() замд эвдрэхгүй',
+    adm.includes("var dk=k.replace(/\\./g,'_');") && adm.includes("utxt('dataset.'+dk+'.name'"));
+
+  check('U3. Порталын карт бодит тоо харуулна (жагсаалтын уртаас)',
+    adm.includes('CON.site.datasets.length:null') && adm.includes('CON.site.services.length:null'));
+  check('U3. "тооцоологдоно" ба нэгж ЗАЛГАГДАХГҮЙ',
+    !adm.includes("esc(utxt('portal_kpi.computed','тооцоологдоно')):'—')+\n          ' <span"),
+    'хуучин залгаас үлдсэн');
+
+  if (!CHROME) { skipped('U4. QA дахин тестийн засвар (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(5000);
+      const R={};
+      const unitOf=()=>{const e=d.querySelector('#pvhost .pvticker span.t:not(.ed)');return e?e.textContent.trim():''};
+      const sec=d.querySelector('[data-section="hero"]'); if(!sec) return {__err:'hero хэсэг алга'};
+      sec.click(); await sleep(700);
+      const wg=d.querySelector('[data-widget="hero_fl"]'); if(!wg) return {__err:'hero_fl алга'};
+      wg.click(); await sleep(1200);
+      R.unitBefore=unitOf();
+      R.titleField0=(d.querySelector('[data-tf="title"]')||{}).value||'';
+      const sel=d.querySelector('[data-slot^="hero_fl|"]'); if(!sel) return {__err:'слот алга'};
+      const opt=[...sel.options].find(o=>o.value==='field:Зорчигч|SUM');
+      if(!opt) return {__err:'Зорчигч·SUM сонголт алга'};
+      R.registered=sel.value;
+      sel.value=opt.value; sel.dispatchEvent(new w.Event('change',{bubbles:true}));
+      await sleep(1300);
+      R.unitAfter=unitOf();
+      R.warn=!!d.querySelector('[data-titlewarn]');
+      R.titleField1=(d.querySelector('[data-tf="title"]')||{}).value||'';
+      const ap=d.querySelector('[data-titlewarn] [data-autoname]');
+      if(ap){ ap.click(); await sleep(700) }
+      R.titleField2=(d.querySelector('[data-tf="title"]')||{}).value||'';
+      const twb=d.querySelector('[data-titlewarn]');
+      R.warnHidden=!twb||twb.style.display==='none';
+      /* буцаах — бүртгэлтэй метрик */
+      const sel2=d.querySelector('[data-slot^="hero_fl|"]');
+      sel2.value=R.registered; sel2.dispatchEvent(new w.Event('change',{bubbles:true}));
+      await sleep(1200);
+      R.unitBack=unitOf();
+      /* U2 — Датасэтийн өнцөг */
+      let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();
+      await sleep(400);
+      const f=d.querySelector('[data-facet="data"]'); if(f){ f.click(); await sleep(800) }
+      R.dataNodes=[...d.querySelectorAll('#dsList [data-node]')].map(x=>x.textContent.trim());
+      /* U3 — Порталын 4 карт */
+      const pg=d.querySelector('[data-facet="page"]'); if(pg){ pg.click(); await sleep(600) }
+      const ps=d.querySelector('[data-section="portal-kpi"]');
+      if(ps){ ps.click(); await sleep(700) }
+      const uk=d.querySelector('[data-widget="uk"]');
+      if(uk){ uk.click(); await sleep(1100) }
+      R.ukText=((d.querySelector('#pvhost')||{}).textContent||'').replace(/\\s+/g,' ');
+      return R;
+    }`, 120000);
+    if (R.__err) { bad('U4. QA дахин тестийн DOM шалгалт', R.__err); return; }
+    check('U4. Анхны нэгж "нислэг"', R.unitBefore === 'нислэг', R.unitBefore);
+    check('U4. Зорчигч · SUM сонгоход нэгж "хүн" болно',
+      R.unitAfter === 'хүн', JSON.stringify({ before: R.unitBefore, after: R.unitAfter }));
+    check('U4. Гарчиг таарахгүй анхааруулга гарна', R.warn === true);
+    check('U4. Сонголт гарчгийг ӨӨРӨӨ солихгүй', R.titleField1 === R.titleField0,
+      JSON.stringify({ before: R.titleField0, after: R.titleField1 }));
+    check('U4. "Тавих" дархад санал гарчигт тавигдаж анхааруулга алга болно',
+      R.titleField2 !== R.titleField0 && /ЗОРЧИГЧ/.test(R.titleField2) && R.warnHidden === true,
+      JSON.stringify({ title: R.titleField2, hidden: R.warnHidden }));
+    check('U4. Бүртгэлтэй метрик рүү буцаахад нэгж "нислэг" сэргэнэ', R.unitBack === 'нислэг', R.unitBack);
+    check('U4. Датасэтийн модонд түүхий код гарахгүй',
+      R.dataNodes.length > 0 && R.dataNodes.every((t) => !/silver\./.test(t)) &&
+      R.dataNodes.some((t) => /Төмөр замын вагон ачилт/.test(t)),
+      R.dataNodes.join(' | '));
+    check('U4. Порталын картад "тооцоологдоно датасет" гарахгүй, бодит тоо гарна',
+      !/тооцоологдоно\s*датасет/i.test(R.ukText) && /\b10\b\s*датасет/.test(R.ukText),
+      R.ukText.slice(0, 160));
+  } finally { srv.close(); }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);
