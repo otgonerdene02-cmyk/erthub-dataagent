@@ -2536,6 +2536,46 @@ const PROBE_Y = `async function(d,w){
   return R;
 }`;
 
+
+/* Y6 — админы үүсгэдэг гүн холбоос ("#sec-06") ЖИНХЭНЭ газар руу аваачна */
+const PROBE_Y_ANCHOR = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(7500);
+  const ids=['hero','portal-kpi','sec-01','sec-02','sec-04','sec-05','sec-06','sec-07','sec-08'];
+  const e=d.getElementById('sec-06');
+  return { exists:ids.filter(i=>!!d.getElementById(i)),
+    hash:w.location.hash, scrollY:Math.round(w.scrollY),
+    top:e?Math.round(e.getBoundingClientRect().top):null };
+}`;
+
+/* Y7/Y8 — хуудас бүр хаягтай, Back сайт дотор, "буцах" өөр рүүгээ заахгүй */
+const PROBE_Y_ROUTE = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(7000);
+  const go=async(n)=>{const b=[...d.querySelectorAll('button,a')].filter(x=>x.textContent.trim()===n)[0];
+    if(b){b.click(); await sleep(1300)} return !!b};
+  const back=()=>{const b=[...d.querySelectorAll('button,a')].filter(x=>/руу буцах/.test(x.textContent))[0];
+    return b?b.textContent.trim():null};
+  const R={start:w.location.hash};
+  await go('Коммунити');
+  R.c1={hash:w.location.hash, back:back()};
+  await go('Коммунити');
+  R.c2={hash:w.location.hash, back:back()};
+  await go('Салбарын түүх');
+  R.h={hash:w.location.hash, back:back()};
+  w.history.back(); await sleep(1300);
+  R.afterBack={hash:w.location.hash,
+    onCommunity:d.body.innerText.indexOf('Төр, иргэнийг холбосон')>=0};
+  /* Hero-гийн хайлт ч хаягаа шинэчилнэ */
+  await go('Нүүр');
+  const inp=[...d.querySelectorAll('input[type=\\"text\\"]')][0];
+  if(inp){ inp.value='нислэг'; inp.dispatchEvent(new w.Event('input',{bubbles:true})); await sleep(300);
+    const sb=[...d.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Хайх')[0];
+    if(sb){ sb.click(); await sleep(1300) } }
+  R.search={hash:w.location.hash};
+  return R;
+}`;
+
 async function groupY() {
   group('Y. Иргэдэд харагдах давхарга (толгойн огноо · хайлтын хоосон төлөв)');
   const idx = read('index.html');
@@ -2570,6 +2610,24 @@ async function groupY() {
   check('Y5. Иргэдэд харагдах текстэд дотоод хүснэгт/файлын нэр алга',
     leakY.length === 0, leakY.join(', '));
 
+  /* ── Y6. Админы "Сайт дээр нээх ↗" гүн холбоос ЖИНХЭНЭ газар заана ──
+     Админ нь content.json → widgets.<id>.anchor-оос "#sec-06" мэт холбоос
+     үүсгэж, хуулах боломжтой хаяг болгон харуулдаг. Өмнө нь сайт дээр тэр
+     id ОГТ байгаагүй тул холбоос нүүр рүү аваачаад хаана ч гүйлгэдэггүй
+     байв. Нүүрний 17 виджетийн анкор бүр темплейтэд id болж байх ёстой. */
+  const regY = readJson('metric_registry.json');
+  const homeAnchors = [...new Set(Object.keys(regY.widgets)
+    .map((id) => (conY.widgets[id] || {}).anchor).filter(Boolean))];
+  const missingA = homeAnchors.filter((a) => idx.indexOf('id="' + a + '"') < 0);
+  check('Y6. Нүүрний виджет бүрийн анкор сайт дээр id болж байна (' + homeAnchors.length + ')',
+    homeAnchors.length >= 8 && missingA.length === 0, 'алга: ' + missingA.join(', '));
+  check('Y7. Хуудасны хаяг "#/" угтвартай — хуучин "#sec-" холбоосыг эвдэхгүй',
+    idx.includes("h.indexOf('#/')!==0") && idx.includes("hash0.indexOf('#/')!==0"));
+  check('Y7. Хөтчийн Back/Forward-ийг сонсоно (popstate)',
+    idx.includes("addEventListener('popstate'"));
+  check('Y8. Байгаа хуудсаа дахин дарахад prevPage хөдлөхгүй',
+    /go\(id\)\{[\s\S]{0,400}if\(this\.state\.page===id\)/.test(idx));
+
   if (!CHROME) { skipped('Y2–Y4 (браузер)', 'Chrome олдсонгүй'); return; }
   const srv = serve();
   try {
@@ -2598,6 +2656,36 @@ async function groupY() {
     check('Y4. Каталог дотроо бичихэд шүүгдэж, ФОКУС алдагдахгүй',
       R.inline && R.inline.empty === true && R.inline.val === 'зззхххяяя' &&
       R.inline.focus === true, JSON.stringify(R.inline));
+
+    /* ── Y6 браузер: "#sec-06" холбоос тухайн хэсэг рүү гүйлгэнэ ── */
+    PROBE_SRC = '/index.html#sec-06';
+    const A = await runProbe(PROBE_Y_ANCHOR, 120000);
+    if (A.__err) bad('Y6. Анкорын шалгалт ажиллав', A.__err);
+    else {
+      check('Y6. Сайт дээр 9 анкор бүгд DOM-д байна',
+        (A.exists || []).length === 9, JSON.stringify(A.exists));
+      check('Y6. "#sec-06" холбоос тухайн хэсэг рүү ГҮЙЛГЭНЭ (нүүрний оройд үлдэхгүй)',
+        A.scrollY > 500 && A.top !== null && Math.abs(A.top) < 250,
+        'scrollY=' + A.scrollY + ' top=' + A.top);
+    }
+
+    /* ── Y7/Y8 браузер: хаяг, Back, "буцах" ── */
+    PROBE_SRC = '/index.html';
+    const N = await runProbe(PROBE_Y_ROUTE, 120000);
+    if (N.__err) bad('Y7. Навигацийн шалгалт ажиллав', N.__err);
+    else {
+      check('Y7. Хуудас солиход хаяг шинэчлэгдэнэ (#/community, #/history)',
+        N.c1 && N.c1.hash === '#/community' && N.h && N.h.hash === '#/history',
+        JSON.stringify({ c: N.c1 && N.c1.hash, h: N.h && N.h.hash }));
+      check('Y7. Хөтчийн Back сайт ДОТОР өмнөх хуудас руу буцна',
+        N.afterBack && N.afterBack.hash === '#/community' && N.afterBack.onCommunity === true,
+        JSON.stringify(N.afterBack));
+      check('Y7. Hero-гийн хайлт ч хаягаа шинэчилнэ (#/browse)',
+        N.search && N.search.hash === '#/browse', JSON.stringify(N.search));
+      check('Y8. Байгаа хуудсаа дахин дарахад "буцах" өөр рүүгээ ЗААХГҮЙ',
+        N.c2 && N.c2.back && N.c2.back.indexOf('Коммунити') < 0 && N.c2.back === N.c1.back,
+        JSON.stringify({ first: N.c1 && N.c1.back, again: N.c2 && N.c2.back }));
+    }
   } finally {
     PROBE_SRC = '/admin/index.html';
     srv.close();

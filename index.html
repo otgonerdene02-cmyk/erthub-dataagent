@@ -397,7 +397,7 @@
   </sc-if>
 
   <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
-  <div style="max-width:1240px;margin:0 auto;padding:30px 24px 8px;position:relative;">
+  <div id="hero" style="max-width:1240px;margin:0 auto;padding:30px 24px 8px;position:relative;">
     <div style="position:relative;overflow:hidden;border-radius:28px;border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.96);box-shadow:var(--shadow-lg);background:linear-gradient(100deg,rgba(var(--surface-rgb),.98) 0%,rgba(252,253,255,.97) 32%,rgba(240,246,255,.94) 55%,rgba(46,124,246,.14) 78%,rgba(46,124,246,.19) 100%);backdrop-filter:blur(20px) saturate(1.3);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);gap:0;align-items:center;">
       <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(46,124,246,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(46,124,246,.05) 1px,transparent 1px);background-size:46px 46px;mask-image:linear-gradient(90deg,transparent,#000 30%);pointer-events:none;"></div>
       <div style="position:absolute;left:-60px;top:-90px;width:320px;height:320px;border-radius:50%;filter:blur(70px);opacity:.16;background:radial-gradient(circle,#2E7CF6,transparent 70%);animation:driftA 26s ease-in-out infinite alternate;pointer-events:none;"></div>
@@ -662,7 +662,7 @@
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:12px;margin-top:34px;margin-bottom:14px;">
+    <div id="portal-kpi" style="display:flex;align-items:center;gap:12px;margin-top:34px;margin-bottom:14px;">
       <div data-eh-card="uk" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ ukTitle }}{{ ukMark }}</div>
       <div style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></div>
       <div data-eh-card="uk" data-eh-field="sub" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">{{ ukSub }}</div>
@@ -694,7 +694,7 @@
     <div style="font-size:10px;color:var(--ink3);font-style:italic;margin-top:8px;">{{ ukMockNote }}</div>
     </sc-if>
 
-    <div style="display:flex;align-items:center;gap:12px;margin:34px 0 14px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">01</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec01 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-01" style="display:flex;align-items:center;gap:12px;margin:34px 0 14px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">01</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec01 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.74));border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);border-radius:18px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:16px 20px;position:sticky;top:60px;z-index:6;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -804,7 +804,7 @@
 
   <div style="max-width:1240px;margin:0 auto;padding:30px 24px 0;position:relative;">
 
-    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#1B7FA6,#1B7FA6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #1B7FA6cc;">02</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec02 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-02" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#1B7FA6,#1B7FA6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #1B7FA6cc;">02</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec02 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
@@ -992,7 +992,7 @@
     <div style="font-size:10px;color:var(--ink3);font-style:italic;margin:-8px 0 20px;">{{ section02MockNote }}</div>
     </sc-if>
 
-    <div style="margin:0 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#7C5CF0,#7C5CF0bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #7C5CF0cc;">03</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec03 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-03" style="margin:0 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#7C5CF0,#7C5CF0bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #7C5CF0cc;">03</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec03 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
       <button sc-camel-on-click="{{ goCommunity }}" style="cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:600;color:#7C5CF0;background:none;border:none;white-space:nowrap;flex-shrink:0;">{{ sCommSeeAll }}</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px;">
@@ -1030,7 +1030,7 @@
       </button>
     </div>
 
-    <div style="margin:0 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">04</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;"><span data-eh-card="k04" data-eh-field="title">{{ k04Title }}</span> — {{ sector.label }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-04" style="margin:0 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">04</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;"><span data-eh-card="k04" data-eh-field="title">{{ k04Title }}</span> — {{ sector.label }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
       <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
@@ -1079,7 +1079,7 @@
 
     
 
-    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-05" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
       <button sc-camel-on-click="{{ f05.toggle }}" aria-label="{{ sA11yFilter }}" style="{{ f05.btnStyle }}">⚗</button>
     </div>
     <sc-if value="{{ f05.open }}">
@@ -1181,7 +1181,7 @@
     </div>
     </div>
 
-    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">06</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec06 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-06" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">06</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec06 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;display:flex;flex-direction:column;">
@@ -1273,7 +1273,7 @@
     </div>
     
 
-    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">07</div><span data-eh-card="u07" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ u07Title }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-07" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">07</div><span data-eh-card="u07" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ u07Title }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <sc-if value="{{ u07Sub }}">
       <div data-eh-card="u07" data-eh-field="sub" style="font-size:12px;color:var(--ink2);margin:-6px 0 12px;">{{ u07Sub }}</div>
@@ -1290,7 +1290,7 @@
       </sc-for>
     </div>
 
-    <div style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#7C5CF0,#7C5CF0bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #7C5CF0cc;">08</div><span data-eh-card="ai08" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ ai08Title }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-08" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#7C5CF0,#7C5CF0bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #7C5CF0cc;">08</div><span data-eh-card="ai08" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ ai08Title }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="position:relative;overflow:hidden;border-radius:24px;border:1px solid rgba(124,92,240,.28);box-shadow:0 2px 6px rgba(12,20,40,.08),0 34px 70px -28px rgba(46,30,110,.5);background:linear-gradient(150deg,#141B33 0%,#1B1E42 46%,#221A46 100%);padding:0;margin-bottom:54px;">
       <div style="position:absolute;left:-60px;top:-90px;width:340px;height:340px;border-radius:50%;filter:blur(70px);opacity:.42;background:radial-gradient(circle,#7C5CF0,transparent 70%);animation:driftA 22s ease-in-out infinite alternate;"></div>
@@ -4650,14 +4650,78 @@ class Component extends DCLogic {
     })(),
     authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', tblQuery:'', tblStatus:'all', tblPage:0, fYear:'2026', fMonth:'Бүгд', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
 
-  go(id){ this.setState(s=>({page:id,prevPage:s.page})); if(window.scrollTo) window.scrollTo(0,0); }
+/* ── ХАЯГ ↔ ХУУДАС ─────────────────────────────────────────────────
+     Өмнө нь хуудас солигдоход хаяг ОГТ өөрчлөгддөггүй байв. Үүнээс болж:
+     хөтчийн Back товч сайтаас БҮРЭН гаргана (гар утсан дээр гол
+     навигацийн товч), тодорхой хуудсыг хуваалцах/хавчуурга хийх
+     боломжгүй, F5 дарахад байсан газраа алдаж эхлэл рүү буцна.
+
+     ЯАГААД "#/" УГТВАРТАЙ: сайт дээр "#hero", "#sec-01" гэсэн ХЭСЭГ рүү
+     гүйлгэдэг хуучин холбоосууд байгаа (админы "Сайт дээр нээх ↗" тэднийг
+     үүсгэдэг). Хуудасны хаягийг "#/browse" гэж тусад нь тэмдэглэснээр
+     тэдгээр холбоос ХЭВЭЭР ажиллана.
+
+     Дэлгэрэнгүй (datasets → detail) хуудас ЭНД ОРООГҮЙ: түүнийг сэргээхэд
+     жагсаалтын индекс биш ТОГТМОЛ таних тэмдэг хэрэгтэй (индекс нь
+     датасэт нэмэгдэхэд шилжинэ) — тусдаа ажил. */
+  pageFromHash(){
+    var h=String(location.hash||'');
+    if(h.indexOf('#/')!==0) return null;
+    var id=h.slice(2).replace(/\/+$/,'');
+    return PAGES.some(function(p){return p.id===id})?id:null;
+  }
+  syncHash(id,replace){
+    if(!window.history||!window.history.pushState) return;
+    var base=location.pathname+location.search;
+    var next=(id==='home')?base:base+'#/'+id;
+    if(location.pathname+location.search+location.hash===next) return;
+    try{ history[replace?'replaceState':'pushState']({ehPage:id},'',next) }catch(e){}
+  }
+  go(id){
+    /* Байгаа хуудсаа дахин дарахад prevPage-г БҮҮ хөдөлгө — эс тэгвэл
+       "Коммунити руу буцах" гэсэн холбоос Коммунити хуудсан дээрээ
+       гарч, хаашаа ч аваачихгүй үхмэл товч болно. */
+    if(this.state.page===id){ if(window.scrollTo) window.scrollTo(0,0); return }
+    this.setState(s=>({page:id,prevPage:s.page}));
+    this.syncHash(id);
+    if(window.scrollTo) window.scrollTo(0,0);
+  }
   goBack(fallback){
     const prev=this.state.prevPage;
     const to=(prev&&prev!==this.state.page)?prev:(fallback||'home');
     this.setState({page:to,prevPage:'home'});
+    this.syncHash(to);
     if(window.scrollTo) window.scrollTo(0,0);
   }
   componentDidMount(){
+    /* Хаягт хуудас заасан бол ТҮҮГЭЭР эхэлнэ (хуваалцсан холбоос, F5). */
+    var startPage=this.pageFromHash();
+    if(startPage&&startPage!==this.state.page) this.setState({page:startPage,prevPage:'home'});
+    /* "#sec-01" мэтийн ХЭСГИЙН анкор — агуулга async зурагддаг тул
+       хөтөч өөрөө гүйлгэж амждаггүй. Зурагдсаны дараа өөрсдөө хийнэ.
+       ("#/" угтвартай нь ХУУДСЫН хаяг тул энд хамаарахгүй.) */
+    var hash0=String(location.hash||'');
+    if(hash0&&hash0.indexOf('#/')!==0){
+      var tries=0, userMoved=false;
+      var stop=()=>{userMoved=true};
+      window.addEventListener('wheel',stop,{passive:true,once:true});
+      window.addEventListener('touchstart',stop,{passive:true,once:true});
+      var seek=()=>{
+        if(userMoved) return;
+        var el=document.getElementById(hash0.slice(1));
+        if(el&&el.scrollIntoView) el.scrollIntoView({block:'start'});
+        /* Олдсон ч ЗОГСОХГҮЙ: дараагийн дахин зурагдалт гүйлтийг 0 болгоно. */
+        if(++tries<12) setTimeout(seek,400);
+        else { window.removeEventListener('wheel',stop); window.removeEventListener('touchstart',stop) }
+      };
+      setTimeout(seek,400);
+    }
+    /* Хөтчийн Back/Forward — сайтын дотор ажиллана. */
+    this._onPop=()=>{
+      var p=this.pageFromHash()||'home';
+      if(p!==this.state.page) this.setState({page:p,prevPage:'home'});
+    };
+    window.addEventListener('popstate',this._onPop);
     this.loadGlobe(); this.syncMonths(); this.loadSources(); this.loadMongoliaGeo();
     this.auditBindings(); this.loadContent(); this.loadMetricRegistry();
     this.loadPublished(); this.loadEtransportBackend();
@@ -7657,8 +7721,12 @@ class Component extends DCLogic {
         ? '«'+(this.state.dsListQ||'').trim()+'» '+
           this.stxt('browse.empty_head_q','гэсэн хайлтад тохирох датасэт олдсонгүй')
         : this.stxt('browse.empty_head','Шүүлтэд тохирох датасэт олдсонгүй'),
-      onHomeQueryKey:(e)=>{if(e.key==='Enter')this.setState(s=>({page:'browse',prevPage:'home',dsListQ:s.homeQ||'',dataFilter:'all'}));},
-      onHomeSearch:()=>this.setState(s=>({page:'browse',prevPage:'home',dsListQ:s.homeQ||'',dataFilter:'all'})),
+      /* Хайлт ч go()-оор дамжина — эс тэгвэл каталог руу орох энэ замд
+         хаяг шинэчлэгдэхгүй, Back товч сайтаас гаргана. */
+      onHomeQueryKey:(e)=>{if(e.key==='Enter'){
+        this.setState(s=>({dsListQ:s.homeQ||'',dataFilter:'all',dsListPage:0})); this.go('browse');}},
+      onHomeSearch:()=>{
+        this.setState(s=>({dsListQ:s.homeQ||'',dataFilter:'all',dsListPage:0})); this.go('browse');},
       isHistory:page==='history',isNews:page==='news',isTimeline:histTab==='timeline',isPeople:histTab==='people',histEras,
       histYFrom:yFrom||'',histYTo:yTo||'',onHistYFrom,onHistYTo,histYearInputStyle,histManualActive,
       histShowPager,histPageLabel,histPrev,histNext,
