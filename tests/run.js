@@ -37,7 +37,15 @@ function bad(name, detail) {
 function skipped(name, why) { skip++; console.log('  SKIP  ' + name + (why ? ' (' + why + ')' : '')); }
 function check(name, cond, detail) { cond ? ok(name) : bad(name, detail); }
 
-const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+/* Мөрийн төгсгөлийг НЭГТГЭНЭ. Windows дээр core.autocrlf=true тул
+   checkout хийсний дараа ажлын мод CRLF болдог; тэгэхээр эх код дотор
+   LF-тэй хэв маяг хайдаг шалгуурууд ЧИМЭЭГҮЙ гажина. Хоёр төрлийн эвдрэл
+   гардаг: (а) regex таарахгүй болж тест унана (жиш. adminScript — 17
+   тест "esc() алга" гэсэн төөрөгдүүлсэн нэрээр уначихсан), (б) СӨРӨГ
+   шалгуур (!src.includes('...')) ҮРГЭЛЖ ҮНЭН болж тест ХУДАЛ ногоон
+   болно — энэ нь илүү аюултай. Тиймээс эх сурвалжийг нэг л газар
+   нормчилно. */
+const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8').split('\r\n').join('\n');
 const readJson = (f) => JSON.parse(read(f));
 /* Гадаад feed уншигч — J бүлэгт "модуль юу бодох ёстой вэ" гэдгийг
    бодит датагаар шалгахад ашиглана. Сүлжээгүй бол дуудагч тал SKIP. */
@@ -2154,6 +2162,19 @@ async function groupS() {
   const fbLeaks = (admSrc.match(/utxt\([^)]*metric_registry\.json[^)]*\)/g) || []).length;
   check('S7. Кодын fallback текстэд ч "metric_registry.json" гарахгүй',
     fbLeaks === 0, 'олдсон: ' + fbLeaks);
+
+  /* ── S8. Эх сурвалж уншигч CRLF-д гажихгүй ────────────────────────
+     Энэ тестийн БҮХ статик шалгуур read()-ээр дамждаг. Хэрэв тэнд CR
+     үлдвэл LF-тэй хэв маяг хайдаг шалгуурууд чимээгүй гажина. */
+  ['admin/index.html', 'index.html', 'content.json'].forEach((f) => {
+    check('S8. read("' + f + '") мөрийн төгсгөлийг нормчилно',
+      read(f).indexOf(String.fromCharCode(13)) < 0,
+      'CR тэмдэгт үлдсэн — LF-тэй шалгуурууд гажина');
+  });
+  check('S8. adminScript() эх кодыг ОЛНО (хоосон биш)',
+    adminScript().length > 100000, 'урт: ' + adminScript().length);
+  check('S8. dcScript() эх кодыг ОЛНО (хоосон биш)',
+    dcScript().length > 100000, 'урт: ' + dcScript().length);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2199,6 +2220,12 @@ async function groupU() {
   check('U3. "тооцоологдоно" ба нэгж ЗАЛГАГДАХГҮЙ',
     !adm.includes("esc(utxt('portal_kpi.computed','тооцоологдоно')):'—')+\n          ' <span"),
     'хуучин залгаас үлдсэн');
+  /* Сөрөг шалгуур ГАНЦААРАА байвал хайлтын хэв маяг гажихад чимээгүй
+     ногоон болно. Одоогийн ЗӨВ хэлбэр байгааг ч баталгаажуулна. */
+  check('U3. Тооцоолсон утга ба "тооцоологдоно" хоёр ӨӨР салаанд',
+    adm.includes("esc(String(pkComputed[k]))+' <span") &&
+    adm.includes("esc(utxt('portal_kpi.computed','тооцоологдоно'))"),
+    'portal_kpi-ийн preview хэв маяг өөрчлөгдсөн байж магадгүй');
 
   if (!CHROME) { skipped('U4. QA дахин тестийн засвар (DOM)', 'Chrome олдсонгүй'); return; }
   const srv = serve();

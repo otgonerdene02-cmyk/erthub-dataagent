@@ -35,7 +35,15 @@ function ok(n) { pass++; console.log('  PASS  ' + n); }
 function bad(n, d) { fail++; failures.push(n); console.log('  FAIL  ' + n + (d ? '\n        ' + d : '')); }
 function check(n, c, d) { c ? ok(n) : bad(n, d); }
 
-const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+/* Мөрийн төгсгөлийг НЭГТГЭНЭ. Windows дээр core.autocrlf=true тул
+   checkout хийсний дараа ажлын мод CRLF болдог; тэгэхээр эх код дотор
+   LF-тэй хэв маяг хайдаг шалгуурууд ЧИМЭЭГҮЙ гажина. Хоёр төрлийн эвдрэл
+   гардаг: (а) regex таарахгүй болж тест унана (жиш. adminScript — 17
+   тест "esc() алга" гэсэн төөрөгдүүлсэн нэрээр уначихсан), (б) СӨРӨГ
+   шалгуур (!src.includes('...')) ҮРГЭЛЖ ҮНЭН болж тест ХУДАЛ ногоон
+   болно — энэ нь илүү аюултай. Тиймээс эх сурвалжийг нэг л газар
+   нормчилно. */
+const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8').split('\r\n').join('\n');
 const readJson = (f) => JSON.parse(read(f));
 
 const CYR = /[\u0400-\u04FF]/;
