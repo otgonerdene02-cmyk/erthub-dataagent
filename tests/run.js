@@ -562,7 +562,35 @@ async function groupC() {
   } finally { srv.close(); }
 }
 
-const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n  await sleep(3500);\n  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',\n    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',\n    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',\n    r06:'sec-06',u07:'sec-07'};\n  const norm=t=>t.replace(/[\\s\\u00a0]+/g,' ').trim();\n  const pvT=()=>norm(d.getElementById('pvhost').innerText);\n  const edT=()=>norm(d.querySelector('.edit2').innerText);\n  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost rect,#pvhost circle,#pvhost path,'+\n      '#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvrk i,'+\n      '#pvhost .pvcd .d,#pvhost .sp-val'))\n    .map(e=>e.tagName+':'+(e.getAttribute('height')||e.getAttribute('d')||\n      e.getAttribute('stroke-dasharray')||e.getAttribute('style')||e.textContent)).join('|');\n  const snap=()=>({t:pvT(),g:geo()});\n  const go=id=>{ let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();\n    const s=d.querySelector('[data-section=\"'+SEC[id]+'\"]'); if(!s) return false;\n    s.click(); const c=d.querySelector('[data-widget=\"'+id+'\"]'); if(!c) return false;\n    c.click(); return true; };\n  const probeAll=(q,attr,mk,scope)=>{ const out={};\n    [].slice.call(d.querySelectorAll(q)).map(x=>x.getAttribute(attr)).forEach(k=>{\n      const e=d.querySelector('['+attr+'=\"'+k+'\"]'); if(!e) return;\n      const ov=e.value, pr=mk(k);\n      e.value=pr; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n      out[k]=scope().indexOf(pr)>=0?'PASS':'FAIL';\n      e.value=ov; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n    }); return out; };\n  const R={rows:[]};\n  for(const id of Object.keys(SEC)){\n    const row={id:id};\n    if(!go(id)){ row.nav=false; R.rows.push(row); continue }\n    row.nav=true;\n    const s0=snap();\n    const sels=[].slice.call(d.querySelectorAll('[data-slot]'));\n    if(!sels.length){ row.swap='N/A'; row.back='N/A' }\n    else{\n      const sel=sels[0], cur=sel.value;\n      const en=[].slice.call(sel.options).filter(o=>!o.disabled&&o.value!==cur).map(o=>o.value);\n      const all=[].slice.call(sel.options).map(o=>o.value).filter(v=>v!==cur);\n      const pref=en.filter(v=>v);\n      const tgt=pref.length?pref[0]:(en.length?en[0]:all[0]);\n      sel.value=tgt; sel.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s1=snap();\n      row.swap=(s1.t!==s0.t||s1.g!==s0.g);\n      row.swapInfo=(cur||'—')+' → '+(tgt||'—');\n      const s2=d.querySelector('[data-slot]');\n      s2.value=cur; s2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s3=snap();\n      row.back=(s3.t===s0.t&&s3.g===s0.g);\n    }\n    const tf=probeAll('[data-tf]','data-tf',k=>'ZZ'+k.toUpperCase()+'ZZ',pvT);\n    const sf=probeAll('.e-fm [data-sf]','data-sf',()=>'ZZSFZZ',pvT);\n    const rf=probeAll('[data-rf]','data-rf',()=>'ZZRFZZ',edT);\n    row.tfN=Object.keys(tf).length; row.sfN=Object.keys(sf).length; row.rfN=Object.keys(rf).length;\n    row.dead=[].concat(Object.entries(tf),Object.entries(sf),Object.entries(rf))\n      .filter(x=>x[1]!=='PASS').map(x=>x[0]);\n    row.text=Object.values(tf).every(v=>v==='PASS');\n    R.rows.push(row);\n  }\n  R.dirty=d.getElementById('dirtyMsg').textContent;\n  return R;\n}";
+const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n  await sleep(3500);\n  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',\n    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',\n    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',\n    r06:'sec-06',u07:'sec-07'};\n  const norm=t=>t.replace(/[\\s\\u00a0]+/g,' ').trim();\n  const pvT=()=>norm(d.getElementById('pvhost').innerText);\n  const edT=()=>norm(d.querySelector('.edit2').innerText);\n  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost rect,#pvhost circle,#pvhost path,'+\n      '#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvrk i,'+\n      '#pvhost .pvcd .d,#pvhost .sp-val'))\n    .map(e=>e.tagName+':'+(e.getAttribute('height')||e.getAttribute('d')||\n      e.getAttribute('stroke-dasharray')||e.getAttribute('style')||e.textContent)).join('|');\n  const snap=()=>({t:pvT(),g:geo()});\n  const go=id=>{ let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();\n    const s=d.querySelector('[data-section=\"'+SEC[id]+'\"]'); if(!s) return false;\n    s.click(); const c=d.querySelector('[data-widget=\"'+id+'\"]'); if(!c) return false;\n    c.click(); return true; };\n  const probeAll=(q,attr,mk,scope)=>{ const out={};\n    [].slice.call(d.querySelectorAll(q)).map(x=>x.getAttribute(attr)).forEach(k=>{\n      const e=d.querySelector('['+attr+'=\"'+k+'\"]'); if(!e) return;\n      const ov=e.value, pr=mk(k);\n      e.value=pr; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n      out[k]=scope().indexOf(pr)>=0?'PASS':'FAIL';\n      e.value=ov; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n    }); return out; };\n  const R={rows:[]};\n  for(const id of Object.keys(SEC)){\n    const row={id:id};\n    if(!go(id)){ row.nav=false; R.rows.push(row); continue }\n    row.nav=true;\n    const pw=()=>!!d.querySelector('[data-periodwarn]');\n    row.pw0=pw();\n    const s0=snap();\n    const sels=[].slice.call(d.querySelectorAll('[data-slot]'));\n    if(!sels.length){ row.swap='N/A'; row.back='N/A' }\n    else{\n      const sel=sels[0], cur=sel.value;\n      const en=[].slice.call(sel.options).filter(o=>!o.disabled&&o.value!==cur).map(o=>o.value);\n      const all=[].slice.call(sel.options).map(o=>o.value).filter(v=>v!==cur);\n      const pref=en.filter(v=>v);\n      const tgt=pref.length?pref[0]:(en.length?en[0]:all[0]);\n      sel.value=tgt; sel.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s1=snap();\n      row.pwSwap=pw();\n      row.swap=(s1.t!==s0.t||s1.g!==s0.g);\n      row.swapInfo=(cur||'—')+' → '+(tgt||'—');\n      const s2=d.querySelector('[data-slot]');\n      s2.value=cur; s2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s3=snap();\n      row.pwBack=pw();\n      row.back=(s3.t===s0.t&&s3.g===s0.g);\n    }\n    const tf=probeAll('[data-tf]','data-tf',k=>'ZZ'+k.toUpperCase()+'ZZ',pvT);\n    const sf=probeAll('.e-fm [data-sf]','data-sf',()=>'ZZSFZZ',pvT);\n    const rf=probeAll('[data-rf]','data-rf',()=>'ZZRFZZ',edT);\n    row.tfN=Object.keys(tf).length; row.sfN=Object.keys(sf).length; row.rfN=Object.keys(rf).length;\n    row.dead=[].concat(Object.entries(tf),Object.entries(sf),Object.entries(rf))\n      .filter(x=>x[1]!=='PASS').map(x=>x[0]);\n    row.text=Object.values(tf).every(v=>v==='PASS');\n    R.rows.push(row);\n  }\n  if(go('hero_px')){\n    const sx=d.querySelector('[data-slot]');\n    sx.value='air.weekly_pax'; sx.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const vis=()=>{const b=d.querySelector('[data-periodwarn]');\n      return !!b&&b.style.display!=='none'};\n    R.px={warn:vis()};\n    const fb=d.querySelector('[data-periodwarn] [data-autoname]');\n    R.px.fix=fb?fb.getAttribute('data-autoname'):null;\n    if(fb) fb.click();\n    R.px.title=(d.querySelector('[data-tf=\"title\"]')||{}).value;\n    R.px.warnAfterFix=vis();\n    const sy=d.querySelector('[data-slot]');\n    sy.value=''; sy.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const cc=d.querySelector('[data-tcancel]'); if(cc&&!cc.disabled) cc.click();\n  }\n  if(go('ls')){\n    const pv=()=>{const x=d.getElementById('pendRow');return !!x&&x.style.display!=='none'};\n    const t1=d.querySelector('[data-tf=\"title\"]');\n    const orig=t1.value;\n    t1.value='ZZDRAFTZZ'; t1.dispatchEvent(new w.Event('input',{bubbles:true}));\n    R.dr={bar:pv()};\n    let q,qn=0; while((q=d.querySelector('[data-back]'))&&qn++<6) q.click();\n    R.dr.barAway=pv();\n    go('ls');\n    R.dr.kept=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZDRAFTZZ';\n    d.querySelector('[data-penddrop]').click();\n    R.dr.dropped=(d.querySelector('[data-tf=\"title\"]')||{}).value===orig&&!pv();\n    const t2=d.querySelector('[data-tf=\"title\"]');\n    t2.value='ZZAPPLYZZ'; t2.dispatchEvent(new w.Event('input',{bubbles:true}));\n    let q2,qm=0; while((q2=d.querySelector('[data-back]'))&&qm++<6) q2.click();\n    d.querySelector('[data-pendsave]').click();\n    go('ls');\n    R.dr.applied=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZAPPLYZZ'&&!pv();\n    const t3=d.querySelector('[data-tf=\"title\"]');\n    t3.value=orig; t3.dispatchEvent(new w.Event('input',{bubbles:true}));\n    const sv=d.querySelector('[data-tsave]'); if(sv&&!sv.disabled) sv.click();\n  }\n  R.dirty=d.getElementById('dirtyMsg').textContent;\n  return R;\n}";
+
+/* ── Хугацааны нарийвчлалын (period grain) логикийг АДМИНЫ ЭХ КОДООС
+   гаргаж авна. Тест хуулбар бичихгүй: админ юу боддог, тест ЯГ түүгээр
+   бодно — эс бөгөөс "тест ногоон, дэлгэц улаан" гэсэн зөрүү үүснэ. */
+function periodKit() {
+  const src = adminScript();
+  const cut = (from, to) => {
+    const a = src.indexOf(from), b = src.indexOf(to);
+    return (a < 0 || b < 0 || b <= a) ? null : src.slice(a, b);
+  };
+  const parts = [cut('var TEXT_ONLY={', 'var ALL_IDS='),
+                 cut('function slotsOf(id){', 'function boundMetrics('),
+                 cut('function curText(id,f){', 'function dirtyTextFields('),
+                 cut('var VALUE_TARGETS={', 'function valueDirtyKeys('),
+                 cut('var PERIODS=[', 'function titleMismatchWarn('),
+                 cut('function autoNameHint(id,cur){', 'function textForm(')];
+  if (parts.some(p => p === null)) return null;
+  const make = new Function('REG', 'S', 'CON', 'SECN', 'esc', 'utxt', 'EHChart',
+    parts.join('') + 'return {periodOfText:periodOfText,periodOfMetric:periodOfMetric,' +
+    'periodOfWidget:periodOfWidget,periodLabel:periodLabel,titleIsValueLabel:titleIsValueLabel,' +
+    'retitledPeriod:retitledPeriod,periodMismatchWarn:periodMismatchWarn,' +
+    'periodMismatchList:periodMismatchList,statOf:statOf,autoNameHint:autoNameHint};');
+  /* EHChart жинхэнэ модулиасаа — autoNameHint нэрийг ТҮҮГЭЭР гаргадаг */
+  const sb = { window: {} };
+  try { new Function('window', read('js/erthub-chart.js'))(sb.window); } catch (e) { return null; }
+  return (reg, con) => make(reg, { widget: null, td: null }, con,
+    { air: 'Агаар', public: 'Нийтийн тээвэр' }, String, (p, f) => f, sb.window.EHChart);
+}
 
 /* ══════════════════════════════════════════════════════════════════
    F. ВИДЖЕТИЙН БҮХ ТАЛБАР ЗАСВАРЛАГДАХ (16 виджет)
@@ -579,10 +607,118 @@ const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeo
      F2. Метрикийг буцаахад preview яг анхны төлөвтөө эргэнэ
      F3. Виджетийн текст талбар бүр preview-д ШУУД тусна
      F4. Засварын дэлгэц дээр ҮХМЭЛ (preview-д нөлөөлдөггүй) талбар алга
+     F5. Хугацааны нарийвчлал (өдөр/7 хоног/сар) — нэгжийн шалгуур
+         БАРЬДАГГҮЙ зөрүүг тусад нь илрүүлэх (unit тест, Chrome-гүй)
+     F6. Бодит registry дээр ХУДАЛ анхааруулга гарахгүй, харин Blocker
+         тохиолдол (hero_px + 7 хоногийн метрик) ИЛРЭНЭ
+     F7. Браузер: анхааруулга ЖИНХЭНЭ дэлгэц дээр гарч/арилна
    ══════════════════════════════════════════════════════════════════ */
 async function groupF() {
   group('F. Виджетийн бүх талбар засварлагдах (16 виджет)');
-  if (!CHROME) { skipped('F бүлэг бүхэлдээ', 'Chrome олдсонгүй'); return; }
+
+  /* ── F5. Хугацааны нарийвчлал — ГАРААР БОДОХ БОЛОМЖТОЙ фикстур ──
+     ЯАГААД: "ЗОРЧИГЧ / ӨДӨР" слотод 7 хоногийн НИЙЛБЭР метрик холбогдвол
+     нэгж нь ХОЁУЛАА "хүн" тул why()/нэгжийн шалгуур зөрчил ОЛОХГҮЙ, гэтэл
+     сайт дээр ~7 дахин өндөр тоо "өдрийн" гэж танилцуулагдана. */
+  const kit = periodKit();
+  if (!kit) { bad('F5. Хугацааны логик админы эх кодоос олдсонгүй'); }
+  else {
+    const REG_FIX = { metrics: {
+        'x.week':  { name: '7 хоногийн нийт зорчигчийн тоо', filter: 'бүтэн 7 хоног',
+                     unit: 'хүн', quality: 'verified',
+                     period_note: 'hero_fl-ийн "сүүлийн бүтэн сар" зарчимтай адил' },
+        'x.month': { name: 'Сүүлийн бүтэн сарын нислэгийн тоо', filter: 'сүүлийн бүтэн сар',
+                     unit: 'нислэг', quality: 'verified' } },
+      widgets: { one: { metric: 'x.week' } } };
+    const CON_FIX = { widgets: { one: { title: 'ЗОРЧИГЧ / ӨДӨР' } } };
+    const K = kit(REG_FIX, CON_FIX);
+
+    check('F5. Хугацааны үг таних (өдөр · 7 хоног · сар · хугацаагүй)',
+      K.periodOfText('ЗОРЧИГЧ / ӨДӨР') === 'day' &&
+      K.periodOfText('7 хоног') === 'week' &&
+      K.periodOfText('Долоо хоногийн нийт зорчигч тээвэр') === 'week' &&
+      K.periodOfText('НИСЛЭГ / САР') === 'month' &&
+      K.periodOfText('Салбар хоорондын харьцуулалт') === null,
+      [K.periodOfText('ЗОРЧИГЧ / ӨДӨР'), K.periodOfText('7 хоног'),
+       K.periodOfText('Долоо хоногийн нийт зорчигч тээвэр'),
+       K.periodOfText('НИСЛЭГ / САР'), K.periodOfText('Салбар хоорондын харьцуулалт')].join('/'));
+
+    check('F5. period_note дэх ИШ ТАТСАН хугацаа метрикийг ГАЖУУДУУЛАХГҮЙ',
+      K.periodOfMetric('x.week') === 'week' && K.periodOfMetric('x.month') === 'month',
+      K.periodOfMetric('x.week') + '/' + K.periodOfMetric('x.month'));
+
+    const w1 = K.periodMismatchWarn('one');
+    check('F5. Гарчиг ӨДӨР + метрик 7 ХОНОГ → анхааруулга ГАРНА', !!w1, w1.slice(0, 80));
+    check('F5. Анхааруулга гарчгийн засварыг САНАЛ болгоно (ЗОРЧИГЧ / 7 ХОНОГ)',
+      K.retitledPeriod('one', 'week') === 'ЗОРЧИГЧ / 7 ХОНОГ' &&
+      w1.indexOf('ЗОРЧИГЧ / 7 ХОНОГ') >= 0, K.retitledPeriod('one', 'week'));
+
+    const K2 = kit({ metrics: REG_FIX.metrics, widgets: { one: { metric: 'x.month' } } },
+                   { widgets: { one: { title: 'НИСЛЭГ / САР' } } });
+    check('F5. Хугацаа ТААРВАЛ анхааруулга ГАРАХГҮЙ', K2.periodMismatchWarn('one') === '',
+      K2.periodMismatchWarn('one').slice(0, 60));
+
+    /* Хэсгийн гарчиг (i06 хэлбэр) — хугацааны үггүй тул ХУДАЛ анхааруулга
+       ч, ХУДАЛ "нэр солих" санал ч гарах ёсгүй. */
+    const K3 = kit({ metrics: REG_FIX.metrics, widgets: { one: { metric: 'x.month' } } },
+                   { widgets: { one: { title: 'Салбар хоорондын харьцуулалт (индекс)' } } });
+    check('F5. Хугацааны үггүй ХЭСГИЙН гарчигт худал анхааруулга гарахгүй',
+      K3.periodMismatchWarn('one') === '' && K3.titleIsValueLabel('one') === false);
+    check('F5. "ХЭМЖИГДЭХҮҮН / ХУГАЦАА" гарчиг нь тооны ШОШГО гэж танигдана',
+      K.titleIsValueLabel('one') === true);
+  }
+
+  /* ── F8. Тоолуурын семантик: "холбогдсон" ≠ "зөв" ──
+     dbt/Looker "компиляц" ба "тест" хоёрыг заагладаг шиг, хугацаа зөрсөн
+     слотыг "бүрэн холбогдсон" гэж тоолбол тоолуур ХУДАЛ тайвшруулна. */
+  if (kit) {
+    const M = { metrics: {
+        'x.week':  { name: '7 хоногийн зорчигч', filter: 'бүтэн 7 хоног', unit: 'хүн', quality: 'verified' },
+        'x.day':   { name: 'Өдрийн зорчигч', filter: 'сүүлийн өдөр', unit: 'хүн', quality: 'verified' } },
+      widgets: { one: { metric: 'x.day' } } };
+    const con = { widgets: { one: { title: 'ЗОРЧИГЧ / ӨДӨР' } } };
+    check('F8. Хугацаа ТААРВАЛ "бүрэн холбогдсон" (ok)',
+      kit(M, con).statOf('one') === 'ok', kit(M, con).statOf('one'));
+    const M2 = JSON.parse(JSON.stringify(M)); M2.widgets.one.metric = 'x.week';
+    check('F8. Хугацаа ЗӨРВӨЛ "бүрэн" биш, "хэсэгчлэн" (mix)',
+      kit(M2, con).statOf('one') === 'mix', kit(M2, con).statOf('one'));
+    const M3 = JSON.parse(JSON.stringify(M)); M3.widgets.one.metric = null;
+    check('F8. Огт холбоогүй слот "холбогдоогүй" хэвээр (no)',
+      kit(M3, con).statOf('one') === 'no', kit(M3, con).statOf('one'));
+  }
+
+  /* ── F9. Автомат нэрийн санал виджетийн ТӨРЛИЙГ мэдэрнэ ──
+     i06 мэт ХЭСГИЙН гарчгийг "ЗОРЧИГЧ (нийлбэр)" болгохыг санал болгож
+     байсан — виджетийн дотоод тооцоолол (индекс) бүрэн үл хамаарна. */
+  if (kit) {
+    const val = { dataset: 'air_flights', measure: 'Зорчигч', agg: 'SUM' };
+    const KL = kit({ metrics: {}, widgets: { one: { value: val } } },
+                   { widgets: { one: { title: 'НИСЛЭГ / САР' } } });
+    const KH = kit({ metrics: {}, widgets: { one: { value: val } } },
+                   { widgets: { one: { title: 'Салбар хоорондын харьцуулалт (индекс)' } } });
+    const hintL = KL.autoNameHint('one', 'НИСЛЭГ / САР');
+    check('F9. Шошго-гарчигт санал ГАРНА, ХУГАЦАА нь хадгалагдана',
+      hintL.indexOf('ЗОРЧИГЧ / САР') >= 0 && hintL.indexOf('(нийлбэр)') < 0, hintL.slice(0, 90));
+    check('F9. ХЭСГИЙН гарчигт автомат нэр САНАЛ БОЛГОХГҮЙ',
+      KH.autoNameHint('one', 'Салбар хоорондын харьцуулалт (индекс)') === '',
+      KH.autoNameHint('one', 'x').slice(0, 60));
+  }
+
+  /* ── F6. Бодит файлууд дээр ── */
+  if (kit) {
+    const REG_R = readJson('metric_registry.json'), CON_R = readJson('content.json');
+    const KR = kit(REG_R, CON_R);
+    const noisy = Object.keys(REG_R.widgets).filter(id => KR.periodMismatchWarn(id) !== '');
+    check('F6. Бодит registry — виджетүүдэд ХУДАЛ анхааруулга алга',
+      noisy.length === 0, noisy.join(', '));
+    const REG_B = JSON.parse(JSON.stringify(REG_R));
+    REG_B.widgets.hero_px.sectors.public.metric = 'air.weekly_pax';
+    const wb = kit(REG_B, CON_R).periodMismatchWarn('hero_px');
+    check('F6. Blocker регресс: "ЗОРЧИГЧ / ӨДӨР" + 7 хоногийн метрик → ИЛРЭНЭ',
+      !!wb && wb.indexOf('7 ХОНОГ') >= 0, wb ? wb.slice(0, 90) : '(анхааруулга гарсангүй)');
+  }
+
+  if (!CHROME) { skipped('F1–F4, F7 (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
   const srv = serve();
   try {
     const R = await runProbe(PROBE_F, 240000);
@@ -599,6 +735,50 @@ async function groupF() {
     check('F3. Виджетийн текст талбар бүр preview-д ШУУД тусна', textBad.length === 0, textBad.join(', '));
     const dead = rows.filter(r => (r.dead || []).length).map(r => r.id + ': ' + r.dead.join(','));
     check('F4. Засварын дэлгэцэд ҮХМЭЛ талбар БАЙХГҮЙ', dead.length === 0, dead.join(' | '));
+    /* ── F7. Анхааруулга ЖИНХЭНЭ дэлгэц дээр. Загвар (kit) ба бодит DOM
+       хоёрыг ТУЛГАНА — "preview зөв, сайт буруу" зөрүү энэ төсөлд хамгийн
+       олон удаа давтагдсан алдаа тул хоёр талыг ХАМТ шалгана. */
+    const pw0 = rows.filter(r => r.pw0).map(r => r.id);
+    check('F7. Анхны төлөвт хугацааны анхааруулга алга (худал дохио үгүй)',
+      pw0.length === 0, pw0.join(', '));
+    const pwBack = rows.filter(r => r.pwBack).map(r => r.id);
+    check('F7. Метрикийг буцаахад анхааруулга АРИЛНА', pwBack.length === 0, pwBack.join(', '));
+    if (kit) {
+      const REG_R = readJson('metric_registry.json'), CON_R = readJson('content.json');
+      const misfit = [];
+      rows.forEach(r => {
+        if (!r.swapInfo || typeof r.pwSwap !== 'boolean') return;
+        const tgt = r.swapInfo.split('→').pop().trim();
+        const reg = JSON.parse(JSON.stringify(REG_R));
+        const w = reg.widgets[r.id];
+        const mk = REG_R.metrics[tgt] ? tgt : null;
+        if (w.sectors && !Array.isArray(w.sectors)) w.sectors[Object.keys(w.sectors)[0]].metric = mk;
+        else w.metric = mk;
+        const exp = kit(reg, CON_R).periodMismatchWarn(r.id) !== '';
+        if (exp !== r.pwSwap) misfit.push(r.id + ' (' + r.swapInfo + ') загвар:' + exp + ' дэлгэц:' + r.pwSwap);
+      });
+      check('F7. Метрик сольсны дараах анхааруулга ЗАГВАРТАЙ тохирно (16 виджет)',
+        misfit.length === 0, misfit.join(' | '));
+    }
+    /* hero_px — Blocker-ийн ЯГ гүйлгээ: ГАНЦ "зөвшөөрөгдсөн" сонголт нь
+       нэгжээрээ тохирох хэрнээ 7 хоногийн нийлбэр тул "ӨДӨР" гэсэн гарчгийн
+       доор ~7 дахин өндөр тоо гаргана. */
+    /* Бичсэн текст ЧИМЭЭГҮЙ алдагдахгүй (Mirakl Save Bar + Cloudscape
+       "unsaved changes" — хэрэглэгч ӨӨРӨӨ л цуцална). */
+    const dr = R.dr || {};
+    check('F10. Бичих даруйд доод мөрөнд "хэрэглээгүй" эгнээ гарна', dr.bar === true, JSON.stringify(dr));
+    check('F10. Дэлгэц сольсон ч эгнээ ХЭВЭЭР харагдана', dr.barAway === true, String(dr.barAway));
+    check('F10. Буцаж ирэхэд бичсэн текст ХЭВЭЭР (алдагдахгүй)', dr.kept === true, String(dr.kept));
+    check('F10. "Болих" дархад ноорог цуцлагдаж, эгнээ алга болно', dr.dropped === true, String(dr.dropped));
+    check('F10. Доод мөрний "Хэрэглэх" нь ӨӨР дэлгэцээс ч хэрэглэнэ', dr.applied === true, String(dr.applied));
+    const px = R.px || {};
+    check('F7. hero_px — 7 хоногийн метрик сонгоход анхааруулга ГАРНА',
+      px.warn === true, JSON.stringify(px));
+    check('F7. Анхааруулга гарчгийн бэлэн засварыг санал болгоно',
+      px.fix === 'ЗОРЧИГЧ / 7 ХОНОГ', String(px.fix));
+    check('F7. Товч дархад гарчиг тавигдаж, анхааруулга АРИЛНА',
+      px.title === 'ЗОРЧИГЧ / 7 ХОНОГ' && px.warnAfterFix === false,
+      px.title + ' · анхааруулга: ' + px.warnAfterFix);
     const total = rows.reduce((a, r) => a + (r.tfN || 0) + (r.sfN || 0) + (r.rfN || 0), 0);
     check('Засварлагдах талбар 200-аас олон шалгагдав', total > 200, 'нийт: ' + total);
     console.log('        16 виджет · нийт ' + total + ' засварлагдах талбар шалгав');
@@ -935,25 +1115,37 @@ const PROBE_I7 = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await sleep(4000);
   const R={};
-  d.querySelector('[data-section="sec-02"]').click(); await sleep(600);
-  d.querySelector('[data-widget="w2pb"]').click(); await sleep(900);
-  const sel=d.querySelector('[data-slot^="w2pb|"]');
-  const og=sel?sel.querySelector('optgroup'):null;
-  if(!og) return {__err:'талбарын бүлэг олдсонгүй'};
-  const opt=[].slice.call(og.querySelectorAll('option'))
-    .filter(function(o){return o.value.indexOf('field:|')!==0})[0];
-  sel.value=opt.value; sel.dispatchEvent(new w.Event('change',{bubbles:true}));
+  const pvT=()=>{const e=d.querySelector('#pvhost [data-ed="title"]');return e?e.textContent.trim():null};
+  const pickField=(q)=>{const sl2=d.querySelector(q), og2=sl2?sl2.querySelector('optgroup'):null;
+    if(!og2) return null;
+    const o2=[].slice.call(og2.querySelectorAll('option'))
+      .filter(function(o){return o.value.indexOf('field:|')!==0})[0];
+    if(!o2) return null;
+    sl2.value=o2.value; sl2.dispatchEvent(new w.Event('change',{bubbles:true}));
+    return o2.value};
+  /* 1) Гарчиг нь тооны ШОШГО болдог виджет (hero_fl · "НИСЛЭГ / САР") —
+        САНАЛ ГАРНА, гарчгийн талбар ХАРААХАН хэвээр */
+  d.querySelector('[data-section="hero"]').click(); await sleep(600);
+  d.querySelector('[data-widget="hero_fl"]').click(); await sleep(900);
+  if(!pickField('[data-slot^="hero_fl|"]')) return {__err:'hero_fl талбарын бүлэг олдсонгүй'};
   await sleep(1100);
-  /* 1) Автомат нэрийн САНАЛ гарах ба гарчгийн талбар ХАРААХАН хэвээр */
   const btn=d.querySelector('[data-autoname]');
   R.hasSuggestion=!!btn;
-  const pvT=()=>{const e=d.querySelector('#pvhost [data-ed="title"]');return e?e.textContent.trim():null};
+  R.suggest=btn?btn.getAttribute('data-autoname'):null;
   R.titleBefore=pvT();
   R.fieldBefore=(d.querySelector('[data-tf="title"]')||{}).value;
   if(btn){ btn.click(); await sleep(700); }
   R.titleAfter=pvT();
   R.fieldAfter=(d.querySelector('[data-tf="title"]')||{}).value;
-  /* 2) Талбар дээр очиход preview тодрох */
+  /* 2) ХЭСГИЙН гарчигтай виджет (w2pb · "Төрлийн хуваарь · 7 хоног") —
+        автомат нэр САНАЛ БОЛГОХ ЁСГҮЙ (гарчиг нь тоог тайлбарладаггүй) */
+  let bk,bn=0; while((bk=d.querySelector('[data-back]'))&&bn++<6) bk.click();
+  d.querySelector('[data-section="sec-02"]').click(); await sleep(600);
+  d.querySelector('[data-widget="w2pb"]').click(); await sleep(900);
+  if(!pickField('[data-slot^="w2pb|"]')) return {__err:'w2pb талбарын бүлэг олдсонгүй'};
+  await sleep(1100);
+  R.headingSuggestion=!!d.querySelector('[data-autoname]');
+  /* 3) Талбар дээр очиход preview тодрох */
   const sl=d.querySelector('[data-slot^="w2pb|"]');
   sl.dispatchEvent(new w.FocusEvent('focusin',{bubbles:true}));
   await sleep(400);
@@ -976,7 +1168,13 @@ async function groupI4() {
   try {
     const R = await runProbe(PROBE_I7, 120000);
     if (R.__err) { bad('I7. Детэйл шалгалт ажиллав', R.__err); return; }
-    check('I7. Утга сольсны дараа гарчгийн САНАЛ гарна', R.hasSuggestion === true);
+    check('I7. Утга сольсны дараа гарчгийн САНАЛ гарна (шошго-гарчиг)',
+      R.hasSuggestion === true, String(R.suggest));
+    check('I7. Санал нь ХУГАЦААНЫ хэсгийг хадгална (… / САР)',
+      typeof R.suggest === 'string' && R.suggest.indexOf(' / ') > 0 &&
+      R.suggest.indexOf('(') < 0, String(R.suggest));
+    check('I7. ХЭСГИЙН гарчигтай виджетэд автомат нэр САНАЛ БОЛГОХГҮЙ',
+      R.headingSuggestion === false, String(R.headingSuggestion));
     check('I7. Санал нь гарчгийг ӨӨРӨӨ дарж бичихгүй (ганц эх сурвалж)',
       R.titleBefore === R.fieldBefore,
       JSON.stringify({ preview: R.titleBefore, field: R.fieldBefore }));
@@ -1920,6 +2118,28 @@ async function groupS() {
       R.toastOk);
     check('S6. MAP товчинд товчлол алга', !!R.mapBtn && !/MAP/.test(R.mapBtn), R.mapBtn);
   } finally { srv.close(); }
+
+  /* ── S7. Хэрэглэгчид ХЭРЭГГҮЙ дотоод файлын нэр ──────────────────
+     GOV.UK/ONS "plain language": техникийн нэр томьёог зайлсхий, аргагүй
+     бол тайлбарла. `metric_registry.json` бол хэрэглэгч ХЭЗЭЭ Ч гар
+     хүрдэггүй дотоод файл — түүнийг нэрлэх нь мэдээлэл өгөхгүй, зөвхөн
+     "энэ надад хэцүү" гэсэн мэдрэмж төрүүлнэ. (`content.json` нь өөр —
+     экспортын АЖИЛЫН урсгалд шууд оролцдог тул хэвээр үлдэнэ.) */
+  const visible = [];
+  (function walk(o, p) {
+    if (typeof o === 'string') { visible.push([p, o]); return }
+    if (o && typeof o === 'object') Object.keys(o).forEach((k) => walk(o[k], p ? p + '.' + k : k));
+  })({ ui: readJson('content.json').ui, site: readJson('content.json').site,
+       widgets: readJson('content.json').widgets }, '');
+  const leaks = visible.filter((x) => x[1].indexOf('metric_registry.json') >= 0).map((x) => x[0]);
+  check('S7. Харагдах текстэд "metric_registry.json" гарахгүй (content.json)',
+    leaks.length === 0, leaks.join(', '));
+  /* Кодын utxt() fallback нь content.json-той ИЖИЛ байх ёстой — эс бөгөөс
+     сүлжээгүй/ачаалагдаагүй үед хуучин текст буцаж гарна. */
+  const admSrc = adminScript();
+  const fbLeaks = (admSrc.match(/utxt\([^)]*metric_registry\.json[^)]*\)/g) || []).length;
+  check('S7. Кодын fallback текстэд ч "metric_registry.json" гарахгүй',
+    fbLeaks === 0, 'олдсон: ' + fbLeaks);
 }
 
 /* ══════════════════════════════════════════════════════════════════

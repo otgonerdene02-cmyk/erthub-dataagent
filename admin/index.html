@@ -362,6 +362,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .expbar{flex-direction:column;align-items:stretch;gap:8px}
 .expbar .sv-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .expbar .d{font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
+.pend{font-size:11.5px;color:var(--ink);line-height:1.4}
+.pend b{color:var(--warn)}
 .sv-hint{font-size:11.5px;color:var(--ink2);line-height:1.4}
 .sv-hint b{color:var(--ink)}
 .sv-dot{width:8px;height:8px;border-radius:50%;background:var(--line2);flex-shrink:0}
@@ -444,6 +446,12 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
     <span class="d" id="dirtyMsg">Өөрчлөлт алга</span>
     <span class="sv-hint" id="saveHint"></span>
     <span class="pubst" id="pubMsg"></span>
+  </div>
+  <div class="sv-row" id="pendRow" style="display:none">
+    <span class="sv-dot warn"></span>
+    <span class="pend" id="pendMsg"></span>
+    <button class="btn pri sm" data-pendsave="1" data-ui="pending.apply">Хэрэглэх</button>
+    <button class="btn sm" data-penddrop="1" data-ui="pending.discard">Болих</button>
   </div>
   <div class="sv-row">
     <button class="btn pri" id="pubBtn" disabled data-ui="publish.button">Сайтад нийтлэх</button>
@@ -576,6 +584,9 @@ var SWAPPABLE={line:['line','bar'],donut:['donut','bar'],bignum:['bignum','bar']
 /* ══════════════════ ТӨЛӨВ ══════════════════ */
 var REG=null, CON=null, REG0=null, CON0=null;
 var S={tab:'data',ds:null,level:'sections',section:null,widget:null,td:null,q:'',
+       /* drafts — "Хэрэглэх" дараагүй текст засвар, виджетээр. Өмнө нь
+          дэлгэц сольмогц ЧИМЭЭГҮЙ алга болдог байв (бичсэн ажил устана). */
+       drafts:{},
        /* каталогийн мод: сонгосон өнцөг, идэвхтэй зангилаа, дэлгэсэн мөчир */
        facet:'page',node:null,twOpen:{},
        /* дата сан: шүүлт ба нээлттэй мөр */
@@ -846,10 +857,16 @@ function qualityOf(sv){
   if(typeof sv.quality==='string') return sv.quality;
   return sv.metric?'verified':'mock';
 }
+/* "Холбогдсон" гэдэг нь "ЗӨВ" гэсэн үг БИШ. dbt/Looker зэрэг хэрэгсэл
+   "компиляц хийгдэв" ба "тест давав" хоёрыг ЗААГЛАДАГ — бид ч ялгана:
+   слот бүр verified мөртөө гарчгийн хугацаа метрикийнхтэй зөрсөн бол
+   тоолуур "бүрэн холбогдсон" гэж ХУДАЛ тайвшруулна. Тийм виджет
+   "хэсэгчлэн" ангилалд орно (улаан биш, шар). */
 function statOf(id){
   if(TEXT_ONLY[id]) return 'txt';   /* метрик холбохгүй тул хамрахгүй */
   var sl=slotsOf(id),v=0;
   sl.forEach(function(s){if(qualityOf(slotVal(id,s.path))==='verified')v++});
+  if(v===sl.length&&periodMismatchList(id).length) return 'mix';
   return v===sl.length?'ok':(v>0?'mix':'no');
 }
 function boundMetrics(id){
@@ -955,7 +972,49 @@ function dirtyTextFields(id){
   if(!S.td)return [];
   return textFields(id).filter(function(f){return S.td[f]!==curText(id,f)});
 }
-function resetTd(id){S.td={};textFields(id).forEach(function(f){S.td[f]=curText(id,f)})}
+function resetTd(id){
+  S.td={};textFields(id).forEach(function(f){S.td[f]=curText(id,f)});
+  /* Хэрэглээгүй ноорог байвал СЭРГЭЭНЭ — дэлгэц сольсон нь "цуцаллаа"
+     гэсэн үг биш. Цуцлахыг хэрэглэгч ӨӨРӨӨ "Болих"-оор хэлнэ. */
+  var dr=S.drafts&&S.drafts[id];
+  if(dr) Object.keys(dr).forEach(function(f){if(f in S.td) S.td[f]=dr[f]});
+}
+/* Одоогийн виджетийн хэрэглээгүй талбаруудыг ноорогт буулгана. */
+function stashDraft(id){
+  if(!id||!S.td) return;
+  var d=dirtyTextFields(id);
+  if(!d.length){ delete S.drafts[id]; return }
+  var o={}; d.forEach(function(f){o[f]=S.td[f]});
+  S.drafts[id]=o;
+}
+function dropDraft(id){ delete S.drafts[id] }
+/* Бүх виджетийн хэрэглээгүй талбарын НИЙТ тоо. */
+function pendingCount(){
+  var n=0;
+  Object.keys(S.drafts).forEach(function(id){n+=Object.keys(S.drafts[id]).length});
+  return n;
+}
+function pendingIds(){ return Object.keys(S.drafts) }
+/* Бүгдийг нэг дор хэрэглэх — доод мөрний "Хэрэглэх" товч. */
+function applyAllDrafts(){
+  var n=0;
+  pendingIds().forEach(function(id){
+    var o=S.drafts[id];
+    Object.keys(o).forEach(function(f){
+      if(!CON.widgets[id]||o[f]===curText(id,f)) return;
+      log(id,(FL[f]||f)+': "'+curText(id,f)+'" → "'+o[f]+'"');
+      CON.widgets[id][f]=o[f]; n++;
+    });
+    delete S.drafts[id];
+  });
+  if(S.widget) resetTd(S.widget);
+  return n;
+}
+function dropAllDrafts(){
+  var n=pendingCount(); S.drafts={};
+  if(S.widget) resetTd(S.widget);
+  return n;
+}
 
 /* ══════════════════ БҮЛЭГЛЭЛТ ══════════════════ */
 function anchorOf(id){var c=CON.widgets[id];return (c&&c.anchor)||'hero'}
@@ -1226,12 +1285,16 @@ var UI_GROUPS=[
    labels:{live_value:'Амьд утга',live_service:'Амьд · вэб сервис',live:'Амьд',
            mock:'Түр дата',no_source:'Эх сурвалж алга',no_data:'Мэдээлэл алга'}},
   {key:'metric',title:'Админ · метрик холбох', where:'Виджетийн засварын баруун тал',
-   labels:{title_mismatch:'Гарчиг таарахгүй анхааруулга',title_mismatch_note:'Гарчиг таарахгүй тайлбар',heading:'Хэсгийн гарчиг',single:'Ганц слотын гарчиг',unbound:'Холбоогүй сонголт',
+   labels:{title_mismatch:'Гарчиг таарахгүй анхааруулга',title_mismatch_note:'Гарчиг таарахгүй тайлбар',
+           period_mismatch:'Хугацаа таарахгүй анхааруулга',period_mismatch_note:'Хугацаа таарахгүй тайлбар',
+           period_fix:'Гарчгийн хугацаа засах товч',heading:'Хэсгийн гарчиг',single:'Ганц слотын гарчиг',unbound:'Холбоогүй сонголт',
            unit_label:'Нэгжийн шошго',unit_unknown:'Нэгж тодорхойгүй',calc:'Тооцоолол',
            dataset:'Датасэт',source:'Эх сурвалж',filter:'Шүүлт',required:'Шаардлагатай',
            single_slot:'Ганц метрик',warn_rule:'Дүрэм зөрчсөн анхааруулга',
            warn_sum:'Нийлбэрийн анхааруулга',why_no_def:'Тодорхойлолт алга',
            why_not_verified:'Verified биш',why_unit:'Нэгж үл нийцнэ',hide:'"Нуух" товч',hidden_on:'"Буцаах" товч',hide_hint:'Нуух товчны тайлбар',hidden_note:'Нуусан үеийн тайлбар',unfit_group:'Тохирохгүй метрикийн бүлэг',unit_mixed:'"Холимог нэгж"-ийн тайлбар',from_field:'Датаны талбарын бүлгийн нэр'}},
+  {key:'pending',title:'Админ · хэрэглээгүй засварын мөр', where:'Дэлгэцийн доод мөр — бичсэн ч хэрэглээгүй талбар байвал гарна',
+   labels:{note:'Хэрэглээгүй талбарын тайлбар',apply:'"Хэрэглэх" товч',discard:'"Болих" товч'}},
   {key:'text',title:'Админ · текстийн маягт', where:'Виджетийн засварын доод хэсэг',
    labels:{heading:'Хэсгийн гарчиг',apply:'Хэрэглэх товч',cancel:'Болих товч',auto_name_hint:'Автомат нэрийн санал',auto_name_apply:'"Тавих" товч',
            location:'Байршил товч',history:'Түүх товч',changed:'Өөрчлөгдсөн тэмдэг'}},
@@ -1829,7 +1892,7 @@ function dsColor(k){return NEON[(DSMETA[k]&&DSMETA[k].s)||'air']}
 function facetDefs(){
   return [
     ['page',  utxt('cat.facet_page','Цэсээр'),     utxt('cat.note_page','Сайтын хуудас ба хэсгийн дарааллаар — виджетийг сайт дээрх байрлалаар нь олно.')],
-    ['data',  utxt('left.heading','Датасэт'),      utxt('left.note','Датасэт нь metric_registry.json-ий метрик бүрийн dataset талбараас автоматаар гарна — шинэ эх сурвалж нэмэгдмэгц энд өөрөө гарч ирнэ.')],
+    ['data',  utxt('left.heading','Датасэт'),      utxt('left.note','Датасэт нь бүртгэлтэй метрик бүрээс автоматаар гарна — шинэ эх сурвалж нэмэгдмэгц энд өөрөө гарч ирнэ.')],
     ['sector',utxt('cat.facet_sector','Салбараар'),utxt('cat.note_sector','Тээврийн салбараар — тухайн салбарын утга харуулдаг виджетүүд.')],
     ['state', utxt('cat.facet_state','Төлөвөөр'),  utxt('cat.note_state','Дата холболтын төлөвөөр — юуг эхлээд засах вэ гэдгийг эндээс хардаг.')]
   ];
@@ -2639,7 +2702,7 @@ function lvInventory(){
   var all=invRows(), rows=all.filter(invMatch);
   return '<p class="ph">'+esc(utxt('inv.heading','Дата сан — ирсэн бүх өгөгдөл'))+' '+
     '<span style="font-family:var(--mono)">'+rows.length+'/'+all.length+'</span></p>'+
-    '<p class="pvnote">'+esc(utxt('inv.note','Вэб сервисээс ирж буй бүх утга нэг жагсаалтад. Мөрөө сонгоод виджеттэй холбоод шууд нийтэлж болно. Холбоос нь metric_registry.json дээр бичигдэх тул виджетийн засварын дэлгэцэд ч ижилхэн харагдана.'))+'</p>'+
+    '<p class="pvnote">'+esc(utxt('inv.note','Вэб сервисээс ирж буй бүх утга нэг жагсаалтад. Мөрөө сонгоод виджеттэй холбоод шууд нийтэлж болно. Холбоос нь автоматаар хадгалагдаж, виджетийн засварын дэлгэцэд ч ижилхэн харагдана.'))+'</p>'+
     invChips(rows,all)+
     (rows.length?rows.map(invRowHtml).join('')
       :'<div class="empty">'+esc(utxt('inv.empty','Шүүлтэд тохирох дата олдсонгүй'))+'</div>');
@@ -3121,27 +3184,146 @@ function chromeForm(id){
     '<div class="acc" style="margin-bottom:9px">'+esc(utxt('chrome.note','Эдгээр нь олон виджетэд давтагддаг ерөнхий шошго. Энд бичсэн даруйд preview шинэчлэгдэж, "Сайтын текст" таб дээрх ижил утга ч өөрчлөгдөнө (Хэрэглэх товч шаардлагагүй).'))+'</div>'+
     ps.map(function(p){return siteField(p.split('.'),pathLabel(p))}).join('');
 }
+/* ══════════ ХУГАЦААНЫ НАРИЙВЧЛАЛ (period grain) ══════════════════
+   Виджетийн гарчиг дээрх хугацааны үг ("/ САР", "/ ӨДӨР", "7 хоног")
+   нь сайт дээр тооны ШОШГО болж уншигддаг. Сонгосон метрикийн хугацааны
+   цонх өөр байвал хуудас ХУДАЛ тайлбарлана — жиш. "ЗОРЧИГЧ / ӨДӨР"
+   слотод `air.weekly_pax` (7 хоногийн НИЙЛБЭР) холбогдвол ойролцоогоор
+   7 дахин өндөр тоо "өдрийн" гэж танилцуулагдана.
+
+   ЯАГААД НЭГЖИЙН ШАЛГУУР ХАНГАЛТГҮЙ: `why()` нь нэгжийг (хүн ≠ нислэг)
+   тулгадаг ч энэ тохиолдолд ХОЁУЛАА "хүн" тул зөрчил ИЛРЭХГҮЙ өнгөрдөг
+   байв. Хугацаа бол НЭГЖЭЭС ТУСДАА хэмжээс.
+
+   Хатуу ХОРИГЛОХГҮЙ (registry-д зориудаар өөр цонхтой тохиолдол байж
+   болно) — зөвхөн анхааруулж, гарчгийн хугацааны хэсгийг нэг товшилтоор
+   солих зам өгнө. Тоог өөрөө ЗАСАХГҮЙ: эх сурвалж ГАНЦ хэвээр. */
+var PERIODS=[
+  /* Дараалал ЧУХАЛ: "долоо хоног" нь "хоног" агуулдаг тул 7 хоногийг
+     ӨДРӨӨС ӨМНӨ, сарыг жилээс өмнө шалгана ("тухайн ЖИЛийн бодит байгаа
+     САРууд" → нарийвчлал нь сар, жил биш). */
+  {k:'week',    lab:'7 ХОНОГ', re:/(7|долоо[ёе]?)\s*хоног|weekly/i},
+  {k:'month',   lab:'САР',     re:/(^|[^а-яёөүА-ЯЁӨҮ])сар(ын|д|аар|ууд|уудын|т)?([^а-яёөүА-ЯЁӨҮ]|$)|monthly/i},
+  {k:'quarter', lab:'УЛИРАЛ',  re:/улирал/i},
+  {k:'year',    lab:'ЖИЛ',     re:/(^|[^а-яёөүА-ЯЁӨҮ])жил(ийн|д|үүд)?([^а-яёөүА-ЯЁӨҮ]|$)|annual/i},
+  {k:'day',     lab:'ӨДӨР',    re:/(^|[^а-яёөүА-ЯЁӨҮ])өдөр(ийн|т|үүд)?([^а-яёөүА-ЯЁӨҮ]|$)|daily/i}
+];
+function periodOfText(t){
+  t=String(t||''); if(!t) return null;
+  for(var i=0;i<PERIODS.length;i++) if(PERIODS[i].re.test(t)) return PERIODS[i].k;
+  return null;
+}
+function periodLabel(k){
+  for(var i=0;i<PERIODS.length;i++) if(PERIODS[i].k===k) return PERIODS[i].lab;
+  return '';
+}
+/* Метрикийн хугацааны цонх. `period_note` тайлбарыг ЗОРИУД УНШИХГҮЙ —
+   тэнд өөр виджетийн зарчмыг иш татсан байдаг (жиш. weekly_pax-ийн
+   тэмдэглэлд hero_fl-ийн "сүүлийн бүтэн САР" гэж дурдсан) тул уншвал
+   7 хоногийн метрик "сарын" гэж ХУДАЛ ангилагдана. */
+function periodOfMetric(mk){
+  var m=REG.metrics&&REG.metrics[mk]; if(!m) return null;
+  return periodOfText(m.filter)||periodOfText(m.name)||periodOfText(m.unit)||null;
+}
+/* Виджет ХАРАГДАХ байдлаараа ямар хугацаа амладаг вэ. Гарчиг эхэнд,
+   дараа нь нэгжийн шошго ("нислэг/сар"). Хугацааны үг огт байхгүй бол
+   null — амлаагүй зүйлийг зөрчилд тооцохгүй (худал анхааруулга гарахгүй). */
+function periodOfWidget(id){
+  return periodOfText(curTitleOf(id))||periodOfText(curText(id,'unit'))||null;
+}
+/* Гарчгийн хугацааны хэсгийг сольсон САНАЛ. Зөвхөн "А / Б" хэлбэрийн
+   шошго-гарчигт (titleParts) — хэсгийн гарчгийн дунд үг сольвол
+   монгол хэл зүй эвдэрнэ. */
+function retitledPeriod(id,pk){
+  var tp=titleParts(id); if(!tp||tp.period===pk) return '';
+  var lab=periodLabel(pk); if(!lab) return '';
+  if(tp.right===tp.right.toLowerCase()) lab=lab.toLowerCase();
+  return tp.left+' / '+lab;
+}
+/* ЦЭВЭР жагсаалт — зурахаас ТУСДАА. Тоолуур (statOf) ч, анхааруулга ч
+   ЭНЭ Л функцийг уншина: хоёр газар тус тусад нь бодвол нэг нь хоцордог. */
+function periodMismatchList(id){
+  if(TEXT_ONLY[id]) return [];
+  var wp=periodOfWidget(id); if(!wp) return [];
+  var out=[];
+  slotsOf(id).forEach(function(s){
+    var sv=slotVal(id,s.path); if(!sv||!sv.metric) return;
+    var mp=periodOfMetric(sv.metric); if(!mp||mp===wp) return;
+    out.push({key:s.key,metric:sv.metric,period:mp,widgetPeriod:wp});
+  });
+  return out;
+}
+function periodMismatchWarn(id){
+  var ms=periodMismatchList(id); if(!ms.length) return '';
+  var wp=ms[0].widgetPeriod,pk=null;
+  var bad=ms.map(function(m){
+    pk=pk===null?m.period:(pk===m.period?pk:'mixed');
+    return (SECN[m.key]||m.key||utxt('metric.single','Метрик'))+' · '+
+      ((REG.metrics[m.metric]&&REG.metrics[m.metric].name)||m.metric)+
+      ' → '+periodLabel(m.period);
+  });
+  var fix=(pk&&pk!=='mixed')?retitledPeriod(id,pk):'';
+  return '<div class="warnbox" data-periodwarn="1"><b>'+
+    esc(utxt('metric.period_mismatch','Гарчгийн хугацаа сонгосон метрикийнхтэй таарахгүй байна'))+'</b>'+
+    esc(utxt('metric.period_mismatch_note','Гарчиг дээрх хугацаа нь тооны шошго болж уншигддаг. Нэгж нь тохирч байсан ч хугацааны цонх өөр бол сайт дээрх тоо худал тайлбарлагдана:'))+
+    ' «'+esc(curTitleOf(id))+'» ('+esc(periodLabel(wp))+') ↔ '+esc(bad.join(' · '))+
+    (fix?' <button class="btn sm" data-autoname="'+esc(fix)+'">'+
+      esc(utxt('metric.period_fix','Гарчгийг засах'))+' → «'+esc(fix)+'»</button>':'')+
+    '</div>';
+}
 /* Утга сольсны дараа ГАРЧИГ хуучнаараа үлдвэл хуудас ХУДАЛ тайлбарлана
    (жиш. "НИСЛЭГ / САР" гэсэн доор зорчигчийн тоо). Гарчгийн эх сурвалж
    ГАНЦ (content.json) хэвээр байлгахын тулд автоматаар ДАРЖ БИЧИХГҮЙ —
    зөвхөн санал болгож, нэг товшилтоор тавих боломж өгнө. */
-var TITLE_IS_LABEL={hero_fl:1};
+/* ЯАГААД ХАТУУ ЖАГСААЛТ БИШ: өмнө нь `TITLE_IS_LABEL={hero_fl:1}` гэж
+   ГАНЦ виджетийн ID кодод бичигдсэн байв — үр дүнд яг ижил хэлбэртэй
+   `hero_px` ("ЗОРЧИГЧ / ӨДӨР") дээр анхааруулга ОГТ гардаггүй, шинэ
+   виджет нэмэх бүрд кодоо засах шаардлагатай байв. Одоо ГАРЧГИЙН
+   ХЭЛБЭРЭЭР шийднэ: "ХЭМЖИГДЭХҮҮН / ХУГАЦАА" (баруун тал нь хугацааны
+   үг) бол гарчиг нь тооны ШОШГО. "Салбар хоорондын харьцуулалт" мэтийн
+   ХЭСГИЙН ГАРЧИГ энэ хэлбэрт орохгүй тул тэнд анхааруулгын ХАЙРЦАГ
+   гарахгүй. (Гарчгийн талбарын доорх `autoNameHint` санал нь ТУСДАА
+   зам — i06 дээр "ЗОРЧИГЧ (нийлбэр)" гэж санал болгосон хэвээр,
+   qa-backlog.md-д нээлттэй олдвор.) */
+function curTitleOf(id){
+  return String((S.widget===id&&S.td&&S.td.title!=null)?S.td.title:curText(id,'title')||'').trim();
+}
+function titleParts(id){
+  var t=curTitleOf(id), i=t.indexOf('/');
+  if(i<0||t.indexOf('/',i+1)>=0) return null;
+  var left=t.slice(0,i).trim(), right=t.slice(i+1).trim();
+  if(!left||!right||periodOfText(right)==null) return null;
+  return {left:left,right:right,period:periodOfText(right)};
+}
+function titleIsValueLabel(id){ return !!titleParts(id) }
 function titleMismatchWarn(id){
-  if(!TITLE_IS_LABEL[id]||typeof EHChart==='undefined'||typeof valueSpecOf!=='function') return '';
+  if(!titleIsValueLabel(id)||typeof EHChart==='undefined'||typeof valueSpecOf!=='function') return '';
   var sp=valueSpecOf(id); if(!sp) return '';
   var auto=EHChart.valueTitle({measure:sp.measure,agg:sp.agg});
-  var cur=(S.widget===id&&S.td&&S.td.title!=null)?S.td.title:curText(id,'title');
-  if(!auto||String(cur||'').trim()===auto) return '';
+  var cur=curTitleOf(id);
+  /* Хугацааны хэсгийг ХАДГАЛНА. `valueTitle` нь "ЗОРЧИГЧ (нийлбэр)" гэж
+     буцаадаг тул түүнийг шууд тавибал "/ САР" гээгдэж, гарчиг хугацааны
+     мэдээллээ алдана (доорх periodMismatchWarn ч хараа алдана). */
+  var tp=titleParts(id);
+  if(auto&&tp) auto=auto.replace(/\s*\([^)]*\)\s*$/,'').trim()+' / '+tp.right;
+  if(!auto||cur===auto) return '';
   return '<div class="warnbox" data-titlewarn="1"><b>'+
     esc(utxt('metric.title_mismatch','Гарчиг сонгосон утгатай таарахгүй байна'))+'</b>'+
     esc(utxt('metric.title_mismatch_note','Сайт дээр гарчиг нь тооны дэргэд шошго болж гардаг тул одоогийн нэр тоог худал тайлбарлана:'))+
     ' «'+esc(cur)+'» → «'+esc(auto)+'» '+
     '<button class="btn sm" data-autoname="'+esc(auto)+'">'+esc(utxt('text.auto_name_apply','Тавих'))+'</button></div>';
 }
+/* Гарчиг нь тооны ШОШГО болдог виджетэд Л автомат нэр санал болгоно.
+   i06 ("Салбар хоорондын харьцуулалт (индекс)") мэт ХЭСГИЙН ГАРЧИГТ
+   "ЗОРЧИГЧ (нийлбэр)" гэж нэрлэхийг санал болгодог байсан нь виджетийн
+   дотоод тооцоолол (индекс) болон байрлалыг ТООЦООГҮЙ худал зөвлөгөө. */
 function autoNameHint(id,cur){
   if(typeof valueSpecOf!=='function'||typeof EHChart==='undefined') return '';
+  if(!titleIsValueLabel(id)) return '';
   var sp=valueSpecOf(id); if(!sp) return '';
   var auto=EHChart.valueTitle({measure:sp.measure,agg:sp.agg});
+  var tp=titleParts(id);
+  if(auto&&tp) auto=auto.replace(/\s*\([^)]*\)\s*$/,'').trim()+' / '+tp.right;
   if(!auto||String(cur||'').trim()===auto) return '';
   return '<div class="acc" style="margin-top:5px;display:flex;gap:8px;align-items:center">'+
     '<span style="flex:1">'+esc(utxt('text.auto_name_hint','Сонгосон утгад тохирох нэр:'))+
@@ -3177,7 +3359,7 @@ function pvInner(id){
   if(TEXT_ONLY[id]) return head+previewFor(id,false)+
     '<p class="pvnote">'+esc(utxt('preview.note_text_only','Өнгө, фонт нь сайтын эх кодын токеноос. Текст дээр дарж талбар руу шилжинэ.'))+'</p>';
   return head+vizSelect(id)+sitePreview(id)+
-    '<p class="pvnote">'+esc(utxt('preview.note','Өнгө, фонт нь сайтын эх кодын токеноос; дата цэг нь сайт өөрөө уншдаг вэб сервисээс, metric_registry.json-д бичигдсэн agg/filter/transform-оор тооцоолов. Метрик сольсон даруйд график шууд шинэчлэгдэнэ.'))+'</p>';
+    '<p class="pvnote">'+esc(utxt('preview.note','Өнгө, фонт нь сайтын эх кодын токеноос; дата цэг нь сайт өөрөө уншдаг вэб сервисээс, метрикт бүртгэсэн нэгтгэл/шүүлт/хувиргалтаар тооцоолов. Метрик сольсон даруйд график шууд шинэчлэгдэнэ.'))+'</p>';
 }
 function repaintPreview(){
   if(S.level!=='edit'||!S.widget) return;
@@ -3266,7 +3448,7 @@ function lvEdit(){
     (bw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_rule','Одоогийн холбоос дүрэм зөрчиж байна'))+'</b>'+
         esc(bw.join(' · '))+'</div>':'')+
     (gw?'<div class="warnbox"><b>'+esc(utxt('metric.warn_sum','Нийлбэрийн анхааруулга'))+'</b>'+esc(gw)+'</div>':'')+
-    '<p class="ph">'+esc(utxt('metric.heading','Эх сурвалж'))+'</p>'+titleMismatchWarn(id)+slotForm+textForm(id)+chromeForm(id)+'</div></div>';
+    '<p class="ph">'+esc(utxt('metric.heading','Эх сурвалж'))+'</p>'+periodMismatchWarn(id)+titleMismatchWarn(id)+slotForm+textForm(id)+chromeForm(id)+'</div></div>';
 }
 
 /* ══════════════════ МОДАЛЬ ══════════════════ */
@@ -3458,6 +3640,7 @@ function render(){
     renderBody();
     $('allBtn').textContent=S.level==='all'?utxt('app.by_section','Хэсгээр нь'):utxt('app.all_views','Бүх харагдац');
   }
+  syncPendingBar();
   var n=dirtyCount();
   $('dirtyMsg').innerHTML=n?('<b>'+n+'</b> '+esc(utxt('app.unsaved','өөрчлөлт хадгалагдаагүй'))):esc(utxt('app.no_changes','Өөрчлөлт алга'));
   $('expBtn').disabled=n===0;
@@ -3470,6 +3653,19 @@ function render(){
 function renderBody(){
   $('body').innerHTML=S.level==='all'?lvAll():S.level==='edit'?lvEdit()
     :S.level==='widgets'?lvWidgets():lvSections();
+}
+/* Доод мөрний "хэрэглээгүй" эгнээ. Mirakl Save Bar-ын дүрэм: өөрчлөлт
+   БАЙХГҮЙ үед огт харагдахгүй, байвал хаанаас ч харагдана. */
+function syncPendingBar(){
+  var row=$('pendRow'); if(!row) return;
+  var n=pendingCount();
+  row.style.display=n?'flex':'none';
+  if(!n) return;
+  var ids=pendingIds(), where=ids.length===1
+    ? (curText(ids[0],'title')||ids[0])
+    : ids.length+' '+utxt('crumb.widget_word','виджет');
+  $('pendMsg').innerHTML='<b>'+n+'</b> '+
+    esc(utxt('pending.note','талбар бичигдсэн ч ХЭРЭГЛЭГДЭЭГҮЙ байна'))+' — '+esc(where);
 }
 var tT;
 function toast(t){
@@ -3552,8 +3748,11 @@ document.addEventListener('click',function(e){
   if((el=t.closest&&t.closest('[data-autoname]'))){
     var an=el.dataset.autoname, ti=document.querySelector('[data-tf="title"]');
     if(ti){ ti.value=an; ti.dispatchEvent(new Event('input',{bubbles:true})); ti.focus(); }
-    /* Санал тавигдсан тул анхааруулга хуучирна — дахин зурахыг хүлээхгүй. */
+    /* Санал тавигдсан тул анхааруулга хуучирна — дахин зурахыг хүлээхгүй.
+       Товч нь ӨӨРИЙН хайрцаг дотроос (хугацааны анхааруулга) эсвэл гадна
+       талаас (текстийн маягтын санал) дарагдаж болох тул ХОЁУЛАНГ нь. */
     var twb=document.querySelector('[data-titlewarn]'); if(twb) twb.style.display='none';
+    var own=el.closest&&el.closest('.warnbox'); if(own) own.style.display='none';
     return;
   }
   if((el=t.closest&&t.closest('[data-hide]'))){
@@ -3632,9 +3831,18 @@ document.addEventListener('click',function(e){
     d.forEach(function(f){
       log(id,FL[f]+': "'+curText(id,f)+'" → "'+S.td[f]+'"');
       CON.widgets[id][f]=S.td[f]});
+    dropDraft(id);
     render();toast(d.length+' '+utxt('toast.text_applied','текст талбар хэрэглэгдлээ'));return}
   if(t.closest&&t.closest('[data-tcancel]')){
-    resetTd(S.widget);render();toast(utxt('toast.text_cancelled','Текстийн өөрчлөлт цуцлагдлаа'));return}
+    dropDraft(S.widget);resetTd(S.widget);render();
+    toast(utxt('toast.text_cancelled','Текстийн өөрчлөлт цуцлагдлаа'));return}
+  /* Доод мөрний нийтлэг хоёр үйлдэл (Mirakl Save Bar — ЗӨВХӨН хоёр товч) */
+  if(t.closest&&t.closest('[data-pendsave]')){
+    var an=applyAllDrafts();
+    render();toast(an+' '+utxt('toast.text_applied','текст талбар хэрэглэгдлээ'));return}
+  if(t.closest&&t.closest('[data-penddrop]')){
+    dropAllDrafts();
+    render();toast(utxt('toast.text_cancelled','Текстийн өөрчлөлт цуцлагдлаа'));return}
   if(t.closest&&t.closest('[data-madd]')){
     var kIn=$('mNewKey'), wnIn=$('mNewWn'), nmIn=$('mNewName');
     var newKey=(kIn&&kIn.value||'').trim();
@@ -3913,6 +4121,8 @@ document.addEventListener('input',function(e){
   var tf=el.closest&&el.closest('[data-tf]');
   if(!tf)return;
   S.td[tf.dataset.tf]=tf.value;
+  stashDraft(S.widget);
+  syncPendingBar();
   /* Зөвхөн товчийг шинэчилнэ — бүтэн дахин зурвал курсор алдагдана */
   var d=dirtyTextFields(S.widget);
   var sv=document.querySelector('[data-tsave]'), cn=document.querySelector('[data-tcancel]');
@@ -3926,7 +4136,7 @@ document.addEventListener('input',function(e){
 /* Хадгалагдаагүй өөрчлөлттэй үед хуудас хаахаас сэргийлнэ — экспорт бол
    ганц хадгалалтын зам тул хамгаалалтгүй бол ажил бүрмөсөн алдагдана. */
 window.addEventListener('beforeunload',function(e){
-  if(dirtyCount()===0)return;
+  if(dirtyCount()===0&&pendingCount()===0)return;
   e.preventDefault();e.returnValue='';
 });
 
@@ -3947,7 +4157,7 @@ $('allBtn').addEventListener('click',function(){
   S.level=(S.level==='all')?'sections':'all';S.section=null;S.td=null;render();
 });
 $('revBtn').addEventListener('click',function(){
-  REG=clone(REG0);CON=clone(CON0);S.td=null;LOG=[];
+  REG=clone(REG0);CON=clone(CON0);S.td=null;S.drafts={};LOG=[];
   render();toast(utxt('toast.reverted','Бүх өөрчлөлт буцаагдлаа'));
 });
 
