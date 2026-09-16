@@ -2576,6 +2576,53 @@ const PROBE_Y_ROUTE = `async function(d,w){
   return R;
 }`;
 
+
+/* Y9 — датасэтийн дэлгэрэнгүй: жагсаалтаас нээхэд хаяг, Back */
+const PROBE_Y_DS_OPEN = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(6500);
+  const go=async(n)=>{const b=[...d.querySelectorAll('button,a')].filter(x=>x.textContent.trim()===n)[0];
+    if(b){b.click(); await sleep(1300)} return !!b};
+  await go('Нээлттэй өгөгдөл');
+  /* ХОЁР дахь картыг нээнэ — эхнийх нь анхдагч dsIndex:0-тэй санамсаргүй
+     таарч, тест хуурамчаар давах эрсдэлтэй */
+  const cards=[...d.querySelectorAll('button')].filter(b=>b.innerText.length>60&&/Дэлгэрэнгүй|Үзэх/.test(b.innerText));
+  const card=cards[1];
+  if(!card) return {__err:'датасэтийн карт олдсонгүй ('+cards.length+')'};
+  const name=(card.innerText.split('\\n').filter(x=>x.trim().length>6)[0]||'').trim();
+  card.click(); await sleep(1500);
+  const R={name:name, hash:decodeURIComponent(w.location.hash),
+    head:((d.querySelector('h1,h2')||{}).innerText||'').trim()};
+  w.history.back(); await sleep(1300);
+  R.back={hash:w.location.hash};
+  w.history.forward(); await sleep(1500);
+  R.fwd={hash:decodeURIComponent(w.location.hash),
+    head:((d.querySelector('h1,h2')||{}).innerText||'').trim()};
+  return R;
+}`;
+
+/* Y9 — хаягаар ШУУД орох (хуваалцсан холбоос / F5) */
+const PROBE_Y_DS_DIRECT = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(6500);
+  return { hash:decodeURIComponent(w.location.hash),
+    head:((d.querySelector('h1,h2')||{}).innerText||'').trim(),
+    back:([...d.querySelectorAll('button,a')].filter(x=>/руу буцах/.test(x.textContent))[0]||{}).textContent||null };
+}`;
+
+/* Y9 — хуучирсан холбоос: хоосон дэлгэрэнгүй биш, каталог + тайлбар */
+const PROBE_Y_DS_STALE = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  let seen=false;
+  for(let i=0;i<60;i++){
+    if(d.body&&d.body.textContent.indexOf('Холбоосын датасэт олдсонгүй')>=0){ seen=true; break }
+    await sleep(100);
+  }
+  await sleep(800);
+  return { toast:seen, hash:w.location.hash,
+    catalog:!!d.querySelector('input[placeholder=\\"Датасэт хайх…\\"]') };
+}`;
+
 async function groupY() {
   group('Y. Иргэдэд харагдах давхарга (толгойн огноо · хайлтын хоосон төлөв)');
   const idx = read('index.html');
@@ -2625,6 +2672,27 @@ async function groupY() {
     idx.includes("h.indexOf('#/')!==0") && idx.includes("hash0.indexOf('#/')!==0"));
   check('Y7. Хөтчийн Back/Forward-ийг сонсоно (popstate)',
     idx.includes("addEventListener('popstate'"));
+  /* ── Y9. Датасэтийн дэлгэрэнгүй хаягтай ──
+     Таних тэмдэг нь datasetSlug — үзэлтийн тоолуур ба дагалт ч үүнийг
+     ашигладаг тул хаяг, тоолуур, дагалт ГУРВУУЛАА нэг эх сурвалжтай.
+     Жагсаалтын индекс хаягт ОРОХГҮЙ (датасэт нэмэгдэхэд шилжинэ). */
+  check('Y9. Хаяг "#/browse/<slug>" хэлбэрийг задлана',
+    idx.includes("parts[0]==='browse'&&parts.length>1") && idx.includes('decodeURIComponent(raw)'));
+  check('Y9. Хаяг datasetSlug-аар үүснэ (индексээр БИШ)',
+    idx.includes("pushRoute('browse/'+encodeURIComponent(datasetSlug(d))") &&
+    !/pushRoute\([^)]*dsIndex/.test(idx));
+  check('Y9. Жагсаалтаас нээх нь ганц замаар (openDataset)',
+    idx.includes('open:()=>this.openDataset(d)') && !idx.includes("this.go('detail')"));
+  const slugOf = (d) => d.sector + '__' + String(d.name).toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  const dsSlugs = (conY.site.datasets || []).map(slugOf);
+  check('Y9. Датасэт бүрийн таних тэмдэг ДАВХАРДАХГҮЙ (' + dsSlugs.length + ')',
+    dsSlugs.length > 0 && new Set(dsSlugs).size === dsSlugs.length,
+    'давхардал: ' + dsSlugs.filter((x, i) => dsSlugs.indexOf(x) !== i).join(', '));
+  check('Y9. Хуучирсан холбоосын тайлбар content.json-д бүртгэлтэй',
+    typeof (conY.site.browse || {}).link_not_found === 'string' &&
+    idx.includes("stxt('browse.link_not_found'"));
+
   check('Y8. Байгаа хуудсаа дахин дарахад prevPage хөдлөхгүй',
     /go\(id\)\{[\s\S]{0,400}if\(this\.state\.page===id\)/.test(idx));
 
@@ -2685,6 +2753,39 @@ async function groupY() {
       check('Y8. Байгаа хуудсаа дахин дарахад "буцах" өөр рүүгээ ЗААХГҮЙ',
         N.c2 && N.c2.back && N.c2.back.indexOf('Коммунити') < 0 && N.c2.back === N.c1.back,
         JSON.stringify({ first: N.c1 && N.c1.back, again: N.c2 && N.c2.back }));
+    }
+
+    /* ── Y9 браузер ── */
+    PROBE_SRC = '/index.html';
+    const O = await runProbe(PROBE_Y_DS_OPEN, 120000);
+    if (O.__err) bad('Y9. Датасэт нээх шалгалт ажиллав', O.__err);
+    else {
+      const want = '#/browse/' + slugOf((conY.site.datasets || []).find((x) => x.name === O.name) || {});
+      check('Y9. Жагсаалтаас нээхэд хаяг тухайн датасэтийн slug болно',
+        O.hash === want && O.head === O.name, JSON.stringify({ got: O.hash, want: want, head: O.head }));
+      check('Y9. Back каталог руу, Forward тэр датасэт рүү буцна',
+        O.back && O.back.hash === '#/browse' && O.fwd && O.fwd.hash === want && O.fwd.head === O.name,
+        JSON.stringify({ back: O.back, fwd: O.fwd }));
+    }
+    /* Сүүлийн датасэт — анхдагч dsIndex:0-оос хамгийн ХОЛ */
+    const lastDs = (conY.site.datasets || []).slice(-1)[0];
+    PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slugOf(lastDs));
+    const D = await runProbe(PROBE_Y_DS_DIRECT, 120000);
+    if (D.__err) bad('Y9. Шууд хаягийн шалгалт ажиллав', D.__err);
+    else {
+      check('Y9. Хуваалцсан холбоос ЗӨВ датасэтийг нээнэ (эхнийхийг биш)',
+        D.head === lastDs.name, JSON.stringify({ head: D.head, want: lastDs.name }));
+      check('Y9. Шууд орсон дэлгэрэнгүйгээс "буцах" каталог руу заана',
+        typeof D.back === 'string' && D.back.indexOf('Нээлттэй өгөгдөл') >= 0, String(D.back));
+    }
+    PROBE_SRC = '/index.html#/browse/' + encodeURIComponent('air__байхгүй-датасэт');
+    const X = await runProbe(PROBE_Y_DS_STALE, 120000);
+    if (X.__err) bad('Y9. Хуучирсан холбоосын шалгалт ажиллав', X.__err);
+    else {
+      check('Y9. Хуучирсан холбоос хоосон хуудас биш, КАТАЛОГ руу аваачна',
+        X.hash === '#/browse' && X.catalog === true, JSON.stringify(X));
+      check('Y9. Хуучирсан холбоосын шалтгааныг ТАЙЛБАРЛАНА',
+        X.toast === true, JSON.stringify(X));
     }
   } finally {
     PROBE_SRC = '/admin/index.html';
