@@ -2526,6 +2526,23 @@ async function groupY() {
     idx.includes("feed.stamp_pending") && idx.includes("feed.stamp_failed") &&
     idx.includes('feedFailed:true'));
 
+  /* ── Y5. Иргэдэд харагдах текстэд ДОТООД нэр гоожихгүй ──
+     Админ талд ижил олдвор хаагдсан ч (silver.rail_wagon_loading →
+     монгол нэр) нийтийн датасэтийн тайлбарт үлдсэн байв. Энэ шалгуур
+     ганц мөр биш, БҮХ АНГИЛЛЫГ барина: medallion схемийн нэр
+     (bronze./silver./gold.) ба дотоод файлын нэр (*.json). */
+  const conY = readJson('content.json');
+  const leakY = [];
+  (function walk(o, p) {
+    if (typeof o === 'string') {
+      if (/(bronze|silver|gold)\.[a-z_]+|[a-z_]+\.json/i.test(o)) leakY.push(p);
+      return;
+    }
+    if (o && typeof o === 'object') Object.keys(o).forEach((k) => walk(o[k], p ? p + '.' + k : k));
+  })({ site: conY.site, widgets: conY.widgets }, '');
+  check('Y5. Иргэдэд харагдах текстэд дотоод хүснэгт/файлын нэр алга',
+    leakY.length === 0, leakY.join(', '));
+
   if (!CHROME) { skipped('Y2–Y4 (браузер)', 'Chrome олдсонгүй'); return; }
   const srv = serve();
   try {
