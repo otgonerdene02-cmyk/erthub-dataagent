@@ -57,7 +57,11 @@ function dcScript() {
   return m ? m[1] : '';
 }
 function adminScript() {
-  const m = read('admin/index.html').match(/<script>\n([\s\S]*?)<\/script>/);
+  /* CRLF-тэй ажлын мод дээр ч ажиллана. Windows дээр core.autocrlf=true
+     үед checkout хийхэд <script> шошгын ард CR+LF ирдэг тул хатуу LF
+     хайвал эх код ОЛДОХГҮЙ — админы 17 тест ЧИМЭЭГҮЙ уначихдаг байв
+     (алдаа нь "esc() алга", "utxt() алга" гэх мэт төөрөгдүүлсэн нэрээр). */
+  const m = read('admin/index.html').match(/<script>\r?\n([\s\S]*?)<\/script>/);
   return m ? m[1] : '';
 }
 /* Темплейт хэсэг = <script>-ээс ГАДНАХ бүх HTML */
@@ -2452,11 +2456,115 @@ async function groupX() {
   }
 }
 
+
+/* ══════════════════════════════════════════════════════════════════
+   Y. ИРГЭДЭД ХАРАГДАХ ДАВХАРГА (ux-qa-persona · амьд сайт, 2026-09-16)
+
+   Агент амьд сайт дээр 2 Major олдвор илрүүлсэн — хоёулаа админ талд
+   БИШ, иргэдийн эхний дэлгэц дээр:
+     Y1/Y2. Толгойн "амьд" badge ХАТУУ бичсэн огноо ('2026-08-12')
+            харуулдаг байв — ногоон цохилдог цэгийн хажууд зогссон огноо
+            нь "энэ дата шинэ" гэсэн ХУДАЛ дохио (бодит feed 35 хоногоор
+            хожуу). Одоо feed-ийн мета-аас л уншина.
+     Y3/Y4. Хайлт 0 үр дүн өгөхөд ХООСОН хуудас гарч, хайлтаа засах ч,
+            цуцлах ч газаргүй байв — иргэн "Нүүр"-ээс шинээр эхлэхээс
+            өөр гарцгүй. Одоо каталог дээрээ хайх талбар, цэвэрлэх товч,
+            "юу олдсонгүй, одоо яах вэ" гэсэн хоосон төлөвтэй.
+   ══════════════════════════════════════════════════════════════════ */
+const PROBE_Y = `async function(d,w){
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  await sleep(7000);
+  const R={};
+  const clock=d.querySelector('.eh-clock');
+  R.badge=clock?clock.innerText.replace(/\\s+/g,' ').trim():null;
+  R.dot=clock&&clock.querySelector('div')?clock.querySelector('div').getAttribute('style'):'';
+  /* Иргэн hero-гээс утгагүй үг хайна */
+  const inp=[...d.querySelectorAll('input[type=\"text\"]')][0];
+  if(!inp) return Object.assign(R,{__err:'hero хайлтын талбар олдсонгүй'});
+  inp.value='зззхххяяя'; inp.dispatchEvent(new w.Event('input',{bubbles:true}));
+  await sleep(300);
+  const go=[...d.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Хайх')[0];
+  if(!go) return Object.assign(R,{__err:'Хайх товч олдсонгүй'});
+  go.click(); await sleep(1200);
+  R.emptyShown=d.body.innerText.indexOf('олдсонгүй')>=0;
+  R.emptyText=(()=>{const e=[...d.querySelectorAll('div')]
+    .filter(x=>x.innerText&&x.innerText.indexOf('олдсонгүй')>=0).pop();
+    return e?e.innerText.replace(/\\s+/g,' ').trim().slice(0,120):null})();
+  const ci=[...d.querySelectorAll('input[type=\"text\"]')][0];
+  R.catalogInput=ci?{ph:ci.placeholder,val:ci.value}:null;
+  R.clearBtns=[...d.querySelectorAll('button')]
+    .map(b=>b.textContent.trim()).filter(t=>t==='✕'||t==='Хайлтыг цэвэрлэх');
+  /* Цэвэрлэхэд жагсаалт СЭРГЭНЭ */
+  const cb=[...d.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Хайлтыг цэвэрлэх')[0];
+  if(cb){ cb.click(); await sleep(900) }
+  R.afterClear={empty:d.body.innerText.indexOf('олдсонгүй')>=0,
+    val:([...d.querySelectorAll('input[type=\"text\"]')][0]||{}).value};
+  /* Каталог дотроо бичихэд шүүгдэж, ФОКУС алдагдахгүй */
+  const ti=[...d.querySelectorAll('input[type=\"text\"]')][0];
+  if(ti){ ti.focus(); ti.value='зззхххяяя';
+    ti.dispatchEvent(new w.Event('input',{bubbles:true})); await sleep(900) }
+  const ti2=[...d.querySelectorAll('input[type=\"text\"]')][0];
+  R.inline={empty:d.body.innerText.indexOf('олдсонгүй')>=0,
+    val:ti2?ti2.value:null, focus:d.activeElement===ti2};
+  return R;
+}`;
+
+async function groupY() {
+  group('Y. Иргэдэд харагдах давхарга (толгойн огноо · хайлтын хоосон төлөв)');
+  const idx = read('index.html');
+
+  /* ── Статик: огноо КОДОД хатуу бичигдээгүй ── */
+  const valsStart = idx.indexOf('renderVals(){');
+  const valsHead = valsStart >= 0 ? idx.slice(valsStart, valsStart + 4000) : '';
+  check('Y1. Толгойн огноо кодод ХАТУУ бичигдээгүй',
+    !/nowLabel:\s*'20\d\d-\d\d-\d\d'/.test(idx),
+    (idx.match(/nowLabel:[^,]*/) || [''])[0].slice(0, 80));
+  check('Y1. Огноо feed-ийн мета-аас уншигдана (ганц эх сурвалж)',
+    valsHead.includes("sourceData('flights')") && valsHead.includes('updatedAt'),
+    valsHead.includes("sourceData('flights')") ? 'ok' : 'sourceData олдсонгүй');
+  check('Y1. Дата ирээгүй үед огноо ЗОХИОХГҮЙ, төлөвөө хэлнэ',
+    idx.includes("feed.stamp_pending") && idx.includes("feed.stamp_failed") &&
+    idx.includes('feedFailed:true'));
+
+  if (!CHROME) { skipped('Y2–Y4 (браузер)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html';
+    const R = await runProbe(PROBE_Y, 120000);
+    if (R.__err) { bad('Y бүлэг ажиллав', R.__err); return; }
+
+    check('Y2. Толгойн badge БОДИТ огноо харуулна (хуучин 2026-08-12 биш)',
+      typeof R.badge === 'string' && /20\d\d-\d\d-\d\d/.test(R.badge) &&
+      R.badge.indexOf('2026-08-12') < 0, String(R.badge));
+    check('Y2. Огноо байгаа үед л "амьд" цэг цохилно',
+      /pulseGlow/.test(R.dot || ''), String(R.dot).slice(0, 80));
+
+    check('Y3. 0 үр дүнтэй хайлт "олдсонгүй"-г ХЭЛНЭ', R.emptyShown === true);
+    check('Y3. Хоосон төлөв хайсан үгийг эшлэнэ',
+      typeof R.emptyText === 'string' && R.emptyText.indexOf('зззхххяяя') >= 0,
+      String(R.emptyText));
+    check('Y3. Үр дүнгийн хуудсан дээрээ хайх талбар байна (буцахгүйгээр засна)',
+      !!R.catalogInput && R.catalogInput.val === 'зззхххяяя', JSON.stringify(R.catalogInput));
+    check('Y3. Цэвэрлэх боломж ХОЁУЛАА байна (✕ ба товч)',
+      (R.clearBtns || []).indexOf('✕') >= 0 &&
+      (R.clearBtns || []).indexOf('Хайлтыг цэвэрлэх') >= 0, JSON.stringify(R.clearBtns));
+    check('Y3. Цэвэрлэхэд жагсаалт СЭРГЭНЭ (гацаа биш)',
+      R.afterClear && R.afterClear.empty === false && R.afterClear.val === '',
+      JSON.stringify(R.afterClear));
+    check('Y4. Каталог дотроо бичихэд шүүгдэж, ФОКУС алдагдахгүй',
+      R.inline && R.inline.empty === true && R.inline.val === 'зззхххяяя' &&
+      R.inline.focus === true, JSON.stringify(R.inline));
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY();
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

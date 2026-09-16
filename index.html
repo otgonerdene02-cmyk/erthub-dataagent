@@ -61,7 +61,7 @@
       </div>
       <div style="flex:1;"></div>
       <div class="eh-clock" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;flex-shrink:0;">
-        <div style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;animation:pulseGlow 2.2s infinite;"></div>
+        <div style="{{ clockDotStyle }}"></div>
         {{ nowLabel }}
       </div>
       <sc-if value="{{ isAuthed }}">
@@ -1770,6 +1770,12 @@
       <sc-for list="{{ chips }}" as="cp" hint-placeholder-count="6">
         <button sc-camel-on-click="{{ cp.pick }}" style="{{ cp.style }}">{{ cp.label }}</button>
       </sc-for>
+      <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 13px;flex:1;min-width:180px;max-width:320px;">
+        <input type="text" value="{{ dsListQVal }}" sc-camel-on-input="{{ onDsListQ }}" placeholder="{{ sDsSearchPh }}" aria-label="{{ sDsSearchPh }}" style="flex:1;min-width:0;border:none;background:transparent;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;">
+        <sc-if value="{{ dsListHasQ }}">
+          <button sc-camel-on-click="{{ dsListClear }}" title="{{ sDsSearchClear }}" aria-label="{{ sDsSearchClear }}" style="cursor:pointer;font-family:inherit;border:none;background:var(--surface2);color:var(--ink2);border-radius:999px;width:22px;height:22px;flex-shrink:0;font-size:11px;line-height:1;padding:0;">✕</button>
+        </sc-if>
+      </div>
       <div style="margin-left:auto;font-size:11.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;white-space:nowrap;">{{ datasetCount }}</div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
@@ -1798,6 +1804,15 @@
         </button>
       </sc-for>
     </div>
+    <sc-if value="{{ dsListEmpty }}">
+      <div style="text-align:center;padding:44px 20px;border:1px dashed var(--line2);border-radius:16px;color:var(--ink2);">
+        <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:8px;text-wrap:pretty;">{{ dsListEmptyHead }}</div>
+        <div style="font-size:12.5px;line-height:1.6;margin-bottom:16px;text-wrap:pretty;">{{ sDsEmptyBody }}</div>
+        <sc-if value="{{ dsListHasQ }}">
+          <button sc-camel-on-click="{{ dsListClear }}" style="cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink);border:1px solid var(--line2);background:var(--surface);border-radius:10px;padding:9px 18px;">{{ sDsSearchClear }}</button>
+        </sc-if>
+      </div>
+    </sc-if>
     <sc-if value="{{ dsListShowPager }}">
       <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:20px;">
         <button sc-camel-on-click="{{ dsListPrev }}" style="cursor:pointer;font-family:inherit;font-size:12px;color:var(--ink2);border:1px solid var(--line2);background:var(--surface);border-radius:9px;padding:8px 16px;white-space:nowrap;">← Өмнөх</button>
@@ -4980,6 +4995,9 @@ class Component extends DCLogic {
         airMFrom:'1',airMTo:'12'},()=>this.recomputeAirData());
     }catch(e){
       console.warn('[ErtHub] Live flights data unavailable, keeping demo values for Агаарын тээвэр:',e);
+      /* Толгойн badge "ачаалж байна…" дээр мөнхөд гацахгүй — бүтэлгүйтсэнээ
+         ил хэлнэ (тоо/огноо ЗОХИОХГҮЙ дүрэм). */
+      this.setState({feedFailed:true});
     }
   }
   // Нислэгийн feed-ийг НИЙТЛЭГ мета бүтэц рүү хөрвүүлнэ (rows, updatedAt,
@@ -7045,6 +7063,13 @@ class Component extends DCLogic {
     const datasets=datasetsAll.slice(dsListPg*DSPER,(dsListPg+1)*DSPER);
     const dsListShowPager=datasetsAll.length>DSPER;
     const dsListPageLabel=(dsListPg+1)+' / '+dsPages;
+    /* Хайлт 0 үр дүн өгөхөд ХООСОН хуудас гарч, хайлтаа засах ч, цуцлах ч
+       газаргүй байв — иргэн "Нүүр"-ээс шинээр эхлэхээс өөр гарцгүй болдог.
+       Жишиг (GOV.UK search, нээлттэй дата порталууд): үр дүнгийн хуудсан
+       дээрээ хайх талбар, идэвхтэй хайлтыг цэвэрлэх товч, мөн "юу олдсонгүй,
+       одоо яах вэ" гэдгийг хэлсэн хоосон төлөв. */
+    const dsListEmpty=datasetsAll.length===0;
+    const dsListClear=()=>this.setState({dsListQ:'',dsListPage:0});
     const dsListPrev=()=>this.setState({dsListPage:Math.max(0,dsListPg-1)});
     const dsListNext=()=>this.setState({dsListPage:Math.min(dsPages-1,dsListPg+1)});
     const vizPath=(kind,seed)=>{
@@ -7617,6 +7642,21 @@ class Component extends DCLogic {
         style:'border-radius:16px;border:1px solid '+(this.state.browseMode===m.id?m.color:'var(--line)')+';background:'+(this.state.browseMode===m.id?m.color+'0f':'var(--surface)')+';box-shadow:var(--shadow);padding:16px 18px;transition:.18s var(--ease);'})),
       homeQuery:this.state.homeQ||'',
       onHomeQuery:(e)=>this.setState({homeQ:e.target.value}),
+      /* Каталогийн хайлт — хуудас дотроо засварлагдана (буцаад нүүр рүү
+         явах шаардлагагүй). Шүүлт өөрчлөгдвөл хуудаслалт эхэлнэ. */
+      dsListQVal:this.state.dsListQ||'',
+      onDsListQ:(e)=>this.setState({dsListQ:e.target.value,dsListPage:0}),
+      dsListHasQ:!!(this.state.dsListQ||'').trim(),
+      dsListClear,dsListEmpty,
+      sDsSearchPh:this.stxt('browse.search_ph','Датасэт хайх…'),
+      sDsSearchClear:this.stxt('browse.search_clear','Хайлтыг цэвэрлэх'),
+      sDsEmptyBody:this.stxt('browse.empty_body','Өөр түлхүүр үг оруулах, эсвэл салбарын шүүлтээ өөрчилж үзнэ үү.'),
+      /* Хайлтын үг өөрөө ДИНАМИК тул content.json-д бичихгүй — зөвхөн
+         түүнийг хүрээлэх өгүүлбэрийг бүртгэнэ. */
+      dsListEmptyHead:(this.state.dsListQ||'').trim()
+        ? '«'+(this.state.dsListQ||'').trim()+'» '+
+          this.stxt('browse.empty_head_q','гэсэн хайлтад тохирох датасэт олдсонгүй')
+        : this.stxt('browse.empty_head','Шүүлтэд тохирох датасэт олдсонгүй'),
       onHomeQueryKey:(e)=>{if(e.key==='Enter')this.setState(s=>({page:'browse',prevPage:'home',dsListQ:s.homeQ||'',dataFilter:'all'}));},
       onHomeSearch:()=>this.setState(s=>({page:'browse',prevPage:'home',dsListQ:s.homeQ||'',dataFilter:'all'})),
       isHistory:page==='history',isNews:page==='news',isTimeline:histTab==='timeline',isPeople:histTab==='people',histEras,
@@ -8254,6 +8294,8 @@ class Component extends DCLogic {
   }
 
   renderVals(){
+    /* Толгойн badge-ийн огноо — flights feed-ийн мета (ганц эх сурвалж). */
+    const feedStamp=((this.sourceData('flights')||{}).meta||{}).updatedAt||'';
     const key=this.state.activeSector;
     const s=SECTORS[key];
     const color=NEON[key];
@@ -8359,7 +8401,20 @@ class Component extends DCLogic {
       {l:'Тэргүүн ангилал',v:this.buildRings(s.rank)[0].name+' · '+this.buildRings(s.rank)[0].pctLabel}
     ];
     return {
-      nowLabel:'2026-08-12',
+      /* Толгойн badge. Өмнө нь ХАТУУ бичсэн огноо ('2026-08-12') байсан:
+         ногоон цохилдог цэгийн хажууд зогссон огноо нь "энэ дата шинэ"
+         гэсэн ХУДАЛ дохио өгдөг байв (бодит feed түүнээс 35 хоногоор
+         хожуу). Одоо feed-ийн БОДИТ шинэчлэлтийн огноог л харуулна —
+         байхгүй бол огноо ЗОХИОХГҮЙ, төлөвөө ил хэлээд цэгийн "амьд"
+         эффектийг ч унтраана (хоосон дээр амьд дохио өгөхгүй). */
+      nowLabel:feedStamp
+        ? this.stxt('feed.stamp_prefix','Дата')+' · '+feedStamp
+        : (this.state.feedFailed
+            ? this.stxt('feed.stamp_failed','дата ачаалагдаагүй')
+            : this.stxt('feed.stamp_pending','дата ачаалж байна…')),
+      clockDotStyle:'width:6px;height:6px;border-radius:50%;flex-shrink:0;'+
+        (feedStamp?'background:#3ee6a8;animation:pulseGlow 2.2s infinite;'
+                  :'background:var(--line2);'),
       activeColor:color,
       // Hero-гийн 3 чипийн гарчиг content.json → site.hero.diagram.chips-ээс.
       // Тайлбар (body) мөн засварлагдана — site.hero.diagram.chip_bodies.
