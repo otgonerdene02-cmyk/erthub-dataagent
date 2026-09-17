@@ -118,15 +118,36 @@ does not exist` буцаахад `erthubStore.available` нь `false` болж, 
 
 ### Идэвхжүүлэх (нэг удаа)
 
-1. Firebase Console → **Firestore Database → Rules** → энэ репо дэх
+1. **Firestore мэдээллийн сан үүсгэх.** Firebase Console → төсөл
+   `open-data-62ed3` (`js/firebase-config.js`-ийн `projectId`) → **Build →
+   Firestore Database → Create database**.
+   - Database ID: **`(default)`**-ийг хэвээр үлдээнэ. Сайт яг энэ нэрээр
+     уншдаг тул өөр нэр өгвөл нийтлэл харагдахгүй.
+   - Байршил: ойр бүс (жиш. `asia-east2` эсвэл `asia-northeast1`). Үүсгэсний
+     дараа **солих боломжгүй**.
+   - Эхлэх горим: **Production mode**. Дүрмийг дараагийн алхамд тавина —
+     "test mode" нь 30 хоног бүх хүнд бичих эрх нээдэг тул хэрэглэхгүй.
+2. Firebase Console → **Firestore Database → Rules** → энэ репо дэх
    `firestore.rules`-ийг бүтнээр нь хуулж **Publish**.
-2. Firebase Console → **Authentication → Settings → Authorized domains**-д
+3. Firebase Console → **Authentication → Sign-in method**-д **Google**
+   идэвхтэй, **Settings → Authorized domains**-д
    `otgonerdene02-cmyk.github.io` нэмэгдсэн эсэхийг шалгах.
-3. Админ самбарыг нээж баруун дээд буланд **Нэвтрэх (Google)** дарна.
+4. Админ самбарыг нээж баруун дээд буланд **Нэвтрэх (Google)** дарна.
    Нэвтэрсний дараа и-мэйлийн хажууд **uid** харагдана.
-4. Firebase Console → Firestore → `admins` коллекц үүсгээд **Document ID = тэр
+5. Firebase Console → Firestore → `admins` коллекц үүсгээд **Document ID = тэр
    uid** гэж баримт нэмнэ (талбар шаардлагагүй). Хуудсаа сэргээнэ.
-5. Одооноос **Сайтад нийтлэх** товч идэвхжинэ.
+6. Одооноос **Сайтад нийтлэх** товч идэвхжинэ.
+
+**Шалгах:** хөтчөөр
+`https://firestore.googleapis.com/v1/projects/open-data-62ed3/databases/(default)/documents/site_content/current`
+хаягийг нээнэ.
+
+| Хариу | Утга |
+|---|---|
+| `The database (default) does not exist` | 1-р алхам хийгдээгүй |
+| `PERMISSION_DENIED` | 2-р алхмын дүрэм Publish хийгдээгүй |
+| `Document ... not found` | Бэлэн — зүгээр л одоогоор нийтлэл алга |
+| JSON (`fields.content`) | Нийтлэл байгаа, сайт үүнийг давхарлана |
 
 ### Нийтэлсний дараа
 
