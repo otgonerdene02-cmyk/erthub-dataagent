@@ -3204,15 +3204,68 @@ async function groupZ4() {
   }
 }
 
+/* ─────────── Z16–Z18. ux-qa-persona 4-р ээлжийн олдвор ───────────
+   Z16 — датасэтийн "N дагагч" нэрний уртаас зохиогдохгүй
+   Z17 — баримтын од/үнэлгээний тоо, жишээ сэтгэгдэл зохиогдохгүй
+   Z18 — "24 датасет холбогдсон" хатуу тоо алга */
+async function groupZ5() {
+  group('Z16–Z18. Дагагч · баримтын үнэлгээ · AI-ийн датасетийн тоо');
+  const idx = read('index.html'), con = readJson('content.json');
+  check('Z16. Дагагчийн тоо нэрний уртаас тооцогдохгүй', !/dsel\.name\.length\*37/.test(idx));
+  check('Z16. Бодит тоо ирээгүй үед дагагчийн тоо нуугдана',
+    idx.includes('hasFollowers') && idx.includes('<sc-if value="{{ detail.hasFollowers }}">'));
+  check('Z17. Үнэлгээ гарчгийн уртаас тооцогдохгүй',
+    !/d\[1\]\.length\*3/.test(idx) && !/18\+\(d\[1\]\.length%23\)/.test(idx));
+  check('Z17. Бүх баримтад давтагддаг жишээ сэтгэгдэл алга',
+    !idx.includes('Т.Golearig') && !idx.includes('Н.Сарантуяа'));
+  check('Z17. "Үнэлгээ алга" content.json-д',
+    typeof (con.site.doc || {}).no_ratings === 'string' && idx.includes("stxt('doc.no_ratings'"));
+  const all24 = [JSON.stringify(con), idx].join('\n').match(/24 датасет/g) || [];
+  check('Z18. "24 датасет" хатуу тоо сайт ба content.json-д алга', all24.length === 0, all24.length + ' удаа');
+  check('Z18. Датасетийн тоо каталогоос тооцогдоно', idx.includes("DATASETS.length+' датасет"));
+
+  if (!CHROME) { skipped('Z17–Z18 (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html#/news';
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(6000);
+      const R={};
+      const b=[...d.querySelectorAll('button')].find(x=>/PDF/.test(x.innerText)&&x.innerText.length<260);
+      if(!b) return {__err:'баримтын товч алга'};
+      b.click(); await sleep(1500);
+      R.text=d.body.innerText;
+      return R;
+    }`, 120000);
+    if (R.__err) bad('Z17. Баримтын хуудас нээгдэв', R.__err);
+    else {
+      check('Z17. Бодит үнэлгээгүй баримт "Үнэлгээ алга" гэнэ', R.text.indexOf(con.site.doc.no_ratings) >= 0);
+      check('Z17. "NN үнэлгээ" зохиомол тоо гарахгүй', !/\d+ үнэлгээ/.test(R.text), (R.text.match(/\d+ үнэлгээ/) || [''])[0]);
+    }
+    PROBE_SRC = '/index.html';
+    const H = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(6000);
+      return {text:d.body.innerText};
+    }`, 120000);
+    if (H.__err) bad('Z18. Нүүр хуудас ачаалагдав', H.__err);
+    else check('Z18. Нүүр хуудсанд "24 датасет" алга', H.text.indexOf('24 датасет') < 0);
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
-  if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); }
+  if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5();
   }
 
   console.log('\n' + '═'.repeat(62));

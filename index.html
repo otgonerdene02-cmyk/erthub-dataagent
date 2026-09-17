@@ -2268,7 +2268,7 @@
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
           <div style="font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">{{ detail.t.notify_head }}</div>
           <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);white-space:nowrap;">{{ detail.followers }} дагагч</div>
+            <sc-if value="{{ detail.hasFollowers }}"><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);white-space:nowrap;">{{ detail.followers }} дагагч</div></sc-if>
             <sc-if value="{{ detail.canFollow }}">
               <button sc-camel-on-click="{{ detail.toggleFollow }}" style="{{ detail.followBtnStyle }}">{{ detail.followBtnLabel }}</button>
             </sc-if>
@@ -6040,7 +6040,7 @@ class Component extends DCLogic {
         });
         if(best<3) hit=null;
       }
-      const ans=hit?hit.a:'Асуултад тохирох шууд үзүүлэлт олдсонгүй. Нээлттэй өгөгдлийн сангаас 24 датасет холбогдсон байна — салбар, хугацааг тодруулж дахин асуувал тодорхой тоо гаргаж чадна.';
+      const ans=hit?hit.a:'Асуултад тохирох шууд үзүүлэлт олдсонгүй. Нээлттэй өгөгдлийн санд '+DATASETS.length+' датасет байна — салбар, хугацааг тодруулж дахин асуувал тодорхой тоо гаргаж чадна.';
       const src=hit?AI_SOURCES[AI_QA.indexOf(hit)%AI_SOURCES.length]:'Салбарын нэгдсэн үзүүлэлт';
       void src;
       this.setState(s=>({aiThread:(s.aiThread||[]).concat([{role:'bot',text:ans,source:src}]),aiThinking:false,aiStep:0}));
@@ -6234,27 +6234,21 @@ class Component extends DCLogic {
     const remoteDoc=(this.state.docRemote&&this.state.docRemote[dkey])||null;
     const ratingsMap=this.state.docRatings||{};
     const myStars=(remoteDoc&&remoteDoc.mine)||(ratingsMap[dkey]&&ratingsMap[dkey].mine)||0;
-    const seedAvg=3.6+((d[1].length*3)%14)/10;
+    /* Үнэлгээ зөвхөн Firestore-оос эсвэл энэ хэрэглэгчийн өөрийн саналаас.
+       Өмнө нь гарчгийн уртаас "4.x од · 18–40 үнэлгээ" гэж зохиодог байв. */
     const extraVotes=(ratingsMap[dkey]&&ratingsMap[dkey].extra)||0;
-    const baseCount=18+(d[1].length%23);
-    // Firestore-оос жинхэнэ үнэлгээ ирсэн бол demo тооцоог бүрэн орлоно.
     const hasReal=!!(remoteDoc&&remoteDoc.stats&&remoteDoc.stats.ratingCount>0);
-    const totalCount=hasReal?remoteDoc.stats.ratingCount:(baseCount+extraVotes);
-    const avg=hasReal?remoteDoc.stats.avgRating
-      :(extraVotes>0?((seedAvg*baseCount+myStars*extraVotes)/totalCount):seedAvg);
+    const totalCount=hasReal?remoteDoc.stats.ratingCount:extraVotes;
+    const avg=hasReal?remoteDoc.stats.avgRating:(extraVotes>0?myStars:0);
     const starsRow=(val,onPick)=>Array.from({length:5},(_,si)=>({
       i:si,filled:si<Math.round(val),
       pick:onPick?()=>onPick(si+1):null,
       style:'font-size:'+(onPick?'22px':'15px')+';line-height:1;cursor:'+(onPick?'pointer':'default')+';color:'+(si<Math.round(val)?'#E0A62B':'var(--line2)')+';background:none;border:none;padding:0;font-family:inherit;'
     }));
     const reviewsAll=(this.state.docReviews&&this.state.docReviews[dkey])||[];
-    const seedReviews=[
-      {by:'Т.Golearig',stars:4,text:'Судалгааны арга зүй тодорхой, эх сурвалж баттай — ажилдаа ашигласан.'},
-      {by:'Н.Сарантуяа',stars:5,text:'Маш дэлгэрэнгүй, статистик хэсэг нь онцгой хэрэгтэй байлаа.'}
-    ].filter((_,ri)=>ri<((d[1].length)%2)+1);
     const reviews=(remoteDoc&&remoteDoc.reviews
       ? remoteDoc.reviews.map(r=>({by:r.byName||'Уншигч',stars:r.stars||0,text:r.text||''}))
-      : seedReviews.concat(reviewsAll)
+      : reviewsAll
     ).map(r=>({...r,starsRow:starsRow(r.stars)}));
     const onDocDraft=(e)=>this.setState({docReviewDraft:e.target.value});
     const rateDoc=(n)=>{
@@ -6346,7 +6340,8 @@ class Component extends DCLogic {
         prev:()=>this.setState(s=>({docPage:Math.max(1,(s.docPage||1)-1)})),
         next:()=>this.setState(s=>({docPage:Math.min(pages,(s.docPage||1)+1)})),
         citation:d[2]+'. ('+d[3]+'). '+d[1]+'. Улаанбаатар: Зам, тээврийн хөгжлийн яам. ErtHub нээлттэй санаас авав.',
-        avgLabel:avg.toFixed(1),avgStars:starsRow(avg),countLabel:totalCount+' үнэлгээ',
+        avgLabel:totalCount>0?avg.toFixed(1):'—',avgStars:starsRow(avg),
+        countLabel:totalCount>0?totalCount+' үнэлгээ':stxt('doc.no_ratings','Үнэлгээ алга'),
         myStarsRow:starsRow(myStars,rateDoc),
         reviews,hasReviews:reviews.length>0,
         reviewDraft:this.state.docReviewDraft||'',onDocDraft,submitDocReview,
@@ -7564,9 +7559,11 @@ class Component extends DCLogic {
                   ['Аномали илрэх үед','AI модель хэвийн бус хэлбэлзэл олбол сэрэмжлүүлнэ',false],
                   ['Сарын тайлан','Ашиглалт, чанарын оноог сар бүр илгээнэ',false]].map(x=>({l:x[0],d:x[1],on:x[2],
                     pill:x[2]?'Нэмэгдсэн':'Нэмэх',pillStyle:x[2]?'color:#0E8F63;background:#0E8F6318;':'color:var(--ink2);background:var(--surface2);'})),
-      followers:(dsFollowState&&dsFollowState.count!=null&&dsFollowState.count>0)
-        ? dsFollowState.count.toLocaleString('en-US')
-        : (1200+dsel.name.length*37).toLocaleString(),
+      /* Дагагчийн тоо зөвхөн Firestore-оос (0 ч бодит). Өмнө нь ирээгүй
+         үед нэрийн уртаас "1,5xx" гэж зохиодог байв — одоо нууна. */
+      hasFollowers:!!(dsFollowState&&dsFollowState.count!=null),
+      followers:(dsFollowState&&dsFollowState.count!=null)
+        ? dsFollowState.count.toLocaleString('en-US') : '',
       canFollow:!!(window.erthubStore&&window.erthubStore.available),
       isFollowing:!!(dsFollowState&&dsFollowState.following),
       followBtnLabel:(dsFollowState&&dsFollowState.following)?'Дагаж байна':'Дагах',
@@ -7758,7 +7755,7 @@ class Component extends DCLogic {
       onBack:()=>this.goBack('home'),
       isHome:page==='home',isEservices:page==='eservices',isBrowse:page==='browse',isCommunity:page==='community',
       browseModes:[
-        {id:'db',glyph:'🗄️',color:'#0FA37F',title:'Өгөгдлийн сан',desc:'24 датасет, CSV/JSON татах, түүхэн цуврал бүрэн.',
+        {id:'db',glyph:'🗄️',color:'#0FA37F',title:'Өгөгдлийн сан',desc:DATASETS.length+' датасет, CSV/JSON татах, түүхэн цуврал бүрэн.',
           points:['Сар бүр шинэчлэгдэнэ','Схем баталгаажсан','Лиценз: нээлттэй ашиглалт']},
         {id:'rt',glyph:'📡',color:'#2E7CF6',title:'Бодит цаг',desc:'Мэдрэгчийн урсгал шууд, дэлгэц дээр амьд харагдана.',
           points:['5 сек тутам шинэчлэгдэнэ','WebSocket дэмжлэгтэй','Тасалдал<0.1%']},
@@ -8656,9 +8653,9 @@ class Component extends DCLogic {
       ai08Title:this.txt('ai08','title','ErtHub AI-аас асуух'),
       // ai08 — "ErtHub-LM" (мөр 1275) брэндийн гарчиг тул content.json-ийн
       // sub-д ОРООГүй; зөвхөн мөр 1276-ийн бодит sub мөрийг холбов.
-      ai08Sub:this.txt('ai08','sub','v2.4 · 24 датасет холбогдсон'),
+      ai08Sub:this.txt('ai08','sub','v2.4 · туршилтын хувилбар'),
       ai08Foot:this.txt('ai08','foot','Хариултууд нээлттэй өгөгдлийн сан дээр үндэслэнэ. Албан ёсны шийдвэрт эх сурвалжийг шалгана уу.')
-        +(this.isWidgetMock('ai08')?' '+stxt('status.ai08_mock','* "24 датасет холбогдсон" гэдэг тоо тогтмол бичигдсэн, бодит тоолол хараахан алга.'):''),
+        +(this.isWidgetMock('ai08')?' '+stxt('status.ai08_mock','* AI туслах туршилтын горимд — хариулт нь жишээ асуулт-хариулт дээр суурилна.'):''),
       sector:s,
       sectorTabs,
       orbitDots,
