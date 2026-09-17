@@ -3078,15 +3078,92 @@ async function groupZ2() {
   }
 }
 
+/* ─────────── Z9–Z11. ux-qa-persona 3-р ээлжийн олдвор ───────────
+   Z9  — датасэтийн дэлгэрэнгүйд НЭРНИЙ hash-аас зохиосон тоо гарахгүй
+   Z10 — ⌖ модальд хөгжүүлэгчийн тэмдэглэл/ID анхдагчаар ил гарахгүй
+   Z11 — Сайтын текст табын дэд гарчигт файлын зам алга */
+async function groupZ3() {
+  group('Z9–Z11. Зохиомол тоо · модалийн тэмдэглэл · файлын зам');
+  const idx = read('index.html'), con = readJson('content.json'), adm = adminScript();
+  check('Z9. 7 хоногийн гүйцэтгэл нэрний hash-аас тооцогдохгүй',
+    !idx.includes('wpUnitList') && !/wpBase|wpWowPct|wpPlanPct/.test(idx) && idx.includes('wpNoData:true'));
+  check('Z9. Мөрийн тоо нэрний уртаас зохиогдохгүй',
+    !idx.includes('dsel.name.length*1370') && idx.includes('const dsRows=null'));
+  check('Z9. "Эх сурвалж холбогдоогүй" тайлбар content.json-д',
+    typeof (con.site.detail || {}).wp_no_source === 'string' && idx.includes("stxt('detail.wp_no_source'"));
+  const st = con.ui.site_tab;
+  const leaky = ['heading', 'ui_heading', 'ufh_heading', 'auto_heading', 'auto_where']
+    .filter((k) => /content\.json|ui_form|→ ui\b/.test(st[k] || ''));
+  check('Z11. Сайтын текст табын гарчиг/тайлбарт файлын зам алга', leaky.length === 0, leaky.join(', '));
+  const fbLeak = ["'Админы интерфейсийн текст · content.json → ui'", "content.json → ui_form'", "'Бусад бүртгэлтэй текст · content.json'"]
+    .filter((s) => adm.includes(s));
+  check('Z11. Кодын fallback-д ч файлын зам алга', fbLeak.length === 0, fbLeak.join(', '));
+  check('Z10. Техникийн мэдээлэл эвхэгддэг хэсэгт', adm.includes('<details class="acc lotech"'));
+
+  if (!CHROME) { skipped('Z9–Z10 (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const A = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(4500);
+      const R={};
+      d.querySelector('[data-section="hero"]').click(); await sleep(700);
+      const b=d.querySelector('[data-mo="loc|hero_fl"]'); if(!b) return {__err:'⌖ товч алга'};
+      b.click(); await sleep(600);
+      R.eyebrow=d.getElementById('moK').textContent;
+      const body=d.getElementById('moB');
+      const det=body.querySelector('details.lotech');
+      R.det=!!det; R.detOpen=det?det.open:null;
+      /* details хаалттай үед доторх текст innerText-д орохгүй */
+      R.visible=body.innerText;
+      R.link=!!body.querySelector('a[href*="#hero"]');
+      return R;
+    }`, 120000);
+    if (A.__err) bad('Z10. DOM шалгалт ажиллав', A.__err);
+    else {
+      const note = String(con.widgets.hero_fl._note || '');
+      check('Z10. Модалийн дээд мөрөнд виджетийн ID алга', !/hero_fl/i.test(A.eyebrow), A.eyebrow);
+      check('Z10. Модалийн дээд мөр хэсгийн нэрийг хэлнэ', A.eyebrow.indexOf('·') > 0 && A.eyebrow.length > 6, A.eyebrow);
+      check('Z10. Техникийн хэсэг анхдагчаар ХААЛТТАЙ', A.det === true && A.detOpen === false);
+      check('Z10. Хөгжүүлэгчийн тэмдэглэл ил харагдахгүй',
+        note.length > 10 && A.visible.indexOf(note.slice(0, 20)) < 0, A.visible.slice(0, 120));
+      check('Z10. "Сайт дээр нээх" холбоос хэвээр', A.link === true);
+      check('Z10. Ижил метрикийн хэсэгт кодын түлхүүр/салбарын код алга',
+        A.visible.indexOf('air.flight_count_last_month') < 0 && !/ · air/.test(A.visible), A.visible.slice(-160));
+    }
+    const ds = (con.site.datasets || [])[0] || {};
+    const slug = ds.sector + '__' + String(ds.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+    PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slug);
+    const D = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(6000);
+      const vals=[...d.querySelectorAll('[data-wp-val]')].map(e=>e.textContent.trim());
+      const nd=d.querySelector('[data-wp-nodata]');
+      return {vals:vals, nodata:nd?nd.textContent.trim():'', text:d.body.innerText};
+    }`, 120000);
+    if (D.__err) bad('Z9. Дэлгэрэнгүй хуудас ачаалагдав', D.__err);
+    else {
+      check('Z9. Дөрвөн утга + төлөвлөгөө "—" (зохиомол тоо алга)',
+        D.vals.length === 6 && D.vals.every((v) => v === '—'), JSON.stringify(D.vals));
+      check('Z9. "Эх сурвалж холбогдоогүй" гэж ил хэлнэ', D.nodata === con.site.detail.wp_no_source, D.nodata);
+      const fake = (12000 + String(ds.name).length * 1370).toLocaleString('en-US');
+      check('Z9. Хуучин зохиомол мөрийн тоо (' + fake + ') гарахгүй', D.text.indexOf(fake) < 0);
+    }
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
-  if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); }
+  if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3();
   }
 
   console.log('\n' + '═'.repeat(62));

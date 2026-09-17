@@ -2183,30 +2183,31 @@
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
         <div>
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Энэ 7 хоногт</div>
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;">{{ detail.wp.total }}</div>
+          <div data-wp-val="total" style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;">{{ detail.wp.total }}</div>
         </div>
         <div>
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Оны эхнээс өссөн дүнгээр</div>
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;">{{ detail.wp.ytd }}</div>
+          <div data-wp-val="ytd" style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;">{{ detail.wp.ytd }}</div>
         </div>
         <div>
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Өмнөх 7 хоногийн харьцуулалт</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.wowColor }};">{{ detail.wp.wow }}</div>
+          <div data-wp-val="wow" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.wowColor }};">{{ detail.wp.wow }}</div>
         </div>
         <div>
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Өмнөх оны мөн үеийн харьцуулалт</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.yoyColor }};">{{ detail.wp.yoy }}</div>
+          <div data-wp-val="yoy" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.yoyColor }};">{{ detail.wp.yoy }}</div>
         </div>
       </div>
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);">
         <div style="display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--ink2);margin-bottom:8px;">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span data-eh-card="dwp" data-eh-field="foot">{{ detail.dwpFoot }}</span> — {{ detail.wp.planLabel }}</span>
-          <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:{{ activeColor }};">{{ detail.wp.planPctLabel }}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span data-eh-card="dwp" data-eh-field="foot">{{ detail.dwpFoot }}</span> — <span data-wp-val="plan">{{ detail.wp.planLabel }}</span></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:{{ activeColor }};" data-wp-val="pct">{{ detail.wp.planPctLabel }}</span>
         </div>
         <div style="height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;">
           <div style="height:100%;border-radius:5px;background:{{ activeColor }};width:{{ detail.wp.planWidth }};"></div>
         </div>
       </div>
+      <sc-if value="{{ detail.wp.wpNoData }}"><div data-wp-nodata="1" style="margin-top:12px;font-size:11.5px;color:var(--ink3);line-height:1.45;">{{ detail.wp.note }}</div></sc-if>
     </div>
 
     <sc-if value="{{ detail.act }}">
@@ -7332,25 +7333,19 @@ class Component extends DCLogic {
     const dsFollowKey=this.followItemId(dsel);
     const dsFollowState=(dsFollowKey&&this.state.dsFollow&&this.state.dsFollow[dsFollowKey])||null;
     const dq=dqScore(dsel,this.sourceData(dsel.source).meta);
-    const dsRows=(12000+dsel.name.length*1370).toLocaleString();
+    /* Мөрийн тоо датасэт тус бүрээр ИРДЭГГҮЙ — өмнө нь нэрийн уртаас
+       зохиодог байв ("Тоо ЗОХИОХГҮЙ" дүрэм). Эх сурвалж өгөх хүртэл null. */
+    const dsRows=null;
     const dqTier=!dq.known?{l:'Тодорхойгүй',c:'var(--ink3)'}
       :(dq.total>=85?{l:'Маш сайн',c:'#2FA37B'}:(dq.total>=65?{l:'Сайн',c:'#3F6FD8'}:{l:'Дундаж',c:'#B9903A'}));
     const dsTrend=buildTrendChart(SECTORS[dsel.sector].c1d);
-    const seed=dsel.name.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-    const wpUnitList=['мянган нэгж','мян.тн','мянган хүн','удаа','ГБ'];
-    const wpUnit=wpUnitList[seed%wpUnitList.length];
-    const wpBase=80+(seed%420);
-    const wpWowPct=((seed%23)-11)*1.1, wpYoyPct=((seed%31)-6)*1.3;
-    const wpYtd=Math.round(wpBase*(38+seed%14));
-    const wpPlanPct=Math.min(148,Math.max(78,86+seed%55));
-    const wp={
-      total:wpBase.toLocaleString()+' '+wpUnit,
-      ytd:(wpYtd/1000).toFixed(1)+' сая '+wpUnit,
-      wow:(wpWowPct>0?'+':'')+wpWowPct.toFixed(1)+'%',wowColor:wpWowPct<0?'#D2564A':'#2FA37B',
-      yoy:(wpYoyPct>0?'+':'')+wpYoyPct.toFixed(1)+'%',yoyColor:wpYoyPct<0?'#D2564A':'#2FA37B',
-      planLabel:(wpBase*50/1000).toFixed(1)+' сая '+wpUnit,
-      planPctLabel:wpPlanPct.toFixed(1)+'%',planWidth:Math.min(100,wpPlanPct)+'%'
-    };
+    /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
+       сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
+       өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
+       Эх сурвалж холбогдох хүртэл "—" + шалтгааныг ил хэлнэ. */
+    const wp={wpNoData:true,total:'—',ytd:'—',wow:'—',wowColor:'var(--ink3)',
+      yoy:'—',yoyColor:'var(--ink3)',planLabel:'—',planPctLabel:'—',planWidth:'0%',
+      note:stxt('detail.wp_no_source','Энэ датасэтийн 7 хоногийн гүйцэтгэлийн эх сурвалж холбогдоогүй — тоо харуулахгүй.')};
     const isAirDetail=dsel.sector==='air';
     let airExtra={};
     if(isAirDetail){
@@ -7549,13 +7544,13 @@ class Component extends DCLogic {
       isDownload:this.state.dsAction==='download',isApiAct:this.state.dsAction==='api',isFollow:this.state.dsAction==='follow',
       pvSettingsOpen:!!this.state.pvSettingsOpen,
       togglePvSettings:()=>this.setState(s=>({pvSettingsOpen:!s.pvSettingsOpen})),
-      files:[[dsel.fmt,'Бүрэн өгөгдөл',dsRows+' мөр',(/api|вэбсервис/i.test(dsel.fmt)?'JSON урсгал':'≈'+Math.max(1,Math.round(parseInt(dsRows.replace(/\D/g,''))/1400))+' MB')],
+      files:[[dsel.fmt,'Бүрэн өгөгдөл',dsRows!=null?dsRows+' мөр':'—',(/api|вэбсервис/i.test(dsel.fmt)?'JSON урсгал':'—')],
              ['CSV','Хураангуй хүснэгт','сүүлийн 12 сар','≈240 KB'],
              ['XLSX','Тайлбартай хувилбар','мета хуудастай','≈310 KB'],
              ['GeoJSON','Байршилтай хувилбар','WGS-84','≈1.2 MB']].map(x=>({fmt:x[0],name:x[1],scope:x[2],size:x[3]})),
       endpoint:'/v1/'+dsel.sector+'/'+(dsel.badges.includes('Шууд')?'live':'series'),
       curl:'curl -H "X-Api-Key: $ERTHUB_KEY" \\\n  https://api.erthub.gov.mn/v1/'+dsel.sector+'/'+(dsel.badges.includes('Шууд')?'live':'series')+'?from=2026-01-01',
-      sample:'{\n  "sector": "'+dsel.sector+'",\n  "updated_at": "2026-08-12T09:40:00+08:00",\n  "unit": "'+dsel.fmt+'",\n  "rows": '+dsRows.replace(/\D/g,'')+',\n  "data": [\n    { "ts": "2026-08-12T09:39:00+08:00", "value": 214300 }\n  ]\n}',
+      sample:'{\n  "sector": "'+dsel.sector+'",\n  "updated_at": "2026-08-12T09:40:00+08:00",\n  "unit": "'+dsel.fmt+'",\n  "rows": '+(dsRows!=null?dsRows:'null')+',\n  "data": [\n    { "ts": "2026-08-12T09:39:00+08:00", "value": 214300 }\n  ]\n}',
       apiSpecs:[['Хандалтын хязгаар',dsel.badges.includes('Premium')?'100 дуудлага/сек · SLA 99.9%':'10 дуудлага/сек · 10,000/сар'],
                 ['Түлхүүр','X-Api-Key header'],['Хариу','JSON · UTF-8 · ISO-8601'],
                 ['Шинэчлэлт',dsel.freq],['Түүх','2021 оноос'],['Лиценз','CC-BY 4.0']].map(x=>({l:x[0],v:x[1]})),

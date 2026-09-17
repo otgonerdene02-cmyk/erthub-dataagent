@@ -2330,7 +2330,7 @@ function siteGroupDefs(){
     (autoBy[grp]=autoBy[grp]||[]).push({p:p,l:restLabel(p,c),m:lbl+' '+key});
   });
   Object.keys(autoBy).sort().forEach(function(grp){
-    add('auto','a:'+grp,grp,utxt('site_tab.auto_where','Автоматаар илэрсэн талбар — content.json-д байгаа боловч гараар бүлэглээгүй'),autoBy[grp]);
+    add('auto','a:'+grp,grp,utxt('site_tab.auto_where','Автоматаар илэрсэн талбар — бүртгэлтэй боловч гараар бүлэглээгүй'),autoBy[grp]);
   });
   /* Гарчигт дагавар нэмнэ: энэ бүлэг нь дээрх жинхэнэ текстийн бүлэгтэй
      ЯГ ижил нэртэй (ui_form нь тэр бүлгийн НЭРИЙГ хадгалдаг) тул дагаваргүй
@@ -2416,12 +2416,12 @@ function lvSite(){
     '<span style="font-family:var(--mono)">'+site.fields+'</span> '+
     esc(utxt('site_tab.count_word','бичиг'))+'</p>'+site.html+
     '<p class="pvnote">'+esc(utxt('site_tab.note','Эдгээр нь виджетийн БУС текст. 04/05/07/08 хэсгийн гарчиг энд байхгүй — тэдгээр виджетээсээ гарчигаа авдаг тул давхардуулбал хоёр эх сурвалж үүснэ.'))+'</p>':'')+
-    (ui.n?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.ui_heading','Админы интерфейсийн текст · content.json → ui'))+' '+
+    (ui.n?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.ui_heading','Админы интерфейсийн текст · энэ удирдлага дээр харагдах бичиг'))+' '+
     '<span style="font-family:var(--mono)">'+ui.fields+'</span></p>'+ui.html+
     '<p class="pvnote">'+esc(utxt('site_tab.ui_note','Эдгээр нь ЭНЭ УДИРДЛАГЫН ХЭРЭГСЛИЙН текст (сайтад харагдахгүй). Нэг утга бүх виджетийн засварын дэлгэцэд адил хэрэглэгдэнэ.'))+'</p>':'')+
-    (auto.n?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.auto_heading','Бусад бүртгэлтэй текст · content.json'))+' '+
+    (auto.n?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.auto_heading','Бусад бүртгэлтэй текст'))+' '+
     '<span style="font-family:var(--mono)">'+auto.fields+'</span></p>'+auto.html:'')+
-    (uf.n?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.ufh_heading','Админ таб/бүлгийн НЭРНИЙ тохиргоо · content.json → ui_form'))+' '+
+    (uf.n?'<p class="ph" style="margin-top:22px">'+esc(utxt('site_tab.ufh_heading','Админы таб ба бүлгийн НЭРНИЙ тохиргоо'))+' '+
     '<span style="font-family:var(--mono)">'+uf.fields+'</span></p>'+uf.html+
     '<p class="pvnote">'+esc(utxt('site_tab.ufh_note','Эдгээр нь ЗӨВХӨН энэ удирдлагын хэрэгслийн дотоод бүлэг/шошгын НЭРИЙГ тодорхойлно — сайт дээр ХАРАГДАХГҮЙ. Ихэвчлэн засах шаардлагагүй.'))+'</p>':'');
 }
@@ -3675,18 +3675,23 @@ function moLoc(id){
   var rows='<dl style="margin:0">'+
     '<div class="loc"><dt>'+esc(utxt('loc.page','Хуудас'))+'</dt><dd>'+esc(c.page||'—')+'</dd></div>'+
     '<div class="loc"><dt>'+esc(utxt('loc.section','Хэсэг'))+'</dt><dd>'+esc(sectionLabel(anchorOf(id)))+'</dd></div>'+
-    '<div class="loc"><dt>Anchor</dt><dd>#'+esc(anchorOf(id))+'</dd></div>'+
-    '<div class="loc"><dt>'+esc(utxt('loc.widget_id','Виджетийн ID'))+'</dt><dd>'+esc(id)+'</dd></div>'+
     '<div class="loc"><dt>'+esc(utxt('loc.slot','Слот'))+'</dt><dd>'+slotsOf(id).map(function(s){
         return esc(SECN[s.key]||s.key||utxt('metric.single_slot','ганц метрик'))}).join(', ')+'</dd></div>'+
     '</dl>'+
     '<p class="ph" style="margin:16px 0 6px">'+esc(utxt('loc.direct_link','Сайт дээрх шууд холбоос'))+'</p>'+
     '<div class="urlbox">'+esc(url)+'</div>'+
     '<div class="acts"><a class="btn sm" href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(utxt('loc.open_on_site','Сайт дээр нээх ↗'))+'</a></div>';
-  if(c._note) rows+='<p class="ph" style="margin:16px 0 6px">'+esc(utxt('loc.content_note','content.json тэмдэглэл'))+'</p>'+
-    '<div class="acc">'+esc(c._note)+'</div>';
-  if(REG.widgets[id].note) rows+='<p class="ph" style="margin:16px 0 6px">'+esc(utxt('loc.registry_note','registry тэмдэглэл'))+'</p>'+
-    '<div class="acc">'+esc(REG.widgets[id].note)+'</div>';
+  /* Anchor, ID, дотоод тэмдэглэл (мөрийн дугаар, функцийн нэр агуулдаг) —
+     зөвхөн хөгжүүлэгчид. Дата холболт табын "Техникийн мэдээлэл"-тэй ижил
+     хэв маягаар анхнаасаа ХААЛТТАЙ. */
+  rows+='<details class="acc lotech" style="margin-top:16px;cursor:pointer"><summary>'+
+    esc(utxt('loc.tech_summary','Техникийн мэдээлэл (зөвхөн хөгжүүлэгчид)'))+'</summary>'+
+    '<dl style="margin:8px 0 0">'+
+    '<div class="loc"><dt>Anchor</dt><dd>#'+esc(anchorOf(id))+'</dd></div>'+
+    '<div class="loc"><dt>'+esc(utxt('loc.widget_id','Виджетийн ID'))+'</dt><dd>'+esc(id)+'</dd></div></dl>'+
+    (c._note?'<p class="ph" style="margin:12px 0 4px">'+esc(utxt('loc.content_note','Агуулгын тэмдэглэл'))+'</p><div>'+esc(c._note)+'</div>':'')+
+    (REG.widgets[id].note?'<p class="ph" style="margin:12px 0 4px">'+esc(utxt('loc.registry_note','Холболтын тэмдэглэл'))+'</p><div>'+esc(REG.widgets[id].note)+'</div>':'')+
+    '</details>';
 
   rows+='<p class="ph" style="margin:16px 0 6px">'+esc(utxt('loc.same_metric','Ижил метрик ашигладаг виджет'))+'</p>';
   if(!b.length){
@@ -3694,11 +3699,12 @@ function moLoc(id){
   }else{
     b.forEach(function(mk){
       var u=usersOfMetric(mk,id);
-      rows+='<div class="mecalc" style="margin-bottom:5px"><code>'+esc(mk)+'</code></div>';
+      /* Метрикийн МОНГОЛ нэр ба салбарын нэр — кодын түлхүүр (air.xxx, air) зөвхөн title-д */
+      rows+='<div class="mecalc" style="margin-bottom:5px" title="'+esc(mk)+'">'+esc((REG.metrics[mk]||{}).name||mk)+'</div>';
       rows+= u.length
         ? '<div class="use">'+u.map(function(x){
             return '<button class="utag" data-goto="'+esc(x.id)+'"'+(x.inScope?'':' disabled title="'+esc(utxt('loc.out_of_scope','Хамрах хүрээнээс гадуур'))+'"')+'>'+
-              esc(curText(x.id,'title')||x.id)+' · '+esc(x.slot)+(x.inScope?' →':' '+esc(utxt('loc.out_of_scope_tag','(хүрээнээс гадуур)')))+'</button>'}).join('')+'</div>'
+              esc(curText(x.id,'title')||x.id)+(x.slot&&x.slot!=='—'?' · '+esc(SECN[x.slot]||x.slot):'')+(x.inScope?' →':' '+esc(utxt('loc.out_of_scope_tag','(хүрээнээс гадуур)')))+'</button>'}).join('')+'</div>'
         : '<div class="empty" style="padding:14px">'+esc(utxt('loc.no_other','Өөр виджет энэ метрикийг ашиглахгүй байна'))+'</div>';
     });
   }
@@ -3717,7 +3723,8 @@ function moHist(id){
 function rMo(){
   if(!S.mo)return;
   var id=S.mo;
-  $('moK').textContent=(CON.widgets[id]&&CON.widgets[id].page||utxt('section.path_root','Нүүр'))+' · '+id;
+  /* Дотоод ID-г биш хэсгийн нэрийг — ID нь "Байршил" табын техникийн хэсэгт */
+  $('moK').textContent=(CON.widgets[id]&&CON.widgets[id].page||utxt('section.path_root','Нүүр'))+' · '+sectionLabel(anchorOf(id));
   $('moN').textContent=curText(id,'title')||id;
   $('moS').textContent=(KIND[id]||'')+' · '+slotsOf(id).length+' '+utxt('list.slot','слот')+' · '+
     (boundMetrics(id).length)+' '+utxt('crumb.full','бүрэн холбогдсон');
