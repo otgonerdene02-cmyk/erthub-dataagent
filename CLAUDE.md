@@ -13,7 +13,8 @@
 | `metric_registry.json` | Виджет → метрикийн холбоос, `agg/filter/transform` |
 | `js/erthub-publish.js` | Firestore overlay — админаас сайтад ШУУД нийтлэх |
 | `firestore.rules` | Эрхийн дүрэм (Console дээр гараар Publish хийнэ) |
-| `tests/run.js` | Ерөнхий регресс (89 тест; F = засварлагдалт, G = нийтлэл) |
+| `tests/run.js` | Ерөнхий регресс (F = засварлагдалт, G = нийтлэл, Z = анхны сэтгэгдэл; `--only=Z`) |
+| `.claude/skills/first-impression-audit/` | `ux-qa-persona` агентын скилл — дэлгэц бүрийг анх орж буй хүний нүдээр 8 асуултаар шалгах |
 | `tests/text-coverage.js` | Харагдах текстийн хамрах хүрээ + round-trip (5 тест) |
 
 ## content.json — 4 блок

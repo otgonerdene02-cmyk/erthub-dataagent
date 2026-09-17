@@ -2793,11 +2793,211 @@ async function groupY() {
   }
 }
 
+/* ─────────── Z. Анхны сэтгэгдэл (first-impression-audit олдвор) ───────────
+   Анх орж буй хүн жагсаалтын мөрийг НЭЭЛГҮЙГЭЭР таних ёстой:
+   Z1 — модны төлөвийн тэмдэг худал хэлэхгүй (хэсэгчлэн = "!", текст = "·")
+   Z2 — Сайтын текстийн бүлэг бүр сайтын аль хуудас/бүсэд гарахаа мэднэ
+   Z3 — шинэ текст content.json-д
+   Z4 — DOM: хураасан бүлэг + утгын хураангуй + хуудсаар шүүх + байршлын
+        холбоос, модны навч ба виджет чип дээр preview гарна */
+function adminCut(a, b) {
+  const s = adminScript(), i = s.indexOf(a), j = s.indexOf(b, i + 1);
+  return i >= 0 && j > i ? s.slice(i, j) : null;
+}
+async function groupZ() {
+  group('Z. Анхны сэтгэгдэл (таних · байршил · тойм)');
+  const con = readJson('content.json');
+
+  /* ── Z1. treeStat — гараар бодох боломжтой 6 тохиолдол ── */
+  const tsSrc = adminCut('function treeStat(t,n){', '/* TREE_STAT_END */');
+  let treeStat = null;
+  try { treeStat = tsSrc && new Function(tsSrc + 'return treeStat;')(); } catch (e) {}
+  if (!treeStat) bad('Z1. treeStat() олдсонгүй');
+  else {
+    const T = (ok, mix, no, txt) => ({ ok, mix, no, txt });
+    check('Z1. Бүгд бүрэн → ok', treeStat(T(2, 0, 0, 0), 2) === 'ok');
+    check('Z1. Бүгд ХЭСЭГЧЛЭН → mix (✕ биш)', treeStat(T(0, 2, 0, 0), 2) === 'mix', treeStat(T(0, 2, 0, 0), 2));
+    check('Z1. Бүрэн + холбоогүй → mix', treeStat(T(1, 0, 1, 0), 2) === 'mix');
+    check('Z1. Бүгд холбоогүй → no', treeStat(T(0, 0, 2, 0), 2) === 'no');
+    check('Z1. Зөвхөн текст → txt (холбоогүй гэж хэлэхгүй)', treeStat(T(0, 0, 0, 1), 1) === 'txt');
+    check('Z1. Текст тооцоонд орохгүй: 2 бүрэн + 1 текст → ok', treeStat(T(2, 0, 0, 1), 3) === 'ok');
+  }
+  const adm = adminScript();
+  check('Z1. twRow нь treeStat-аар тэмдэг сонгоно',
+    adm.includes('cls=treeStat(t,n.ids.length)') && !adm.includes("cls=t.ok===n.ids.length&&n.ids.length?'ok':(t.ok?'mix':'no')"));
+
+  /* ── Z2. Байршлын зураглал ── */
+  const locSrc = adminCut('var SITE_LOC={', '/* SITE_LOC_END */');
+  let L = null;
+  try {
+    L = locSrc && new Function('BASE', locSrc +
+      'return {siteLocOf:siteLocOf,siteLocUrl:siteLocUrl,LOC_ZONES:LOC_ZONES,SITE_LOC:SITE_LOC};')('../index.html');
+  } catch (e) { bad('Z2. SITE_LOC ачаалагдав', e.message); }
+  if (!L) bad('Z2. SITE_LOC / siteLocOf олдсонгүй');
+  else {
+    const eq = (p, page, zone) => { const r = L.siteLocOf(p); return r.page === page && r.zone === zone; };
+    check('Z2. brand.name → бүх хуудас · толгой', eq(['brand', 'name'], 'all', 'head'));
+    check('Z2. hero.ticker.ai → нүүр · hero', eq(['hero', 'ticker', 'ai'], 'home', 'hero'));
+    check('Z2. community.see_all → нүүр · 03-р хэсэг', eq(['community', 'see_all'], 'home', 's3'));
+    check('Z2. community.tabs.0.label → коммунити · таб (урт зам давуу)', eq(['community', 'tabs', '0', 'label'], 'community', 'tabs'));
+    check('Z2. browse.hero.lead → нээлттэй өгөгдөл · hero', eq(['browse', 'hero', 'lead'], 'browse', 'hero'));
+    check('Z2. ui.* → админ', eq(['ui', 'toast', 'x'], 'admin', 'body'));
+    check('Z2. URL: нүүр 03 → #sec-03', L.siteLocUrl({ page: 'home', zone: 's3' }) === '../index.html#sec-03',
+      L.siteLocUrl({ page: 'home', zone: 's3' }));
+    check('Z2. URL: browse hero → #/browse', L.siteLocUrl({ page: 'browse', zone: 'hero' }) === '../index.html#/browse');
+    check('Z2. URL: бүх хуудасны толгой → нүүр', L.siteLocUrl({ page: 'all', zone: 'head' }) === '../index.html');
+    check('Z2. URL: админ → холбоосгүй', L.siteLocUrl({ page: 'admin', zone: 'body' }) === null);
+    /* content.json-д байгаа БҮХ бүлэг тодорхой байршилтай (таамгийн
+       fallback-д унахгүй) — шинэ бүлэг нэмэгдвэл энд унана. */
+    const groups = [].concat(
+      (con.ui_form.site || []).map((g) => [g.key]),
+      (con.ui_form.site_nested || []).map((g) => String(g.path).split('.')),
+      Object.keys(con.site).filter((k) => k[0] !== '_').map((k) => [k]));
+    const unknown = groups.filter((p) => L.siteLocOf(p.concat('x')).guess).map((p) => p.join('.'));
+    check('Z2. content.json-ийн бүх бүлэг байршилтай (' + groups.length + ')', unknown.length === 0, unknown.join(', '));
+    const zones = Object.keys(L.SITE_LOC).map((k) => L.SITE_LOC[k].split('|')[1]);
+    const badZ = zones.filter((z) => !L.LOC_ZONES[z]);
+    check('Z2. Бүсийн нэр бүр схемд зурагдана', badZ.length === 0, badZ.join(', '));
+    /* Нүүрний анкор бүр сайт дээр id болж байх ёстой (Y6-тай ижил зарчим) */
+    const idx = read('index.html');
+    const anchors = [...new Set(Object.keys(L.LOC_ZONES).map((z) => L.LOC_ZONES[z].anchor).filter(Boolean))];
+    const miss = anchors.filter((a) => idx.indexOf('id="' + a + '"') < 0);
+    check('Z2. Бүсийн анкор сайт дээр байна (' + anchors.length + ')', anchors.length >= 8 && miss.length === 0, miss.join(', '));
+  }
+
+  /* ── Z3. Текст content.json-д ── */
+  const stx = con.ui.site_tab || {};
+  const need = ['toc_label', 'page_all', 'page_admin', 'page_other', 'open_on_site', 'expand_all', 'collapse_all', 'fields_word', 'loc_title'];
+  const missT = need.filter((k) => typeof stx[k] !== 'string' || !stx[k]);
+  check('Z3. Сайтын текст табын шинэ бичиг content.json-д', missT.length === 0, missT.join(', '));
+  check('Z3. Модны "зөвхөн текст" тэмдгийн тайлбар content.json-д',
+    typeof (con.ui.left || {}).status_txt === 'string' && adm.includes("utxt('left.status_txt'"));
+
+  if (!CHROME) { skipped('Z4. Анхны сэтгэгдэл (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(4500);
+      const R={};
+      const vis=e=>!!e&&w.getComputedStyle(e).display!=='none';
+      /* ── Модны тэмдэг ── */
+      d.querySelector('[data-facet="state"]').click(); await sleep(300);
+      const mixRoot=d.querySelector('[data-node="state:mix"] .st');
+      R.mixRoot=mixRoot?mixRoot.className+'|'+mixRoot.textContent:'';
+      const txtRoot=d.querySelector('[data-node="state:txt"] .st');
+      R.txtRoot=txtRoot?txtRoot.className+'|'+txtRoot.textContent+'|'+txtRoot.getAttribute('title'):'';
+      const x=d.querySelector('[data-twx="state:mix"]'); if(x){ x.click(); await sleep(300) }
+      const mixNode=d.querySelector('[data-node="state:mix"]');
+      const leaf=mixNode?mixNode.parentNode.querySelector('.tkids .tn.leaf'):null;
+      R.leafSt=leaf?leaf.querySelector('.st').textContent:'';
+      /* ── Навч дээр preview ── */
+      R.leafTitle=leaf?(leaf.getAttribute('title')||''):'';
+      R.leafNote=leaf&&leaf.querySelector('.sub')?leaf.querySelector('.sub').textContent:'';
+      R.leafId=leaf?leaf.getAttribute('data-pvpop'):'';
+      if(leaf){ leaf.dispatchEvent(new w.MouseEvent('mouseover',{bubbles:true})); await sleep(250) }
+      let pop=d.getElementById('twpop');
+      R.popVis=vis(pop); R.popPv=!!(pop&&pop.innerHTML.length>200);
+      R.popFor=pop?pop.getAttribute('data-for'):'';
+      if(leaf){ leaf.dispatchEvent(new w.MouseEvent('mouseout',{bubbles:true,relatedTarget:d.body})); await sleep(200) }
+      R.popHidden=!vis(d.getElementById('twpop'));
+      /* ── Дата холболтын виджет чип ── */
+      d.querySelector('[data-tab="metrics"]').click(); await sleep(1200);
+      const chip=d.querySelector('[data-mgoto][data-pvpop]');
+      R.chip=!!chip;
+      if(chip){ chip.dispatchEvent(new w.MouseEvent('mouseover',{bubbles:true})); await sleep(250);
+        R.chipPop=vis(d.getElementById('twpop'));
+        chip.dispatchEvent(new w.MouseEvent('mouseout',{bubbles:true,relatedTarget:d.body})); await sleep(150) }
+      /* ── Сайтын текст ── */
+      d.querySelector('[data-tab="site"]').click(); await sleep(1200);
+      const groups=()=>[...d.querySelectorAll('#body .sgroup')];
+      const fields=()=>d.querySelectorAll('#body [data-sf]').length;
+      R.g0=groups().length; R.f0=fields();
+      R.ex0=groups().filter(g=>g.querySelector('.sgex')).length;
+      R.loc0=groups().filter(g=>g.querySelector('.sgloc svg')).length;
+      R.toc=[...d.querySelectorAll('[data-sgpage]')].map(b=>b.getAttribute('data-sgpage'));
+      /* Бүгдийг дэлгэх → бүх талбар */
+      const ea=d.querySelector('[data-sgall="1"]'); if(ea){ ea.click(); await sleep(900) }
+      R.fAll=fields();
+      const ca=d.querySelector('[data-sgall="0"]'); if(ca){ ca.click(); await sleep(500) }
+      R.fCollapsed=fields();
+      /* Хуудсаар шүүх — Нүүр */
+      const hp=d.querySelector('[data-sgpage="home"]'); if(hp){ hp.click(); await sleep(600) }
+      R.homePages=[...new Set(groups().map(g=>g.getAttribute('data-sgpage-of')))];
+      R.homeN=groups().length;
+      /* Нэг бүлэг нээх → талбар + холбоос */
+      const hd=d.querySelector('#body .sgroup [data-sgt]');
+      const gid=hd?hd.getAttribute('data-sgt'):'';
+      if(hd){ hd.click(); await sleep(500) }
+      const g1=d.querySelector('#body .sgroup[data-sgid="'+gid+'"]');
+      R.openFields=g1?g1.querySelectorAll('[data-sf]').length:0;
+      const hd2=d.querySelector('[data-sgt="'+gid+'"]');
+      R.openExp=hd2?hd2.getAttribute('aria-expanded'):'';
+      const lk=g1&&g1.querySelector('a.sglink');
+      R.link=lk?lk.getAttribute('href'):'';
+      R.linkTarget=lk?lk.getAttribute('target'):'';
+      /* Засвар → хураагаад дахин нээхэд утга хэвээр */
+      const inp=g1&&g1.querySelector('[data-sf]');
+      if(inp){
+        R.key=inp.getAttribute('data-sf'); R.orig=inp.value;
+        inp.value=R.orig+' ZZ'; inp.dispatchEvent(new w.Event('input',{bubbles:true})); await sleep(150);
+        d.querySelector('[data-sgt="'+gid+'"]').click(); await sleep(300);
+        R.closedDirty=d.querySelector('#body .sgroup[data-sgid="'+gid+'"]').classList.contains('dirty');
+        d.querySelector('[data-sgt="'+gid+'"]').click(); await sleep(300);
+        const again=d.querySelector('[data-sf="'+R.key+'"]');
+        R.kept=again?again.value:'';
+        if(again){ again.value=R.orig; again.dispatchEvent(new w.Event('input',{bubbles:true})); await sleep(150) }
+      }
+      /* Бүгд рүү буцаад хайлт → автоматаар нээгдэнэ */
+      const allp=d.querySelector('[data-sgpage="any"]'); if(allp){ allp.click(); await sleep(500) }
+      const q=d.getElementById('qsite');
+      q.value='ErtHub'; q.dispatchEvent(new w.Event('input',{bubbles:true})); await sleep(600);
+      R.qFields=fields();
+      q.value=''; q.dispatchEvent(new w.Event('input',{bubbles:true})); await sleep(400);
+      R.dirty=d.getElementById('dirtyMsg').textContent;
+      return R;
+    }`, 150000);
+    if (R.__err) { bad('Z4. DOM шалгалт ажиллав', R.__err); return; }
+    check('Z4. "хэсэгчлэн" бүлэг ! тэмдэгтэй (✕ биш)', /mix\|!$/.test(R.mixRoot), R.mixRoot);
+    check('Z4. "зөвхөн текст" бүлэг · тэмдэг + тайлбартай', /txt\|·\|.+/.test(R.txtRoot), R.txtRoot);
+    check('Z4. Хэсэгчлэн виджетийн навч ! тэмдэгтэй', R.leafSt === '!', R.leafSt);
+    check('Z4. Навч бүтэн нэр + хэсгээ title-д хэлнэ', R.leafTitle.indexOf(' · ') > 0, R.leafTitle);
+    check('Z4. Навч доор хэсгийн нэр харагдана (ижил нэрийг ялгана)', R.leafNote.length > 0, R.leafNote);
+    check('Z4. Навч дээр хулгана барихад тухайн виджетийн preview гарна',
+      R.popVis && R.popPv && R.popFor === R.leafId && !!R.leafId, JSON.stringify({ v: R.popVis, pv: R.popPv, f: R.popFor, id: R.leafId }));
+    check('Z4. Хулгана гарахад preview нуугдана', R.popHidden);
+    check('Z4. Дата холболтын виджет чип дээр ч preview гарна', R.chip && R.chipPop, JSON.stringify({ chip: R.chip, pop: R.chipPop }));
+    check('Z4. Сайтын текст анхнаасаа ХУРААСАН (талбар 0, бүлэг ' + R.g0 + ')', R.g0 >= 20 && R.f0 === 0, 'талбар ' + R.f0);
+    check('Z4. Хураасан бүлэг бүр одоогийн утгын хураангуйтай', R.ex0 === R.g0, R.ex0 + '/' + R.g0);
+    check('Z4. Бүлэг бүр байршлын схемтэй', R.loc0 === R.g0, R.loc0 + '/' + R.g0);
+    check('Z4. Хуудсаар тойм: Бүгд + Нүүр + Админ',
+      R.toc.indexOf('any') === 0 && R.toc.indexOf('home') > 0 && R.toc.indexOf('admin') > 0, R.toc.join(','));
+    check('Z4. "Бүгдийг дэлгэх" бүх талбарыг гаргана (' + R.fAll + ')', R.fAll > 1000, String(R.fAll));
+    check('Z4. "Бүгдийг хураах" буцааж хураана', R.fCollapsed === 0, String(R.fCollapsed));
+    check('Z4. "Нүүр" шүүлт зөвхөн нүүрний бүлгийг үлдээнэ',
+      R.homeN > 0 && R.homeN < R.g0 && R.homePages.length === 1 && R.homePages[0] === 'home', JSON.stringify(R.homePages) + ' ' + R.homeN);
+    check('Z4. Бүлэг нээхэд талбар гарч aria-expanded=true', R.openFields > 0 && R.openExp === 'true', R.openFields + ' ' + R.openExp);
+    check('Z4. Нээсэн бүлэгт "Сайт дээр харах" холбоос шинэ цонхонд',
+      /index\.html(#.*)?$/.test(R.link) && R.linkTarget === '_blank', R.link + ' ' + R.linkTarget);
+    check('Z4. Хураасан бүлэг засвар хийгдсэнээ харуулна', R.closedDirty === true);
+    check('Z4. Хураагаад нээхэд бичсэн утга хэвээр', R.kept === R.orig + ' ZZ', R.kept);
+    check('Z4. Хайлт хийхэд тохирох бүлэг автоматаар нээгдэнэ', R.qFields > 0, String(R.qFields));
+    check('Z4. Шалгалтын дараа өөрчлөлт үлдээгүй', /алга/.test(R.dirty), R.dirty);
+  } finally {
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
+  /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
+     өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
+  if (process.argv.includes('--only=Z')) await groupZ();
+  else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ();
+  }
 
   console.log('\n' + '═'.repeat(62));
   console.log('НИЙТ:  PASS ' + pass + '  ·  FAIL ' + fail + '  ·  SKIP ' + skip);

@@ -18,6 +18,9 @@ description: >
 #
 #   tools: Read, Write, Edit, Glob, Grep, mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_take_screenshot
 model: sonnet
+# Сценари тестийн өмнө анхны сэтгэгдлийн аудит хийх скиллийг урьдчилан ачаална
+skills:
+  - first-impression-audit
 ---
 
 # Дүр (Persona)
@@ -65,6 +68,12 @@ node scripts/serve.js 8080
 
 # Ажлын урсгал (workflow)
 
+0. **Анхны сэтгэгдлийн аудит** — `first-impression-audit` скиллийг
+   (урьдчилан ачаалагдсан) дагаж, сценари эхлүүлэхээс ӨМНӨ дэлгэц бүрийг
+   "огт ойлголтгүй хүн"-ий нүдээр 8 асуултаар шалга. Жишээ нь жагсаалт
+   сайт дээрх харагдацаараа танигдахгүй, нээж байж л юу болохыг мэдэх бол
+   олдвор. Олдвор бүрд жишиг сайттай харьцуулж, хувилбаруудыг үнэлээд
+   хамгийн оновчтойг нь санал болго.
 1. `qa-backlog.md` файлыг унш — өмнөх тестийн олдвор, тэдгээрийн статус
    (нээлттэй/хаагдсан), мөн **Product owner-ийн санал** хэсгийг заавал унш.
    Энэ бол хэрэглэгчийн (чиний) шууд өгсөн чиглэл — дараагийн тестэд
