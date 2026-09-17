@@ -182,9 +182,11 @@
                   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">{{ cDetail.shareLabel }}</div>
                   <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:#C8443A;white-space:nowrap;">▼ {{ cDetail.opposeCount }}</div>
                 </div>
+                <sc-if value="{{ cDetail.shareKnown }}">
                 <div style="display:flex;height:6px;border-radius:4px;overflow:hidden;background:#C8443A33;margin-top:8px;">
                   <div style="height:100%;background:{{ cDetail.color }};width:{{ cDetail.shareW }};transition:width .4s var(--ease);"></div>
                 </div>
+                </sc-if>
                 <div style="display:flex;flex-direction:column;gap:6px;margin-top:9px;">
                   <button sc-camel-on-click="{{ cDetail.vote }}" style="{{ cDetail.voteStyle }}padding:9px;">{{ cDetail.voteGlyph }} {{ cDetail.voteLabel }}</button>
                   <button sc-camel-on-click="{{ cDetail.oppose }}" style="{{ cDetail.opposeStyle }}padding:9px;">{{ cDetail.opposeGlyph }} {{ cDetail.opposeLabel }}</button>
@@ -2198,15 +2200,17 @@
           <div data-wp-val="yoy" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.yoyColor }};">{{ detail.wp.yoy }}</div>
         </div>
       </div>
-      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);">
+      <sc-if value="{{ detail.wp.hasPlan }}">
+      <div data-wp-plan="1" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);">
         <div style="display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--ink2);margin-bottom:8px;">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span data-eh-card="dwp" data-eh-field="foot">{{ detail.dwpFoot }}</span> — <span data-wp-val="plan">{{ detail.wp.planLabel }}</span></span>
-          <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:{{ activeColor }};" data-wp-val="pct">{{ detail.wp.planPctLabel }}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span data-eh-card="dwp" data-eh-field="foot">{{ detail.dwpFoot }}</span> — {{ detail.wp.planLabel }}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:{{ activeColor }};">{{ detail.wp.planPctLabel }}</span>
         </div>
         <div style="height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;">
           <div style="height:100%;border-radius:5px;background:{{ activeColor }};width:{{ detail.wp.planWidth }};"></div>
         </div>
       </div>
+      </sc-if>
       <sc-if value="{{ detail.wp.wpNoData }}"><div data-wp-nodata="1" style="margin-top:12px;font-size:11.5px;color:var(--ink3);line-height:1.45;">{{ detail.wp.note }}</div></sc-if>
     </div>
 
@@ -6206,22 +6210,24 @@ class Component extends DCLogic {
     const i=this.state.docIndex;
     const d=list[i]||list[0];
     if(!d) return {docDetail:null,isDocDetail:false};
-    const seed=(d[1].length*7+d[3].length*13)%40;
-    const pages=48+seed*6;
+    /* Баримтын жинхэнэ хуудасны тоо эх сурвалжаас ирдэггүй — өмнө нь
+       нэрийн уртаас "48–282 хуудас" гэж зохиодог байв. Уншигч нь ЗАГВАР
+       (демо) хэсэг тул зөвхөн жишээ хуудсуудаа (LOREM-ийн тоо) гүйлгэнэ. */
+    const pages=3;
     const tab=this.state.docTab;
     const page=Math.min(Math.max(1,this.state.docPage||1),pages);
     const toc=[
-      ['1','Ерөнхий үндэслэл',1],
-      ['2','Хэрэглэх хүрээ, тодорхойлолт',7],
-      ['3','Үндсэн шаардлага, зохицуулалт',Math.round(pages*0.22)],
-      ['4','Хэрэгжилтийн үнэлгээ ба дүн шинжилгээ',Math.round(pages*0.48)],
-      ['5','Дүгнэлт, санал зөвлөмж',Math.round(pages*0.78)],
-      ['6','Хавсралт, эх сурвалж',Math.round(pages*0.9)]
-    ].map(t=>({num:t[0],title:t[1],page:t[2],
-      jump:()=>this.setState({docPage:t[2],docTab:'read'})}));
+      ['1','Ерөнхий үндэслэл'],
+      ['2','Хэрэглэх хүрээ, тодорхойлолт'],
+      ['3','Үндсэн шаардлага, зохицуулалт'],
+      ['4','Хэрэгжилтийн үнэлгээ ба дүн шинжилгээ'],
+      ['5','Дүгнэлт, санал зөвлөмж'],
+      ['6','Хавсралт, эх сурвалж']
+    ].map(t=>({num:t[0],title:t[1],page:'',
+      jump:()=>this.setState({docPage:1,docTab:'read'})}));
     const meta=[
       ['Эх сурвалж',d[2]],['Он',d[3]],['Формат',d[4]],
-      ['Хуудас',pages+' хуудас'],['Хэл','Монгол'],['Лиценз','CC-BY 4.0'],
+      ['Хуудас','—'],['Хэл','Монгол'],['Лиценз','CC-BY 4.0'],
       ['Салбар',SECTORS[d[0]].label],['Ангилал',(DOC_CATS.find(c=>c[0]===cat)||['','—'])[1]]
     ].map(m=>({l:m[0],v:m[1]}));
     const dkey=cat+':'+d[1];
@@ -6331,7 +6337,7 @@ class Component extends DCLogic {
            demoNote:stxt('doc.demo_note','Энэ бол эх бичвэрийн загвар харагдац (демо) — бодит PDF агуулга биш. Бүрэн эх хувийг дээрх "Онлайн унших" эсвэл "Татах" товчоор аваарай.')},
         title:d[1],org:d[2],year:d[3],fmt:d[4],color:NEON[d[0]],glyph:GLYPH[d[0]],
         sectorLabel:SECTORS[d[0]].label,catLabel:(DOC_CATS.find(c=>c[0]===cat)||['','—'])[1],
-        pages,pagesLabel:pages+' хуудас',meta,toc,tabs,related,readerPage,
+        pages,pagesLabel:stxt('doc.pages_unknown','Хуудасны тоо: мэдээлэл алга'),meta,toc,tabs,related,readerPage,
         abstract:this.state.docExpand?abstractFull:abstractFull.slice(0,215)+'…',
         expandLabel:this.state.docExpand?'Хураах':'Дэлгэрэнгүй үзэх',
         toggleExpand:()=>this.setState(s=>({docExpand:!s.docExpand})),
@@ -6401,16 +6407,16 @@ class Component extends DCLogic {
       stage:p.stage==='Яаманд хүргэгдсэн'?'Санал хураалт':(p.stage==='Хэлэлцэгдэж байна'?'Сурталчилгаа':(p.stage==='Судлагдаж байна'?'Боловсронгуй болгох':'Техник шалгалт')),
       extra:p.resp,viz:'line'}));
     const req=REQUESTS.map((r,i)=>({kind:'request',kindLabel:'Өгөгдлийн хүсэлт',idx:i,sector:keys[i%keys.length],title:r.title,by:'Иргэдийн хүсэлт',
-      body:r.desc,meta:'Нээлттэй санд байхгүй өгөгдөл',support:parseInt(String(r.votes).replace(/\D/g,''))||24,goal:300,
+      body:r.desc,meta:'Нээлттэй санд байхгүй өгөгдөл',support:parseInt(String(r.votes).replace(/\D/g,''))||0,goal:300,
       stage:r.status==='Хэрэгжсэн'?'Хэрэгжсэн':(r.status==='Судлагдаж байна'?'Техник шалгалт':'Ирүүлсэн'),
       extra:r.status,viz:'bar'}));
     let feed=dash.concat(pol,req).map(it=>{
       const k=this.cKey(it), voted=!!votes[k], opposed=!!against[k];
-      const base=Math.round(it.support*0.14);
+      /* Эсрэг саналын НИЙТ тоо хаана ч хадгалагддаггүй — өмнө нь
+         дэмжлэгийн 14% гэж зохиодог тул бүх бичлэг "88% дэмжсэн" гардаг
+         байв. Зөвхөн энэ хэрэглэгчийн өөрийн санал л бодит. */
       const sup=it.support+(voted?1:0);
-      const opp=base+(opposed?1:0);
       const pct=Math.min(100,Math.round(sup/it.goal*100));
-      const share=Math.round(sup/(sup+opp)*100);
       const st=this.STAGES().indexOf(it.stage);
       const col=NEON[it.sector];
       const kindColor=it.kind==='dash'?'#0FA37F':(it.kind==='policy'?'#7C5CF0':'#B9903A');
@@ -6420,8 +6426,9 @@ class Component extends DCLogic {
       return {...it,voted,opposed,color:col,glyph:GLYPH[it.sector],sectorLabel:SECTORS[it.sector].label,
         kindColor,stageIdx:st,sortVal:sup,
         anon,voteGlyph:anon?'🔒':'▲',opposeGlyph:anon?'🔒':'▼',
-        supportLabel:sup.toLocaleString(),opposeLabel:opp.toLocaleString(),
-        goalLabel:it.goal.toLocaleString(),pctW:pct+'%',pctLabel:pct+'%',shareLabel:share+'% дэмжсэн',
+        supportLabel:sup.toLocaleString(),opposeLabel:opposed?'1':'',
+        goalLabel:it.goal.toLocaleString(),pctW:pct+'%',pctLabel:pct+'%',
+        shareLabel:stxt('community_data.share_unknown','эсрэг санал: мэдээлэл алга'),
         commentCount:(comments[k]||[]).length,
         initials:it.by.replace(/[^A-Za-zА-ЯӨҮа-яөү]/g,' ').trim()[0]||'E',
         open:()=>this.setState({projOpen:this.cKey(it),cDraft:'',cCommentsOpen:true}),
@@ -6463,10 +6470,7 @@ class Component extends DCLogic {
     let detail=null;
     if(sel){
       const k=this.cKey(sel), voted=!!votes[k], opposed=!!against[k];
-      const dbase=Math.round(sel.support*0.14);
       const sup=sel.support+(voted?1:0);
-      const opp=dbase+(opposed?1:0);
-      const dshare=Math.round(sup/(sup+opp)*100);
       const pct=Math.min(100,Math.round(sup/sel.goal*100));
       const si=this.STAGES().indexOf(sel.stage);
       const col=NEON[sel.sector];
@@ -6479,8 +6483,9 @@ class Component extends DCLogic {
         voteGlyph:this.state.authed?'▲':'🔒',opposeGlyph:this.state.authed?'▼':'🔒',
         voteLabel:voted?'✓ Дэмжсэн':'Дэмжих',
         opposeLabel:opposed?'✓ Дэмжихгүй':'Дэмжихгүй',
-        opposeCount:opp.toLocaleString(),shareLabel:dshare+'% дэмжсэн',
-        shareW:dshare+'%',
+        opposeCount:opposed?'1':'—',
+        shareLabel:stxt('community_data.share_unknown','эсрэг санал: мэдээлэл алга'),
+        shareKnown:false,shareW:'0%',
         voteStyle:'display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:inherit;width:100%;border-radius:12px;padding:13px;font-size:13px;font-weight:700;white-space:nowrap;border:none;transition:.18s var(--ease);'
           +(voted?'background:'+col+'22;color:'+col+';box-shadow:inset 0 0 0 1px '+col+';':'background:linear-gradient(135deg,'+col+',#2E5CE6);color:#FFFFFF;box-shadow:0 12px 26px -12px '+col+';'),
         opposeStyle:'display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:inherit;width:100%;border-radius:12px;padding:13px;font-size:13px;font-weight:600;white-space:nowrap;transition:.18s var(--ease);'
@@ -7343,7 +7348,7 @@ class Component extends DCLogic {
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
        Эх сурвалж холбогдох хүртэл "—" + шалтгааныг ил хэлнэ. */
-    const wp={wpNoData:true,total:'—',ytd:'—',wow:'—',wowColor:'var(--ink3)',
+    const wp={wpNoData:true,hasPlan:false,total:'—',ytd:'—',wow:'—',wowColor:'var(--ink3)',
       yoy:'—',yoyColor:'var(--ink3)',planLabel:'—',planPctLabel:'—',planWidth:'0%',
       note:stxt('detail.wp_no_source','Энэ датасэтийн 7 хоногийн гүйцэтгэлийн эх сурвалж холбогдоогүй — тоо харуулахгүй.')};
     const isAirDetail=dsel.sector==='air';

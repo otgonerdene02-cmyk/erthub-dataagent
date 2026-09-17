@@ -3139,15 +3139,64 @@ async function groupZ3() {
       await sleep(6000);
       const vals=[...d.querySelectorAll('[data-wp-val]')].map(e=>e.textContent.trim());
       const nd=d.querySelector('[data-wp-nodata]');
-      return {vals:vals, nodata:nd?nd.textContent.trim():'', text:d.body.innerText};
+      return {vals:vals, nodata:nd?nd.textContent.trim():'', text:d.body.innerText,
+              plan:!!d.querySelector('[data-wp-plan]')};
     }`, 120000);
     if (D.__err) bad('Z9. Дэлгэрэнгүй хуудас ачаалагдав', D.__err);
     else {
-      check('Z9. Дөрвөн утга + төлөвлөгөө "—" (зохиомол тоо алга)',
-        D.vals.length === 6 && D.vals.every((v) => v === '—'), JSON.stringify(D.vals));
+      check('Z9. Дөрвөн утга "—" (зохиомол тоо алга)',
+        D.vals.length === 4 && D.vals.every((v) => v === '—'), JSON.stringify(D.vals));
+      /* Z15 — эх сурвалжгүй үед "2025 оны төлөвлөгөө — —" гэсэн хоосон мөр гарахгүй */
+      check('Z15. Эх сурвалжгүй үед төлөвлөгөөний мөр нуугдана', D.plan === false, String(D.plan));
       check('Z9. "Эх сурвалж холбогдоогүй" гэж ил хэлнэ', D.nodata === con.site.detail.wp_no_source, D.nodata);
       const fake = (12000 + String(ds.name).length * 1370).toLocaleString('en-US');
       check('Z9. Хуучин зохиомол мөрийн тоо (' + fake + ') гарахгүй', D.text.indexOf(fake) < 0);
+    }
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
+/* ─────────── Z12–Z14. ux-qa-persona 3-р ээлжийн үлдэгдэл ───────────
+   Z12 — баримтын хуудасны тоо нэрнээс зохиогдохгүй
+   Z13 — коммунитийн эсрэг санал/дэмжлэгийн хувь зохиогдохгүй
+   Z14 — доод мөрийн тайлбарт git-ийн үг алга */
+async function groupZ4() {
+  group('Z12–Z14. Баримтын хуудас · коммунитийн хувь · доод мөр');
+  const idx = read('index.html'), con = readJson('content.json');
+  check('Z12. Баримтын хуудасны тоо нэрний уртаас тооцогдохгүй',
+    !/const seed=\(d\[1\]\.length/.test(idx) && !idx.includes('48+seed*6'));
+  check('Z12. Гарчигт зохиомол хуудасны дугаар алга',
+    !/Math\.round\(pages\*0\.\d+\)/.test(idx));
+  check('Z12. Хуудасны тоо тодорхойгүй гэж хэлнэ (content.json)',
+    typeof (con.site.doc || {}).pages_unknown === 'string' && idx.includes("stxt('doc.pages_unknown'"));
+  check('Z13. Эсрэг санал дэмжлэгийн 14% гэж зохиогдохгүй',
+    !/support\*0\.14/.test(idx));
+  check('Z13. Саналгүй хүсэлтэд дур мэдэн 24 өгөхгүй',
+    !/\|\|24,goal/.test(idx));
+  check('Z13. "Эсрэг санал: мэдээлэл алга" content.json-д',
+    typeof (con.site.community_data || {}).share_unknown === 'string' &&
+    idx.includes("stxt('community_data.share_unknown'"));
+  check('Z14. Доод мөрийн тайлбарт "commit" үг алга',
+    !/commit/i.test(con.ui.app.export_note) && !/data-ui="app\.export_note">[^<]*commit/i.test(read('admin/index.html')),
+    con.ui.app.export_note);
+
+  if (!CHROME) { skipped('Z13 (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html#/community';
+    const C = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(6000);
+      return {text:d.body.innerText};
+    }`, 120000);
+    if (C.__err) bad('Z13. Коммунити хуудас ачаалагдав', C.__err);
+    else {
+      const pcts = C.text.match(/\d+% дэмжсэн/g) || [];
+      check('Z13. "NN% дэмжсэн" зохиомол хувь гарахгүй', pcts.length === 0, pcts.slice(0, 3).join(', '));
+      check('Z13. Эсрэг саналын мэдээлэл алга гэж ил хэлнэ',
+        C.text.indexOf(con.site.community_data.share_unknown) >= 0);
     }
   } finally {
     PROBE_SRC = '/admin/index.html';
@@ -3160,10 +3209,10 @@ console.log('ErtHub — систем тест');
 (async () => {
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
-  if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); }
+  if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4();
   }
 
   console.log('\n' + '═'.repeat(62));
