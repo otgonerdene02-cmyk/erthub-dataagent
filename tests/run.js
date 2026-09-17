@@ -1487,7 +1487,7 @@ async function groupL() {
 
   check('L4. Админд каталогийн карт, нэмэх/хасах товч байна',
     adm.includes('data-ds-card') && adm.includes('data-ds-add') && adm.includes('data-ds-del'));
-  check('L4. Каталог "Дата холболт" табд холбогдсон', adm.includes('lvCharts()+lvDatasets()'));
+  check('L4. Каталог "Дата холболт" табд холбогдсон', adm.includes("'<div id=\"mt-ds\">'+lvDatasets()"));
 
   check('L5. Каталогийн хайлт НЭРЭЭР ажиллана (d.title БИШ)',
     idx.includes("(d.name||'')+' '+(d.agency||'')") && !idx.includes("d.title+' '+d.desc"),
@@ -1564,7 +1564,7 @@ async function groupM() {
 
   check('M4. Админд үйлчилгээний карт, нэмэх/хасах товч байна',
     adm.includes('data-sv-card') && adm.includes('data-sv-add') && adm.includes('data-sv-del'));
-  check('M4. Каталог "Дата холболт" табд холбогдсон', adm.includes('lvDatasets()+lvServices()'));
+  check('M4. Каталог "Дата холболт" табд холбогдсон', adm.includes("'<div id=\"mt-svc\">'+lvServices()"));
 
   /* M6. Хуудасны бусад текст (таб, алхам, тоолуурын үг) ч засварлагдана —
      каталог засварлагдаж мөртөө хажуугийн бичиг код дотор үлдвэл
@@ -1769,7 +1769,8 @@ async function groupO() {
     adm.includes('var fn=f[0]') && !adm.includes('invFieldUsers(ds,f.name,ag)'),
     'measures() массив буцаадаг — f.name уншвал undefined');
   check('O1. Дата сан "Дата холболт" табын ЭХЭНД',
-    adm.includes('var invHtml=lvInventory();') && adm.includes('return invHtml+'));
+    adm.includes('var invHtml=lvInventory();') && /* Тоймын ард ШУУД — дата сан бусад хэсгээс өмнө */
+    adm.includes("return toc+'<div id=\"mt-inv\">'+invHtml+'</div>'"));
 
   check('O2. Таван шүүлт (салбар, датасэт, нэгж, төрөл, төлөв)',
     ["'sector'", "'dataset'", "'unit'", "'kind'", "'state'"]
@@ -2988,15 +2989,104 @@ async function groupZ() {
   }
 }
 
+/* ─────────── Z5–Z8. Анхны сэтгэгдэл — 2-р ээлж ───────────
+   Z5 — жагсаалтад дотоод ID (w2pb) ил гарахгүй
+   Z6 — метрик сонголт 2 алхамтай: талбар (нэг удаа) → нэгтгэл тусдаа
+   Z7 — "Дата холболт" таб агуулгын тоймтой, хэсэг бүр рүү үсэрнэ
+   Z8 — шинэ текст content.json-д */
+async function groupZ2() {
+  group('Z5–Z8. Анхны сэтгэгдэл (ID · метрик сонголт · табын тойм)');
+  const con = readJson('content.json'), adm = adminScript();
+  const mt = con.ui.metrics_tab || {};
+  const needM = ['toc_label', 'toc_note', 'toc_inv', 'toc_metrics', 'toc_charts', 'toc_ds', 'toc_svc'];
+  const missM = needM.filter((k) => typeof mt[k] !== 'string' || !mt[k]);
+  check('Z8. Табын тоймын бичиг content.json-д', missM.length === 0, missM.join(', '));
+  check('Z8. Нэгтгэлийн шошго content.json-д',
+    typeof (con.ui.metric || {}).agg_label === 'string' && adm.includes("utxt('metric.agg_label'"));
+  const ids = Object.keys(readJson('metric_registry.json').widgets);
+
+  if (!CHROME) { skipped('Z5–Z7 (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(4500);
+      const R={};
+      const back=async()=>{let b,n=0;while((b=d.querySelector('[data-back]'))&&n++<6){b.click();await sleep(250)}};
+      /* ── Z5 ── */
+      d.querySelector('[data-section="sec-02"]').click(); await sleep(700);
+      R.cdt=[...d.querySelectorAll('.cd-t')].map(e=>e.textContent).join(' || ');
+      R.cdTitle=(d.querySelector('.cd-n')||{}).title||'';
+      await back();
+      d.getElementById('allBtn').click(); await sleep(900);
+      R.allhead=[...d.querySelectorAll('.allhead')].map(e=>e.textContent).join(' || ');
+      d.getElementById('allBtn').click(); await sleep(400);
+      await back();
+      /* ── Z6 ── */
+      d.querySelector('[data-section="hero"]').click(); await sleep(600);
+      d.querySelector('[data-widget="hero_fl"]').click(); await sleep(1200);
+      const S0=()=>d.querySelector('[data-slot^="hero_fl|"]');
+      const og=S0().querySelector('optgroup');
+      const fopts=og?[...og.querySelectorAll('option')].map(o=>o.value):[];
+      R.fN=fopts.length;
+      R.fDup=fopts.map(v=>v.slice(6).split('|')[0]).filter((m,i,a)=>a.indexOf(m)!==i).length;
+      R.total=S0().options.length;
+      R.aggBefore=!!d.querySelector('[data-slotagg]');
+      R.orig=S0().value;
+      const pvT=()=>(d.getElementById('pvhost')||{}).innerText||'';
+      S0().value='field:Зорчигч|SUM'; S0().dispatchEvent(new w.Event('change',{bubbles:true})); await sleep(1300);
+      const ag=d.querySelector('[data-slotagg]');
+      R.agg=ag?ag.value:null; R.aggOpts=ag?[...ag.options].map(o=>o.value).join(','):'';
+      const t1=pvT();
+      if(ag){ ag.value='MAX'; ag.dispatchEvent(new w.Event('change',{bubbles:true})); await sleep(1300) }
+      R.afterMax=S0().value; R.aggAfter=(d.querySelector('[data-slotagg]')||{}).value;
+      R.pvChanged=pvT()!==t1;
+      const s2=S0(); s2.value=R.orig; s2.dispatchEvent(new w.Event('change',{bubbles:true})); await sleep(1200);
+      R.aggGone=!d.querySelector('[data-slotagg]');
+      const cc=d.querySelector('[data-tcancel]'); if(cc&&!cc.disabled){ cc.click(); await sleep(300) }
+      R.dirty=d.getElementById('dirtyMsg').textContent;
+      /* ── Z7 ── */
+      d.querySelector('[data-tab="metrics"]').click(); await sleep(1300);
+      const js=[...d.querySelectorAll('[data-mtjump]')];
+      R.jumps=js.map(b=>b.getAttribute('data-mtjump'));
+      R.targets=R.jumps.filter(k=>d.getElementById('mt-'+k)).length;
+      R.tocText=(d.querySelector('.mttoc')||{}).textContent||'';
+      const last=js[js.length-1];
+      if(last){ last.click(); await sleep(900);
+        const r=d.getElementById('mt-'+last.getAttribute('data-mtjump')).getBoundingClientRect();
+        R.lastTop=Math.round(r.top) }
+      return R;
+    }`, 150000);
+    if (R.__err) { bad('Z5–Z7. DOM шалгалт ажиллав', R.__err); return; }
+    const leak = (s) => ids.filter((id) => new RegExp('(^|[^a-z0-9_])' + id + '([^a-z0-9_]|$)').test(s));
+    check('Z5. Хэсгийн жагсаалтын мета мөрөнд виджетийн ID алга', R.cdt.length > 0 && leak(R.cdt).length === 0, leak(R.cdt).join(',') + ' | ' + R.cdt.slice(0, 120));
+    check('Z5. ID хөгжүүлэгчид title-д үлдсэн', /w2p/.test(R.cdTitle), R.cdTitle);
+    check('Z5. Бүх харагдацын картын толгойд ID алга', R.allhead.length > 0 && leak(R.allhead).length === 0, leak(R.allhead).join(','));
+    check('Z6. Талбар бүр сонголтод НЭГ л удаа (' + R.fN + ')', R.fN >= 3 && R.fDup === 0, 'давхардал ' + R.fDup);
+    check('Z6. Нийт сонголт 25-аас бага (' + R.total + ')', R.total < 25, String(R.total));
+    check('Z6. Бүртгэлтэй метрикт нэгтгэлийн сонголт гарахгүй', R.aggBefore === false);
+    check('Z6. Талбар сонгоход нэгтгэл тусдаа гарна (SUM)', R.agg === 'SUM' && R.aggOpts === 'SUM,AVG,MIN,MAX', R.agg + ' ' + R.aggOpts);
+    check('Z6. Нэгтгэл солиход утга шинэчлэгдэнэ', R.afterMax === 'field:Зорчигч|MAX' && R.aggAfter === 'MAX', R.afterMax + ' ' + R.aggAfter);
+    check('Z6. Нэгтгэл солиход preview өөрчлөгдөнө', R.pvChanged === true);
+    check('Z6. Метрик руу буцахад нэгтгэл нуугдаж, өөрчлөлт үлдэхгүй',
+      R.aggGone && /алга/.test(R.dirty), R.aggGone + ' ' + R.dirty);
+    check('Z7. Табын тойм 5 хэсэгтэй, бүгд байна', R.jumps.length === 5 && R.targets === 5, R.jumps.join(','));
+    check('Z7. Тойм табын зорилгыг хэлнэ', R.tocText.length > 40, R.tocText.slice(0, 80));
+    check('Z7. Хэсэг рүү үсэрнэ', typeof R.lastTop === 'number' && R.lastTop < 250 && R.lastTop > -50, String(R.lastTop));
+  } finally {
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
-  if (process.argv.includes('--only=Z')) await groupZ();
+  if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2();
   }
 
   console.log('\n' + '═'.repeat(62));

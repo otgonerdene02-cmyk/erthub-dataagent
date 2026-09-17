@@ -170,6 +170,11 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .sgtoc .lbl{font-family:var(--mono);font-size:10px;color:var(--ink3);margin-right:2px}
 .sgtoc .ct{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-left:2px}
 .sgsp{flex:1}
+.mttoc{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:16px}
+[id^="mt-"]{scroll-margin-top:12px}
+.slotagg{display:flex;align-items:center;gap:8px;margin-top:6px}
+.slotagg label{font-size:11px;color:var(--ink3);margin:0}
+.slotagg select{width:auto}
 .sfield{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;align-items:start;
   padding:9px 0;border-bottom:1px solid var(--line)}
 .sfield:last-child{border-bottom:0}
@@ -343,7 +348,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
   padding:11px;cursor:pointer;transition:.13s}
 .allcard:hover{border-color:var(--road);box-shadow:0 3px 14px rgba(19,26,46,.08)}
 .allhead{display:flex;align-items:center;gap:7px;margin-bottom:8px}
-.allid{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2)}
+.allid{font-size:11.5px;font-weight:600;color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .allpos{font-family:var(--mono);font-size:8px;color:var(--ink3);background:rgba(20,32,58,.05);
   border-radius:4px;padding:1px 4px}
 .allsec{font-family:var(--mono);font-size:8.5px;color:var(--ink3);margin-left:auto;
@@ -2924,7 +2929,24 @@ function lvMetrics(){
   });
   if(!shown && q) html='<div class="empty">"'+esc(S.q)+'" '+esc(utxt('site_tab.not_found','— тохирох текст олдсонгүй'))+'</div>';
   if(!keys.length) html='<div class="empty">'+esc(utxt('metrics_tab.empty','Метрик бүртгэгдээгүй байна'))+'</div>';
-  return invHtml+
+  /* Нэг табад 5 өөр ажил (дата сан, метрик, чарт, 2 каталог) байгаа тул
+     дээр нь "энэ табад юу байна" гэсэн тойм — GOV.UK "Contents"-ийн
+     жишгээр. Хэсгүүдийг нуухгүй (хайлт бүгдэд ажиллана), зөвхөн үсэрнэ. */
+  var tocItems=[
+    ['inv',utxt('metrics_tab.toc_inv','Дата сан'),invRows().length],
+    ['metrics',utxt('metrics_tab.toc_metrics','Метрикүүд'),keys.length],
+    ['charts',utxt('metrics_tab.toc_charts','Чарт бүтээгч'),null],
+    ['ds',utxt('metrics_tab.toc_ds','Датасэтийн каталог'),dsList().length],
+    ['svc',utxt('metrics_tab.toc_svc','Үйлчилгээний каталог'),svcList().length]];
+  var toc='<div class="mttoc"><p class="pvnote" style="margin:0 0 8px">'+
+    esc(utxt('metrics_tab.toc_note','Энд эх сурвалжаас ирсэн өгөгдлийг виджеттэй холбож, метрикийн тайлбарыг засаж, нээлттэй өгөгдөл ба цахим үйлчилгээний жагсаалтыг хөтөлнө.'))+'</p>'+
+    '<div class="sgtoc" style="margin:0"><span class="lbl">'+esc(utxt('metrics_tab.toc_label','Энэ табад:'))+'</span>'+
+    tocItems.map(function(x){
+      return '<button class="fc" data-mtjump="'+x[0]+'">'+esc(x[1])+
+        (x[2]!=null?' <span class="ct">'+x[2]+'</span>':'')+'</button>';
+    }).join('')+'</div></div>';
+  return toc+'<div id="mt-inv">'+invHtml+'</div>'+
+    '<div id="mt-metrics"></div>'+
     '<p class="ph" style="margin-top:26px">'+esc(utxt('metrics_tab.heading','Бүртгэлтэй метрикүүд'))+' '+
     '<span style="font-family:var(--mono)">'+keys.length+'</span></p>'+html+
     '<p class="pvnote">'+esc(utxt('metrics_tab.note','Эдгээрийг виджетийн засварын дэлгэц дэх "Метрик холбох" сонголтод ашиглана. Эх сурвалж/датасэт/багана нь кодтой холбоотой тул зөвхөн хөгжүүлэгч өөрчилнө — нэгж, чанар, тайлбарыг энд шууд засаж болно.'))+'</p>'+
@@ -2937,7 +2959,9 @@ function lvMetrics(){
     '<div class="sfield"><textarea id="mNewWn" rows="2" placeholder="'+esc(utxt('metrics_tab.add_would_need_ph','Ямар эх сурвалж хэрэгтэйг бичнэ үү'))+'"></textarea></div>'+
     '<div class="acts"><button class="btn pri sm" data-madd="1">'+esc(utxt('metrics_tab.add_button','+ Шинэ метрик (зөвхөн төлөвлөгөө)'))+'</button></div>'+
     '</div>'+
-    lvCharts()+lvDatasets()+lvServices();
+    '<div id="mt-charts">'+lvCharts()+'</div>'+
+    '<div id="mt-ds">'+lvDatasets()+'</div>'+
+    '<div id="mt-svc">'+lvServices()+'</div>';
 }
 
 /* ══════════════════ ХАЙЛТ + ШҮҮЛТ ══════════════════
@@ -3026,7 +3050,7 @@ function lvAll(){
       var st=statOf(id);
       return '<div class="allcard" data-widget="'+esc(id)+'">'+
         '<div class="allhead"><span class="dot d-'+st+'"></span>'+
-        '<span class="allid">'+esc(id)+'</span>'+
+        '<span class="allid" title="'+esc(id)+'">'+esc(curText(id,'title')||id)+'</span>'+
         '<span class="allpos">'+esc(posInSection(id))+'</span>'+
         '<span class="allsec" title="'+esc(widgetPath(id))+'">'+esc(sectionLabel(anchorOf(id)))+(sectionDynNote(anchorOf(id))?' '+sectionDynNote(anchorOf(id)):'')+'</span></div>'+
         previewFor(id,true)+'</div>';
@@ -3107,9 +3131,11 @@ function lvWidgets(){
       return '<div class="cd'+(S.flash===id?' flash':'')+'" data-cd="'+esc(id)+'"><div class="cd-h">'+
         '<span class="dot d-'+st+'"></span>'+
         '<div class="cd-open" data-widget="'+esc(id)+'" role="button" tabindex="0">'+
-          '<div class="cd-n">'+esc(curText(id,'title')||id)+
+          /* Дотоод ID (w2pb) энгийн хэрэглэгчид утгагүй — хөгжүүлэгчид
+             зориулж зөвхөн title-д үлдээнэ. Хайлт ID-гаар хэвээр олно. */
+          '<div class="cd-n" title="'+esc(id)+'">'+esc(curText(id,'title')||id)+
             (widgetDirty(id)?' <b class="dt">'+esc(utxt('list.unsaved','хадгалаагүй'))+'</b>':'')+'</div>'+
-          '<div class="cd-t">'+esc(SHAPEN[SHAPE[id]]||KIND[id]||'')+' · '+esc(id)+
+          '<div class="cd-t">'+esc(SHAPEN[SHAPE[id]]||KIND[id]||'')+
             ' · '+esc(posInSection(id))+' '+esc(utxt('list.position','байрлал'))+
             ' · '+(txt?esc(utxt('list.text_only','зөвхөн текст'))
                      :esc(utxt('list.accepts','хүлээж авна:'))+' '+esc(ru||utxt('list.unit_unknown','нэгж тодорхойгүй')))+'</div>'+
@@ -3165,20 +3191,29 @@ function metricSelect(id,path,sectorKey){
      (б) ХАВТГАЙ sectors:['air'] (hero_fl/t05/i06/r06) — sectorKey===null.
      Хоёуланд нь сонголт өгнө, эс тэгвэл "чиг хандлага" мэтийн виджет дээр
      утга солих боломжгүй хэвээр үлдэнэ. */
-  var ds=(typeof VALUE_TARGETS!=='undefined')&&VALUE_TARGETS[id];
+  var ds=(typeof VALUE_TARGETS!=='undefined')&&VALUE_TARGETS[id], aggSel='';
   var isAirSlot=(sectorKey==='air')||(sectorKey===null&&ds);
   if(ds&&isAirSlot&&typeof EHChart!=='undefined'){
     var aggNames={SUM:utxt('chart_tab.agg_sum','Нийлбэр (SUM)'),AVG:utxt('chart_tab.agg_avg','Дундаж (AVG)'),
                   MIN:utxt('chart_tab.agg_min','Хамгийн бага (MIN)'),MAX:utxt('chart_tab.agg_max','Хамгийн их (MAX)')};
     var fo=[];
+    /* Талбар бүр НЭГ л удаа — нэгтгэлийг (SUM/AVG/MIN/MAX) талбар
+       сонгосны ДАРАА тусдаа сонгоно (Metabase/Looker-ийн "багана →
+       нэгтгэл" дараалал). Өмнө нь талбар × 4 нэгтгэл = 50+ мөр нэг
+       жагсаалтад холилдож, хэрэгтэй мөрөө олоход хэцүү байв. */
     EHChart.measures(ds).forEach(function(c){
-      ['SUM','AVG','MIN','MAX'].forEach(function(a){
-        var v='field:'+c[0]+'|'+a;
-        var sel=vsActive&&vspec.measure===c[0]&&(vspec.agg||'SUM')===a;
-        fo.push('<option value="'+esc(v)+'"'+(sel?' selected':'')+'>'+
-          esc(c[0])+' · '+esc(aggNames[a]||a)+(EHChart.unitOf(c[0])?' · '+esc(EHChart.unitOf(c[0])):'')+'</option>');
-      });
+      var cur=vsActive&&vspec.measure===c[0];
+      var a=cur?(vspec.agg||'SUM'):'SUM';
+      fo.push('<option value="'+esc('field:'+c[0]+'|'+a)+'"'+(cur?' selected':'')+'>'+
+        esc(c[0])+(EHChart.unitOf(c[0])?' · '+esc(EHChart.unitOf(c[0])):'')+'</option>');
     });
+    if(vsActive&&vspec.measure){
+      aggSel='<div class="slotagg"><label>'+esc(utxt('metric.agg_label','Нэгтгэл:'))+'</label>'+
+        '<select data-slotagg="'+esc(id)+'|'+path.join(',')+'|'+esc(sectorKey||'')+'">'+
+        ['SUM','AVG','MIN','MAX'].map(function(x){
+          return '<option value="'+x+'"'+((vspec.agg||'SUM')===x?' selected':'')+'>'+esc(aggNames[x]||x)+'</option>';
+        }).join('')+'</select></div>';
+    }
     /* Бичлэг ТООЛОХ — хэмжигдэхүүнгүй. Одоо байгаа метрикүүд (нислэгийн
        тоо) үүнтэй ижил үр дүн өгдөг тул ТӨГСГӨЛД: энэ сонголтын гол
        зорилго нь ХЭМЖИГДЭХҮҮН солих (нислэг → зорчигч). */
@@ -3196,7 +3231,7 @@ function metricSelect(id,path,sectorKey){
     opts.push('<optgroup label="'+esc(utxt('metric.unfit_group','Тохирохгүй (нэгж үл нийцнэ)'))+'">'+
       badOpts.join('')+'</optgroup>');
   }
-  return '<select data-slot="'+esc(id)+'|'+path.join(',')+'|'+esc(sectorKey||'')+'">'+opts.join('')+'</select>';
+  return '<select data-slot="'+esc(id)+'|'+path.join(',')+'|'+esc(sectorKey||'')+'">'+opts.join('')+'</select>'+aggSel;
 }
 
 /* Одоо холбогдсон метрик слотын дүрэм зөрчиж байгаа эсэх */
@@ -3891,6 +3926,10 @@ document.addEventListener('click',function(e){
     [].some.call(document.querySelectorAll('[data-sgt]'),function(b){
       if(b.dataset.sgt===gk){ b.focus(); return true } });
     return}
+  if((el=t.closest&&t.closest('[data-mtjump]'))){
+    var jt=$('mt-'+el.dataset.mtjump);
+    if(jt&&jt.scrollIntoView) jt.scrollIntoView({block:'start'});
+    return}
   if((el=t.closest&&t.closest('[data-sgpage]'))){
     S.sitePage=el.dataset.sgpage; $('body').innerHTML=lvSite(); return}
   if((el=t.closest&&t.closest('[data-sgall]'))){
@@ -4149,6 +4188,19 @@ document.addEventListener('change',function(e){
   var vz=e.target.closest&&e.target.closest('[data-viz]');
   if(vz){S.viz[vz.dataset.viz]=vz.value;render();
     toast(utxt('toast.viz_changed','Харагдацын хэлбэр:')+' '+vz.value);return}
+  /* Нэгтгэл солих — үндсэн сонголтын ОДООГИЙН талбарын утгыг шинэчлээд
+     ердийн change урсгалаар дамжуулна (ганц бичих зам). */
+  var sag=e.target.closest&&e.target.closest('[data-slotagg]');
+  if(sag){
+    var ms=[].filter.call(document.querySelectorAll('[data-slot]'),function(x){
+      return x.dataset.slot===sag.dataset.slotagg})[0];
+    var mo=ms&&ms.options[ms.selectedIndex];
+    if(!mo||mo.value.indexOf('field:')!==0) return;
+    var nv=mo.value.replace(/\|[A-Z]+$/,'|'+sag.value);
+    mo.value=nv; ms.value=nv;
+    ms.dispatchEvent(new Event('change',{bubbles:true}));
+    return;
+  }
   var sel=e.target.closest&&e.target.closest('[data-slot]');
   if(!sel)return;
   var p=sel.dataset.slot.split('|'), id=p[0], path=p[1]?p[1].split(','):[], sectorKey=p[2]||null, mk=sel.value||null;
