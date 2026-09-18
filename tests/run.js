@@ -3314,6 +3314,29 @@ async function groupBE() {
     reg2.metrics['rail.wagon_loading'] && reg2.metrics['rail.wagon_loading'].quality === 'pending');
   check('BE8. rail.wagon_loading ямар ч виджетэд холбогдоогүй',
     !Object.values(reg2.widgets).some(w => JSON.stringify(w).includes('rail.wagon_loading')));
+
+  /* ── BE9. Backend-ийн ХАРИУ → val()-ийн хүлээх хэлбэр ──
+     Backend нь {sector,status,data:[{month,total_volume}]} буцаадаг атлаа
+     val() нь `count`-ыг уншдаг байв — өгөгдөл ирж эхэлсэн ч сайт чимээгүй
+     "—" хэвээр үлдэх байсан. sectorSummaryToValue() хоёрыг холбоно.
+     Гараар бодох боломжтой фикстур: 2 сар → ХАМГИЙН СҮҮЛИЙНХ. */
+  const bs = dcScript().match(/function sectorSummaryToValue\(json\)\{([\s\S]*?)\n\}/);
+  if (!bs) { bad('BE9. sectorSummaryToValue() олдсонгүй'); return; }
+  const toVal = new Function('MONTHS', 'json', bs[1])
+    .bind(null, readJson('content.json').site.months);
+  const row = (m, v) => ({ sector: 'rail', month: m, total_volume: v });
+  check('BE9. Хоосон data → null (тоо ЗОХИОХГҮЙ)', toVal({ sector: 'rail', status: 'ok', data: [] }) === null);
+  check('BE9. Хариугүй → null', toVal(null) === null && toVal(undefined) === null);
+  check('BE9. status:"no_data" → null', toVal({ status: 'no_data', message: 'Мэдээлэл алга', data: [] }) === null);
+  const be1 = toVal({ status: 'ok', data: [row('2026-09-01T00:00:00.000Z', '50')] });
+  check('BE9. Нэг мөр → count 50, "9-р сар"', !!be1 && be1.count === 50 && be1.monthLabel === '9-р сар', JSON.stringify(be1));
+  const be2 = toVal({ status: 'ok', data: [row('2026-07-01T00:00:00.000Z', '10'), row('2026-08-01T00:00:00.000Z', '7')] });
+  check('BE9. Хоёр сар → СҮҮЛИЙНХ (8-р сар, 7)', !!be2 && be2.count === 7 && be2.monthLabel === '8-р сар', JSON.stringify(be2));
+  check('BE9. Тоон бус утга → null', toVal({ status: 'ok', data: [row('2026-09-01T00:00:00.000Z', 'тодорхойгүй')] }) === null);
+  check('BE9. Огноогүй мөр → null (сар зохиохгүй)', toVal({ status: 'ok', data: [{ total_volume: '5' }] }) === null);
+  check('BE9. Сайт хариуг ХӨРВҮҮЛЖ хадгална (шууд биш)',
+    dcScript().includes('this._railWagonLoading=sectorSummaryToValue(d)') &&
+    !/if\(d\) this\._railWagonLoading=d;/.test(dcScript()));
 }
 
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
