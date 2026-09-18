@@ -8,7 +8,7 @@
  *
  * Идэвхжүүлэх алхам:
  *   1. Серверт reverse proxy + SSL тохируулж, нийтийн URL гарган авна
- *      (жиш. https://api.erthub.mn эсвэл Cloudflare Tunnel-ийн URL).
+ *      (одоо: https://portal.mrt.gov.mn — nginx + Let's Encrypt, 2026-09-17).
  *   2. Доорх ETRANSPORT_BACKEND_BASE-д тэр URL-ийг бөглөнө (төгсгөлийн "/"
  *      ОРУУЛАХГҮЙ).
  *   3. Commit хийхэд js/erthub-backend.js автоматаар идэвхжинэ — код өөрчлөх
@@ -17,4 +17,4 @@
  * Хоосон үлдвэл (өгөгдмөл) backend-тэй холбогдох ямар ч оролдлого хийхгүй —
  * сайт яг өмнөх шигээ ажиллана (энэ файл шаардлага биш, нэмэлт л).
  */
-const ETRANSPORT_BACKEND_BASE = "";
+const ETRANSPORT_BACKEND_BASE = "https://portal.mrt.gov.mn";

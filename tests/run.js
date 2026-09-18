@@ -3257,15 +3257,75 @@ async function groupZ5() {
   }
 }
 
+/* ──────────────── BE. etransport-backend холболт (js/erthub-backend.js) ──────────────── */
+/* Backend нийтийн болсон (https://portal.mrt.gov.mn, 2026-09-17) тул
+   модуль URL-ийг зөв угсарч, алдаа/хоосон хариуг ЗОХИОМОЛ ТОО БОЛГОХГҮЙ
+   байгааг гараар бодох боломжтой фикстураар шалгана. */
+async function groupBE() {
+  group('BE. etransport-backend холболт');
+  const vm = require('vm');
+  const cfg = read('js/backend-config.js');
+  const m = cfg.match(/const ETRANSPORT_BACKEND_BASE\s*=\s*"([^"]*)"/);
+  const base = m ? m[1] : null;
+  check('BE1. backend-config.js-д BASE тодорхойлогдсон', base !== null);
+  check('BE1. BASE хоосон эсвэл https:// (mixed content-гүй)', base === '' || /^https:\/\//.test(base), base);
+  check('BE1. BASE төгсгөлд "/" алга', !base || !base.endsWith('/'), base);
+
+  const modSrc = read('js/erthub-backend.js');
+  function load(BASE, fetchImpl) {
+    const calls = [];
+    const ctx = { window: {}, console: { info() {} }, setTimeout, clearTimeout, AbortController,
+      ETRANSPORT_BACKEND_BASE: BASE,
+      fetch: (u, o) => { calls.push(u); return fetchImpl(u, o); } };
+    vm.runInNewContext(modSrc, ctx);
+    return { B: ctx.window.EHBackend, calls };
+  }
+  const okJson = (j) => () => Promise.resolve({ ok: true, json: () => Promise.resolve(j) });
+
+  const e = load('', okJson({}));
+  const r0 = await e.B.fetchRailWagonLoading();
+  check('BE2. BASE хоосон → enabled=false, сүлжээний хүсэлт 0', e.B.enabled === false && e.calls.length === 0 && r0 === null);
+
+  const a = load('https://x.test', okJson({ sector: 'rail', status: 'ok', data: [] }));
+  const r1 = await a.B.fetchRailWagonLoading();
+  check('BE3. URL = BASE + /api/sectors/rail/summary', a.calls[0] === 'https://x.test/api/sectors/rail/summary', a.calls[0]);
+  check('BE3. JSON хариу дамжина', r1 && r1.sector === 'rail');
+
+  const n = load('https://x.test', () => Promise.reject(new Error('net down')));
+  check('BE4. Сүлжээний алдаа → null (унахгүй)', (await n.B.fetchRailWagonLoading()) === null);
+  const h = load('https://x.test', () => Promise.resolve({ ok: false, status: 500 }));
+  check('BE5. HTTP 500 → null', (await h.B.fetchRailWagonLoading()) === null);
+
+  /* val() — index.html-ийн логикийг шууд гаргаж авч шалгана */
+  const vs = dcScript().match(/\n  val\(widgetId,fallback\)\{([\s\S]*?)\n  \}\n/);
+  if (!vs) { bad('BE6. val() олдсонгүй'); return; }
+  const val = new Function('widgetId', 'fallback', vs[1]);
+  const reg = { widgets: { w: { metric: 'rail.wagon_loading' } } };
+  const call = (live) => val.call({ state: { metricRegistry: reg }, _railWagonLoading: live }, 'w', '—');
+  const v0 = call({ sector: 'rail', status: 'ok', data: [] });
+  check('BE6. Хоосон data:[] → fallback "—" (тоо зохиохгүй)', v0.isFallback === true && v0.value === '—', JSON.stringify(v0));
+  const v1 = call(undefined);
+  check('BE6. Backend хариугүй → fallback', v1.isFallback === true);
+  const v2 = call({ count: 322, monthLabel: '9-р сар' });
+  check('BE7. count=322 → "322", fallback биш', v2.isFallback === false && v2.value === '322', JSON.stringify(v2));
+
+  const reg2 = readJson('metric_registry.json');
+  check('BE8. rail.wagon_loading quality:"pending" хэвээр (баталгаажаагүй)',
+    reg2.metrics['rail.wagon_loading'] && reg2.metrics['rail.wagon_loading'].quality === 'pending');
+  check('BE8. rail.wagon_loading ямар ч виджетэд холбогдоогүй',
+    !Object.values(reg2.widgets).some(w => JSON.stringify(w).includes('rail.wagon_loading')));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
-  if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
+  if (process.argv.includes('--only=BE')) { await groupBE(); }
+  else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE();
   }
 
   console.log('\n' + '═'.repeat(62));
