@@ -4498,6 +4498,24 @@ function sectorSummaryToValue(json){
           monthLabel:MONTHS[d.getUTCMonth()]};
 }
 
+/* Вагон ачилтын ТУСДАА endpoint (/api/sectors/rail/wagon-loading) →
+   val()-ийн хүлээх хэлбэр. Дээрх summary-гаас ЯЛГААТАЙ: энэ нь count-ыг
+   ШУУД өгдөг бөгөөд СҮҮЛИЙН ХОНОГИЙН дүн (сарын БИШ) тул сарын шошго
+   биш ОГНООГ буцаана — өгөгдөл ердөө хэдхэн хоногийнх байхад "9-р сар"
+   гэвэл бүтэн сарыг төлөөлж байгаа мэт ХУДАЛ уншигдана.
+   status:'no_data', тоон бус, сөрөг бол null — сайт "—" харуулна. */
+function wagonLoadingToValue(json){
+  if(!json||json.status!=='ok') return null;
+  const raw=json.count;
+  if(raw==null||String(raw).trim()==='') return null;
+  const n=Number(raw);
+  if(!isFinite(n)||n<0) return null;
+  const date=typeof json.date==='string'?json.date:null;
+  return {count:n,date,monthLabel:date,unit:json.unit||null,
+          stationCount:Number(json.station_count)||null,
+          unloadedCount:json.unloaded_count==null?null:Number(json.unloaded_count)};
+}
+
 function buildTrendChart(data,off){
   off=off||0;
   const w=600,h=170,padL=46,padR=12,padT=14,padB=26;
@@ -5055,10 +5073,12 @@ class Component extends DCLogic {
     if(typeof EHBackend==='undefined'||!EHBackend.enabled) return;
     try{
       const d=await EHBackend.fetchRailWagonLoading();
-      /* Хариуг ШУУД хадгалахгүй — val() нь {count} хүлээдэг, backend нь
-         {data:[…]} буцаадаг. Хөрвүүлэлтгүй бол өгөгдөл ирсэн ч сайт
-         чимээгүй "—" хэвээр үлдэнэ. */
-      this._railWagonLoading=sectorSummaryToValue(d);
+      /* Хариуг ШУУД хадгалахгүй — val() нь {count} хүлээдэг. Вагон ачилт
+         одоо ТУСДАА endpoint-оос ирдэг тул wagonLoadingToValue()-ээр
+         хөрвүүлнэ (summary-ийн sectorSummaryToValue() БИШ — тэр нь
+         {data:[{month,total_volume}]} хэлбэрт зориулагдсан, бусад салбар
+         амьд болоход fetchSectorSummary-тай хамт хэрэглэгдэнэ). */
+      this._railWagonLoading=wagonLoadingToValue(d);
     }catch(e){
       console.info('[ErtHub] etransport-backend уншигдсангүй:',e.message);
     }

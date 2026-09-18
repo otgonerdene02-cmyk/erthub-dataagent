@@ -48,8 +48,17 @@
       });
   }
 
+  /* Вагон ачилт — ТУСДАА endpoint (summary БИШ). summary нь gold-ийн сарын
+     нэгтгэл (rail-д зорчигчийн тоо) бөгөөд вагонтой өөр нэгжтэй тул хоёрыг
+     хольж болохгүй. Хариу: {status,date,unit,count,unloaded_count,
+     station_count,by_station[]} эсвэл {status:'no_data',count:null}. */
   function fetchRailWagonLoading() {
-    return fetchSectorSummary('rail');
+    if (!BASE) return Promise.resolve(null);
+    return fetchJson(BASE + '/api/sectors/rail/wagon-loading')
+      .catch(function (e) {
+        console.info('[ErtHub] backend (rail/wagon-loading) уншигдсангүй:', e.message);
+        return null;
+      });
   }
 
   window.EHBackend = {

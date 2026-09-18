@@ -3286,10 +3286,17 @@ async function groupBE() {
   const r0 = await e.B.fetchRailWagonLoading();
   check('BE2. BASE хоосон → enabled=false, сүлжээний хүсэлт 0', e.B.enabled === false && e.calls.length === 0 && r0 === null);
 
-  const a = load('https://x.test', okJson({ sector: 'rail', status: 'ok', data: [] }));
+  const a = load('https://x.test', okJson({ sector: 'rail', status: 'ok', count: 6415 }));
   const r1 = await a.B.fetchRailWagonLoading();
-  check('BE3. URL = BASE + /api/sectors/rail/summary', a.calls[0] === 'https://x.test/api/sectors/rail/summary', a.calls[0]);
-  check('BE3. JSON хариу дамжина', r1 && r1.sector === 'rail');
+  /* Вагон ачилт ТУСДАА endpoint-оос ирнэ — summary руу буцаж унавал
+     gold-ийн сарын зорчигчийн тоог вагон гэж ХУДАЛ уншина. */
+  check('BE3. URL = BASE + /api/sectors/rail/wagon-loading',
+    a.calls[0] === 'https://x.test/api/sectors/rail/wagon-loading', a.calls[0]);
+  check('BE3. JSON хариу дамжина', r1 && r1.count === 6415);
+  const a2 = load('https://x.test', okJson({ sector: 'road', status: 'ok', data: [] }));
+  await a2.B.fetchSectorSummary('road');
+  check('BE3. fetchSectorSummary нь summary URL хэвээр',
+    a2.calls[0] === 'https://x.test/api/sectors/road/summary', a2.calls[0]);
 
   const n = load('https://x.test', () => Promise.reject(new Error('net down')));
   check('BE4. Сүлжээний алдаа → null (унахгүй)', (await n.B.fetchRailWagonLoading()) === null);
@@ -3334,8 +3341,30 @@ async function groupBE() {
   check('BE9. Хоёр сар → СҮҮЛИЙНХ (8-р сар, 7)', !!be2 && be2.count === 7 && be2.monthLabel === '8-р сар', JSON.stringify(be2));
   check('BE9. Тоон бус утга → null', toVal({ status: 'ok', data: [row('2026-09-01T00:00:00.000Z', 'тодорхойгүй')] }) === null);
   check('BE9. Огноогүй мөр → null (сар зохиохгүй)', toVal({ status: 'ok', data: [{ total_volume: '5' }] }) === null);
-  check('BE9. Сайт хариуг ХӨРВҮҮЛЖ хадгална (шууд биш)',
-    dcScript().includes('this._railWagonLoading=sectorSummaryToValue(d)') &&
+  /* ── BE10. Вагон ачилтын ТУСДАА endpoint → val()-ийн хэлбэр ──
+     Бодит хариу (2026-09-05): count=6415, 33 станц. Хамгийн сүүлийн
+     ХОНОГИЙН дүн тул сарын шошго биш ОГНОО буцаана — хэдхэн хоногийн
+     датаг "9-р сар" гэвэл бүтэн сарыг төлөөлж байгаа мэт ХУДАЛ уншигдана. */
+  const ws = dcScript().match(/function wagonLoadingToValue\(json\)\{([\s\S]*?)\n\}/);
+  if (!ws) { bad('BE10. wagonLoadingToValue() олдсонгүй'); return; }
+  const toW = new Function('json', ws[1]);
+  const live = { sector: 'rail', metric: 'wagon_loading', status: 'ok', date: '2026-09-05',
+    unit: 'вагон', count: 6415, unloaded_count: 4725, station_count: 33 };
+  const w1 = toW(live);
+  check('BE10. count 6415, огноо 2026-09-05', !!w1 && w1.count === 6415 && w1.date === '2026-09-05', JSON.stringify(w1));
+  check('BE10. Шошго нь ОГНОО (сарын нэр БИШ)', !!w1 && w1.monthLabel === '2026-09-05' && !/сар/.test(String(w1.monthLabel)));
+  check('BE10. Нэгж ба станцын тоо дамжина', !!w1 && w1.unit === 'вагон' && w1.stationCount === 33 && w1.unloadedCount === 4725);
+  check('BE10. status:"no_data" → null (тоо ЗОХИОХГҮЙ)',
+    toW({ status: 'no_data', message: 'Мэдээлэл алга', count: null }) === null);
+  check('BE10. Хариугүй → null', toW(null) === null && toW(undefined) === null);
+  check('BE10. count дутуу/хоосон → null (0 гэж ХУДАЛ харуулахгүй)',
+    toW({ status: 'ok', date: '2026-09-05' }) === null && toW({ status: 'ok', count: '' }) === null);
+  check('BE10. Тоон бус count → null', toW({ status: 'ok', count: 'тодорхойгүй' }) === null);
+  check('BE10. Сөрөг count → null', toW({ status: 'ok', count: -5 }) === null);
+  check('BE10. count 0 бол 0 (бодит тэг ≠ дата алга)', (toW({ status: 'ok', count: 0 }) || {}).count === 0);
+  check('BE10. Сайт вагон ачилтыг wagonLoadingToValue-ээр хөрвүүлнэ',
+    dcScript().includes('this._railWagonLoading=wagonLoadingToValue(d)') &&
+    !/this\._railWagonLoading=sectorSummaryToValue\(d\)/.test(dcScript()) &&
     !/if\(d\) this\._railWagonLoading=d;/.test(dcScript()));
 }
 

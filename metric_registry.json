@@ -420,16 +420,16 @@
     },
     "rail.wagon_loading": {
       "name": "Төмөр замын вагон ачилтын хоногийн мэдээ",
-      "source": "EHBackend.fetchRailWagonLoading (js/erthub-backend.js → GET /api/sectors/rail/summary)",
+      "source": "EHBackend.fetchRailWagonLoading (js/erthub-backend.js → GET /api/sectors/rail/wagon-loading)",
       "dataset": "silver.rail_wagon_loading",
-      "column": "WIG_*/POG_*",
-      "agg": "тодорхойгүй",
-      "filter": "тодорхойгүй",
+      "column": "loaded_* (14 багана: mtd/covered/pl/pv/tank/reefer/other × дотоод/гадаад)",
+      "agg": "SUM — сүүлийн бүртгэлтэй ХОНОГИЙН бүх станцын ачилтын нийлбэр",
+      "filter": "record_date = max(record_date); буулгалт (unloaded_*) нийлбэрт ОРОХГҮЙ — өөр үйлдэл",
       "transform": "",
-      "unit": "тодорхойгүй",
+      "unit": "вагон",
       "additive": false,
       "quality": "pending",
-      "period_note": "Код (val()-ийн getters) холбогдсон, гэхдээ АМЬД БИШ: (1) backend (10.2.115.40:3000) одоогоор зөвхөн дотоод сүлжээнд (127.0.0.1), widget builder (GitHub Pages) хүрч чадахгүй — js/backend-config.js-ийн ETRANSPORT_BACKEND_BASE хоосон хэвээр; (2) нийтлэг болсон ч одоогийн /api/sectors/rail/summary нь silver.rail_operations уншдаг, шинэ ETL хийсэн silver.rail_wagon_loading-тай ХОЛБОГДООГҮЙ — аль нэгийг сонгох шийдвэр backend талд хараахан гараагүй. Иймд agg/filter/unit-ийг ЗОХИОХГҮЙ, endpoint-ийн бодит хариу тодорхой болмогц бөглөнө (HANDOFF_widget_builder.md харах). Ямар нэг widget слот руу ХАРААХАН холбогдоогүй — админ 'Виджет бүтээгч'-ийн метрик сонголтод харагдах ч 'метрик өөрөө verified биш' анхааруулгатай гарна."
+      "period_note": "АМЬД (2026-09-18): https://portal.mrt.gov.mn/api/sectors/rail/wagon-loading — nginx + Let’s Encrypt, CORS нь GitHub Pages-ийг зөвшөөрнө. summary-гаас ТУСДАА endpoint: summary нь gold.monthly_summary_by_sector (rail-д зорчигчийн тоо) уншдаг тул вагонтой хольж болохгүй. Амьд хариу дээр шалгахад val() нь 6,415 вагон (2026-09-05, 33 станц) болж гарсан. quality \"pending\" хэвээр байгаа ШАЛТГААН: (1) өгөгдөл ердөө 2 хоног (09-04 нь 17 станц дутуу, 09-05 нь 33 станц); (2) ETL хуваарьгүй, гараар ажилладаг тул тоо хуучирч болзошгүй; (3) нийт дүнг УБТЗ-ийн эх тайлангийн хоногийн нийлбэртэй тулгаж хараахан баталгаажуулаагүй (322 гэдэг нь 09-04-ний loaded_mtd_domestic ГАНЦ багана байсан). Эдгээр биелмэгц verified болгоно. Ямар ч widget слот руу ХАРААХАН холбоогүй."
     }
   },
   "removed": {
