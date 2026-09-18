@@ -3317,8 +3317,14 @@ async function groupBE() {
   check('BE7. count=322 → "322", fallback биш', v2.isFallback === false && v2.value === '322', JSON.stringify(v2));
 
   const reg2 = readJson('metric_registry.json');
-  check('BE8. rail.wagon_loading quality:"pending" хэвээр (баталгаажаагүй)',
-    reg2.metrics['rail.wagon_loading'] && reg2.metrics['rail.wagon_loading'].quality === 'pending');
+  /* 2026-09-18: УБТЗ-ийн эх файлтай 09-17-ны өдрөөр тулгаж 35/35 станц ЯГ
+     таарсны ДАРАА verified болгосон. Метрик verified байхад ямар ч виджетэд
+     холбогдоогүй нь ЗӨВ төлөв — холбох нь тусдаа шийдвэр. */
+  check('BE8. rail.wagon_loading quality:"verified" (эх файлтай тулгасан)',
+    reg2.metrics['rail.wagon_loading'] && reg2.metrics['rail.wagon_loading'].quality === 'verified');
+  check('BE8. mtd багана нийлбэрт ОРОХГҮЙ гэдэг registry-д тэмдэглэгдсэн',
+    /mtd/.test(reg2.metrics['rail.wagon_loading'].column) &&
+    /ХУРИМТЛАЛ/.test(reg2.metrics['rail.wagon_loading'].column));
   check('BE8. rail.wagon_loading ямар ч виджетэд холбогдоогүй',
     !Object.values(reg2.widgets).some(w => JSON.stringify(w).includes('rail.wagon_loading')));
 
@@ -3342,18 +3348,19 @@ async function groupBE() {
   check('BE9. Тоон бус утга → null', toVal({ status: 'ok', data: [row('2026-09-01T00:00:00.000Z', 'тодорхойгүй')] }) === null);
   check('BE9. Огноогүй мөр → null (сар зохиохгүй)', toVal({ status: 'ok', data: [{ total_volume: '5' }] }) === null);
   /* ── BE10. Вагон ачилтын ТУСДАА endpoint → val()-ийн хэлбэр ──
-     Бодит хариу (2026-09-05): count=6415, 33 станц. Хамгийн сүүлийн
-     ХОНОГИЙН дүн тул сарын шошго биш ОГНОО буцаана — хэдхэн хоногийн
-     датаг "9-р сар" гэвэл бүтэн сарыг төлөөлж байгаа мэт ХУДАЛ уншигдана. */
+     Фикстур нь УБТЗ-ийн эх файлаар БАТАЛГААЖСАН бодит хариу (2026-09-17):
+     1182 ачсан / 1027 буусан / 35 станц. Хамгийн сүүлийн ХОНОГИЙН дүн тул
+     сарын шошго биш ОГНОО буцаана — хоногийн датаг "9-р сар" гэвэл бүтэн
+     сарыг төлөөлж байгаа мэт ХУДАЛ уншигдана. */
   const ws = dcScript().match(/function wagonLoadingToValue\(json\)\{([\s\S]*?)\n\}/);
   if (!ws) { bad('BE10. wagonLoadingToValue() олдсонгүй'); return; }
   const toW = new Function('json', ws[1]);
-  const live = { sector: 'rail', metric: 'wagon_loading', status: 'ok', date: '2026-09-05',
-    unit: 'вагон', count: 6415, unloaded_count: 4725, station_count: 33 };
+  const live = { sector: 'rail', metric: 'wagon_loading', status: 'ok', date: '2026-09-17',
+    unit: 'вагон', count: 1182, unloaded_count: 1027, station_count: 35 };
   const w1 = toW(live);
-  check('BE10. count 6415, огноо 2026-09-05', !!w1 && w1.count === 6415 && w1.date === '2026-09-05', JSON.stringify(w1));
-  check('BE10. Шошго нь ОГНОО (сарын нэр БИШ)', !!w1 && w1.monthLabel === '2026-09-05' && !/сар/.test(String(w1.monthLabel)));
-  check('BE10. Нэгж ба станцын тоо дамжина', !!w1 && w1.unit === 'вагон' && w1.stationCount === 33 && w1.unloadedCount === 4725);
+  check('BE10. count 1182, огноо 2026-09-17', !!w1 && w1.count === 1182 && w1.date === '2026-09-17', JSON.stringify(w1));
+  check('BE10. Шошго нь ОГНОО (сарын нэр БИШ)', !!w1 && w1.monthLabel === '2026-09-17' && !/сар/.test(String(w1.monthLabel)));
+  check('BE10. Нэгж ба станцын тоо дамжина', !!w1 && w1.unit === 'вагон' && w1.stationCount === 35 && w1.unloadedCount === 1027);
   check('BE10. status:"no_data" → null (тоо ЗОХИОХГҮЙ)',
     toW({ status: 'no_data', message: 'Мэдээлэл алга', count: null }) === null);
   check('BE10. Хариугүй → null', toW(null) === null && toW(undefined) === null);
