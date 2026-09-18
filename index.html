@@ -795,7 +795,7 @@
                 <path d="{{ ls.spark }}" fill="none" stroke="{{ ls.color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
               </svg>
             </div>
-            <div data-eh-card="ls" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ink3);opacity:.85;white-space:nowrap;margin-top:5px;">{{ lsFoot }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ink3);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px;" title="{{ ls.footText }}"><span data-eh-card="ls" data-eh-field="foot" style="{{ ls.footBaseStyle }}">{{ lsFoot }}</span><span style="{{ ls.footNoteStyle }}">{{ ls.footNote }}</span></div>
           </button>
         </sc-for>
       </div>
@@ -1054,10 +1054,10 @@
               <div style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ k.deltaColor }};background:{{ k.deltaColor }}18;border-radius:999px;padding:4px 11px;">
                 <span style="font-size:9px;">{{ k.deltaGlyph }}</span>{{ k.delta }}
               </div>
-              <div style="font-size:9.5px;color:var(--ink3);white-space:nowrap;">{{ k.compareLabel }}</div>
+              <div style="font-size:9.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;" title="{{ k.compareLabel }}">{{ k.compareLabel }}</div>
             </div>
           </div>
-          <div data-eh-card="k04" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);opacity:.8;margin-top:12px;padding:0 22px;white-space:nowrap;">{{ k04Foot }}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);opacity:.8;margin-top:12px;padding:0 22px;white-space:nowrap;"><span data-eh-card="k04" data-eh-field="foot" style="{{ k.footBaseStyle }}">{{ k04Foot }}</span><span style="{{ k.footNoteStyle }}">{{ k.footNote }}</span></div>
           <svg sc-camel-view-box="0 0 120 32" sc-camel-preserve-aspect-ratio="none" style="width:100%;height:46px;display:block;margin-top:4px;">
             <defs>
               <linearGradient id="kpiFill" x1="0" y1="0" x2="0" y2="1">
@@ -1068,13 +1068,6 @@
             <path d="{{ k.sparkArea }}" fill="url(#kpiFill)" stroke="none"></path>
             <path d="{{ k.spark }}" fill="none" stroke="{{ activeColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
           </svg>
-          <div style="padding:12px 22px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;">
-            <div data-eh-card="k04" data-eh-field="foot2" style="font-size:9.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;font-family:'JetBrains Mono',monospace;white-space:nowrap;">{{ k04Foot2 }}</div>
-            <div style="flex:1;height:4px;border-radius:3px;background:var(--surface2);overflow:hidden;">
-              <div style="height:100%;border-radius:3px;background:{{ activeColor }};width:{{ k.confWidth }};"></div>
-            </div>
-            <div style="font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--ink2);font-weight:600;">{{ k.conf }}%</div>
-          </div>
         </div>
       </sc-for>
     </div>
@@ -3747,7 +3740,12 @@ const RECENT = [
   {title:'Улаанбаатарын замын хөдөлгөөний ачаалал', agency:'ЗТХЕГ', src:'Вэбсервис', date:'2026-07-29', sector:'road'},
   {title:'Зорчигчийн галт тэрэгний мэдээ', agency:'УБТЗ', src:'Вэбсервис', date:'2026-07-28', sector:'rail'},
   {title:'Автобусны бодит цагийн байршил', agency:'НТБГ', src:'API', date:'2026-07-27', sector:'public'},
-  {title:'Боомтын ачаа эргэлтийн мэдээ', agency:'ЗТЯ', src:'Эксэл', date:'2026-07-25', sector:'water'}
+  {title:'Боомтын ачаа эргэлтийн мэдээ', agency:'ЗТЯ', src:'Эксэл', date:'2026-07-25', sector:'water'},
+  /* Вагон ачилт — БОДИТ огноотой хоёр дахь мөр (эх сурвалж: railWagon).
+     `date` нь ЗОРИУД хоосон: backend ирээгүй үед огноо ЗОХИОХГҮЙ,
+     buildRecent() "мэдээлэл алга" гэж ил харуулна. */
+  {title:'Ачилт буулгалтын хоногийн мэдээ (вагон)', agency:'УБТЗ', src:'API', date:'', sector:'rail',
+   dataset:'Ачилт буулгалтын хоногийн мэдээ (вагон)', source:'railWagon', bind:{date:'feedUpdated'}}
 ];
 const RATIO = {
   road:{labels:['Хатуу хучилттай','Шороон зам'],pct:67.8},
@@ -4015,7 +4013,11 @@ function datasetSlug(d){
 // loadSources() автоматаар татна — өөр хаана ч гар хүрэх шаардлагагүй.
 const SOURCES={
   // ИНЕГ-ийн нислэгийн сан (veritech-flights-dashboard-ийн нийтэлдэг JSON).
-  flights:{label:'ИНЕГ · нислэгийн сан', load:app=>app.loadFlightsData()}
+  flights:{label:'ИНЕГ · нислэгийн сан', load:app=>app.loadFlightsData()},
+  // УБТЗ-ийн вагон ачилт (etransport-backend → /api/sectors/rail/wagon-loading).
+  // Backend хаалттай/BASE хоосон бол EHBackend.enabled=false тул ямар ч
+  // хүсэлт явахгүй — мөр нь "мэдээлэл алга" хэвээр үлдэнэ.
+  railWagon:{label:'УБТЗ · вагон ачилтын хоногийн мэдээ', load:app=>app.loadEtransportBackend()}
 };
 // Карт өөрөө өөрөөр зарлаагүй бол эдгээр метрик автоматаар үйлчилнэ —
 // үзэлтийн тоо бол салбар, эх сурвалж харгалзахгүй бүх датасэтэд утга учиртай.
@@ -4240,10 +4242,17 @@ function applySiteContent(){
     if(S.sectors&&S.sectors[k]) SECTORS[k].label=S.sectors[k];
     if(S.sector_chart&&S.sector_chart[k]) SECTORS[k].c1=S.sector_chart[k];
     const kl=S.sector_kpi&&S.sector_kpi[k];
-    if(Array.isArray(kl)) kl.forEach((lb,i)=>{ if(lb&&SECTORS[k].kpis[i]) SECTORS[k].kpis[i][0]=lb; });
+    /* Бодит дата холбогдсон салбарын KPI мөрийг СТАТИК нэрээр дарахгүй:
+       applySiteContent() нь (нийтлэл ирэх бүрд) ДАХИН дуудагддаг тул
+       rail-ийн амьд "ХОНОГИЙН АЧИЛТ" мөр дараагийн дуудалтаар "НИЙТ ЗАМ"
+       болж хувирч, тоо нь вагон хэвээр үлдэх байв. Амьд мөрийн нэр нь
+       өөрийн жагсаалттай (sector_kpi_<k>_live) — тэндээс уншина. */
+    if(Array.isArray(kl)&&!SECTORS[k]._liveKpis)
+      kl.forEach((lb,i)=>{ if(lb&&SECTORS[k].kpis[i]) SECTORS[k].kpis[i][0]=lb; });
     /* Нэгжийн товчлол — кодын анхны утгаар нь таньж солино (idempotent) */
     SECTORS[k].kpis.forEach(r=>{
-      const key={'км':'km','тн':'tn','тонн':'ton','хүн':'person'}[r[2]];
+      const key={'км':'km','тн':'tn','тонн':'ton','хүн':'person',
+                 'вагон':'wagon','станц':'station'}[r[2]];
       if(key) r[2]=stxt('unit.'+key,r[2]);
     });
   });
@@ -4631,31 +4640,27 @@ function buildDualAxisChart(barSeries,lineSeries,labels){
     w,h,padL,padR,padT,padB,axisX1:padL,axisX2:w-padR,axisYBottom:(padT+plotH).toFixed(1)};
 }
 
-function miniSpark(dir,seed){
-  const pts=[]; let v=40;
-  for(let i=0;i<10;i++){
-    const noise=Math.sin((i+seed)*1.7)*5;
-    if(dir==='up') v+=(i/10)*2.2+noise*0.3;
-    else if(dir==='down') v-=(i/10)*2.2-noise*0.3;
-    else v+=noise*0.4;
-    pts.push(v);
-  }
-  return pathFor(pts,120,32,3).line;
-}
+/* miniSpark() УСТГАВ (2026-09-18): чиглэлээс (up/down) синус муруй ЗОХИОЖ
+   зурдаг байсан бөгөөд "12 сарын чиг хандлага" шошготой хамт бодит цуваа
+   мэт уншигдаж байв — "тоо ЗОХИОХГҮЙ" дүрмийн зөрчил. Бодит цуваагүй бол
+   ХАВТГАЙ шугам (pathFor-ийн тэг цуваа) + "мэдээлэл алга" тайлбар. */
 
 function buildDiverging(activeKey){
   const keys=Object.keys(SECTORS);
   const items=keys.map(k=>{
-    const raw=SECTORS[k].kpis[0][3].replace(/−/g,'-');
-    const num=parseFloat(raw.replace('%',''));
-    return {key:k,label:SECTORS[k].label,num,color:NEON[k],on:k===activeKey};
+    const raw=String(SECTORS[k].kpis[0][3]||'').replace(/−/g,'-');
+    const n=parseFloat(raw.replace('%',''));
+    /* "—" (харьцуулах өгөгдөлгүй) бол 0 урттай зурвас + "—" шошго —
+       NaN% гэж гаргавал хуудас ХУДАЛ уншигдана. */
+    return {key:k,label:SECTORS[k].label,num:isFinite(n)?n:0,has:isFinite(n),
+      color:NEON[k],on:k===activeKey};
   });
   const maxAbs=Math.max.apply(null,items.map(i=>Math.abs(i.num)))||1;
   return items.map(i=>({
     ...i,
     leftPct:(i.num<0?(Math.abs(i.num)/maxAbs*100):0)+'%',
     rightPct:(i.num>0?(Math.abs(i.num)/maxAbs*100):0)+'%',
-    deltaLabel:(i.num>0?'+':'')+i.num.toFixed(1)+'%',
+    deltaLabel:i.has?((i.num>0?'+':'')+i.num.toFixed(1)+'%'):'—',
     rowOpacity:i.on?1:0.6
   }));
 }
@@ -4828,8 +4833,10 @@ class Component extends DCLogic {
     };
     window.addEventListener('popstate',this._onPop);
     this.loadGlobe(); this.syncMonths(); this.loadSources(); this.loadMongoliaGeo();
+    /* loadEtransportBackend-ийг ТУСАД НЬ дуудахгүй — SOURCES.railWagon
+       дамжуулан loadSources() дуудна (давхар fetch хийхгүй). */
     this.auditBindings(); this.loadContent(); this.loadMetricRegistry();
-    this.loadPublished(); this.loadEtransportBackend();
+    this.loadPublished();
     this._esc=(e)=>{ if(e.key==='Escape') this.escClose(); };
     window.addEventListener('keydown',this._esc);
     this._onResize=()=>this.setState({viewportW:window.innerWidth});
@@ -5079,9 +5086,46 @@ class Component extends DCLogic {
          {data:[{month,total_volume}]} хэлбэрт зориулагдсан, бусад салбар
          амьд болоход fetchSectorSummary-тай хамт хэрэглэгдэнэ). */
       this._railWagonLoading=wagonLoadingToValue(d);
+      this.applyRailWagonData();
     }catch(e){
       console.info('[ErtHub] etransport-backend уншигдсангүй:',e.message);
     }
+  }
+  // ── УБТЗ · вагон ачилтын хоногийн мэдээ → SECTORS.rail ────────────────
+  // Агаарын applyRealFlightsData()-тай ЯГ ИЖИЛ зарчим: бодит дата ирмэгц
+  // SECTORS тогтмолын KPI мөрийг ДАРЖ бичнэ. Ингэснээр 04-р хэсэг (k04),
+  // 01-р зурвас (ls), салбарын дэлгэрэнгүй хуудас — бүгд нэмэлт кодгүйгээр
+  // шинэ тоог уншина (тэд бүгд SECTORS[k].kpis-ээс уншдаг).
+  // Дата ирээгүй бол ОГТ ХӨНДӨХГҮЙ: статик мөр үлдэх ба kpiVerified()
+  // түүнийг "амьд" гэж ХУДАЛ тэмдэглэхгүй.
+  applyRailWagonData(){
+    const w=this._railWagonLoading;
+    if(!w||w.count==null) return;
+    /* Мөрийн нэр — content.json → site.sector_kpi_rail_live (air-ийн
+       sector_kpi_air_live-тэй ижил зарчим: амьд мөр нь статик мөрөөс
+       ӨӨР утгатай тул нэрийн жагсаалт нь ч тусдаа). */
+    const kl=(x,i)=>stxt('sector_kpi_rail_live.'+i,x);
+    const uw=stxt('unit.wagon','вагон'), us=stxt('unit.station','станц');
+    /* Өмнөх хоногийн дүнг endpoint буцаадаггүй тул өөрчлөлтийн хувийг
+       ЗОХИОХГҮЙ — "—" гэж тавиад шалтгааныг нь мөрийн доор ил бичнэ. */
+    const cmp=stxt('status.rail_wagon_compare','харьцуулах өгөгдөл алга (өмнөх хоногийн дүн ирээгүй)');
+    const rows=[[kl('ХОНОГИЙН АЧИЛТ',0),fmtNum(w.count),uw,'—','flat',cmp]];
+    if(w.unloadedCount!=null) rows.push([kl('ХОНОГИЙН БУУЛГАЛТ',1),fmtNum(w.unloadedCount),uw,'—','flat',cmp]);
+    if(w.stationCount!=null)  rows.push([kl('АЧИЛТТАЙ СТАНЦ',2),fmtNum(w.stationCount),us,'—','flat',cmp]);
+    SECTORS.rail.kpis=rows;
+    SECTORS.rail._liveKpis=true;
+    /* "Сүүлд шинэчлэгдсэн өгөгдөл" (u07) мөрийн огноо — RECENT-ийн
+       source:'railWagon' мөр bindCard()-аар ЭНЭ метагаас уншина. */
+    this.setSourceMeta('railWagon',{updatedAt:w.date,updatedAtFull:w.date,lastRecord:w.date});
+    this.setState({railWagonDate:w.date||''});
+  }
+  // Registry-ийн "verified" нь ХОЛБООС байгааг л хэлнэ — дата ИРСЭН гэсэн
+  // үг БИШ. Эх сурвалж унасан үед статик демо тоо (11,979 нислэг,
+  // 1,815 км) амьд мэт харагдаж байсан тул KPI мөрийг уншдаг виджет
+  // (ls / k04 / d05) бүрт "дата нь үнэхээр ирсэн үү" гэдгийг ДАВХАР шална.
+  kpiVerified(widgetId,sectorKey){
+    if(this.sectorQuality(widgetId,sectorKey).quality!=='verified') return false;
+    return !!(SECTORS[sectorKey]&&SECTORS[sectorKey]._liveKpis);
   }
   // Виджет → метрик → бодит утга. Registry ирээгүй, widget/metric
   // тодорхойлогдоогүй, эсвэл датаг хараахан тооцоолоогүй бол fallback-аа
@@ -5092,7 +5136,10 @@ class Component extends DCLogic {
     const metricId=reg&&reg.widgets&&reg.widgets[widgetId]&&reg.widgets[widgetId].metric;
     const getters={
       'air.flight_count_last_month':()=>this._heroFlLastMonth,
-      'rail.wagon_loading':()=>this._railWagonLoading
+      'rail.wagon_loading':()=>this._railWagonLoading,
+      /* KPI багцын "толгой" тоо нь ЯГ ижил хоногийн ачилт (kpis[0]) —
+         hero_fl ↔ air.kpi_set хосын ижил зарчим. */
+      'rail.wagon_kpi_set':()=>this._railWagonLoading
     };
     const live=metricId&&getters[metricId]&&getters[metricId]();
     if(!live||live.count==null) return {value:fallback,isFallback:true,monthLabel:null};
@@ -5752,6 +5799,10 @@ class Component extends DCLogic {
       [kl('ТЭЭВЭРЛЭГЧ',6),fmtCount(cur.carrierCount),'',pctDelta(cur.carrierCount,prev.carrierCount).s,pctDelta(cur.carrierCount,prev.carrierCount).dir,compareLabel],
       [kl('ХОТ',7),fmtCount(cur.cityCount),'',pctDelta(cur.cityCount,prev.cityCount).s,pctDelta(cur.cityCount,prev.cityCount).dir,compareLabel]
     ];
+    /* Бодит дата ирлээ — kpiVerified() ба applySiteContent() хоёулаа
+       үүнийг уншина (статик демо мөрийг "амьд" гэж тэмдэглэхгүй,
+       амьд мөрийн нэрийг статик нэрээр дарахгүй). */
+    SECTORS.air._liveKpis=true;
 
     // Trend chart: keep only months that actually have data — the chart's
     // own "AI прогноз" feature already draws a forecast tail past the last
@@ -7852,10 +7903,10 @@ class Component extends DCLogic {
     const keys=this.visibleSectorKeys('d05');
     const d05Spec=this.valueFromSpec('d05');
     const raw=keys.map(k=>{
-      const q=this.sectorQuality('d05',k);
-      let v=q.quality==='verified'?(parseFloat(String(SECTORS[k].kpis[0][1]).replace(/[^0-9.]/g,''))||0):0;
+      const live=this.kpiVerified('d05',k);
+      let v=live?(parseFloat(String(SECTORS[k].kpis[0][1]).replace(/[^0-9.]/g,''))||0):0;
       /* Утгын тохиргоо ЗӨВХӨН air салбарт (мөр түвшний дата зөвхөн тэнд). */
-      if(d05Spec&&k==='air'&&q.quality==='verified') v=d05Spec.raw;
+      if(d05Spec&&k==='air'&&live) v=d05Spec.raw;
       return {key:k,label:SECTORS[k].label,color:NEON[k],v};
     });
     const total=raw.reduce((s,r)=>s+r.v,0)||1;
@@ -8415,11 +8466,18 @@ class Component extends DCLogic {
     // байв (admin "холбоогүй" гэж, сайт амьд огноо гэж — хоёр өөр үнэн).
     const reg=this.state.metricRegistry;
     const u07=reg&&reg.widgets&&reg.widgets.u07;
-    const u07Bound=!!(u07&&u07.metric);
+    /* u07 одоо САЛБАР БҮРЭЭР холбогдоно (widgets.u07.sectors.<key>) —
+       мөр бүр өөр эх сурвалжтай тул ганц метрик 5 мөрийг төлөөлж чадахгүй
+       байв. Хуучин ХАВТГАЙ хэлбэрийг (metric) ч уншина: нийтлэгдсэн
+       хуучин registry ирвэл сайт унахгүй, өмнөх зан төлөв хэвээр. */
+    const u07Sec=(u07&&u07.sectors&&!Array.isArray(u07.sectors))?u07.sectors:null;
+    const u07Bound=(sector)=>u07Sec
+      ? !!(u07Sec[sector]&&u07Sec[sector].metric)
+      : !!(u07&&u07.metric);
     return RECENT.map(r=>{
       const ds=r.dataset?DATASETS.find(d=>d.sector===r.sector&&d.name===r.dataset):null;
       const decl={...r,name:ds?ds.name:r.title,source:r.source||(ds&&ds.source)};
-      const card=u07Bound
+      const card=u07Bound(r.sector)
         ? this.bindCard(decl,'date','Шинэчлэгдсэн')
         : {label:'Шинэчлэгдсэн',value:r.date,live:false};
       // H5 (нэмэлт): card.live=false үед card.value нь RECENT тогтмол
@@ -8443,29 +8501,44 @@ class Component extends DCLogic {
   // H5 (нэмэлт): "04" хэсэг идэвхтэй салбарын 4 (эсвэл air-ийн бодит үед 8)
   // KPI картыг үзүүлдэг. verified=false үед (registry: k04.sectors.<key>)
   // эдгээр нь SECTORS тогтмол статик тоо тул үнэ дүн/хувь/спарк бүгд
-  // ls-тэй ижил зарчмаар 0/"—"/хавтгай шугам болно. "AI ИТГЭЛ" (conf%)
-  // хэвээр үлдэнэ — энэ нь үргэлж чимэглэлийн шинжтэй тоо, air үед ч
-  // бодит тоо БИШ (өөрчлөлт шаардлагагүй).
-  buildKpis(kpis,color,verified,spec){
+  // ls-тэй ижил зарчмаар 0/"—"/хавтгай шугам болно. 2026-09-18: "AI ИТГЭЛ
+  // %" мөрийг ХАСАВ — [94,88,91,86,83] гэсэн хатуу жагсаалтаас гардаг,
+  // эх сурвалжгүй чимэглэл байсан. Хажууд нь амьд тоо (вагон ачилт)
+  // гарах болсноор иргэн үүнийг тухайн өгөгдлийн үнэн зөвийн хэмжүүр гэж
+  // уншихаар болсон тул "Тоо ЗОХИОХГҮЙ" дүрмээр устгасан.
+  buildKpis(kpis,color,verified,spec,foot){
     const flatSpark=pathFor(new Array(10).fill(0),120,32,3).line;
+    foot=foot||'';
     return kpis.map((k,i)=>{
       /* Утгын тохиргоо ЗӨВХӨН агаарын ЭХНИЙ картад (ls-тэй ижил зарчим) —
          тоо, нэгж, шошго, өөрчлөлтийн хувь, spark ХАМТ сонгосон
          хэмжигдэхүүнээс гарна. Бусад 7 карт хэвээр. */
       const vs=(i===0&&verified&&spec)?spec:null;
       const dir=vs?(vs.dir||'flat'):(verified?k[4]:'flat');
+      const delta=vs?(vs.delta||'—'):(verified?k[3]:'—');
       const deltaColor = verified?(dir==='up'?'#0E8F63':dir==='down'?'#C8443A':'#6B7896'):'#828EA8';
-      const deltaGlyph = verified?(dir==='up'?'▲':dir==='down'?'▼':'•'):'';
-      const conf=[94,88,91,86,83][i%5];
-      const spark=(vs&&vs.spark)?vs.spark:(verified?miniSpark(dir,i):flatSpark);
+      /* Өөрчлөлт "—" (харьцуулах өгөгдөл алга) бол сум/цэг тэмдэг утгагүй —
+         "• —" гэж уншигдахгүйн тулд тэмдгийг хоосон үлдээнэ. */
+      const deltaGlyph = (verified&&delta!=='—')?(dir==='up'?'▲':dir==='down'?'▼':'•'):'';
+      const hasSeries=!!(vs&&vs.spark);
+      const spark=hasSeries?vs.spark:flatSpark;
+      /* Хөл бичиг ("12 сарын чиг хандлага") нь БОДИТ цуваатай карт дээр л
+         үнэн. Үгүй бол ЯГ ЮУ дутууг нь хэлнэ — картын дээд талын
+         "харьцуулах өгөгдөл алга" нь ӨӨРЧЛӨЛТИЙН тухай, энэ нь ГРАФИКИЙН
+         тухай тул хоёрыг ялгаж бичнэ. */
+      const footNote=stxt('status.no_series','чиг хандлагын цуваа алга');
       return {label:vs?vs.label:k[0],
+        hasSeries,
+        footText:hasSeries?foot:footNote,
+        footNote:hasSeries?'':footNote,
+        footBaseStyle:hasSeries?'':'display:none;',
+        footNoteStyle:hasSeries?'display:none;':'',
         value:vs?vs.value:(verified?k[1]:'0'),
         unit:vs?(vs.unit||''):k[2],
-        delta:vs?(vs.delta||'—'):(verified?k[3]:'—'),
-        dir,deltaColor,deltaGlyph,
+        delta,dir,deltaColor,deltaGlyph,
         compareLabel:verified?(k[5]||'өмнөх сартай харьцуулбал'):stxt('status.no_data','мэдээлэл алга'),
         spark,sparkArea:spark+' L120,32 L0,32 Z',
-        conf,confWidth:conf+'%',index:String(i+1).padStart(2,'0')};
+        index:String(i+1).padStart(2,'0')};
     });
   }
 
@@ -8543,7 +8616,8 @@ class Component extends DCLogic {
     const livestrip=this.visibleSectorKeys('ls',keys).map(k=>{
       const sk=SECTORS[k];
       const on=k===key, dir=sk.kpis[0][4];
-      const q=this.sectorQuality('ls',k), verified=q.quality==='verified';
+      const q=this.sectorQuality('ls',k), verified=this.kpiVerified('ls',k);
+      const lsFootTxt=this.txt('ls','foot','өмнөх сартай харьцуулбал · 12 сарын график');
       const vs=(k==='air'&&verified)?lsSpec:null;
       return {key:k,label:sk.label,
         value:vs?vs.value:(verified?sk.kpis[0][1]:'0'),
@@ -8562,7 +8636,24 @@ class Component extends DCLogic {
           {road:'Авто зам',rail:'Төмөр зам',air:'Агаар',water:'Усан замын',public:'Нийтийн'}[k]),
         deltaColor:(function(d){return verified?(d==='up'?'#0E8F63':(d==='down'?'#C8443A':'#6B7896')):'#828EA8'})(vs?vs.dir:dir),
         // Тохиргоотой бол сар тутмын БОДИТ цуваа; үгүй бол өмнөх зан төлөв.
-        spark:(vs&&vs.spark)||(verified?miniSpark(dir,k.length):flatSpark),
+        spark:(vs&&vs.spark)||flatSpark,
+        /* Хөл бичиг: виджетийн ерөнхий текст ("өмнөх сартай харьцуулбал
+           · 12 сарын график") нь харьцуулалт ҮНЭХЭЭР байгаа нүдэнд л
+           үнэн. Өөрчлөлт "—" (хоногийн вагон мэдээ) эсвэл нүд
+           холбогдоогүй үед мөрийн ӨӨРИЙН тайлбарыг үзүүлнэ — эс тэгвэл
+           хавтгай шугам, "—" хоёрын доор "өмнөх сартай харьцуулбал"
+           гэж ХУДАЛ бичигдэнэ. */
+        ...(()=>{
+          const hasCmp=verified&&((vs?(vs.delta||'—'):sk.kpis[0][3])!=='—');
+          const note=verified?(sk.kpis[0][5]||stxt('status.no_data','мэдээлэл алга'))
+                             :stxt('status.no_data','мэдээлэл алга');
+          return {footText:hasCmp?lsFootTxt:note,
+            footNote:hasCmp?'':note,
+            /* Засварлагдах текстийг DOM-оос ХАСАХГҮЙ — зөвхөн нуух:
+               админы холбоос (data-eh-field="foot") хэвээр ажиллана. */
+            footBaseStyle:hasCmp?'':'display:none;',
+            footNoteStyle:hasCmp?'display:none;':''};
+        })(),
         cellStyle:'position:relative;display:flex;flex-direction:column;gap:0;align-items:stretch;text-align:left;background:'
           +(on?NEON[k]+'12':'transparent')+';border:none;border-radius:14px;cursor:pointer;font-family:inherit;padding:15px 10px 12px 13px;transition:.18s var(--ease);',
         railStyle:'position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:2px;background:'+(on?NEON[k]:'transparent')+';',
@@ -8680,7 +8771,6 @@ class Component extends DCLogic {
       // дотор давтагддаг тул нэг л удаа тооцоолоод давтан ашиглана.
       k04Title:this.txt('k04','title','Түлхүүр үзүүлэлт'),
       k04Foot:this.txt('k04','foot','12 сарын чиг хандлага'),
-      k04Foot2:this.txt('k04','foot2','AI итгэл'),
       t05Title:this.txt('t05','title','Чиг хандлага'),
       t05Foot:this.txt('t05','foot','Дундаж шугам харуулах'),
       i06Title:this.txt('i06','title','Салбар хоорондын харьцуулалт (индекс)'),
@@ -8731,7 +8821,8 @@ class Component extends DCLogic {
       ratioLabels:ratio.labels,
       ratioPct:ratio.pct.toFixed(1)+'%',
       ratioDasharray:ratioDash.toFixed(1)+' '+ratioCirc.toFixed(1),
-      kpis:this.buildKpis(s.kpis,color,this.sectorVerified('k04',key),(key==='air')?this.valueFromSpec('k04'):null),
+      kpis:this.buildKpis(s.kpis,color,this.kpiVerified('k04',key),(key==='air')?this.valueFromSpec('k04'):null,
+        this.txt('k04','foot','12 сарын чиг хандлага')),
       rings:this.buildRings(s.rank),
       bars:this.buildBars(this.state.f04Sort==='name'?[...s.bars].sort((a,b)=>a[0].localeCompare(b[0])):s.bars),
       status:this.buildStatus(s.bars),

@@ -175,7 +175,7 @@ function groupB() {
        түлхүүрээр дүүргэдэг тул мөрөөр хайж олдохгүй. Бүлгийн нэр тэр функц
        дотор ашиглагдсан эсэхийг шалгана. Утга нь сайт дээр ҮНЭХЭЭР гарч
        ирснийг tests/text-coverage.js (F3 round-trip) DOM-оос баталдаг. */
-    const dynGroups = ['sectors', 'sector_kpi', 'sector_kpi_air_live', 'sector_chart', 'unit',
+    const dynGroups = ['sectors', 'sector_kpi', 'sector_kpi_air_live', 'sector_kpi_rail_live', 'sector_chart', 'unit',
       /* `datasets` — нээлттэй өгөгдлийн каталог. stxt() биш, applySiteContent()
          дотор массиваар (индексээр) DATASETS дээр давхарлагддаг тул бусад
          динамик бүлэгтэй ижил зарчмаар шалгагдана. */
@@ -2347,11 +2347,13 @@ async function groupW() {
 
   check('W1. k04 утгын тохиргоог сайт уншина',
     idx.includes("(key==='air')?this.valueFromSpec('k04'):null") &&
-    idx.includes('buildKpis(kpis,color,verified,spec)') &&
+    /buildKpis\(kpis,color,verified,spec,foot\)/.test(idx) &&
     idx.includes('const vs=(i===0&&verified&&spec)?spec:null;'));
+  /* spark нь одоо ЗӨВХӨН бодит цуваанаас (hasSeries) — зохиомол
+     miniSpark() устсан тул шалгуур нь тэр шинэ мөрийг барина. */
   check('W1. Тоо, нэгж, шошго, хувь, spark ХАМТ сонголтыг дагана',
     ['label:vs?vs.label:k[0]', 'value:vs?vs.value:', "unit:vs?(vs.unit||''):k[2]",
-      "delta:vs?(vs.delta||'—')", '(vs&&vs.spark)?vs.spark:']
+      "const delta=vs?(vs.delta||'—')", 'const spark=hasSeries?vs.spark:flatSpark;']
       .every((t) => idx.includes(t)));
   check('W2. i06 агаарын шугам утгын тохиргооноос',
     idx.includes("const airI06=airFromSpec(this.valueSpecRaw('i06'))||cw.airCounts;") &&
@@ -3224,7 +3226,25 @@ async function groupZ5() {
   check('Z18. "24 датасет" хатуу тоо сайт ба content.json-д алга', all24.length === 0, all24.length + ' удаа');
   check('Z18. Датасетийн тоо каталогоос тооцогдоно', idx.includes("DATASETS.length+' датасет"));
 
-  if (!CHROME) { skipped('Z17–Z18 (DOM)', 'Chrome олдсонгүй'); return; }
+  /* ── Z19. "AI ИТГЭЛ %" — хатуу жагсаалтаас гардаг чимэглэл ──
+     [94,88,91,86,83] нь эх сурвалжгүй, гэтэл 2026-09-18-наас хойш яг
+     хажууд нь АМЬД тоо (вагон ачилт) гарах болсон тул иргэн үүнийг
+     тухайн өгөгдлийн үнэн зөвийн хэмжүүр гэж уншина. Мөрийг бүхэлд нь
+     хасав — k04.foot2 ("AI итгэл") ч content.json-оос устсан байх ёстой,
+     эс тэгвэл үхмэл текст үлдэнэ. */
+  /* Яагаад устгасныг тайлбарласан КОММЕНТ дотор жагсаалт дурдагдаж
+     болно (miniSpark-ийн ижил тохиолдол) — КОД дотор УТГА ОЛГОЛТООР
+     үлдээгүй эсэхийг шалгана. */
+  check('Z19. Итгэлийн хатуу жагсаалт кодод алга',
+    !/=\s*\[94,\s*88,\s*91/.test(idx) && !/\[94,\s*88,\s*91[^\]]*\]\[i%5\]/.test(idx));
+  check('Z19. Темплейтэд conf/confWidth үлдээгүй',
+    !idx.includes('{{ k.conf }}') && !idx.includes('{{ k.confWidth }}') && !/conf,confWidth:/.test(idx));
+  check('Z19. k04.foot2 ("AI итгэл") content.json-д үлдээгүй',
+    con.widgets.k04 && con.widgets.k04.foot2 === undefined, JSON.stringify(con.widgets.k04));
+  check('Z19. k04-ийн бусад бичиг ХЭВЭЭР (foot, title)',
+    !!(con.widgets.k04 && con.widgets.k04.title && con.widgets.k04.foot));
+
+  if (!CHROME) { skipped('Z17–Z19 (DOM)', 'Chrome олдсонгүй'); return; }
   const srv = serve();
   try {
     PROBE_SRC = '/index.html#/news';
@@ -3250,7 +3270,11 @@ async function groupZ5() {
       return {text:d.body.innerText};
     }`, 120000);
     if (H.__err) bad('Z18. Нүүр хуудас ачаалагдав', H.__err);
-    else check('Z18. Нүүр хуудсанд "24 датасет" алга', H.text.indexOf('24 датасет') < 0);
+    else {
+      check('Z18. Нүүр хуудсанд "24 датасет" алга', H.text.indexOf('24 датасет') < 0);
+      check('Z19. Нүүр хуудсанд "AI итгэл" мөр алга', !/AI\s*итгэл/i.test(H.text),
+        (H.text.match(/.{0,30}AI\s*итгэл.{0,30}/i) || [''])[0]);
+    }
   } finally {
     PROBE_SRC = '/admin/index.html';
     srv.close();
@@ -3325,8 +3349,8 @@ async function groupBE() {
   check('BE8. mtd багана нийлбэрт ОРОХГҮЙ гэдэг registry-д тэмдэглэгдсэн',
     /mtd/.test(reg2.metrics['rail.wagon_loading'].column) &&
     /ХУРИМТЛАЛ/.test(reg2.metrics['rail.wagon_loading'].column));
-  check('BE8. rail.wagon_loading ямар ч виджетэд холбогдоогүй',
-    !Object.values(reg2.widgets).some(w => JSON.stringify(w).includes('rail.wagon_loading')));
+  check('BE8. rail.wagon_loading виджетэд ХОЛБОГДСОН (2026-09-18)',
+    Object.values(reg2.widgets).some(w => JSON.stringify(w).includes('rail.wagon_loading')));
 
   /* ── BE9. Backend-ийн ХАРИУ → val()-ийн хүлээх хэлбэр ──
      Backend нь {sector,status,data:[{month,total_volume}]} буцаадаг атлаа
@@ -3373,6 +3397,178 @@ async function groupBE() {
     dcScript().includes('this._railWagonLoading=wagonLoadingToValue(d)') &&
     !/this\._railWagonLoading=sectorSummaryToValue\(d\)/.test(dcScript()) &&
     !/if\(d\) this\._railWagonLoading=d;/.test(dcScript()));
+
+  /* ── BE11. ВИДЖЕТИЙН ХОЛБООС — registry ба админы нэгжийн ГЭРЭЭ ──
+     Метрик "verified" байх нь хангалтгүй: слотын ШААРДАХ НЭГЖ (админы
+     FIXED_UNIT) метрикийнхтэй таарахгүй бол why() амьд холбоосыг
+     "нэгж үл нийцнэ" гэж блоклоод, дараагийн хадгалалт түүнийг САЛГАНА.
+     Хоёр файлын утга зөрөх нь энэ төсөлд ойр ойрхон гардаг алдаа тул
+     хамтад нь шалгана. */
+  const sl = (id, key) => ((reg2.widgets[id] || {}).sectors || {})[key] || {};
+  check('BE11. ls.rail → rail.wagon_loading (verified)',
+    sl('ls', 'rail').metric === 'rail.wagon_loading' && sl('ls', 'rail').quality === 'verified',
+    JSON.stringify(sl('ls', 'rail')));
+  check('BE11. k04.rail → rail.wagon_kpi_set (verified)',
+    sl('k04', 'rail').metric === 'rail.wagon_kpi_set' && sl('k04', 'rail').quality === 'verified',
+    JSON.stringify(sl('k04', 'rail')));
+  check('BE11. u07.rail → rail.feed_updated_at (verified)',
+    sl('u07', 'rail').metric === 'rail.feed_updated_at' && sl('u07', 'rail').quality === 'verified',
+    JSON.stringify(sl('u07', 'rail')));
+  check('BE11. u07.air холбоос ХЭВЭЭР (air.feed_updated_at)',
+    sl('u07', 'air').metric === 'air.feed_updated_at');
+  check('BE11. u07-ийн эх сурвалжгүй 3 мөр "мэдээлэл алга" шошготой',
+    ['road', 'water', 'public'].every(k => sl('u07', k).metric === null && sl('u07', k).label && sl('u07', k).would_need));
+  check('BE11. Шинэ метрик 2 нь metrics{}-д verified',
+    ['rail.wagon_kpi_set', 'rail.feed_updated_at']
+      .every(k => reg2.metrics[k] && reg2.metrics[k].quality === 'verified'));
+  check('BE11. Шинэ метрик тус бүр датасэттэй (каталогт нэрээр гарна)',
+    ['rail.wagon_kpi_set', 'rail.feed_updated_at']
+      .every(k => reg2.metrics[k].dataset === 'silver.rail_wagon_loading'));
+
+  const adm = adminScript();
+  const fuBlock = (adm.match(/var FIXED_UNIT=\{([\s\S]*?)\n\};/) || [])[1] || '';
+  const fixed = {};
+  for (const fm of fuBlock.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)) fixed[fm[1]] = fm[2];
+  check('BE11. ls.rail шаардах нэгж = метрикийн нэгж ("вагон", "км" БИШ)',
+    fixed['ls.rail'] === reg2.metrics['rail.wagon_loading'].unit, fixed['ls.rail']);
+  check('BE11. k04.rail шаардах нэгж = "mixed" (3 мөр өөр нэгжтэй)',
+    fixed['k04.rail'] === reg2.metrics['rail.wagon_kpi_set'].unit, fixed['k04.rail']);
+  check('BE11. u07 салбар бүрийн шаардах нэгж "огноо"',
+    ['air', 'rail', 'road', 'water', 'public'].every(k => fixed['u07.' + k] === 'огноо'));
+
+  /* ── BE12. applyRailWagonData() — ГАРААР БОДОХ фикстур ──
+     Эх файлаар баталгаажсан 2026-09-17: 1182 ачсан / 1027 буусан / 35 станц.
+     Тоо · НЭГЖИЙН ШОШГО · МӨРИЙН НЭР гурвыг ХАМТ шалгана (аль нэг нь
+     хуучнаараа үлдвэл хуудас ХУДАЛ тайлбарлана). */
+  const arm = dcScript().match(/\n  applyRailWagonData\(\)\{([\s\S]*?)\n  \}\n/);
+  if (!arm) { bad('BE12. applyRailWagonData() олдсонгүй'); return; }
+  const mkApply = new Function('SECTORS', 'stxt', 'fmtNum', 'return function(){' + arm[1] + '}');
+  const RAILTXT = {
+    'sector_kpi_rail_live.0': 'ХОНОГИЙН АЧИЛТ',
+    'sector_kpi_rail_live.1': 'ХОНОГИЙН БУУЛГАЛТ',
+    'sector_kpi_rail_live.2': 'АЧИЛТТАЙ СТАНЦ',
+    'unit.wagon': 'вагон', 'unit.station': 'станц',
+    'status.rail_wagon_compare': 'харьцуулах өгөгдөл алга (өмнөх хоногийн дүн ирээгүй)'
+  };
+  const runApply = (live) => {
+    const SEC = { rail: { label: 'Төмөр зам', kpis: [['НИЙТ ЗАМ', '1,815', 'км', '+0.4%', 'up']] } };
+    const ctx = { _railWagonLoading: live, _meta: null, _st: null,
+      setSourceMeta(id, m) { this._meta = { id, m } }, setState(s) { this._st = s } };
+    mkApply(SEC, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f),
+      (n) => Number(n).toLocaleString('en-US')).call(ctx);
+    return { SEC, ctx };
+  };
+  const A = runApply({ count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' });
+  const kr = A.SEC.rail.kpis;
+  check('BE12. 3 мөр үүснэ (ачилт/буулгалт/станц)', kr.length === 3, JSON.stringify(kr));
+  check('BE12. kpis[0] = ХОНОГИЙН АЧИЛТ · 1,182 · вагон',
+    kr[0][0] === 'ХОНОГИЙН АЧИЛТ' && kr[0][1] === '1,182' && kr[0][2] === 'вагон', JSON.stringify(kr[0]));
+  check('BE12. kpis[1] = ХОНОГИЙН БУУЛГАЛТ · 1,027 · вагон',
+    kr[1][0] === 'ХОНОГИЙН БУУЛГАЛТ' && kr[1][1] === '1,027' && kr[1][2] === 'вагон', JSON.stringify(kr[1]));
+  check('BE12. kpis[2] = АЧИЛТТАЙ СТАНЦ · 35 · станц',
+    kr[2][0] === 'АЧИЛТТАЙ СТАНЦ' && kr[2][1] === '35' && kr[2][2] === 'станц', JSON.stringify(kr[2]));
+  check('BE12. Өөрчлөлтийн хувь ЗОХИОХГҮЙ — мөр бүр "—"', kr.every(r => r[3] === '—'));
+  check('BE12. Харьцуулалтын мөр шалтгаанаа ил хэлнэ',
+    kr.every(r => /харьцуулах өгөгдөл алга/.test(r[5] || '')), JSON.stringify(kr[0][5]));
+  check('BE12. Хуучин статик мөр (1,815 км) БҮРЭН солигдоно',
+    !JSON.stringify(kr).includes('1,815') && !JSON.stringify(kr).includes('НИЙТ ЗАМ'));
+  check('BE12. _liveKpis=true (KPI мөр амьд боллоо)', A.SEC.rail._liveKpis === true);
+  check('BE12. u07-ийн огноо railWagon мета руу бичигдэнэ',
+    A.ctx._meta && A.ctx._meta.id === 'railWagon' && A.ctx._meta.m.updatedAt === '2026-09-17',
+    JSON.stringify(A.ctx._meta));
+  const A0 = runApply(null);
+  check('BE12. Дата ирээгүй → SECTORS.rail ОГТ хөндөгдөхгүй',
+    A0.SEC.rail.kpis.length === 1 && A0.SEC.rail.kpis[0][1] === '1,815' && !A0.SEC.rail._liveKpis);
+  const A1 = runApply({ count: 900, unloadedCount: null, stationCount: null, date: '2026-09-17' });
+  check('BE12. Дутуу талбар → тэр мөр ОГТ гарахгүй (0 гэж зохиохгүй)',
+    A1.SEC.rail.kpis.length === 1 && A1.SEC.rail.kpis[0][1] === '900');
+
+  /* ── BE13. kpiVerified() — registry "verified" ≠ дата ИРСЭН ──
+     Регресс: backend/feed унасан үед статик демо тоо (1,815 км / 11,979)
+     амьд утга мэт харагдаж байв. */
+  const kvm = dcScript().match(/\n  kpiVerified\(widgetId,sectorKey\)\{([\s\S]*?)\n  \}\n/);
+  if (!kvm) { bad('BE13. kpiVerified() олдсонгүй'); return; }
+  const kvFn = new Function('SECTORS', 'widgetId', 'sectorKey', kvm[1]);
+  const kvCall = (q, liveKpis) => kvFn.call(
+    { sectorQuality: () => ({ quality: q }) },
+    { rail: { _liveKpis: liveKpis } }, 'k04', 'rail');
+  check('BE13. verified + дата ирсэн → true', kvCall('verified', true) === true);
+  check('BE13. verified + дата ИРЭЭГҮЙ → false (демо тоо амьд гэж харагдахгүй)',
+    kvCall('verified', undefined) === false);
+  check('BE13. mock + дата ирсэн ч → false', kvCall('mock', true) === false);
+  check('BE13. KPI уншдаг 3 виджет бүгд kpiVerified ашиглана (ls/k04/d05)',
+    /this\.kpiVerified\('ls',k\)/.test(dcScript()) &&
+    /this\.kpiVerified\('k04',key\)/.test(dcScript()) &&
+    /this\.kpiVerified\('d05',k\)/.test(dcScript()));
+  check('BE13. air ч ижил гэрээнд орно (_liveKpis тэмдэглэгдэнэ)',
+    /SECTORS\.air\._liveKpis=true;/.test(dcScript()));
+  check('BE13. Амьд KPI мөрийн нэрийг статик нэрээр ДАРАХГҮЙ',
+    /if\(Array\.isArray\(kl\)&&!SECTORS\[k\]\._liveKpis\)/.test(dcScript()));
+
+  /* ── BE14. u07 — мөр бүр САЛБАРААРАА холбогдоно ── */
+  const con14 = readJson('content.json');
+  const recBlock = (dcScript().match(/const RECENT = \[([\s\S]*?)\n\];/) || [])[1] || '';
+  const recN = (recBlock.match(/\{title:/g) || []).length;
+  check('BE14. RECENT мөрийн тоо = content.json site.updates-ийн урт',
+    recN === con14.site.updates.length && recN === 6, recN + ' vs ' + con14.site.updates.length);
+  check('BE14. Вагон ачилтын мөр railWagon эх сурвалжтай, огноо ЗОХИОГҮЙ',
+    /source:'railWagon'/.test(recBlock) && /date:'', sector:'rail'/.test(recBlock));
+  check('BE14. SOURCES-д railWagon бүртгэлтэй (auditBindings анхааруулахгүй)',
+    /railWagon:\{label:/.test(dcScript()));
+  check('BE14. buildRecent мөр бүрийн САЛБАРААР холбоосыг шална',
+    /u07Bound\(r\.sector\)/.test(dcScript()) &&
+    !/const u07Bound=!!\(u07&&u07\.metric\);/.test(dcScript()));
+  check('BE14. backend давхар дуудагдахгүй (SOURCES-оор л ачаална)',
+    (dcScript().match(/loadEtransportBackend\(\)/g) || []).length === 2,
+    String((dcScript().match(/loadEtransportBackend\(\)/g) || []).length));
+
+  /* ── BE15. content.json — шинэ ХАРАГДАХ текст бүртгэгдсэн ── */
+  check('BE15. sector_kpi_rail_live 3 мөрийн нэртэй',
+    Array.isArray(con14.site.sector_kpi_rail_live) && con14.site.sector_kpi_rail_live.length === 3);
+  check('BE15. unit.wagon / unit.station бүртгэлтэй',
+    con14.site.unit.wagon === 'вагон' && con14.site.unit.station === 'станц');
+  check('BE15. status.rail_wagon_compare бүртгэлтэй',
+    !!con14.site.status.rail_wagon_compare);
+  check('BE15. Админы required_unit-д "вагон" бүртгэлтэй (FIXED_UNIT-ийн утга)',
+    con14.ui.required_unit['вагон'] === 'вагон');
+
+  /* ── BE16. Админы preview ба сайт ХОЁУЛАА ижил эх сурвалжаас ── */
+  check('BE16. Админ backend модулийг ачаална',
+    /erthub-backend\.js/.test(read('admin/index.html')) && /backend-config\.js/.test(read('admin/index.html')));
+  check('BE16. Админ вагон ачилтыг тусад нь (flights-ээс хамааралгүй) уншина',
+    /function loadRailWagon\(\)/.test(adm) && /Promise\.all\(\[loadFeed\(\),loadRailWagon\(\)\]\)/.test(adm));
+  check('BE16. metricValue rail.wagon_* -г RAIL-ээс өгнө (FEED-ээс БИШ)',
+    /mk\.indexOf\('rail\.wagon'\)===0/.test(adm) && /RAIL\.state!=='ready'/.test(adm));
+  check('BE16. u07 preview огноог МЕТРИКЭЭС уншина (хатуу air шалгалт устсан)',
+    /function metricDate\(mk\)/.test(adm) &&
+    !/mk==='air\.feed_updated_at'&&FEED\.fetchedAt/.test(adm));
+  check('BE16. k04 preview нь verified САЛБАР БҮРИЙГ үзүүлнэ (зөвхөн эхнийх БИШ)',
+    /var kp=sectorParts\(id\), ons=kp\.filter/.test(adm) &&
+    !/kp\.filter\(function\(p\)\{return p\.q==='verified'\}\)\[0\]/.test(adm));
+  check('BE16. ls preview-ийн цуваа МӨРИЙН метрикээс (air-ийн муруй бусдад НААГДАХГҮЙ)',
+    /var useSer=\(p\.k==='air'\)\?ser5:\(p\.m\?metricAnySeries\(p\.m\):null\);/.test(adm) &&
+    /q:q,m:sv\.metric\|\|null/.test(adm));
+
+  /* ── BE17. ЗОХИОМОЛ СПАРКЛАЙН УСТСАН ──
+     miniSpark() нь up/down чиглэлээс синус муруй ЗОХИОДОГ байсан. rail
+     слот verified болмогц 3 карт дээр "12 сарын чиг хандлага" гэсэн
+     шошготой хуурамч муруй гарах байв ("тоо ЗОХИОХГҮЙ" зөрчил). */
+  /* Тайлбар дотор (яагаад устгасан тухай) нэр нь дурдагдаж болно —
+     ДУУДАЛТ үлдээгүй эсэхийг шалгана. */
+  check('BE17. miniSpark() кодоос БҮРЭН устсан (дуудалт үлдээгүй)',
+    !/function miniSpark\(/.test(dcScript()) && !/[=?:(]\s*miniSpark\(/.test(dcScript()));
+  check('BE17. Бодит цуваагүй карт ХАВТГАЙ шугамтай',
+    /const hasSeries=!!\(vs&&vs\.spark\);/.test(dcScript()) &&
+    /const spark=hasSeries\?vs\.spark:flatSpark;/.test(dcScript()));
+  check('BE17. Цуваагүй үед хөл бичиг "чиг хандлагын цуваа алга" гэж ил хэлнэ',
+    /stxt\('status\.no_series'/.test(dcScript()) && !!con14.site.status.no_series);
+  check('BE17. Засварлагдах текст DOM-оос ХАСАГДАХГҮЙ, зөвхөн нуугдана',
+    /data-eh-card="k04" data-eh-field="foot" style="\{\{ k\.footBaseStyle \}\}"/.test(read('index.html')) &&
+    /data-eh-card="ls" data-eh-field="foot" style="\{\{ ls\.footBaseStyle \}\}"/.test(read('index.html')));
+  check('BE17. ls-ийн хөл бичиг НҮД БҮРД өөр (ганц lsFoot давтагдахаа больсон)',
+    /\{\{ ls\.footNote \}\}/.test(read('index.html')));
+  check('BE17. Урт харьцуулалтын тайлбар картаас халихгүй (ellipsis)',
+    /title="\{\{ k\.compareLabel \}\}">\{\{ k\.compareLabel \}\}/.test(read('index.html')));
 }
 
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */

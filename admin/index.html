@@ -437,6 +437,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
 <script src="../js/erthub-publish.js"></script>
+<script src="../js/backend-config.js"></script>
+<script src="../js/erthub-backend.js"></script>
 <script src="../js/erthub-chart.js"></script>
 </head>
 <body>
@@ -577,9 +579,11 @@ var DSMETA={
      ls.air  — зөвхөн kpis[0] (нислэгийн тоо) уншина тул "нислэг" */
 var FIXED_UNIT={
   'hero_fl.':'нислэг','t05.':'нислэг/сар','u07.':'огноо',
+  'u07.air':'огноо','u07.rail':'огноо','u07.road':'огноо',
+  'u07.water':'огноо','u07.public':'огноо',
   'i06.':'индекс (1-р сар=100)','r06.':'индекс (1-р сар=100)',
-  'k04.air':'mixed','k04.road':'км','k04.rail':'км','k04.water':'км','k04.public':'чиглэл',
-  'ls.air':'нислэг', 'ls.road':'км', 'ls.rail':'км', 'ls.water':'км', 'ls.public':'чиглэл',
+  'k04.air':'mixed','k04.road':'км','k04.rail':'mixed','k04.water':'км','k04.public':'чиглэл',
+  'ls.air':'нислэг', 'ls.road':'км', 'ls.rail':'вагон', 'ls.water':'км', 'ls.public':'чиглэл',
   'hero_px.public':'хүн'
 };
 var SUM_WIDGETS={d05:1,w2p:1,w2px:1,w2c:1,w2cx:1};
@@ -636,6 +640,10 @@ var LOG=[];   /* энэ сессийн бодит өөрчлөлтийн лог 
 var FEED={state:'idle',err:null,months:[],index:[],weekPax:null,weekCargo:null,
           dayPax:null,dayCargo:null,
           lastMonthCount:null,fetchedAt:null,lastLabel:''};
+/* УБТЗ · вагон ачилт — flights feed-ЭЭС ТУСДАА. Аль нэг нь унасан ч
+   нөгөө preview хэвийн ажиллана (нэг Promise.all болговол нэгнийх нь
+   алдаа хоёуланг нь унтраана). */
+var RAIL={state:'idle',date:null,loaded:null,unloaded:null,stations:null};
 
 var $=function(i){return document.getElementById(i)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -833,6 +841,13 @@ function computeSeries(byYear,latest){
 /* Метрикийн БОДИТ утга — зөвхөн registry-д тодорхойлолт нь байгаа
    метрикүүдэд. Мэдэхгүй метрикт null буцаана (тоо зохиохгүй). */
 function metricValue(mk){
+  /* Вагон ачилт нь flights feed-ээс ТУСДАА эх сурвалж — FEED.state-ээр
+     хаачихвал backend амьд байхад ч preview 0 харуулна. */
+  if(mk&&mk.indexOf('rail.wagon')===0){
+    if(RAIL.state!=='ready') return null;
+    if(mk==='rail.wagon_loading'||mk==='rail.wagon_kpi_set') return RAIL.loaded;
+    return null;
+  }
   if(FEED.state!=='ready') return null;
   switch(mk){
     case 'air.flight_count_last_month': return FEED.lastMonthCount;
@@ -842,6 +857,31 @@ function metricValue(mk){
     case 'air.kpi_set': return FEED.lastMonthCount;
     default: return null;
   }
+}
+/* Метрикийн ОГНОО (тоо биш) — u07 маягийн картан жагсаалт ҮҮНИЙГ уншина.
+   Өмнө нь preview дотор "mk==='air.feed_updated_at'" гэсэн ГАНЦ хатуу
+   нөхцөл байсан тул шинэ огнооны метрик (rail) холбоход preview хоосон
+   хэвээр үлдэх байв. */
+function metricDate(mk){
+  if(mk==='air.feed_updated_at')
+    return (FEED.state==='ready'&&FEED.fetchedAt)?String(FEED.fetchedAt).slice(0,10):null;
+  if(mk==='rail.feed_updated_at')
+    return (RAIL.state==='ready'&&RAIL.date)?String(RAIL.date).slice(0,10):null;
+  return null;
+}
+/* Хоногийн вагон мэдээ — сайтын loadEtransportBackend()-тэй ИЖИЛ endpoint,
+   ижил шалгуур (status!=='ok' эсвэл count хоосон бол тоо ЗОХИОХГҮЙ). */
+function loadRailWagon(){
+  if(typeof EHBackend==='undefined'||!EHBackend.enabled){ RAIL.state='off'; return Promise.resolve() }
+  RAIL.state='loading';
+  return EHBackend.fetchRailWagonLoading().then(function(d){
+    if(!d||d.status!=='ok'||d.count==null||isNaN(Number(d.count))){ RAIL.state='error'; return }
+    RAIL.date=typeof d.date==='string'?d.date:null;
+    RAIL.loaded=Number(d.count);
+    RAIL.unloaded=(d.unloaded_count==null)?null:Number(d.unloaded_count);
+    RAIL.stations=Number(d.station_count)||null;
+    RAIL.state='ready';
+  },function(){ RAIL.state='error' });
 }
 function metricSeries(mk){
   if(FEED.state!=='ready') return null;
@@ -1649,7 +1689,7 @@ function sectorParts(id){
        үзүүлнэ — эс тэгвэл preview "6,677,422.6", сайт "6,677,423" гэж
        зөрөх бөгөөд аль нь үнэн бэ гэсэн эргэлзээ төрүүлнэ. */
     if(vres&&(s.key==='air'||s.key===null)&&q==='verified') v=vres.rounded;
-    return {k:s.key,n:SECN[s.key]||s.key,c:NEON[s.key]||'#8A93AB',v:v,q:q,
+    return {k:s.key,n:SECN[s.key]||s.key,c:NEON[s.key]||'#8A93AB',v:v,q:q,m:sv.metric||null,
       label:q==='none'?(sv.label||'мэдээлэл алга'):(q==='mock'?'түр дата':'')};
   });
 }
@@ -1736,9 +1776,11 @@ function previewFor(id,mini){
       : metricSeries('air.monthly_flight_series');
     body='<div class="pvstrip">'+sectorParts(id).slice(0,5).map(function(p){
       var on=p.q==='verified';
-      /* Тохируулсан цуваа нь ЗӨВХӨН air салбарынх — бусдад нь хуучин
-         зарчмаар (verified бол ерөнхий цуваа, үгүй бол хавтгай шугам). */
-      var useSer=(vres5&&p.k!=='air')?null:ser5;
+      /* Цуваа нь ТУХАЙН МӨРИЙН метрикээс: air-д утгын тохиргоо (vres5)
+         эсвэл сарын цуваа, бусдад нь метрик өөрөө цуваатай эсэхээс
+         (metricAnySeries). Хоногийн вагон мэдээ цуваагүй тул хавтгай
+         шугам — сайт дээр ЯГ ижил. */
+      var useSer=(p.k==='air')?ser5:(p.m?metricAnySeries(p.m):null);
       var spark=(on&&useSer&&useSer.length>1)
         ? svgLine(useSer,p.c,44,14,false)
         : '<svg viewBox="0 0 44 14" style="width:100%;height:14px;display:block">'+
@@ -1755,13 +1797,13 @@ function previewFor(id,mini){
   } else if(kind==='grid8'){
     /* k04 — сайт дээр 4×2 = 8 KPI карт. Registry-д 5 салбарын слот тул
        бодит 8 мөрийн БҮТЦИЙГ дуурайж 8 нүд зурна (эхний нь бодит утга). */
-    var kp=sectorParts(id), on=kp.filter(function(p){return p.q==='verified'})[0];
+    var kp=sectorParts(id), ons=kp.filter(function(p){return p.q==='verified'});
     var cells=[];
     for(var i=0;i<8;i++){
-      var live=(i===0&&on);
-      cells.push('<div class="pvgc"><div class="l">'+(live?esc(on.n):esc(utxt('preview.kpi_row','үзүүлэлт'))+' '+(i+1))+
+      var live=ons[i];
+      cells.push('<div class="pvgc"><div class="l">'+(live?esc(live.n):esc(utxt('preview.kpi_row','үзүүлэлт'))+' '+(i+1))+
         '</div><div class="v"'+(live?'':' style="color:#A7B0C6"')+'>'+
-        (live?esc(nf(on.v)||'0'):'0')+'</div></div>');
+        (live?esc(nf(live.v)||'0'):'0')+'</div></div>');
     }
     body='<div class="pvgrid8">'+cells.join('')+'</div>';
   } else if(kind==='kpi4'){
@@ -1882,17 +1924,26 @@ function previewFor(id,mini){
         '<span class="c" style="color:'+(on?'#0C1428':'#A7B0C6')+'">'+(on?'▲':'—')+'</span></div>'
     }).join('')+'</div>';
   } else { /* cards — u07 маягийн картан жагсаалт */
-    var ls2=mk?metricSeries(mk):null;
-    var live=(mk==='air.feed_updated_at'&&FEED.fetchedAt)
-      ?String(FEED.fetchedAt).slice(0,10):null;
-    var rws=[{n:SECN.air,d:live||(ls2&&ls2.length?esc(nf(ls2[ls2.length-1].v)):null),c:NEON.air}]
-      .concat(['road','rail','public','water'].map(function(k){
-        return {n:SECN[k],d:null,c:NEON[k]}}));
+    /* Мөр бүр ӨӨРИЙН слотын метрикээс уншина. Өмнө нь "air.feed_updated_at"
+       гэсэн ГАНЦ хатуу нөхцөл байсан тул (а) air-ийг салгасан ч огноо
+       харагдсаар, (б) rail-д огнооны метрик холбоход preview хоосон
+       хэвээр үлдэж, admin ба сайт хоёр ӨӨР үнэн харуулж байв. */
+    var cslots=slotsOf(id).filter(function(s){return s.key&&s.key!=='plan'});
+    var rws=cslots.length?cslots.map(function(s){
+      var sv=slotVal(id,s.path), q=qualityOf(sv);
+      var dv=(q==='verified')?metricDate(sv.metric):null;
+      if(dv==null&&q==='verified'){
+        var sr=sv.metric?metricSeries(sv.metric):null;
+        dv=(sr&&sr.length)?nf(sr[sr.length-1].v):null;
+      }
+      return {n:SECN[s.key]||s.key,d:dv,c:NEON[s.key]||'#8A93AB',
+              nolabel:(q==='none'&&sv.label)?sv.label:null};
+    }):[{n:SECN.air,d:(mk?metricDate(mk):null),c:NEON.air}];
     body='<div class="pvcards">'+rws.slice(0,mini?3:5).map(function(r){
       return '<div class="pvcd" style="border-left-color:'+r.c+'">'+
         '<span class="n">'+esc(r.n)+'</span>'+
         '<span class="d"'+(r.d?'':' style="color:#C0C8D8"')+'>'+
-        (r.d?esc(r.d):esc(utxt('badge.no_data','мэдээлэл алга')))+'</span></div>'}).join('')+'</div>';
+        (r.d?esc(r.d):esc(r.nolabel||utxt('badge.no_data','мэдээлэл алга')))+'</span></div>'}).join('')+'</div>';
   }
 
   return '<div class="sitepv'+(mini?' mini':'')+'" style="--sc:'+accent+'"><div class="sp-card">'+
@@ -2139,6 +2190,7 @@ var SITE_LOC={
   filter:'home|s1', range:'home|s1', months:'home|s1', sector_short:'home|s1',
   week:'home|s2', community:'home|s3', community_data:'home|s3', updates:'home|s3',
   rank:'home|s4', sector_kpi:'home|s4', sector_kpi_air_live:'home|s4',
+  sector_kpi_rail_live:'home|s4',
   sector_chart:'home|s5', chart:'home|s5', compare_window:'home|s6',
   feed:'home|s7', ai:'home|s8',
   eservices:'eservices|body', 'eservices.hero':'eservices|hero', 'eservices.tabs':'eservices|tabs',
@@ -4603,7 +4655,7 @@ Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
   /* Урьдчилан харах картыг ЖИНХЭНЭ дата цэгээр зурахын тулд сайт өөрөө
      уншдаг feed-ийг ачаална. Амжилтгүй ч гэсэн хэрэгсэл БҮРЭН ажиллана —
      preview зөвхөн бүтцээ харуулж, "дата ачаалагдаагүй" гэж ил хэлнэ. */
-  loadFeed().then(render);
+  Promise.all([loadFeed(),loadRailWagon()]).then(render);
 })
 .catch(function(err){
   showState('<h2>'+esc(utxt('boot.read_fail','Файл уншиж чадсангүй'))+'</h2><p>'+esc(err.message)+'</p>'+

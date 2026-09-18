@@ -22,9 +22,8 @@
           "would_need": "Авто замын сүлжээний урт — Замын газрын эх сурвалж"
         },
         "rail": {
-          "metric": null,
-          "quality": "mock",
-          "would_need": "Төмөр замын урт — УБТЗ"
+          "metric": "rail.wagon_kpi_set",
+          "quality": "verified"
         },
         "water": {
           "metric": null,
@@ -37,7 +36,7 @@
           "would_need": "Нийтийн тээврийн чиглэлийн тоо — НТГ"
         }
       },
-      "note": "SECTORS[activeSector].kpis (8 мөр) — air сонгосон үед бүгд applyRealFlightsData-аас, бусад үед бүгд статик. kpis[0] (НИЙТ НИСЛЭГ) нь hero_fl-тэй яг ижил air.flight_count_last_month; kpis[1-7] нь тухайн үеийн Sector-хуудасны Он/Сар шүүлтээр тодорхойлогдох жилийн эхнээс өнөөдрийг хүртэлх нийлбэр — өөр цонхтой ч тус бүрийн шошго (compareLabel) үнэн зөв тул зөрчилгүй."
+      "note": "SECTORS[activeSector].kpis (8 мөр) — air сонгосон үед бүгд applyRealFlightsData-аас, бусад үед бүгд статик. kpis[0] (НИЙТ НИСЛЭГ) нь hero_fl-тэй яг ижил air.flight_count_last_month; kpis[1-7] нь тухайн үеийн Sector-хуудасны Он/Сар шүүлтээр тодорхойлогдох жилийн эхнээс өнөөдрийг хүртэлх нийлбэр — өөр цонхтой ч тус бүрийн шошго (compareLabel) үнэн зөв тул зөрчилгүй. 2026-09-18: rail нь УБТЗ-ийн вагон ачилтын хоногийн мэдээнд холбогдов — 3 мөр (ачилт/буулгалт/станц), гурвуулаа НЭГ хоногийн дүн тул мөр хооронд цонхны зөрчил алга. Үлдсэн 3 салбар статик хэвээр."
     },
     "ls": {
       "sectors": {
@@ -51,9 +50,8 @@
           "would_need": "Авто замын сүлжээний урт — Замын газрын эх сурвалж"
         },
         "rail": {
-          "metric": null,
-          "quality": "mock",
-          "would_need": "Төмөр замын урт — УБТЗ"
+          "metric": "rail.wagon_loading",
+          "quality": "verified"
         },
         "water": {
           "metric": null,
@@ -66,7 +64,7 @@
           "would_need": "Нийтийн тээврийн чиглэлийн тоо — НТГ"
         }
       },
-      "note": "livestrip — SECTORS[k].kpis[0] л уншина, k04-ийн kpis[0]-тэй яг ижил (hero_fl-тэй ижил метрик)."
+      "note": "livestrip — SECTORS[k].kpis[0] л уншина. air: k04-ийн kpis[0]-тэй яг ижил (hero_fl-тэй ижил метрик). rail: k04.rail-ийн kpis[0]-тэй яг ижил (хоногийн ачсан вагон) — нэгж нь \"вагон\", \"км\" БИШ."
     },
     "hero_px": {
       "sectors": {
@@ -79,11 +77,35 @@
       "note": "312K хатуу статик хэвээр үлдэнэ. hero_px-д БүҮ ХүР гэсэн заавар мөрдөгдсөн — код өөрчлөгдөөгүй."
     },
     "u07": {
-      "metric": "air.feed_updated_at",
-      "sectors": [
-        "air"
-      ],
-      "note": "RECENT[0..4]-ийн зөвхөн air мөр (index 0) бодит. Бусад 4 мөр (road/rail/public/water) статик, эх сурвалжгүй тул энд бүртгэгдээгүй."
+      "sectors": {
+        "air": {
+          "metric": "air.feed_updated_at",
+          "quality": "verified"
+        },
+        "rail": {
+          "metric": "rail.feed_updated_at",
+          "quality": "verified"
+        },
+        "road": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Замын хөдөлгөөний мэдээллийн шинэчлэлтийн огноо — ЗТХЕГ"
+        },
+        "public": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Автобусны бодит байршлын шинэчлэлтийн огноо — НТБГ"
+        },
+        "water": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Боомтын ачаа эргэлтийн мэдээний шинэчлэлтийн огноо — ЗТЯ"
+        }
+      },
+      "note": "RECENT мөр бүр САЛБАРААРАА холбогдоно (өмнө нь ганц хавтгай metric байсан тул админ дээр air-ийг салгахад бүх мөр зэрэг унтардаг байв). air = flights feed-ийн fetchedAt; rail = вагон ачилтын өгөгдлийн сүүлийн хоног. Үлдсэн 3 мөр эх сурвалжгүй тул огноо нь \"мэдээлэл алга\"."
     },
     "t05": {
       "metric": "air.monthly_flight_series",
@@ -429,7 +451,33 @@
       "unit": "вагон",
       "additive": false,
       "quality": "verified",
-      "period_note": "БАТАЛГААЖСАН (2026-09-18): \"Ачилт буулгалтын хоногийн мэдээ УБТЗ - 202609181046.xlsx\" эх файлтай 2026-09-17-ны өдрөөр тулгав — 35/35 станц ЯГ таарсан, нийт ачсан 1182, буусан 1027. Endpoint: https://portal.mrt.gov.mn/api/sectors/rail/wagon-loading. ХОЁР АЛДААГ тулгалтаар илрүүлж зассан: (1) mtd багана нь вагоны төрөл биш, \"Сарын эхнээс ачсан\" ХУРИМТЛАЛ байсныг хоногийн нийлбэрт нэмж 20,495 гэсэн 17 дахин үрэлгэн тоо гаргаж байв; (2) эх сурвалж заримдаа өдрийн бүх станцыг өгдөггүй (09-16 санд 15 станц, эх тайланд 35) тул max(record_date) нь ДУТУУ өдөрт унаж болзошгүй байв — одоо бүрэн бус өдрийг алгасна. ETL: systemd timer etransport-etl-rail.timer, өдөр бүр 01:30 UTC (09:30 УБ). АНХААР: өгөгдөлд 09-06…09-15 БАЙХГҮЙ (ETL ажиллаагүй үе) — түүхэн график зурах бол эхлээд нөхөх ажил хэрэгтэй. Ямар ч widget слот руу ХАРААХАН холбоогүй."
+      "period_note": "БАТАЛГААЖСАН (2026-09-18): \"Ачилт буулгалтын хоногийн мэдээ УБТЗ - 202609181046.xlsx\" эх файлтай 2026-09-17-ны өдрөөр тулгав — 35/35 станц ЯГ таарсан, нийт ачсан 1182, буусан 1027. Endpoint: https://portal.mrt.gov.mn/api/sectors/rail/wagon-loading. ХОЁР АЛДААГ тулгалтаар илрүүлж зассан: (1) mtd багана нь вагоны төрөл биш, \"Сарын эхнээс ачсан\" ХУРИМТЛАЛ байсныг хоногийн нийлбэрт нэмж 20,495 гэсэн 17 дахин үрэлгэн тоо гаргаж байв; (2) эх сурвалж заримдаа өдрийн бүх станцыг өгдөггүй (09-16 санд 15 станц, эх тайланд 35) тул max(record_date) нь ДУТУУ өдөрт унаж болзошгүй байв — одоо бүрэн бус өдрийг алгасна. ETL: systemd timer etransport-etl-rail.timer, өдөр бүр 01:30 UTC (09:30 УБ). АНХААР: өгөгдөлд 09-06…09-15 БАЙХГҮЙ (ETL ажиллаагүй үе) — түүхэн график зурах бол эхлээд нөхөх ажил хэрэгтэй. ХОЛБООС (2026-09-18): ls.rail — 01-р зурвасын Төмөр зам нүд нь SECTORS.rail.kpis[0]-ыг уншина. k04.rail нь ижил хоногийн багцыг rail.wagon_kpi_set-ээр авна."
+    },
+    "rail.wagon_kpi_set": {
+      "name": "Төмөр замын хоногийн вагон үзүүлэлтийн багц (KPI)",
+      "source": "EHBackend.fetchRailWagonLoading → applyRailWagonData (index.html)",
+      "dataset": "silver.rail_wagon_loading",
+      "column": "count (ачилт) · unloaded_count (буулгалт) · station_count (станцын тоо) — бүгд НЭГ хариунаас",
+      "agg": "MIXED",
+      "filter": "kpis[0]=ачсан вагон; kpis[1]=буусан вагон; kpis[2]=ачилт бүртгэсэн станцын тоо. Гурвуулаа rail.wagon_loading-ийн ЯГ ТЭР хоног (сүүлийн БҮРЭН бүртгэгдсэн өдөр)",
+      "transform": "",
+      "unit": "mixed",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "Хоногийн цонх — сар/жилийн дүн БИШ. Өмнөх хоногийн дүнг тус endpoint буцаадаггүй тул өөрчлөлтийн хувь \"—\" (ЗОХИОХГҮЙ), харьцуулалтын мөр нь \"харьцуулах өгөгдөл алга\" гэж ил хэлнэ. Мөрийн нэр: content.json → site.sector_kpi_rail_live."
+    },
+    "rail.feed_updated_at": {
+      "name": "Вагон ачилтын дата сүүлд шинэчлэгдсэн огноо",
+      "source": "EHBackend.fetchRailWagonLoading → date (setSourceMeta(\"railWagon\"))",
+      "dataset": "silver.rail_wagon_loading",
+      "column": "record_date",
+      "agg": "MAX — сүүлийн БҮРЭН бүртгэгдсэн хоног",
+      "filter": "дутуу татагдсан өдрийг алгасна (rail.wagon_loading-тай ижил дүрэм)",
+      "transform": "",
+      "unit": "огноо",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "ETL хоногт нэг ажилладаг (etransport-etl-rail.timer, 01:30 UTC) тул энэ огноо нь татсан цаг БИШ, ӨГӨГДЛИЙН сүүлийн хоног. air.feed_updated_at нь fetchedAt (feed татсан цаг) — өөр утга учир тусдаа метрик."
     }
   },
   "removed": {
