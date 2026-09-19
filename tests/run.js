@@ -176,6 +176,11 @@ function groupB() {
        дотор ашиглагдсан эсэхийг шалгана. Утга нь сайт дээр ҮНЭХЭЭР гарч
        ирснийг tests/text-coverage.js (F3 round-trip) DOM-оос баталдаг. */
     const dynGroups = ['sectors', 'sector_kpi', 'sector_kpi_air_live', 'sector_kpi_rail_live', 'sector_chart', 'unit',
+      /* `ds_schema_rail_wagon` — вагон ачилтын датасэтийн баганын нэр/тайлбар.
+         applyRailWagonData() дотор stxt('ds_schema_rail_wagon.head.'+i) гэж
+         ИНДЕКСЭЭР уншдаг тул бүтэн зам мөрөөр олдохгүй (sector_kpi_*_live-тэй
+         ижил зарчим). */
+      'ds_schema_rail_wagon',
       /* `datasets` — нээлттэй өгөгдлийн каталог. stxt() биш, applySiteContent()
          дотор массиваар (индексээр) DATASETS дээр давхарлагддаг тул бусад
          динамик бүлэгтэй ижил зарчмаар шалгагдана. */
@@ -3442,21 +3447,30 @@ async function groupBE() {
      хуучнаараа үлдвэл хуудас ХУДАЛ тайлбарлана). */
   const arm = dcScript().match(/\n  applyRailWagonData\(\)\{([\s\S]*?)\n  \}\n/);
   if (!arm) { bad('BE12. applyRailWagonData() олдсонгүй'); return; }
-  const mkApply = new Function('SECTORS', 'stxt', 'fmtNum', 'return function(){' + arm[1] + '}');
+  const mkApply = new Function('SECTORS', 'DS_SCHEMA', 'stxt', 'fmtNum', 'return function(){' + arm[1] + '}');
   const RAILTXT = {
     'sector_kpi_rail_live.0': 'ХОНОГИЙН АЧИЛТ',
     'sector_kpi_rail_live.1': 'ХОНОГИЙН БУУЛГАЛТ',
     'sector_kpi_rail_live.2': 'АЧИЛТТАЙ СТАНЦ',
     'unit.wagon': 'вагон', 'unit.station': 'станц',
-    'status.rail_wagon_compare': 'харьцуулах өгөгдөл алга (өмнөх хоногийн дүн ирээгүй)'
+    'status.rail_wagon_compare': 'харьцуулах өгөгдөл алга (өмнөх хоногийн дүн ирээгүй)',
+    'ds_schema_rail_wagon.head.0': 'Станц', 'ds_schema_rail_wagon.head.1': 'Код',
+    'ds_schema_rail_wagon.head.2': 'Ачсан (вагон)', 'ds_schema_rail_wagon.head.3': 'Буулгасан (вагон)',
+    'ds_schema_rail_wagon.head.4': 'Төлөв',
+    'ds_schema_rail_wagon.st_loaded': 'Ачилттай', 'ds_schema_rail_wagon.st_none': 'Зөвхөн буулгалт',
+    'sector_rank_rail_live': 'Станц тус бүрийн ачилт', 'sector_rank_rail_other': 'Бусад станц',
+    'sector_chart2_rail_live': 'Ачилт ихтэй станц'
   };
   const runApply = (live) => {
-    const SEC = { rail: { label: 'Төмөр зам', kpis: [['НИЙТ ЗАМ', '1,815', 'км', '+0.4%', 'up']] } };
+    const SEC = { rail: { label: 'Төмөр зам', kpis: [['НИЙТ ЗАМ', '1,815', 'км', '+0.4%', 'up']],
+      rt: 'Чиглэл тус бүрийн ачаа', rank: [['УБ–Замын-Үүд', '8.4M', '37.2%']],
+      c2: 'Ачааны төрлөөр (тонн)', bars: [['Нүүрс', 88, '12.4M тн']] } };
+    const DSS = { rail_wagon: { head: [], types: ['string','string','int','int','enum'], notes: [], rows: [] } };
     const ctx = { _railWagonLoading: live, _meta: null, _st: null,
       setSourceMeta(id, m) { this._meta = { id, m } }, setState(s) { this._st = s } };
-    mkApply(SEC, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f),
+    mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f),
       (n) => Number(n).toLocaleString('en-US')).call(ctx);
-    return { SEC, ctx };
+    return { SEC, ctx, DSS };
   };
   const A = runApply({ count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' });
   const kr = A.SEC.rail.kpis;
@@ -3569,6 +3583,112 @@ async function groupBE() {
     /\{\{ ls\.footNote \}\}/.test(read('index.html')));
   check('BE17. Урт харьцуулалтын тайлбар картаас халихгүй (ellipsis)',
     /title="\{\{ k\.compareLabel \}\}">\{\{ k\.compareLabel \}\}/.test(read('index.html')));
+
+  /* ── BE18. by_station → ДАТАСЭТИЙН хүснэгт ба салбарын бүтэц ──
+     Регресс: endpoint станц тус бүрийн ачилтыг өгдөг атал тэр мөрүүд
+     ХАЯГДАЖ, датасэтийн дэлгэрэнгүй хуудас DS_SCHEMA.rail-ын ЗОХИОМОЛ
+     галт тэрэгний хуваарийг өөрийн дата мэт харуулж байв.
+     Гараар бодохоор 4 станцын фикстур: 100 / 60 / 40 / 0, нийт 200. */
+  const BS = [{ station: 'Ерөө', code: '32', loaded: 100, unloaded: 10 },
+              { station: 'Багануур', code: '18', loaded: 60, unloaded: 0 },
+              { station: 'Улаанбаатар', code: '84', loaded: 40, unloaded: 300 },
+              { station: 'Сүхбаатар', code: '9', loaded: 0, unloaded: 25 }];
+  const B = runApply({ count: 200, unloadedCount: 335, stationCount: 4, date: '2026-09-17', byStation: BS });
+  const bw = B.DSS.rail_wagon;
+  check('BE18. 4 станц → 4 мөр', bw.rows.length === 4, JSON.stringify(bw.rows));
+  check('BE18. Мөр = [станц, код, ачсан, буулгасан, төлөв]',
+    JSON.stringify(bw.rows[0]) === JSON.stringify(['Ерөө', '32', 100, 10, 'ok:Ачилттай']), JSON.stringify(bw.rows[0]));
+  check('BE18. Ачилтгүй станц warn: шошготой (0-г ЗОХИОЖ ok болгохгүй)',
+    bw.rows[3][4] === 'warn:Зөвхөн буулгалт' && bw.rows[3][2] === 0, JSON.stringify(bw.rows[3]));
+  check('BE18. Баганын нэр content.json-оос (stxt) — 5 багана',
+    bw.head.length === 5 && bw.head[0] === 'Станц' && bw.head[2] === 'Ачсан (вагон)', JSON.stringify(bw.head));
+  check('BE18. Зохиомол галт тэрэгний мөр ОРОХГҮЙ',
+    !JSON.stringify(bw.rows).includes('271') && !JSON.stringify(bw.rows).includes('Замын-Үүд'));
+  check('BE18. rank ачилтаар эрэмбэлэгдэж, хувь нь ГАРААР БОДОХТОЙ таарна',
+    JSON.stringify(B.SEC.rail.rank) === JSON.stringify([['Ерөө', '100', '50.0%'], ['Багануур', '60', '30.0%'],
+      ['Улаанбаатар', '40', '20.0%'], ['Сүхбаатар', '0', '0.0%']]), JSON.stringify(B.SEC.rail.rank));
+  check('BE18. Зохиомол бүтцийн хувь (37.2%) БҮРЭН солигдоно',
+    !JSON.stringify(B.SEC.rail.rank).includes('37.2%') && B.SEC.rail.rt === 'Станц тус бүрийн ачилт');
+  check('BE18. bars — хамгийн их ачилт 100%, бусад нь түүнд харьцуулсан хувь',
+    JSON.stringify(B.SEC.rail.bars) === JSON.stringify([['Ерөө', 100, '100 вагон'], ['Багануур', 60, '60 вагон'],
+      ['Улаанбаатар', 40, '40 вагон'], ['Сүхбаатар', 0, '0 вагон']]), JSON.stringify(B.SEC.rail.bars));
+  check('BE18. Зохиомол багана (12.4M тн) БҮРЭН солигдоно',
+    !JSON.stringify(B.SEC.rail.bars).includes('12.4M') && B.SEC.rail.c2 === 'Ачилт ихтэй станц');
+  const B0 = runApply({ count: 200, unloadedCount: null, stationCount: null, date: '2026-09-17', byStation: [] });
+  check('BE18. by_station ХООСОН → хүснэгт ч, бүтэц ч ОГТ хөндөгдөхгүй',
+    B0.DSS.rail_wagon.rows.length === 0 && B0.SEC.rail.rt === 'Чиглэл тус бүрийн ачаа');
+  check('BE18. wagonLoadingToValue by_station-ыг ХАДГАЛНА',
+    JSON.stringify((toW({ status: 'ok', count: 5, by_station: BS }) || {}).byStation) === JSON.stringify(BS));
+  check('BE18. by_station ирээгүй бол хоосон массив (undefined БИШ)',
+    JSON.stringify((toW({ status: 'ok', count: 5 }) || {}).byStation) === '[]');
+
+  /* ── BE19. station_count: 0 нь мөрийг БҮРМӨСӨН алга болгодог байв ── */
+  check('BE19. station_count 0 → 0 (Number()||null нь null болгож мөрийг залгидаг байв)',
+    (toW({ status: 'ok', count: 5, station_count: 0 }) || {}).stationCount === 0);
+  check('BE19. station_count ирээгүй → null (0 гэж ЗОХИОХГҮЙ)',
+    (toW({ status: 'ok', count: 5 }) || {}).stationCount === null);
+  const C0 = runApply({ count: 900, unloadedCount: 0, stationCount: 0, date: '2026-09-17' });
+  check('BE19. Бодит 0 бол мөр ГАРНА (мөр чимээгүй алга болохгүй)',
+    C0.SEC.rail.kpis.length === 3 && C0.SEC.rail.kpis[1][1] === '0' && C0.SEC.rail.kpis[2][1] === '0',
+    JSON.stringify(C0.SEC.rail.kpis));
+
+  /* ── BE20. НИЙТЛЭЛИЙН ЗАМ — content.json/overlay ирэхэд амьд мөр ДАХИН барина ──
+     Регресс: applyRailWagonData() мөрийн НЭРийг stxt()-ээр тухайн агшинд
+     шингээдэг тул текст нь хожуу ирвэл (нийтлэл нь ҮРГЭЛЖ хамгийн сүүлд
+     ирдэг) админаас засварласан шошго сайтад ХЭЗЭЭ Ч гарахгүй байв. */
+  check('BE20. loadContent() applySiteContent-ийн ДАРАА reapplyLiveText дуудна',
+    /applySiteContent\(\);\s*this\.reapplyLiveText\(\);\s*this\.setState\(\{content:json\}\)/.test(dcScript()));
+  check('BE20. loadPublished() ч ижил (нийтэлсэн шошго амьд мөрөнд хүрнэ)',
+    /applySiteContent\(\);\s*this\.reapplyLiveText\(\);\s*this\.setState\(\{content:pub\.content\}\)/.test(dcScript()));
+  check('BE20. reapplyLiveText нь rail ба air ХОЁУЛАНГ нь дахин барина',
+    /reapplyLiveText\(\)\{[\s\S]*?this\.applyRailWagonData\(\);[\s\S]*?this\.recomputeAirData\(\);[\s\S]*?\}/.test(dcScript()));
+  /* Дарааллыг УРВУУЛЖ давтана: backend түрүүлж ирээд ДАРАА нь content.json */
+  const RAILTXT2 = Object.assign({}, RAILTXT, { 'sector_kpi_rail_live.0': 'АЧСАН ВАГОН' });
+  const lateApply = () => {
+    const SEC = { rail: { label: 'Төмөр зам', kpis: [['НИЙТ ЗАМ', '1,815', 'км', '+0.4%', 'up']] } };
+    const DSS = { rail_wagon: { head: [], types: [], notes: [], rows: [] } };
+    const ctx = { _railWagonLoading: { count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' },
+      _meta: null, _st: null, setSourceMeta() {}, setState() {} };
+    const fmt = (n) => Number(n).toLocaleString('en-US');
+    mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f), fmt).call(ctx);
+    mkApply(SEC, DSS, (p, f) => (RAILTXT2[p] !== undefined ? RAILTXT2[p] : f), fmt).call(ctx);
+    return SEC;
+  };
+  check('BE20. Backend ТҮРҮҮЛЖ ирсэн ч шинэ шошго мөрөнд ТУСНА',
+    lateApply().rail.kpis[0][0] === 'АЧСАН ВАГОН', JSON.stringify(lateApply().rail.kpis[0]));
+
+  /* ── BE21. Нийтлэгдсэн registry нь файлынхыг ДАВХАРЛАНА (бүтнээр солихгүй) ──
+     Регресс: overlay үргэлж сүүлд ирдэг тул бүтнээр дарвал нийтэлсний
+     дараах git засвар (quality: verified) амьд сайтад хүрэхгүй болно. */
+  check('BE21. loadPublished registry-г СОЛИХГҮЙ, давхарлана',
+    !/if\(pub\.registry\) this\.setState\(\{metricRegistry:pub\.registry\}\)/.test(dcScript()) &&
+    /metricRegistry:\{\.\.\.base,\.\.\.pub\.registry,/.test(dcScript()) &&
+    /widgets:\{\.\.\.\(base\.widgets\|\|\{\}\),\.\.\.\(pub\.registry\.widgets\|\|\{\}\)\}/.test(dcScript()));
+
+  /* ── BE22. Схем нь ДАТАСЭТЭЭР сонгогдоно (салбараар БИШ) ── */
+  check('BE22. buildPreview схемийг dsel.schema-аар сонгоно',
+    /const schemaKey=dsel\.schema\|\|dsel\.sector;/.test(dcScript()) &&
+    /const sc=DS_SCHEMA\[schemaKey\];/.test(dcScript()) &&
+    !/const sc=DS_SCHEMA\[dsel\.sector\];/.test(dcScript()));
+  check('BE22. Багана өргөн/эрэмбийн кэш ч ижил түлхүүрээр (датасэт хооронд холилдохгүй)',
+    /const cacheKey=schemaKey\+/.test(dcScript()) &&
+    /this\.state\.pvColWidths\[schemaKey\]/.test(dcScript()));
+  check('BE22. Вагон ачилтын датасэт rail_wagon схем зарлана',
+    /schema:'rail_wagon',source:'railWagon'/.test(dcScript()));
+  check('BE22. DS_SCHEMA.rail_wagon анхнаасаа ХООСОН мөртэй (зохиомол дата алга)',
+    /rail_wagon:\{head:\[[\s\S]*?rows:\[\]\}/.test(dcScript()));
+  check('BE22. Салбарын схем ХЭВЭЭР (schema зарлаагүй датасэт эвдрэхгүй)',
+    /rail:\{head:\['Огноо','Галт тэрэг'/.test(dcScript()));
+  check('BE22. Каталогийн давтамж "Тодорхойгүй" биш бодит хуваарь',
+    !/freq:'Тодорхойгүй',use:'Нийтийн API нээлттэй'/.test(dcScript()));
+
+  /* ── BE23. Шинэ харагдах текст content.json-д бүртгэгдсэн ── */
+  const cw = con14.site.ds_schema_rail_wagon || {};
+  check('BE23. ds_schema_rail_wagon.head 5 баганатай', (cw.head || []).length === 5, JSON.stringify(cw.head));
+  check('BE23. ds_schema_rail_wagon.notes 5 тайлбартай', (cw.notes || []).length === 5);
+  check('BE23. Төлөвийн 2 шошго бүртгэлтэй', !!cw.st_loaded && !!cw.st_none);
+  check('BE23. Салбарын бүтэц/баганын амьд гарчиг бүртгэлтэй',
+    !!con14.site.sector_rank_rail_live && !!con14.site.sector_rank_rail_other && !!con14.site.sector_chart2_rail_live);
 }
 
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */

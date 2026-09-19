@@ -2378,6 +2378,10 @@
     <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
       <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>{{ detail.c1 }}</div>
+        <sc-if value="{{ detail.noTrend }}">
+          <div style="height:180px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ detail.noTrendNote }}</div>
+        </sc-if>
+        <sc-if value="{{ detail.hasTrend }}">
         <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:180px;display:block;">
           <defs>
             <linearGradient id="dtlfill" x1="0" y1="0" x2="0" y2="1">
@@ -2403,6 +2407,7 @@
             </foreignObject>
           </sc-for>
         </svg>
+        </sc-if>
       </div>
       <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dstr" data-eh-field="title">{{ detail.dstrTitle }}</span></div>
@@ -3881,6 +3886,16 @@ const DS_SCHEMA={
       ['2026-08-10','№271','УБ – Замын-Үүд',4310,'ok:Хэвийн'],['2026-08-10','№382','Дархан – Эрдэнэт',2610,'warn:Хойшилсон'],
       ['2026-08-10','№264','УБ – Сүхбаатар',3140,'ok:Хэвийн'],['2026-08-09','№674','Сайншанд – Замын-Үүд',3390,'ok:Хэвийн'],
       ['2026-08-09','№286','УБ – Чойр',2080,'ok:Хэвийн'],['2026-08-09','№271','УБ – Замын-Үүд',3960,'ok:Хэвийн']]},
+  /* Вагон ачилт — САЛБАРЫН биш ДАТАСЭТИЙН схем. rail-д 3 датасэт байгаа
+     тул DS_SCHEMA.rail-ыг дарж бичвэл нөгөө хоёр нь худал болно. rows нь
+     ХООСОН эхэлнэ: backend-ээс by_station ирэх хүртэл хүснэгт "мэдээлэл
+     алга" гэж ил хэлнэ — зохиомол мөр ОГТ ҮЗҮҮЛЭХГҮЙ ("Тоо ЗОХИОХГҮЙ"). */
+  rail_wagon:{head:['Станц','Код','Ачсан (вагон)','Буулгасан (вагон)','Төлөв'],
+    types:['string','string','int','int','enum'],
+    notes:['Ачилт, буулгалт бүртгэгдсэн өртөөний нэр','УБТЗ-ийн өртөөний код',
+      'Тухайн хоногт ачигдсан вагоны тоо','Тухайн хоногт буулгасан вагоны тоо',
+      'Тухайн хоногт ачилт хийгдсэн эсэх'],
+    rows:[]},
   air:{head:['Огноо','Нислэг','Чиглэл','Зорчигч','Төлөв'],
     types:['date','string','string','int','enum'],
     notes:['Нислэгийн огноо','Тээвэрлэгчийн нислэгийн код','Хүрэх/гарах хот','Зорчигчийн тоо','Нислэгийн төрөл'],
@@ -4078,7 +4093,10 @@ const DATASETS=[
   {sector:'water',name:'Боомтын ачаа эргэлт',agency:'ЗТЯ',fmt:'CSV',badges:['Үнэгүй'],freq:'Сар бүр',use:'890 татсан',desc:'Идэвхтэй боомтуудын сарын ачаа эргэлтийн дэлгэрэнгүй тайлан.'},
   {sector:'public',name:'Нийтийн тээврийн чиглэл, хуваарь',agency:'НТБГ',fmt:'CSV, GEOJSON',badges:['Үнэгүй'],freq:'Сар бүр',use:'5,680 татсан',desc:'Хотын нийтийн тээврийн бүх чиглэлийн зурвас, зогсоол, хуваарь.'},
   {sector:'public',name:'Автобусны бодит байршил',agency:'НТБГ',fmt:'API',badges:['Үнэгүй','Шууд'],freq:'15 сек тутам',use:'620,000 дуудлага',desc:'Автобусны GPS байршил, ирэх хугацааны тооцоолол бүхий бодит цагийн дата.'},
-  {sector:'rail',name:'Ачилт буулгалтын хоногийн мэдээ (вагон)',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Тодорхойгүй',use:'Нийтийн API нээлттэй',desc:'Буудал тус бүрийн вагон ачилт, буулгалтын хоногийн бодит мэдээ. Нийтийн API-аар нээлттэй боловч автомат шинэчлэлтийн хуваарь хараахан идэвхжээгүй тул мэдээлэл саатаж болзошгүй.'}
+  {sector:'rail',name:'Ачилт буулгалтын хоногийн мэдээ (вагон)',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нийтийн API нээлттэй',desc:'Буудал тус бүрийн вагон ачилт, буулгалтын хоногийн бодит мэдээ. ETL хуваарийн дагуу өдөр бүр автоматаар шинэчлэгдэнэ.',
+   /* schema — энэ датасэт салбарын схемийг БИШ өөрийн станцын задаргааг
+      үзүүлнэ; source/bind — дэлгэрэнгүйн картууд амьд метаг уншина. */
+   schema:'rail_wagon',source:'railWagon',bind:{freq:'lastRecord'}}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
 // ЗОХИОХГҮЙ, DATASETS/SERVICES-ийн бодит уртаас тооцоолно (KPI_UNIFIED-ийн
@@ -4521,8 +4539,11 @@ function wagonLoadingToValue(json){
   if(!isFinite(n)||n<0) return null;
   const date=typeof json.date==='string'?json.date:null;
   return {count:n,date,monthLabel:date,unit:json.unit||null,
-          stationCount:Number(json.station_count)||null,
-          unloadedCount:json.unloaded_count==null?null:Number(json.unloaded_count)};
+          stationCount:json.station_count==null?null:Number(json.station_count),
+          unloadedCount:json.unloaded_count==null?null:Number(json.unloaded_count),
+          /* Станцын задаргаа — датасэтийн хүснэгт ба салбарын бүтэц энэнээс
+             уншина. Өмнө нь ХАЯГДАЖ, оронд нь зохиомол мөр харагддаг байв. */
+          byStation:Array.isArray(json.by_station)?json.by_station:[]};
 }
 
 function buildTrendChart(data,off){
@@ -4997,6 +5018,7 @@ class Component extends DCLogic {
       // НЭГ УДАА дарж бичнэ — дараагийн рендерүүд шинэ нэрийг авна.
       SITE_TEXT=(json&&json.site)||null;
       applySiteContent();
+      this.reapplyLiveText();
       this.setState({content:json});
       /* content.json бол датасэтийн нэрийн эцсийн эх сурвалж — одоо ч
          олдохгүй бол холбоос хуучирсан. */
@@ -5056,10 +5078,21 @@ class Component extends DCLogic {
     if(pub.content){
       SITE_TEXT=(pub.content&&pub.content.site)||SITE_TEXT;
       applySiteContent();
+      this.reapplyLiveText();
       this.setState({content:pub.content});
       this.resolvePendingRoute(false);
     }
-    if(pub.registry) this.setState({metricRegistry:pub.registry});
+    /* Нийтлэгдсэн registry нь файлын ДЭЭР давхарлана — бүтнээр СОЛИХГҮЙ.
+       Overlay нь үргэлж хамгийн СҮҮЛД ирдэг тул бүтнээр дарвал нийтэлсний
+       дараах git засвар (шинэ виджетийн холбоос, quality: verified) амьд
+       сайтад ХЭЗЭЭ Ч хүрэхгүй болно — хуучин снапшот "pending" байвал
+       kpiVerified() false болж амьд тоо алга болох байв. */
+    if(pub.registry){
+      const base=this.state.metricRegistry||{};
+      this.setState({metricRegistry:{...base,...pub.registry,
+        widgets:{...(base.widgets||{}),...(pub.registry.widgets||{})},
+        metrics:{...(base.metrics||{}),...(pub.registry.metrics||{})}}});
+    }
     console.info('[ErtHub] нийтлэгдсэн контент хэрэглэгдлээ:',
       (pub.meta&&pub.meta.at)||'—', (pub.meta&&pub.meta.by)||'');
   }
@@ -5117,7 +5150,57 @@ class Component extends DCLogic {
     /* "Сүүлд шинэчлэгдсэн өгөгдөл" (u07) мөрийн огноо — RECENT-ийн
        source:'railWagon' мөр bindCard()-аар ЭНЭ метагаас уншина. */
     this.setSourceMeta('railWagon',{updatedAt:w.date,updatedAtFull:w.date,lastRecord:w.date});
+    /* ── Станцын задаргаа (by_station) ───────────────────────────────────
+       Endpoint нь станц тус бүрийн ачилт/буулгалтыг өгдөг атал энэ 35 мөр
+       ХАЯГДАЖ, датасэтийн дэлгэрэнгүй хуудас нь DS_SCHEMA.rail-ын зохиомол
+       галт тэрэгний хуваарийг ("№271 УБ–Замын-Үүд 4180 тн") өөрийн дата мэт
+       харуулж байв — "Тоо ЗОХИОХГҮЙ" дүрмийн шууд зөрчил. Мөн салбарын
+       бүтэц/багана нь зохиомол хувиар ("УБ–Замын-Үүд 37.2%") амьд KPI-ийн
+       хажууд зэрэгцэж сууж байсан. Бодит дата ирэхэд гурвуулангийг нь дарна;
+       ирээгүй бол ОГТ ХӨНДӨХГҮЙ (хуучин байдал хэвээр). */
+    const bs=Array.isArray(w.byStation)?w.byStation:[];
+    if(bs.length){
+      const ld=r=>Number(r&&r.loaded)||0, ul=r=>Number(r&&r.unloaded)||0;
+      const h=(x,i)=>stxt('ds_schema_rail_wagon.head.'+i,x);
+      const nt=(x,i)=>stxt('ds_schema_rail_wagon.notes.'+i,x);
+      DS_SCHEMA.rail_wagon.head=[h('Станц',0),h('Код',1),h('Ачсан (вагон)',2),
+        h('Буулгасан (вагон)',3),h('Төлөв',4)];
+      DS_SCHEMA.rail_wagon.notes=[
+        nt('Ачилт, буулгалт бүртгэгдсэн өртөөний нэр',0),nt('УБТЗ-ийн өртөөний код',1),
+        nt('Тухайн хоногт ачигдсан вагоны тоо',2),nt('Тухайн хоногт буулгасан вагоны тоо',3),
+        nt('Тухайн хоногт ачилт хийгдсэн эсэх',4)];
+      const stOk=stxt('ds_schema_rail_wagon.st_loaded','Ачилттай');
+      const stNo=stxt('ds_schema_rail_wagon.st_none','Зөвхөн буулгалт');
+      DS_SCHEMA.rail_wagon.rows=bs.map(r=>[String(r.station||''),String(r.code||''),
+        ld(r),ul(r),(ld(r)>0?'ok:'+stOk:'warn:'+stNo)]);
+      /* Салбарын бүтэц ба багана — ачилтаар эрэмбэлсэн бодит станцууд */
+      const top=bs.slice().sort((a,b)=>ld(b)-ld(a));
+      const tot=bs.reduce((a,r)=>a+ld(r),0);
+      const pct=v=>tot?(v/tot*100).toFixed(1)+'%':'—';
+      SECTORS.rail.rt=stxt('sector_rank_rail_live','Станц тус бүрийн ачилт');
+      SECTORS.rail.rank=top.slice(0,4).map(r=>[r.station,fmtNum(ld(r)),pct(ld(r))]);
+      if(top.length>4){
+        const rest=top.slice(4).reduce((a,r)=>a+ld(r),0);
+        SECTORS.rail.rank.push([stxt('sector_rank_rail_other','Бусад станц'),fmtNum(rest),pct(rest)]);
+      }
+      SECTORS.rail.c2=stxt('sector_chart2_rail_live','Ачилт ихтэй станц');
+      const mx=ld(top[0]);
+      SECTORS.rail.bars=top.slice(0,5).map(r=>[r.station,
+        mx?Math.round(ld(r)/mx*100):0,fmtNum(ld(r))+' '+uw]);
+    }
     this.setState({railWagonDate:w.date||''});
+  }
+  /* content.json эсвэл нийтлэгдсэн overlay ирэхэд амьд мөрүүдийг ДАХИН барина.
+     applyRailWagonData() ба applyRealFlightsData() хоёул мөрийн НЭР, харьцуулалтын
+     тайлбарыг stxt()-ээр тухайн агшинд ШИНГЭЭДЭГ. Текст нь хожуу ирвэл (CDN ирмэг
+     хүйтэн, эсвэл нийтлэл нь ҮРГЭЛЖ хамгийн сүүлд ирдэг) тэр мөрүүдэд ХЭЗЭЭ Ч
+     тусахгүй байв — админаас sector_kpi_rail_live / sector_kpi_air_live /
+     status.rail_wagon_compare-г засаад "Сайтад нийтлэх" дарахад сайтад
+     гардаггүй байсан ҮНДСЭН шалтгаан яг энэ.
+     Хоёр функц хоёул дата ирээгүй бол шууд буцдаг тул давтан дуудахад аюулгүй. */
+  reapplyLiveText(){
+    this.applyRailWagonData();
+    this.recomputeAirData();
   }
   // Registry-ийн "verified" нь ХОЛБООС байгааг л хэлнэ — дата ИРСЭН гэсэн
   // үг БИШ. Эх сурвалж унасан үед статик демо тоо (11,979 нислэг,
@@ -5812,6 +5895,10 @@ class Component extends DCLogic {
     const lastRealIdx=(()=>{ for(let i=11;i>=0;i--) if(c1dFull[i]>0) return i; return -1; })();
     const lastRealM=lastRealIdx>=0?lastRealIdx+1:12;
     SECTORS.air.c1d=lastRealIdx>=0?c1dFull.slice(0,lastRealIdx+1):c1dFull;
+    /* Энэ салбарын сарын ЦУВАА нь бодит (_liveKpis нь зөвхөн KPI мөр амьд
+       гэдгийг л хэлнэ). Хоёрыг ЯЛГАХ шалтгаан: rail-д KPI амьд боловч
+       цуваа байхгүй — тэнд зохиомол муруй зурах ёсгүй. */
+    SECTORS.air._liveSeries=true;
 
     // "Сараар зорчигч ба нислэг" / "Сараар ачааны хэмжээ" dual-axis
     // графикуудын эх дата — зөвхөн бодит бичлэгтэй сарууд (c1d-тэй ижил
@@ -6146,7 +6233,13 @@ class Component extends DCLogic {
     },AI_STEPS.length*430+320));
   }
   buildPreview(dsel,dsRows){
-    const sc=DS_SCHEMA[dsel.sector];
+    /* Схем нь ДАТАСЭТЭЭР сонгогдоно: нэг салбарт олон датасэт байх тул
+       зөвхөн салбараар түлхүүрлэвэл (өмнөх байдал) вагон ачилтын датасэт
+       нь галт тэрэгний хуваарийн зохиомол мөрүүдийг өөрийн дата мэт
+       харуулж байв. `schema` зарлаагүй датасэт урьдын адил салбарынхаа
+       схемийг хэвээр ашиглана. */
+    const schemaKey=dsel.schema||dsel.sector;
+    const sc=DS_SCHEMA[schemaKey];
     const q=(this.state.dsQ||'').toLowerCase().trim();
     const sf=this.state.pvStatusFilter||'all';
     const sort=this.state.dsSort||0, dir=this.state.dsDir||-1;
@@ -6155,7 +6248,7 @@ class Component extends DCLogic {
     // setState) дахин бодвол UI мэдэгдэхүйц удаашрана. sc.rows-ийн объект
     // адилтгал нь applyRealFlightsData дахин барихад л өөрчлөгддөг учир
     // хүчингүй болгох дохио болж төгс тохирно.
-    const cacheKey=dsel.sector+'|'+q+'|'+sf+'|'+sort+'|'+dir;
+    const cacheKey=schemaKey+'|'+q+'|'+sf+'|'+sort+'|'+dir;
     if(!this._pvCache||this._pvCache.key!==cacheKey||this._pvCache.src!==sc.rows){
       const filteredRows=sc.rows.filter(r=>!q||r.join(' ').toLowerCase().includes(q))
         .filter(r=>sf==='all'||String(r[r.length-1]).split(':')[0]===sf);
@@ -6188,12 +6281,12 @@ class Component extends DCLogic {
       if(types[ci]==='enum') return 124;
       return Math.max(104,Math.min(190,(sc.head[ci]||'').length*8.5+40));
     };
-    const savedW=(this.state.pvColWidths&&this.state.pvColWidths[dsel.sector])||[];
+    const savedW=(this.state.pvColWidths&&this.state.pvColWidths[schemaKey])||[];
     const colWidths=Array.from({length:cols},(_,i)=>savedW[i]||defaultW(i));
     const grid='display:grid;grid-template-columns:'+colWidths.map(w=>w+'px').join(' ')+';gap:12px;';
     const startResize=(ci)=>(e)=>{
       e.preventDefault(); e.stopPropagation();
-      this._colDrag={sector:dsel.sector,index:ci,startX:e.clientX,startWidths:colWidths.slice()};
+      this._colDrag={sector:schemaKey,index:ci,startX:e.clientX,startWidths:colWidths.slice()};
       this._colDragMoved=false;
     };
     return {
@@ -7437,7 +7530,14 @@ class Component extends DCLogic {
     const dsRows=null;
     const dqTier=!dq.known?{l:'Тодорхойгүй',c:'var(--ink3)'}
       :(dq.total>=85?{l:'Маш сайн',c:'#2FA37B'}:(dq.total>=65?{l:'Сайн',c:'#3F6FD8'}:{l:'Дундаж',c:'#B9903A'}));
-    const dsTrend=buildTrendChart(SECTORS[dsel.sector].c1d);
+    /* Чиг хандлагын муруй — бодит цуваатай үед Л зурна. SECTORS[k].c1d нь
+       холбогдоогүй салбаруудад демо утга хэвээр байдаг; тэр нь амьд ТООНЫ
+       хажууд зэрэгцвэл хуудас ХУДАЛ тайлбарлана (жиш. вагон ачилтын
+       датасэт дээр "САРЫН ЗОРЧИГЧ" муруй). _liveKpis нь KPI мөр амьд
+       гэдгийг л хэлнэ — цуваа нь тусдаа тугтай (_liveSeries). */
+    const dsSec=SECTORS[dsel.sector];
+    const dsHasTrend=!dsSec._liveKpis||!!dsSec._liveSeries;
+    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d):null;
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
@@ -7621,7 +7721,10 @@ class Component extends DCLogic {
           color:it.on?'#0E8F63':'var(--ink3)',
           mark:it.on?'✓':'✕'}))
       })),
-      c1:SECTORS[dsel.sector].c1,trend:dsTrend,
+      c1:dsHasTrend?SECTORS[dsel.sector].c1:stxt('detail.no_series_title','ЧИГ ХАНДЛАГА'),
+      hasTrend:dsHasTrend,noTrend:!dsHasTrend,
+      noTrendNote:stxt('status.no_series','чиг хандлагын цуваа алга'),
+      trend:dsTrend||{yTicks:[],xTicks:[]},
       ...this.buildPreview(dsel,dsRows),
       actions:[['api','API холбогдох','{ }'],['follow','Дагах','◎']].map(a=>({
         id:a[0],label:a[0]==='download'?('Татах ('+dsel.fmt+')'):a[1],glyph:a[2],

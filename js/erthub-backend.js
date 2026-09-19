@@ -12,13 +12,13 @@
  *   - Тоо ЗОХИОХГҮЙ: fetch амжилтгүй бол `null` буцаана, val()-ийн
  *     getters нь `null`-ийг isFallback:true болгон зөв тайлбарлана.
  *
- * АНХААРУУЛГА (HANDOFF-ээс): `/api/sectors/rail/summary` одоогоор
- * `silver.rail_operations`-с уншиж байгаа бөгөөд шинэ ETL хийсэн
- * `silver.rail_wagon_loading`-тэй хараахан ХОЛБООГҮЙ (backend талын
- * шийдвэр хүлээгдэж байна). Иймд энэ endpoint нийтийн болсон ч
- * "rail.wagon_loading" метрикийн утга нь тухайн шийдвэр гарах хүртэл
- * буруу/хуучин байж болзошгүй — metric_registry.json-д quality:"pending"
- * гэж ил тэмдэглэсэн шалтгаан яг энэ.
+ * ТӨЛӨВ (2026-09-19): вагон ачилт нь summary-гаас ТУСДАА endpoint-оор
+ * (`/api/sectors/rail/wagon-loading`) `silver.rail_wagon_loading`-оос шууд
+ * ирдэг болсон бөгөөд эх xlsx-тэй тулгаж баталсан тул metric_registry.json-д
+ * quality:"verified". Харин `/api/sectors/rail/summary` нь одоогоор ХООСОН
+ * (`data:[]`) буцаадаг — зорчигчийн сарын нэгтгэл хараахан ирээгүй. Тиймээс
+ * fetchSectorSummary() нь rail-д утга өгөхгүй бөгөөд сайт энэ хоёрыг
+ * ХОЛИХГҮЙ: вагон (хоногийн) ба зорчигч (сарын) нэгж нь өөр.
  */
 (function () {
   'use strict';
