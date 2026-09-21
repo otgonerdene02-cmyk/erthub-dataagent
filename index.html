@@ -776,7 +776,7 @@
         <div style="flex:1;min-width:12px;height:1px;background:var(--line);"></div>
         
       </div>
-      <div style="display:grid;grid-template-columns:repeat({{ lsCols }},minmax(0,1fr));gap:0;">
+      <div class="eh-ls-grid" style="display:grid;grid-template-columns:repeat({{ lsCols }},minmax(0,1fr));gap:0;">
         <sc-for list="{{ livestrip }}" as="ls" hint-placeholder-count="5">
           <button sc-camel-on-click="{{ ls.select }}" style="{{ ls.cellStyle }}">
             <div style="{{ ls.railStyle }}"></div>
@@ -4564,6 +4564,25 @@ function wagonLoadingToValue(json){
           byStation:Array.isArray(json.by_station)?json.by_station:[]};
 }
 
+/* Хоногийн мэдээний НАС (хоногоор). ETL амьд ажиллаж байхад ч эх сурвалж
+   хоцорч болно (2026-09-21: dispatcher өдөр бүр гүйсэн атал вагон ачилтын
+   сүүлийн бичлэг 09-17 дээр зогссон). Огноогүй том тоо нь хуудсан дээр
+   "өнөөдрийнх" мэт уншигдах тул насыг тооцож ил бичнэ.
+   Цагийн бүс/зуны цагийн шилжилт хоногт нөлөөлөхгүйн тулд ХОЁУЛАНГ нь
+   UTC-ийн шөнө дунд болгоно. Буруу/хоосон огноо → null: "0 хоног" гэж
+   ЗОХИОХГҮЙ. */
+function dataAgeDays(dateStr,now){
+  const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr==null?'':dateStr));
+  if(!m) return null;
+  const t=(now instanceof Date&&!isNaN(now))?now:new Date();
+  return Math.round((Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())
+                    -Date.UTC(+m[1],+m[2]-1,+m[3]))/86400000);
+}
+/* Хоногийн мэдээ D+1, зарим үед D+2-т нийтлэгддэг тул 2 хоног хүртэл
+   ХЭВИЙН. Түүнээс хойшхыг л "шинэчлэгдээгүй" гэж тэмдэглэнэ — эс тэгвэл
+   хэвийн хоцролт бүрд сэрэмжлүүлэг гарч утгаа алдана. */
+const WAGON_STALE_DAYS=2;
+
 function buildTrendChart(data,off){
   off=off||0;
   const w=600,h=170,padL=46,padR=12,padT=14,padB=26;
@@ -5160,9 +5179,24 @@ class Component extends DCLogic {
     /* Өмнөх хоногийн дүнг endpoint буцаадаггүй тул өөрчлөлтийн хувийг
        ЗОХИОХГҮЙ — "—" гэж тавиад шалтгааныг нь мөрийн доор ил бичнэ. */
     const cmp=stxt('status.rail_wagon_compare','харьцуулах өгөгдөл алга (өмнөх хоногийн дүн ирээгүй)');
-    const rows=[[kl('ХОНОГИЙН АЧИЛТ',0),fmtNum(w.count),uw,'—','flat',cmp]];
-    if(w.unloadedCount!=null) rows.push([kl('ХОНОГИЙН БУУЛГАЛТ',1),fmtNum(w.unloadedCount),uw,'—','flat',cmp]);
-    if(w.stationCount!=null)  rows.push([kl('АЧИЛТТАЙ СТАНЦ',2),fmtNum(w.stationCount),us,'—','flat',cmp]);
+    /* Мөрийн доорх тайлбар — ЯМАР ӨДРИЙН тоо болохыг ҮРГЭЛЖ хэлнэ.
+       Өмнө нь зөвхөн "харьцуулах өгөгдөл алга" гэж бичдэг байсан тул
+       4 хоногийн өмнөх 1182 вагоныг өнөөдрийн дүн мэт уншиж болохоор
+       байв. Хоцорсон үед харьцуулалтын тайлбарыг СОЛИНО — хоёуланг нь
+       хамт бичвэл жижиг хөл бичиг уншигдахгүй болох ба хоцролт нь илүү
+       чухал үнэн. */
+    const age=dataAgeDays(w.date);
+    const stale=(age!=null&&age>WAGON_STALE_DAYS)
+      ? age+' '+stxt('status.rail_wagon_stale','хоног шинэчлэгдээгүй') : '';
+    /* Хөл бичиг НЭГ мөрт (nowrap + ellipsis, 1280px дээр ~214px) тул
+       ЧУХЛЫГ нь урд тавина. Хоцорсон үед "Хоногийн мэдээ:" шошгыг хасна —
+       сэрэмжлүүлэг өөрөө огнооны утгыг тайлбарладаг, шошготой бол
+       "шинэчлэгдээгүй" гэдэг үг таслагдаж "4 хоног ш…" болж байв. */
+    const asof=!w.date?'':(stale?w.date:stxt('status.rail_wagon_asof','Хоногийн мэдээ:')+' '+w.date);
+    const note=[asof,stale||cmp].filter(Boolean).join(' · ');
+    const rows=[[kl('ХОНОГИЙН АЧИЛТ',0),fmtNum(w.count),uw,'—','flat',note]];
+    if(w.unloadedCount!=null) rows.push([kl('ХОНОГИЙН БУУЛГАЛТ',1),fmtNum(w.unloadedCount),uw,'—','flat',note]);
+    if(w.stationCount!=null)  rows.push([kl('АЧИЛТТАЙ СТАНЦ',2),fmtNum(w.stationCount),us,'—','flat',note]);
     SECTORS.rail.kpis=rows;
     SECTORS.rail._liveKpis=true;
     /* "Сүүлд шинэчлэгдсэн өгөгдөл" (u07) мөрийн огноо — RECENT-ийн

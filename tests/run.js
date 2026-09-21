@@ -1758,6 +1758,14 @@ async function groupN() {
     idx.includes('lsCols:String(Math.max(1,livestrip.length))') &&
     idx.includes('Math.max(1,wPax.delta.length)') &&
     idx.includes('Math.max(1,wCargo.delta.length)'));
+  /* Регресс (browser, 2026-09-21): 375px-д livestrip-ийн 5 нүд бүр ~59px,
+     хөл бичгийн сав 36px болж огноо/хоцролтын тэмдэглэл бүр таслагдаж
+     байв. Desktop-ын lsCols гэрээг ХӨНДӨХГҮЙ — зөвхөн нарийн дэлгэцэд. */
+  const css = read('style.css');
+  check('N1. Livestrip нарийн дэлгэцэд мөр нэмнэ (auto-fit, desktop-ыг хөндөхгүй)',
+    idx.includes('class="eh-ls-grid" style="display:grid;grid-template-columns:repeat({{ lsCols }}') &&
+    css.includes('@media (max-width: 1100px) {') &&
+    css.includes('.eh-ls-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important; }'));
   check('N1. repeat(5, … хатуу бичиглэл ҮЛДЭЭГҮЙ',
     !idx.includes('repeat(5,minmax(0,1fr))'),
     'хаа нэгтээ 5 багана хатуу үлдсэн');
@@ -3536,13 +3544,17 @@ async function groupBE() {
      хуучнаараа үлдвэл хуудас ХУДАЛ тайлбарлана). */
   const arm = dcScript().match(/\n  applyRailWagonData\(\)\{([\s\S]*?)\n  \}\n/);
   if (!arm) { bad('BE12. applyRailWagonData() олдсонгүй'); return; }
-  const mkApply = new Function('SECTORS', 'DS_SCHEMA', 'stxt', 'fmtNum', 'return function(){' + arm[1] + '}');
+  /* dataAgeDays/WAGON_STALE_DAYS-ийг ГАДНААС өгнө: эс тэгвэл тест
+     "өнөөдөр" хэзээ ажиллахаас хамаарч ногоон/улаан солигдоно. */
+  const mkApply = new Function('SECTORS', 'DS_SCHEMA', 'stxt', 'fmtNum',
+    'dataAgeDays', 'WAGON_STALE_DAYS', 'return function(){' + arm[1] + '}');
   const RAILTXT = {
     'sector_kpi_rail_live.0': 'ХОНОГИЙН АЧИЛТ',
     'sector_kpi_rail_live.1': 'ХОНОГИЙН БУУЛГАЛТ',
     'sector_kpi_rail_live.2': 'АЧИЛТТАЙ СТАНЦ',
     'unit.wagon': 'вагон', 'unit.station': 'станц',
     'status.rail_wagon_compare': 'харьцуулах өгөгдөл алга (өмнөх хоногийн дүн ирээгүй)',
+    'status.rail_wagon_asof': 'Хоногийн мэдээ:', 'status.rail_wagon_stale': 'хоног шинэчлэгдээгүй',
     'ds_schema_rail_wagon.head.0': 'Станц', 'ds_schema_rail_wagon.head.1': 'Код',
     'ds_schema_rail_wagon.head.2': 'Ачсан (вагон)', 'ds_schema_rail_wagon.head.3': 'Буулгасан (вагон)',
     'ds_schema_rail_wagon.head.4': 'Төлөв',
@@ -3550,7 +3562,7 @@ async function groupBE() {
     'sector_rank_rail_live': 'Станц тус бүрийн ачилт', 'sector_rank_rail_other': 'Бусад станц',
     'sector_chart2_rail_live': 'Ачилт ихтэй станц'
   };
-  const runApply = (live) => {
+  const runApply = (live, ageDays) => {
     const SEC = { rail: { label: 'Төмөр зам', kpis: [['НИЙТ ЗАМ', '1,815', 'км', '+0.4%', 'up']],
       rt: 'Чиглэл тус бүрийн ачаа', rank: [['УБ–Замын-Үүд', '8.4M', '37.2%']],
       c2: 'Ачааны төрлөөр (тонн)', bars: [['Нүүрс', 88, '12.4M тн']] } };
@@ -3558,9 +3570,11 @@ async function groupBE() {
     const ctx = { _railWagonLoading: live, _meta: null, _st: null,
       setSourceMeta(id, m) { this._meta = { id, m } }, setState(s) { this._st = s } };
     mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f),
-      (n) => Number(n).toLocaleString('en-US')).call(ctx);
+      (n) => Number(n).toLocaleString('en-US'),
+      () => (ageDays === undefined ? 1 : ageDays), 2).call(ctx);
     return { SEC, ctx, DSS };
   };
+  const con12 = readJson('content.json');
   const A = runApply({ count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' });
   const kr = A.SEC.rail.kpis;
   check('BE12. 3 мөр үүснэ (ачилт/буулгалт/станц)', kr.length === 3, JSON.stringify(kr));
@@ -3571,8 +3585,11 @@ async function groupBE() {
   check('BE12. kpis[2] = АЧИЛТТАЙ СТАНЦ · 35 · станц',
     kr[2][0] === 'АЧИЛТТАЙ СТАНЦ' && kr[2][1] === '35' && kr[2][2] === 'станц', JSON.stringify(kr[2]));
   check('BE12. Өөрчлөлтийн хувь ЗОХИОХГҮЙ — мөр бүр "—"', kr.every(r => r[3] === '—'));
-  check('BE12. Харьцуулалтын мөр шалтгаанаа ил хэлнэ',
-    kr.every(r => /харьцуулах өгөгдөл алга/.test(r[5] || '')), JSON.stringify(kr[0][5]));
+  check('BE12. Мөр бүр ЯМАР ӨДРИЙН тоо болохоо хэлнэ (огноогүй тоо = "өнөөдрийнх" мэт уншигдана)',
+    kr.every(r => String(r[5] || '').includes('Хоногийн мэдээ: 2026-09-17')), JSON.stringify(kr[0][5]));
+  check('BE12. ШИНЭ дата (1 хоног) үед харьцуулалтын шалтгаан хэвээр',
+    kr.every(r => /харьцуулах өгөгдөл алга/.test(r[5] || '')) &&
+    kr.every(r => !/шинэчлэгдээгүй/.test(r[5] || '')), JSON.stringify(kr[0][5]));
   check('BE12. Хуучин статик мөр (1,815 км) БҮРЭН солигдоно',
     !JSON.stringify(kr).includes('1,815') && !JSON.stringify(kr).includes('НИЙТ ЗАМ'));
   check('BE12. _liveKpis=true (KPI мөр амьд боллоо)', A.SEC.rail._liveKpis === true);
@@ -3585,6 +3602,60 @@ async function groupBE() {
   const A1 = runApply({ count: 900, unloadedCount: null, stationCount: null, date: '2026-09-17' });
   check('BE12. Дутуу талбар → тэр мөр ОГТ гарахгүй (0 гэж зохиохгүй)',
     A1.SEC.rail.kpis.length === 1 && A1.SEC.rail.kpis[0][1] === '900');
+
+  /* ── BE12b. ХОЦОРСОН дата — 2026-09-21-нд илэрсэн РЕГРЕСС ──
+     Dispatcher өдөр бүр амжилттай гүйсэн (6 датасэтийн last_synced_at =
+     тухайн өглөө) атал вагон ачилтын сүүлийн бичлэг 09-17 дээр зогссон:
+     ETL эрүүл байхад ЭХ СУРВАЛЖ хоцорсон. Хуудсан дээр 1182 вагон
+     огноогүй зогсож байсан тул өнөөдрийн дүн мэт уншигдана. */
+  const AS = runApply({ count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' }, 4);
+  const ks = AS.SEC.rail.kpis;
+  check('BE12b. Хоцорсон үед мөр бүр "4 хоног шинэчлэгдээгүй" гэж ил хэлнэ',
+    ks.length === 3 && ks.every(r => String(r[5] || '').includes('4 хоног шинэчлэгдээгүй')),
+    JSON.stringify(ks[0][5]));
+  check('BE12b. Хоцорсон үед: огноо + хоцролт, ЧУХАЛ нь урд (шошгогүй)',
+    ks.every(r => r[5] === '2026-09-17 · 4 хоног шинэчлэгдээгүй'), JSON.stringify(ks[0][5]));
+  /* Регресс (browser, 1280px): хөл бичгийн сав ~214px, 8px mono үсэг
+     ~4.4–4.8px → ~44 тэмдэгт. Шошготой хувилбар 51 тэмдэгт болж
+     "шинэчлэгдээгүй" гэдэг үг таслагдаж байв. 3 оронтой хоцролтод ч
+     (365 хоног) 40 тэмдэгтээс хэтрэхгүй байх ёстой. */
+  const s365 = String(runApply({ count: 5, unloadedCount: null, stationCount: null,
+    date: '2026-09-17' }, 365).SEC.rail.kpis[0][5]);
+  check('BE12b. Хоцролтын хөл бичиг 40 тэмдэгтэд багтана (таслагдахгүй)',
+    ks[0][5].length <= 40 && s365.length <= 40, ks[0][5].length + ' / ' + s365.length);
+  check('BE12b. Хоцролт нь харьцуулалтын тайлбарыг СОЛИНО (хөл бичиг уншигдахгүй болохгүй)',
+    ks.every(r => !/харьцуулах өгөгдөл алга/.test(r[5] || '')), JSON.stringify(ks[0][5]));
+  check('BE12b. ТОО нь хэвээр (хоцорлоо гээд утгыг нуухгүй/зохиохгүй)',
+    ks[0][1] === '1,182' && ks[1][1] === '1,027' && ks[2][1] === '35');
+  /* Хил: D+1/D+2 нь хэвийн нийтлэлийн хоцролт — сэрэмжлүүлэг ГАРАХГҮЙ. */
+  const edge = (n) => String(runApply({ count: 5, unloadedCount: null, stationCount: null,
+    date: '2026-09-17' }, n).SEC.rail.kpis[0][5] || '');
+  check('BE12b. 2 хоног = ХЭВИЙН (сэрэмжлүүлэг алга)', !/шинэчлэгдээгүй/.test(edge(2)), edge(2));
+  check('BE12b. 3 хоног = хоцорсон', /3 хоног шинэчлэгдээгүй/.test(edge(3)), edge(3));
+  const AN = runApply({ count: 5, unloadedCount: null, stationCount: null, date: null }, null);
+  check('BE12b. Огноогүй хариу → огноо ЗОХИОХГҮЙ, зөвхөн харьцуулалтын шалтгаан',
+    !/Хоногийн мэдээ/.test(AN.SEC.rail.kpis[0][5]) &&
+    /харьцуулах өгөгдөл алга/.test(AN.SEC.rail.kpis[0][5]), JSON.stringify(AN.SEC.rail.kpis[0][5]));
+  check('BE12b. Хоцролтын текст content.json-д бүртгэгдсэн',
+    !!(con12.site.status.rail_wagon_asof && con12.site.status.rail_wagon_stale));
+
+  /* ── BE12c. dataAgeDays() — ГАРААР БОДОХ фикстур, "өнөөдөр"-ийг өгнө ── */
+  const dam = dcScript().match(/function dataAgeDays\(dateStr,now\)\{([\s\S]*?)\n\}/);
+  if (!dam) { bad('BE12c. dataAgeDays() олдсонгүй'); return; }
+  const age = new Function('dateStr', 'now', dam[1]);
+  const T = new Date(2026, 8, 21); // 2026-09-21 (орон нутгийн)
+  check('BE12c. 09-17 → 4 хоног', age('2026-09-17', T) === 4, String(age('2026-09-17', T)));
+  check('BE12c. Өнөөдөр → 0', age('2026-09-21', T) === 0);
+  check('BE12c. Сарын хил дамжина (08-31 → 2)', age('2026-08-31', new Date(2026, 8, 2)) === 2,
+    String(age('2026-08-31', new Date(2026, 8, 2))));
+  check('BE12c. Ирээдүйн огноо сөрөг (хоцорсон гэж ХУДАЛ хэлэхгүй)', age('2026-09-22', T) === -1);
+  check('BE12c. ISO цагтай огноо ч уншигдана', age('2026-09-17T00:00:00.000Z', T) === 4);
+  check('BE12c. Хоосон/буруу огноо → null ("0 хоног" гэж ЗОХИОХГҮЙ)',
+    age('', T) === null && age(null, T) === null && age(undefined, T) === null &&
+    age('тодорхойгүй', T) === null && age('2026-9-1', T) === null);
+  check('BE12c. Хуваарьт хэмжээ кодод, content.json-д БИШ (текст биш тохиргоо)',
+    /const WAGON_STALE_DAYS=2;/.test(dcScript()) &&
+    con12.site.status.rail_wagon_stale.indexOf('2') === -1);
 
   /* ── BE13. kpiVerified() — registry "verified" ≠ дата ИРСЭН ──
      Регресс: backend/feed унасан үед статик демо тоо (1,815 км / 11,979)
@@ -3732,19 +3803,25 @@ async function groupBE() {
   check('BE20. reapplyLiveText нь rail ба air ХОЁУЛАНГ нь дахин барина',
     /reapplyLiveText\(\)\{[\s\S]*?this\.applyRailWagonData\(\);[\s\S]*?this\.recomputeAirData\(\);[\s\S]*?\}/.test(dcScript()));
   /* Дарааллыг УРВУУЛЖ давтана: backend түрүүлж ирээд ДАРАА нь content.json */
-  const RAILTXT2 = Object.assign({}, RAILTXT, { 'sector_kpi_rail_live.0': 'АЧСАН ВАГОН' });
-  const lateApply = () => {
+  const RAILTXT2 = Object.assign({}, RAILTXT, { 'sector_kpi_rail_live.0': 'АЧСАН ВАГОН',
+    'status.rail_wagon_stale': 'хоног шинэ мэдээ ирээгүй' });
+  const lateApply = (ageNow = 1) => {
     const SEC = { rail: { label: 'Төмөр зам', kpis: [['НИЙТ ЗАМ', '1,815', 'км', '+0.4%', 'up']] } };
     const DSS = { rail_wagon: { head: [], types: [], notes: [], rows: [] } };
     const ctx = { _railWagonLoading: { count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' },
       _meta: null, _st: null, setSourceMeta() {}, setState() {} };
     const fmt = (n) => Number(n).toLocaleString('en-US');
-    mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f), fmt).call(ctx);
-    mkApply(SEC, DSS, (p, f) => (RAILTXT2[p] !== undefined ? RAILTXT2[p] : f), fmt).call(ctx);
+    mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f), fmt, () => ageNow, 2).call(ctx);
+    mkApply(SEC, DSS, (p, f) => (RAILTXT2[p] !== undefined ? RAILTXT2[p] : f), fmt, () => ageNow, 2).call(ctx);
     return SEC;
   };
   check('BE20. Backend ТҮРҮҮЛЖ ирсэн ч шинэ шошго мөрөнд ТУСНА',
     lateApply().rail.kpis[0][0] === 'АЧСАН ВАГОН', JSON.stringify(lateApply().rail.kpis[0]));
+  /* Хоцролтын тайлбар ч ижил гэрээнд орно — админаас засаад нийтэлсэн
+     status.rail_wagon_stale хожуу ирсэн ч сайтын мөрөнд ТУСАХ ёстой. */
+  check('BE20. Хожуу ирсэн хоцролтын текст ч мөрөнд ТУСНА',
+    lateApply(4).rail.kpis[0][5] === '2026-09-17 · 4 хоног шинэ мэдээ ирээгүй',
+    JSON.stringify(lateApply(4).rail.kpis[0][5]));
 
   /* ── BE21. Нийтлэгдсэн registry нь файлынхыг ДАВХАРЛАНА (бүтнээр солихгүй) ──
      Регресс: overlay үргэлж сүүлд ирдэг тул бүтнээр дарвал нийтэлсний
