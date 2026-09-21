@@ -3780,6 +3780,280 @@ async function groupBE() {
     !!con14.site.sector_rank_rail_live && !!con14.site.sector_rank_rail_other && !!con14.site.sector_chart2_rail_live);
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   AI. 08 — AI ТУСЛАХЫН БЭЛЭН ХАРИУЛТ АМЬД ДАТААС
+
+   Регресс: content.json → site.ai.qa-д "Энэ онд нийт 11,979 нислэг
+   бүртгэгдсэн — өмнөх оноос +8.4%" гэж ХАТУУ бичигдсэн байв. Ижил нүүр
+   хуудсан дээр hero/k04 нь flights feed-ийн АМЬД тоог (2026-09 байдлаар
+   2,450) харуулж, нэг хуудас хоёр өөр нийт дүн хэлж байв. Бусад 3
+   хариулт ч зохиомол (авто зам 214.3K, Солонгос 457,815, нийтийн
+   тээвэр 139/959) — эх сурвалж нь холбогдоогүй салбарууд.
+     AI1. aiResolve — гараар бодох фикстур (тоо/сар/хувь/нэгж ХАМТ)
+     AI2. Регресс — AI ба hero_fl ЯГ ИЖИЛ тоо хэлнэ
+     AI3. YoY хувь — k04-тэй ижил цонх (сүүлийн бүтэн сар ↔ өмнөх оны мөн сар)
+     AI4. Кодын холбоос (askAi / анхны бөмбөлөг / fallback)
+     AI5. content.json — хатуу тоо үлдээгүй, шинэ текст бүртгэгдсэн
+     AI6. Админ — AI асуулт-хариулт ойлгомжтой шошготой бүлэгт
+     AI7. Сайтын DOM — амьд тоо hero-тэй таарна, эх сурвалжгүй хариулт тоогүй
+   ══════════════════════════════════════════════════════════════════ */
+function aiKit() {
+  const src = dcScript();
+  const cut = (sig) => {
+    const m = src.match(new RegExp('\\n  ' + sig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([\\s\\S]*?)\\n  \\}\\n'));
+    return m ? m[1] : null;
+  };
+  return { resolve: cut('aiResolve(i)'), values: cut('aiLiveValues(kind)'),
+    hero: cut('computeHeroFlightsLastMonth()'), win: cut('lastFullMonthWindow(year)'),
+    val: cut('val(widgetId,fallback)') };
+}
+/* Фикстурын ТЕКСТ — content.json-оос (сайт ч эндээс уншдаг). Ингэснээр
+   тест нь бүртгэсэн темплейтийг ЯГ шалгана. */
+function aiEnv(ctxPatch) {
+  const k = aiKit();
+  const con = readJson('content.json');
+  const S = con.site;
+  const stxt = (p, f) => { let c = S; for (const x of p.split('.')) { if (c == null) return f; c = c[x]; } return (c == null || c === '') ? f : c; };
+  const AI_QA = S.ai.qa.map((x, i) => Object.assign({ ans: ['flights_last_month', null, 'top_countries_pax', null][i] }, x));
+  const SECTORS = { road: { label: 'Авто зам' }, rail: { label: 'Төмөр зам' }, air: { label: 'Агаарын тээвэр' },
+    water: { label: 'Ус, далайн тээвэр' }, public: { label: 'Нийтийн тээвэр' } };
+  const values = new Function('kind', 'stxt', 'SECTORS', k.values);
+  const resolve = new Function('i', 'AI_QA', 'AI_SOURCES', 'SECTORS', 'stxt', k.resolve);
+  const ctx = Object.assign({ kpiVerified: () => false }, ctxPatch);
+  ctx.aiLiveValues = function (kind) { return values.call(this, kind, stxt, SECTORS); };
+  return { k, con, ask: (i) => resolve.call(ctx, i, AI_QA, S.ai.sources, SECTORS, stxt), ctx, stxt };
+}
+async function groupAI() {
+  group('AI. 08 — AI туслахын хариулт амьд датаас');
+  const k = aiKit();
+  if (!k.resolve || !k.values) { bad('AI1. aiResolve()/aiLiveValues() олдсонгүй'); }
+  else {
+    /* ── AI1. Нислэг — 2,450 / өмнөх оны мөн сар 2,000 → +22.5% ── */
+    const a1 = aiEnv({ _heroFlLastMonth: { count: 2450, year: 2026, month: 8, monthLabel: '8-р сар', prevCount: 2000 } }).ask(0);
+    check('AI1. Амьд тоо (2,450) хариултад орно', a1 && a1.live === true && a1.text.includes('2,450'), JSON.stringify(a1));
+    check('AI1. Хугацаа ИЛ — "2026 оны 8-р сар"', a1 && a1.text.includes('2026 оны 8-р сар'), a1 && a1.text);
+    check('AI1. Нэгж "нислэг" тоотой хамт', a1 && /2,450 нислэг/.test(a1.text), a1 && a1.text);
+    check('AI1. YoY хувь (2450-2000)/2000 = +22.5%', a1 && a1.text.includes('+22.5%'), a1 && a1.text);
+    check('AI1. Зохиомол хуучин тоо (11,979 / +8.4%) АЛГА', a1 && !/11,979|8\.4%/.test(a1.text));
+    check('AI1. Темплейтийн {…} нүд ил гарахгүй', a1 && !/[{}]/.test(a1.text), a1 && a1.text);
+    const aDown = aiEnv({ _heroFlLastMonth: { count: 1800, year: 2026, month: 8, monthLabel: '8-р сар', prevCount: 2000 } }).ask(0);
+    check('AI1. Бууралт: 1800 vs 2000 → -10.0%', aDown && aDown.text.includes('-10.0%'), aDown && aDown.text);
+    const aNoPrev = aiEnv({ _heroFlLastMonth: { count: 2450, year: 2026, month: 8, monthLabel: '8-р сар', prevCount: null } }).ask(0);
+    check('AI1. Өмнөх оны дата алга → хувь ЗОХИОХГҮЙ (% тэмдэг ч алга)',
+      aNoPrev && aNoPrev.live && aNoPrev.text.includes('2,450') && !/%/.test(aNoPrev.text), aNoPrev && aNoPrev.text);
+    const aNone = aiEnv({ _heroFlLastMonth: null }).ask(0);
+    check('AI1. Дата ирээгүй → a_nodata, тоо огт алга',
+      aNone && aNone.live === false && !/\d/.test(aNone.text) && /мэдээлэл алга/.test(aNone.text), JSON.stringify(aNone));
+    check('AI1. Дата алга үед эх сурвалжийн шошго "мэдээлэл алга" гэж ил хэлнэ',
+      aNone && /мэдээлэл алга$/.test(aNone.source), aNone && aNone.source);
+
+    /* ── Улсаар: Хятад 100+70=170, Солонгос 150, Япон 20, Монгол ХАСАГДАНА ── */
+    const T = (y, m, d) => Date.UTC(y, m - 1, d) / 1000;
+    const fl = [
+      { cntry: 'Хятад', pax: 100, year: 2026, month: 3, day: 1, unixtimestamp: T(2026, 3, 1) },
+      { cntry: 'Өмнөд Солонгос', pax: 150, year: 2026, month: 5, day: 2, unixtimestamp: T(2026, 5, 2) },
+      { cntry: 'Хятад', pax: 70, year: 2026, month: 9, day: 14, unixtimestamp: T(2026, 9, 14) },
+      { cntry: 'Монгол', pax: 999, year: 2026, month: 9, day: 1, unixtimestamp: T(2026, 9, 1) },
+      { cntry: 'Япон', pax: 20, year: 2026, month: 4, day: 9, unixtimestamp: T(2026, 4, 9) }
+    ];
+    const a3 = aiEnv({ _flightsYears: [2025, 2026], _flightsCache: { 2026: fl, 2025: [] } }).ask(2);
+    check('AI1. Эхний чиглэл Хятад (170 хүн) — Монгол (999) дотоод тул ХАСАГДСАН',
+      a3 && a3.live && /Хятад[^0-9]*170/.test(a3.text) && !/999/.test(a3.text), a3 && a3.text);
+    check('AI1. Хоёрдугаарт Өмнөд Солонгос (150 хүн)', a3 && /Өмнөд Солонгос[^0-9]*150/.test(a3.text), a3 && a3.text);
+    check('AI1. Хугацаа ИЛ — 2026 он, сүүлийн бичлэг 2026-09-14',
+      a3 && a3.text.includes('2026') && a3.text.includes('2026-09-14'), a3 && a3.text);
+    check('AI1. Зохиомол 457,815 / 357,372 АЛГА', a3 && !/457,815|357,372/.test(a3.text));
+    const a3one = aiEnv({ _flightsYears: [2026], _flightsCache: { 2026: [fl[0]] } }).ask(2);
+    check('AI1. Ганц улстай бол "дараа нь …" ЗОХИОХГҮЙ → a_nodata', a3one && a3one.live === false, JSON.stringify(a3one));
+
+    /* ── Эх сурвалжгүй салбар — холбогдсон салбарыг registry-ээс нэрлэнэ ── */
+    const aRoad = aiEnv({ kpiVerified: (w, s) => s === 'air' || s === 'rail' }).ask(1);
+    check('AI1. Авто зам: эх сурвалжгүй → тоо огт алга', aRoad && aRoad.live === false && !/\d/.test(aRoad.text), aRoad && aRoad.text);
+    /* Дараалал = SECTORS-ийн дараалал (road, rail, air, …) — сайтын бусад
+       салбарын жагсаалттай ижил. */
+    check('AI1. Холбогдсон салбарыг registry-ээс нэрлэнэ (Төмөр зам, Агаарын тээвэр)',
+      aRoad && aRoad.text.includes('салбар: Төмөр зам, Агаарын тээвэр.'), aRoad && aRoad.text);
+    const aPub = aiEnv({}).ask(3);
+    check('AI1. Нийтийн тээвэр: зохиомол 139/959/312 АЛГА; холбогдсон салбаргүй бол "мэдээлэл алга"',
+      aPub && !/\d/.test(aPub.text) && /мэдээлэл алга/.test(aPub.text), aPub && aPub.text);
+
+    /* Дүүрээгүй нүд: админ "{bogus}" бичвэл түүхий хаалт ХАРАГДАХГҮЙ */
+    const eB = aiEnv({ _heroFlLastMonth: { count: 5, year: 2026, month: 8, monthLabel: '8-р сар', prevCount: 4 } });
+    const qa0 = Object.assign({ ans: 'flights_last_month' }, eB.con.site.ai.qa[0]);
+    qa0.a_live = qa0.a_live + ' {bogus}';
+    const resolveB = new Function('i', 'AI_QA', 'AI_SOURCES', 'SECTORS', 'stxt', k.resolve);
+    const aB = resolveB.call(eB.ctx, 0, [qa0], eB.con.site.ai.sources, { air: { label: 'Агаарын тээвэр' } }, eB.stxt);
+    check('AI1. Дүүрээгүй {…} нүдтэй темплейт → a_nodata (түүхий хаалт ХЭЗЭЭ Ч харагдахгүй)',
+      aB && aB.live === false && !/[{}]/.test(aB.text), aB && aB.text);
+  }
+
+  /* ── AI1b. Чөлөөт асуулт — хуучин чипийн текстийг ГАРААР бичсэн ч
+     нислэгийн (амьд) хариулт руу очно, хамааралгүй асуулт → -1 ── */
+  const mm = dcScript().match(/\n  aiMatch\(q\)\{([\s\S]*?)\n  \}\n/);
+  if (!mm) bad('AI1b. aiMatch() олдсонгүй');
+  else {
+    const qa = readJson('content.json').site.ai.qa;
+    const match = (q) => new Function('q', 'AI_QA', mm[1])(q, qa);
+    check('AI1b. "Өнөөдөр хэдэн нислэг бүртгэгдсэн бэ?" → нислэгийн асуулт (0)',
+      match('Өнөөдөр хэдэн нислэг бүртгэгдсэн бэ?') === 0, String(match('Өнөөдөр хэдэн нислэг бүртгэгдсэн бэ?')));
+    check('AI1b. "Хамгийн их зорчигч аль чиглэлд?" → улсын асуулт (2)',
+      match('Хамгийн их зорчигч аль чиглэлд?') === 2, String(match('Хамгийн их зорчигч аль чиглэлд?')));
+    check('AI1b. Хамааралгүй асуулт → -1 (зохиомол хариулт СОНГОХГҮЙ)', match('Цаг агаар ямар байна?') === -1);
+  }
+
+  /* ── AI2. РЕГРЕСС — ижил хуудас, ИЖИЛ нийт дүн ── */
+  if (k.val && k.resolve) {
+    const hero = { count: 2450, year: 2026, month: 8, monthLabel: '8-р сар', prevCount: 2300 };
+    const valFn = new Function('widgetId', 'fallback', k.val);
+    const hv = valFn.call({ state: { metricRegistry: { widgets: { hero_fl: { metric: 'air.flight_count_last_month' } } } },
+      _heroFlLastMonth: hero }, 'hero_fl', '11,979');
+    const a = aiEnv({ _heroFlLastMonth: hero }).ask(0);
+    check('AI2. hero_fl ба AI хариулт ЯГ ИЖИЛ тоо (2,450)',
+      hv.value === '2,450' && a && a.text.includes(hv.value), JSON.stringify({ hero: hv.value, ai: a && a.text }));
+    check('AI2. hero_fl ба AI ИЖИЛ сар (8-р сар)', a && a.text.includes(hv.monthLabel), a && a.text);
+  } else bad('AI2. val() эсвэл aiResolve() олдсонгүй');
+
+  /* ── AI3. YoY цонх — prevCount нь ӨМНӨХ ОНЫ МӨН САРААС ──
+     2026: 8-р сард 3 нислэг, 9-р сард 1 (хамгийн сүүлийнх → сүүлийн БҮТЭН сар = 8)
+     2025: 8-р сард 2 нислэг, 7-р сард 5 (7-р сар ТООЦОГДОХГҮЙ) → prevCount 2 */
+  if (k.hero && k.win) {
+    const F = (y, m, d) => ({ year: y, month: m, day: d, unixtimestamp: Date.UTC(y, m - 1, d) / 1000 });
+    const MONTHS = ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар',
+      '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'];
+    const run = (cache, years) => {
+      const ctx = { _flightsYears: years, _flightsCache: cache };
+      const win = new Function('MONTHS', 'year', k.win);
+      ctx.lastFullMonthWindow = (y) => win.call(ctx, MONTHS, y);
+      new Function('MONTHS', k.hero).call(ctx, MONTHS);
+      return ctx._heroFlLastMonth;
+    };
+    const c26 = [F(2026, 8, 1), F(2026, 8, 2), F(2026, 8, 30), F(2026, 9, 3)];
+    const c25 = [F(2025, 8, 5), F(2025, 8, 6), F(2025, 7, 1), F(2025, 7, 2), F(2025, 7, 3), F(2025, 7, 4), F(2025, 7, 5)];
+    const h = run({ 2026: c26, 2025: c25 }, [2025, 2026]) || {};
+    check('AI3. Сүүлийн бүтэн сар = 8-р сар, 3 нислэг', h.month === 8 && h.count === 3, JSON.stringify(h));
+    check('AI3. prevCount = 2025 оны 8-р сар (2) — 7-р сар орохгүй', h.prevCount === 2, JSON.stringify(h));
+    const h2 = run({ 2026: c26 }, [2026]);
+    check('AI3. Өмнөх оны cache алга → prevCount null (0 гэж ЗОХИОХГҮЙ)',
+      !!h2 && h2.prevCount === null, JSON.stringify(h2));
+    const e3 = aiEnv({ _heroFlLastMonth: h }).ask(0);
+    check('AI3. Бүтэн гинж: 3 vs 2 → +50.0%', e3 && e3.text.includes('+50.0%'), e3 && e3.text);
+  } else bad('AI3. computeHeroFlightsLastMonth()/lastFullMonthWindow() олдсонгүй');
+
+  /* ── AI4. Кодын холбоос ── */
+  const s = dcScript();
+  const qaBlock = (s.match(/const AI_QA=\[([\s\S]*?)\n\];/) || [])[1] || '';
+  const digitAt = qaBlock.replace(/\{\w+\}/g, '').match(/.{0,30}\d.{0,30}/);
+  check('AI4. AI_QA кодын fallback-д тоо үлдээгүй (зөвхөн {…} нүд)',
+    qaBlock.length > 0 && !digitAt, digitAt ? digitAt[0] : '');
+  check('AI4. AI_QA мөр бүр ans түлхүүртэй (4 мөр)', (qaBlock.match(/\{ans:/g) || []).length === 4);
+  check('AI4. Хуучин AI_QA[..].a шууд уншилт үлдээгүй',
+    !/AI_QA\[\w+\]\.a\b/.test(s) && !/hit\?hit\.a:/.test(s));
+  check('AI4. Анхны бөмбөлөг aiResolve(0)-аар (render бүрд амьд)',
+    (s.match(/this\.aiResolve\(0\)/g) || []).length >= 2);
+  check('AI4. askAi хариултыг aiResolve-оор бүрдүүлнэ', /const r=hit\?this\.aiResolve\(AI_QA\.indexOf\(hit\)\):null;/.test(s));
+  check('AI4. Олдоогүй үеийн текст ба эх сурвалж content.json-оос',
+    /stxt\('ai\.no_match'/.test(s) && /stxt\('ai\.fallback_source'/.test(s) &&
+    !/:'Салбарын нэгдсэн үзүүлэлт';/.test(s));
+  check('AI4. Үнэлгээ a_live/a_nodata-г хамт хайна (хуучин x.a биш)',
+    /al=\(\(x\.a_live\|\|''\)\+' '\+\(x\.a_nodata\|\|''\)\)\.toLowerCase\(\)/.test(s));
+  check('AI4. applySiteContent a_live/a_nodata-г давхарлана',
+    /\['q','a_live','a_nodata'\]\.forEach/.test(s) && !/if\(x\.a\) AI_QA\[i\]\.a=x\.a;/.test(s));
+  check('AI4. computeHeroFlightsLastMonth prevCount тооцно (hero/k04/AI нэг объект)',
+    /this\._heroFlLastMonth=\{count,year:win\.lmYear,month:win\.lmMonth,monthLabel:win\.monthLabel,prevCount\};/.test(s));
+
+  /* ── AI5. content.json ── */
+  const con = readJson('content.json');
+  const ai = con.site.ai;
+  const noSlot = (t) => String(t || '').replace(/\{\w+\}/g, '');
+  /* Мөрийн БҮХ текст талбарыг шална — зөвхөн нэрлэсэн талбарыг шалгавал
+     хуучин "a" талбарын 11,979 ХУДАЛ ногоон болж өнгөрдөг (сөрөг
+     шалгуурын хавх — анхны улаан ажиллуулалтад яг ингэж өнгөрсөн). */
+  const hasDigit = (x) => Object.keys(x).some((kk) => typeof x[kk] === 'string' && /\d/.test(noSlot(x[kk])));
+  check('AI5. Шалгуур ЭЕРЭГ хостой: хуучин "11,979" мөрийг ЗААВАЛ илрүүлнэ',
+    hasDigit({ q: 'Өнөөдөр?', a: 'нийт 11,979 нислэг' }) && !hasDigit({ q: 'x', a_live: '{value} нислэг' }));
+  const qaDigits = ai.qa.filter(hasDigit);
+  check('AI5. site.ai.qa-д хатуу тоо үлдээгүй ("Тоо ЗОХИОХГҮЙ")', qaDigits.length === 0, JSON.stringify(qaDigits));
+  check('AI5. Хуучин "a" талбар устсан (ганц эх сурвалж)', ai.qa.every((x) => !('a' in x)));
+  check('AI5. Мөр бүр q + a_nodata-тай', ai.qa.length === 4 && ai.qa.every((x) => x.q && x.a_nodata));
+  check('AI5. Амьд эх сурвалжтай 2 асуулт a_live-тай (нислэг, улс)',
+    !!ai.qa[0].a_live && !!ai.qa[2].a_live && !ai.qa[1].a_live && !ai.qa[3].a_live);
+  check('AI5. Нислэгийн темплейт тоо/сар/жил/хувийн нүдтэй',
+    ['{value}', '{month}', '{year}', '{delta}'].every((t) => (ai.qa[0].a_live || '').includes(t)), ai.qa[0].a_live);
+  check('AI5. 1-р асуулт "өнөөдөр" гэж ХУДАЛ хэлэхгүй (хариулт нь сүүлийн бүтэн сар)',
+    !/өнөөдөр/i.test(ai.qa[0].q) && /бүтэн сар/.test(ai.qa[0].q), ai.qa[0].q);
+  check('AI5. delta_yoy / no_match бүртгэлтэй', /\{pct\}/.test(ai.delta_yoy || '') && /\{n\}/.test(ai.no_match || ''));
+  check('AI5. Эх сурвалжийн шошгонд хатуу он алга', ai.sources.every((x) => !/\d{4}/.test(x)), JSON.stringify(ai.sources));
+  check('AI5. no_match "тодорхой тоо гаргаж чадна" гэж ХЭТ амлахгүй', !!ai.no_match && !/тодорхой тоо/.test(ai.no_match));
+
+  /* ── AI6. Админ ── */
+  const adm = adminScript();
+  check('AI6. Админ AI асуулт-хариултыг тусдаа бүлэгт харуулна',
+    /siteGet\(\['ai','qa'\]\)/.test(adm) && /add\('site','q:ai'/.test(adm));
+  check('AI6. Талбар бүр ойлгомжтой шошготой (асуулт / амьд / дата алга)',
+    /utxt\('site_tab\.ai_q'/.test(adm) && /utxt\('site_tab\.ai_live'/.test(adm) && /utxt\('site_tab\.ai_nodata'/.test(adm));
+  const st = (con.ui && con.ui.site_tab) || {};
+  check('AI6. Шошгууд content.json ui.site_tab-д бүртгэлтэй',
+    ['ai_group', 'ai_where', 'ai_word', 'ai_q', 'ai_live', 'ai_nodata', 'ai_delta', 'ai_no_match'].every((x) => !!st[x]));
+  check('AI6. delta_yoy / no_match ч AI бүлэгт (түүхий нэртэй "автомат" бүлэгт УНАХГҮЙ)',
+    /p:\['ai','delta_yoy'\],l:utxt\('site_tab\.ai_delta'/.test(adm) && /p:\['ai','no_match'\],l:utxt\('site_tab\.ai_no_match'/.test(adm) &&
+    /m\['ai\.delta_yoy'\]=1; m\['ai\.no_match'\]=1;/.test(adm));
+  check('AI6. Бүлгийн тайлбар {…} нүдийг код дүүргэдэг гэж ил хэлнэ',
+    /\{/.test(st.ai_where || '') && /тоо/.test(st.ai_where || ''), st.ai_where);
+
+  /* ── AI7. Сайтын DOM (ХОЁР ДАХЬ тал — админ дээр зөв байх нь сайт зөв гэсэн үг БИШ) ── */
+  if (!CHROME) { skipped('AI7. Сайтын DOM', 'Chrome олдсонгүй'); return; }
+  const PROBE_AI = `async function(d,w){
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    const heroEl=()=>d.querySelector('[data-eh-fallback="false"]');
+    for(let t=0;t<60&&!heroEl();t++) await sleep(500);
+    await sleep(600);
+    const h=heroEl();
+    /* firstChild нь dc-runtime-ийн ХООСОН текст зангилаа — тоог
+       textContent-ийн эхнээс авна ("2,450 НИСЛЭГ / САР (8-р сар)"). */
+    const hm=h?h.textContent.trim().match(/^[\\d,]+/):null;
+    const heroVal=hm?hm[0]:null;
+    const bots=()=>[...d.querySelectorAll('[data-ai-text="bot"]')].map(x=>x.textContent.trim());
+    const srcs=()=>[...d.querySelectorAll('[data-ai-src]')].map(x=>x.textContent.trim());
+    const chipsNow=()=>[...d.querySelectorAll('button')].filter(b=>/\\?$/.test(b.textContent.trim()));
+    const out={heroVal,first:bots()[0]||null,firstSrc:srcs()[0]||null,
+      chips:chipsNow().map(c=>c.textContent.trim()),ans:[],srcAns:[]};
+    for(let i=0;i<out.chips.length;i++){
+      const n=bots().length;
+      chipsNow()[i].click();
+      for(let t=0;t<30&&bots().length===n;t++) await sleep(250);
+      const b=bots(), s=srcs();
+      out.ans.push(b[b.length-1]); out.srcAns.push(s[s.length-1]);
+    }
+    out.anyBrace=/[{}]/.test(bots().join(' '));
+    return out;
+  }`;
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html';
+    SERVE_OVERRIDE = null;
+    const r = await runProbe(PROBE_AI, 150000);
+    if (r.__err) { bad('AI7. Сайтын DOM шалгалт', r.__err); return; }
+    if (!r.heroVal) { skipped('AI7. Сайтын DOM', 'flights feed ирсэнгүй (сүлжээ)'); return; }
+    check('AI7. Анхны бөмбөлөг hero-тэй ИЖИЛ тоо хэлнэ (' + r.heroVal + ')',
+      !!r.first && r.first.includes(r.heroVal + ' '), JSON.stringify({ hero: r.heroVal, ai: r.first }));
+    check('AI7. Сайт дээр 11,979 / +8.4% ГАРАХГҮЙ', !!r.first && !/11,979|\+8\.4%/.test(r.first));
+    check('AI7. 4 бэлэн асуулт харагдана', r.chips.length === 4, JSON.stringify(r.chips));
+    check('AI7. Чип бүр хариулт авна', r.ans.length === 4 && r.ans.every(Boolean), JSON.stringify(r.ans));
+    check('AI7. Нислэгийн чип — hero-тэй ИЖИЛ тоо', (r.ans[0] || '').includes(r.heroVal + ' '), r.ans[0]);
+    check('AI7. Улсын чип — зохиомол 457,815 АЛГА, бодит тоотой',
+      !/457,815/.test(r.ans[2] || '') && /\d/.test(r.ans[2] || ''), r.ans[2]);
+    check('AI7. Авто зам / нийтийн тээвэр — тоо огт алга, "мэдээлэл алга"',
+      [r.ans[1], r.ans[3]].every((t) => t && !/\d/.test(t) && /мэдээлэл алга/.test(t)), JSON.stringify([r.ans[1], r.ans[3]]));
+    check('AI7. Эх сурвалжгүй хариултын шошго "мэдээлэл алга"',
+      /мэдээлэл алга$/.test(r.srcAns[1] || '') && /мэдээлэл алга$/.test(r.srcAns[3] || ''), JSON.stringify(r.srcAns));
+    check('AI7. Сайт дээр түүхий {…} нүд ХЭЗЭЭ Ч гарахгүй', r.anyBrace === false);
+  } finally {
+    SERVE_OVERRIDE = null;
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -3787,10 +4061,11 @@ console.log('ErtHub — систем тест');
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); }
+  else if (process.argv.includes('--only=AI')) { await groupAI(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI();
   }
 
   console.log('\n' + '═'.repeat(62));

@@ -1518,6 +1518,10 @@ function curatedPaths(){
     m['hero.diagram.chips.'+i]=1; m['hero.diagram.chip_bodies.'+i]=1 });
   var mo=siteGet(['months']);
   if(Array.isArray(mo)) mo.forEach(function(_,i){ m['months.'+i]=1 });
+  var aq=siteGet(['ai','qa']);
+  if(Array.isArray(aq)) aq.forEach(function(x,i){
+    ['q','a_live','a_nodata'].forEach(function(f){ if(x&&typeof x[f]==='string') m['ai.qa.'+i+'.'+f]=1 }) });
+  m['ai.delta_yoy']=1; m['ai.no_match']=1;
   return m;
 }
 function siteGet(p){var c=siteRoot(CON,p);for(var i=0;i<p.length;i++){if(!c)return undefined;c=c[p[i]]}return c}
@@ -2335,6 +2339,31 @@ function siteGroupDefs(){
     });
     add('site','s:steps',utxt('site_tab.svc_step_group','Цахим үйлчилгээ · 4 алхам'),
         utxt('site_tab.svc_step_where','Цахим үйлчилгээ хуудасны "Хэрхэн авах вэ?" хэсэг'),sf);
+  }
+  /* 08 — AI туслахын бэлэн асуулт-хариулт. Автомат бүлэгт "qa · 1. ·
+     a_live" гэсэн түүхий замаар гардаг байсан — засварлагч аль хариулт
+     хэзээ харагдахыг ойлгохгүй. Хариулт нь {…} нүдтэй ТЕМПЛЕЙТ: тоог
+     сайт амьд датаас дүүргэнэ, энд тоо бичвэл hero/k04-тэй зөрчилдөнө.
+     a_live-гүй асуулт (эх сурвалж холбогдоогүй салбар) зөвхөн 2 талбартай. */
+  var aq=siteGet(['ai','qa']);
+  if(Array.isArray(aq)){
+    var qf=[], aw=utxt('site_tab.ai_word','Асуулт');
+    aq.forEach(function(x,i){
+      if(!x) return;
+      var n=aw+' '+(i+1)+' ';
+      qf.push({p:['ai','qa',String(i),'q'],l:n+utxt('site_tab.ai_q','· асуулт')});
+      if(typeof x.a_live==='string')
+        qf.push({p:['ai','qa',String(i),'a_live'],l:n+utxt('site_tab.ai_live','· хариулт (дата ирсэн үед)')});
+      qf.push({p:['ai','qa',String(i),'a_nodata'],l:n+utxt('site_tab.ai_nodata','· хариулт (мэдээлэл алга үед)')});
+    });
+    /* Хариултад ОРДОГ хэсгүүд — тусад нь "автомат" бүлэгт түүхий нэрээр
+       гарвал аль хариултад хамаарахыг засварлагч мэдэхгүй. */
+    if(typeof siteGet(['ai','delta_yoy'])==='string')
+      qf.push({p:['ai','delta_yoy'],l:utxt('site_tab.ai_delta','Өсөлтийн хувийн хэллэг ({pct} = өмнөх оны мөн сартай харьцуулсан хувь)')});
+    if(typeof siteGet(['ai','no_match'])==='string')
+      qf.push({p:['ai','no_match'],l:utxt('site_tab.ai_no_match','Тохирох асуулт олдоогүй үеийн хариулт ({n} = датасетийн тоо)')});
+    add('site','q:ai',utxt('site_tab.ai_group','AI туслах · бэлэн асуулт-хариулт'),
+        utxt('site_tab.ai_where','08-р хэсэг · {…} нүдийг сайт АМЬД датаас дүүргэнэ — тоо бүү бич'),qf);
   }
   /* months — 01-р хэсгийн хугацааны шүүлтийн сарын шошго (2 сонголтод адил) */
   var mo=siteGet(['months']);
