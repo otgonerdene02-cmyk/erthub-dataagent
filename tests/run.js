@@ -1086,6 +1086,99 @@ async function groupG3() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   G4. ЛОКАЛ ХУУРАМЧ BACKEND (scripts/mock-publish.js · js/publish-mock.js)
+
+   Тестийн агент "Сайтад нийтлэх"-ийг дарж чаддаггүй байв: Google нэвтрэлт
+   + portal_admins + амьд сайт руу бичилт. Mock нь урсгалыг бүтэн (нэвтрэх
+   → нийтлэх → сайт дээр харагдах → 409) локалд дуусгах боломж өгнө.
+   Энд (а) mock нь жинхэнэ backend-ийн гэрээг давтаж буйг, (б) клиент
+   талын mock амьд хаяг дээр ЮУ Ч ХИЙХГҮЙг шалгана.
+   ══════════════════════════════════════════════════════════════════ */
+async function groupG4() {
+  group('G4. Локал хуурамч нийтлэлийн backend');
+  const vm = require('vm');
+  const { createMockPublish, TOKEN, TOKEN_NOPERM } = require('../scripts/mock-publish');
+  const mock = createMockPublish();
+  const srv = http.createServer((q, s) => { if (!mock.handle(q, s)) { s.writeHead(404); s.end(); } });
+  const port = listenFree(srv);
+  const U = 'http://127.0.0.1:' + port + '/api/site-content';
+  const req = (method, url, tok, body) => fetch(url, {
+    method, headers: Object.assign({ 'Content-Type': 'application/json' }, tok ? { Authorization: 'Bearer ' + tok } : {}),
+    body: body === undefined ? undefined : JSON.stringify(body)
+  }).then(async (r) => ({ status: r.status, body: await r.json().catch(() => null) }));
+  try {
+    let r = await req('GET', U);
+    check('G4.1 нийтлэлгүй үед GET → 404', r.status === 404, r.status);
+    r = await req('GET', U + '/me', TOKEN);
+    check('G4.2 /me: админ токен → canPublish=true', r.body && r.body.canPublish === true, JSON.stringify(r.body));
+    r = await req('GET', U + '/me', TOKEN_NOPERM);
+    check('G4.3 /me: эрхгүй токен → canPublish=false', r.body && r.body.canPublish === false, JSON.stringify(r.body));
+    r = await req('PUT', U, null, { content: {} });
+    check('G4.4 токенгүй PUT → 401', r.status === 401, r.status);
+    r = await req('PUT', U, TOKEN_NOPERM, { content: {} });
+    check('G4.5 эрхгүй PUT → 403', r.status === 403, r.status);
+    r = await req('PUT', U, TOKEN, { content: { a: 1 }, registry: { b: 2 }, baseVersion: null });
+    check('G4.6 анхны нийтлэл → version 1', r.status === 200 && r.body.version === 1, JSON.stringify(r.body));
+    r = await req('PUT', U, TOKEN, { content: { a: 9 }, baseVersion: null });
+    check('G4.7 хуучин baseVersion → 409 (амьд өөрчлөлтийг дарахгүй)', r.status === 409, r.status);
+    r = await req('PUT', U, TOKEN, { content: { a: 2 }, registry: null, baseVersion: 1 });
+    check('G4.8 registry=null → өмнөхийг хуулна, version 2', r.status === 200 && r.body.version === 2 &&
+      mock.versions[1].registry.b === 2 && mock.versions[1].content.a === 2, JSON.stringify(mock.versions[1]));
+    r = await req('GET', U);
+    check('G4.9 GET сүүлийн нийтлэлийг буцаана', r.body && r.body.version === 2 && r.body.content.a === 2,
+      JSON.stringify(r.body));
+    await req('DELETE', U);
+    r = await req('GET', U);
+    check('G4.10 DELETE санах ойг цэвэрлэнэ', r.status === 404, r.status);
+  } finally { srv.close(); }
+
+  /* Клиент тал: publish-mock.js-ийг хост/хаяг бүрээр vm-д ажиллуулна */
+  const src = read('js/publish-mock.js');
+  function runClient(host, search, dataAuth) {
+    const store = {};
+    const w = {
+      location: { hostname: host, search, origin: 'http://' + host + ':8090' },
+      sessionStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); },
+        removeItem: (k) => { delete store[k]; } },
+      document: { currentScript: { getAttribute: (a) => (a === 'data-auth' && dataAuth ? '1' : null) } },
+      URLSearchParams, console: { info() {} }, setTimeout, Promise, auth: 'REAL'
+    };
+    w.window = w;
+    vm.runInNewContext(src, w);
+    return w;
+  }
+  let w = runClient('otgonerdene02-cmyk.github.io', '?mockpub=1', true);
+  check('G4.11 амьд хост дээр ?mockpub=1 ЮУ Ч ХИЙХГҮЙ', !w.EH_PUBLISH_BASE && w.auth === 'REAL');
+  w = runClient('portal.mrt.gov.mn', '?mockpub=1', true);
+  check('G4.12 portal.mrt.gov.mn дээр ч идэвхгүй', !w.EH_PUBLISH_BASE && w.auth === 'REAL');
+  w = runClient('localhost', '', true);
+  check('G4.13 localhost ч ?mockpub-гүй бол идэвхгүй', !w.EH_PUBLISH_BASE && w.auth === 'REAL');
+  w = runClient('localhost', '?mockpub=1', false);
+  check('G4.14 сайт (data-auth-гүй): base солигдоно, auth ХӨНДӨГДӨХГҮЙ',
+    w.EH_PUBLISH_BASE === 'http://localhost:8090' && w.auth === 'REAL');
+  w = runClient('localhost', '?mockpub=1', true);
+  const a = w.auth;
+  const seen = [];
+  a.onAuthStateChanged((u) => seen.push(u && u.email));
+  await new Promise((res) => setTimeout(res, 5));
+  await a.signInWithPopup();
+  const tok = await a.currentUser.getIdToken();
+  check('G4.15 админ: эхэндээ гарсан → Нэвтрэх дармагц админ болно',
+    seen[0] === null && seen[1] === 'mock-admin@localhost' && tok === TOKEN, JSON.stringify(seen));
+  w = runClient('127.0.0.1', '?mockpub=viewer', true);
+  await w.auth.signInWithPopup();
+  check('G4.16 ?mockpub=viewer → эрхгүй токен', (await w.auth.currentUser.getIdToken()) === TOKEN_NOPERM);
+
+  const idx = read('index.html'), adm = read('admin/index.html');
+  const before = (h, x, y) => h.indexOf(x) >= 0 && h.indexOf(x) < h.indexOf(y);
+  check('G4.17 ачаалах дараалал: backend-config → publish-mock → erthub-publish (хоёр хуудас)',
+    before(idx, 'js/backend-config.js', 'js/publish-mock.js') && before(idx, 'js/publish-mock.js', 'js/erthub-publish.js') &&
+    before(adm, '../js/backend-config.js', '../js/publish-mock.js') && before(adm, '../js/publish-mock.js', '../js/erthub-publish.js'));
+  check('G4.18 зөвхөн админ auth-ыг солино (data-auth="1")',
+    /publish-mock\.js" data-auth="1"/.test(adm) && !/publish-mock\.js" data-auth/.test(idx));
+}
+
+/* ══════════════════════════════════════════════════════════════════
    H. ДАТА ХОЛБОЛТ ТАБ (metric_registry.json → metrics{})
 
    Өмнө нь metrics{}-ийн МЕТАДАТА (unit/quality/filter/period_note/
@@ -4433,11 +4526,12 @@ console.log('ErtHub — систем тест');
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
-  else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); }
+  else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
+  else if (process.argv.includes('--only=G4')) { await groupG4(); }
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
-  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupH();
+  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
   groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI();
   }
 
