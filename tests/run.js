@@ -24,7 +24,8 @@ const http = require('http');
 const { execFileSync, spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const PORT = 8971;
+const { listenFree } = require('./lib/listen');
+let PORT = 0;   /* serve() бүр OS-оос сул порт онооно — tests/lib/listen.js */
 let pass = 0, fail = 0, skip = 0;
 const failures = [];
 
@@ -359,6 +360,24 @@ function groupE() {
     check('E7: Firestore горим — хадгалсан 2 баримт ХЭВЭЭР',
       JSON.stringify(sRemote.docSaved) === JSON.stringify(saved0), JSON.stringify(sRemote.docSaved));
   }
+
+  /* E8 — Тестийн порт мөргөлдөхгүй (регресс). Өмнө нь хатуу 8971/8973
+     порт эзлэгдсэн байхад (өөр сешн, worktree, хоцорсон процесс) бүх
+     гүйлт C бүлэг дээр unhandled EADDRINUSE-ээр унадаг байв. Одоо
+     эзлэгдсэн порт + ЗЭРЭГЦЭЭ 2 сервер нөхцлийг яг давтана. */
+  const tfiles = ['tests/run.js', 'tests/text-coverage.js'];
+  const hard = tfiles.filter((f) => /\bconst PORT\s*=\s*\d+/.test(read(f)) || /\.listen\(\s*[1-9]\d*\s*\)/.test(read(f)));   /* listen(0) = сул порт, зөвшөөрнө */
+  check('E8: тестүүдэд хатуу порт үлдээгүй', hard.length === 0, hard.join(', '));
+  const envPort = process.env.TEST_PORT;
+  delete process.env.TEST_PORT;
+  const blocker = http.createServer().listen(0);
+  const taken = blocker.address().port;
+  const s1 = http.createServer(), s2 = http.createServer();
+  const p1 = listenFree(s1), p2 = listenFree(s2);
+  check('E8: зэрэгцээ 2 сервер тус тусдаа сул порт авна',
+    p1 > 0 && p2 > 0 && p1 !== p2 && p1 !== taken && p2 !== taken, [taken, p1, p2].join(' / '));
+  [blocker, s1, s2].forEach((s) => s.close());
+  if (envPort !== undefined) process.env.TEST_PORT = envPort;
 }
 
 /* ───────────────────── C. ADMIN UI (толгойгүй Chrome) ───────────────────── */
@@ -381,7 +400,7 @@ let SERVE_OVERRIDE = null;   /* {'/js/erthub-publish.js': '<эх бичвэр>'}
 function serve() {
   const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
     '.css': 'text/css', '.svg': 'image/svg+xml' };
-  return http.createServer((req, res) => {
+  const srv = http.createServer((req, res) => {
     const p = decodeURIComponent(req.url.split('?')[0]);
     if (SERVE_OVERRIDE && SERVE_OVERRIDE[p] != null) {
       res.writeHead(200, { 'Content-Type': MIME[path.extname(p).toLowerCase()] || 'text/plain',
@@ -421,7 +440,9 @@ setTimeout(poll,1000);
       res.writeHead(200, { 'Content-Type': MIME[path.extname(p).toLowerCase()] || 'application/octet-stream' });
       res.end(data);
     });
-  }).listen(PORT);
+  });
+  PORT = listenFree(srv);
+  return srv;
 }
 
 /* Probe-ыг ЖИНХЭНЭ хугацаагаар (virtual time БИШ) ажиллуулж, үр дүнг
