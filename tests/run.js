@@ -4057,7 +4057,8 @@ async function groupBE() {
     const DSS = { rail_wagon: { head: [], types: [], notes: [], rows: [] } };
     const ctx = { _railWagonLoading: { count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' },
       setSourceMeta() {}, setState() {}, railPaxKpiRow: () => paxRow };
-    mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f), fmt26).call(ctx);
+    /* dataAgeDays/WAGON_STALE_DAYS — вагоны хоцролтын тайлбар (PR #3). 1 хоног = хоцроогүй. */
+    mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f), fmt26, () => 1, 2).call(ctx);
     return SEC.rail.kpis;
   };
   const k4 = withPax(paxRow);
