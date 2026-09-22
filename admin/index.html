@@ -568,7 +568,10 @@ var DSMETA={
   air_flights_index:{n:'Нислэгийн индекс (feed мета)', a:'ИНЕГ · Вэбсервис', s:'air'},
   /* rail.wagon_loading метрикийн датасэт — бүртгэлгүй байсан тул каталогт
      "silver.rail_wagon_loading" гэсэн түүхий код гарч байв. */
-  'silver.rail_wagon_loading':{n:'Төмөр замын вагон ачилт (хоногийн мэдээ)', a:'УБТЗ · дотоод сүлжээ', s:'rail'}
+  'silver.rail_wagon_loading':{n:'Төмөр замын вагон ачилт (хоногийн мэдээ)', a:'УБТЗ · дотоод сүлжээ', s:'rail'},
+  /* rail.monthly_passenger_series-ийн датасэт — бүртгэлгүй бол каталогт
+     "silver.rail_operations" гэсэн түүхий код гарна (вагоны ижил тохиолдол). */
+  'silver.rail_operations':{n:'Төмөр замын зорчигч (галт тэрэг × өдөр)', a:'УБТЗ · Veritech', s:'rail'}
 };
 /* Слот бүр ЮУ ХАРУУЛДАГ, түүнээсээ шалтгаалан ямар нэгж шаардахыг энд
    тунхаглана. Одоогийн холбоосоос НЬ УНШИХГҮЙ — эс тэгвэл "одоо юу
@@ -579,6 +582,8 @@ var DSMETA={
      ls.air  — зөвхөн kpis[0] (нислэгийн тоо) уншина тул "нислэг" */
 var FIXED_UNIT={
   'hero_fl.':'нислэг','t05.':'нислэг/сар','u07.':'огноо',
+  't05.air':'нислэг/сар','t05.rail':'зорчигч/сар','t05.road':'тээврийн хэрэгсэл/сар',
+  't05.water':'хөлөг онгоц/сар','t05.public':'зорчигч/сар',
   'u07.air':'огноо','u07.rail':'огноо','u07.road':'огноо',
   'u07.water':'огноо','u07.public':'огноо',
   'i06.':'индекс (1-р сар=100)','r06.':'индекс (1-р сар=100)',
@@ -644,6 +649,9 @@ var FEED={state:'idle',err:null,months:[],index:[],weekPax:null,weekCargo:null,
    нөгөө preview хэвийн ажиллана (нэг Promise.all болговол нэгнийх нь
    алдаа хоёуланг нь унтраана). */
 var RAIL={state:'idle',date:null,loaded:null,unloaded:null,stations:null};
+/* УБТЗ · зорчигчийн сарын цуваа (/api/sectors/rail/summary). Вагоноос ТУСДАА
+   эх сурвалж — нэг нь унасан ч нөгөөгийн preview хэвийн. */
+var RAILPAX={state:'idle',series:null,unit:null};
 
 var $=function(i){return document.getElementById(i)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -883,7 +891,46 @@ function loadRailWagon(){
     RAIL.state='ready';
   },function(){ RAIL.state='error' });
 }
+/* Сайтын sectorSummaryToSeries()-ийн толь: unit ЗААВАЛ, одоогийн (УБ) сар
+   хасагдана, сүүлийн оны 1-р сараас завсаргүй. Зөрүүтэй бол preview ба сайт
+   хоёр ӨӨР муруй зурна — tests/run.js BE24 хоёуланг нэг фикстураар шална. */
+function paxSeriesFromSummary(json,now){
+  if(!json||json.status!=='ok') return null;
+  var unit=typeof json.unit==='string'?json.unit.trim():'';
+  if(!unit) return null;
+  var rows=Array.isArray(json.data)?json.data:[];
+  var ub=new Date((now==null?Date.now():now)+8*3600000);
+  var curKey=ub.getUTCFullYear()*100+(ub.getUTCMonth()+1);
+  var by={},keys=[];
+  rows.forEach(function(r){
+    var t=Date.parse(r&&r.month); if(!isFinite(t)) return;
+    var raw=r.total_volume; if(raw==null||String(raw).trim()==='') return;
+    var n=Number(raw); if(!isFinite(n)||n<0) return;
+    var d=new Date(t), k=d.getUTCFullYear()*100+(d.getUTCMonth()+1);
+    if(k>=curKey) return;
+    if(!(k in by)) keys.push(k);
+    by[k]=n;
+  });
+  if(!keys.length) return null;
+  var year=Math.floor(Math.max.apply(null,keys)/100), out=[];
+  for(var m=1;m<=12;m++){ if(!((year*100+m) in by)) break; out.push({m:m-1,label:MONTHS[m-1],v:by[year*100+m]}); }
+  var maxM=Math.max.apply(null,keys.filter(function(k){return Math.floor(k/100)===year}).map(function(k){return k%100}));
+  if(!out.length||maxM!==out.length) return null;
+  return {unit:unit,series:out};
+}
+function loadRailPax(){
+  if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchSectorSummary){ RAILPAX.state='off'; return Promise.resolve() }
+  RAILPAX.state='loading';
+  return EHBackend.fetchSectorSummary('rail').then(function(j){
+    var p=paxSeriesFromSummary(j);
+    if(!p||p.series.length<2){ RAILPAX.state='error'; return }
+    RAILPAX.series=p.series; RAILPAX.unit=p.unit; RAILPAX.state='ready';
+  },function(){ RAILPAX.state='error' });
+}
 function metricSeries(mk){
+  /* rail-ийн цуваа flights feed-ээс ХАМААРАХГҮЙ — FEED.state-ээр хаавал
+     backend амьд байхад ч preview хоосон харагдана. */
+  if(mk==='rail.monthly_passenger_series') return RAILPAX.state==='ready'?RAILPAX.series:null;
   if(FEED.state!=='ready') return null;
   if(mk==='air.monthly_flight_series') return FEED.months;
   if(mk==='air.monthly_growth_index')  return FEED.index;
@@ -1848,10 +1895,17 @@ function previewFor(id,mini){
     var ser=(serRes&&serRes.series&&serRes.series.length>1)
       ? serRes.series.map(function(v,i){return {label:serRes.labels[i],v:v}})
       : (mk?metricSeries(mk):null);
+    var extraSer=slotsOf(id).filter(function(s){return s.key&&s.key!=='plan'}).map(function(s){
+      var sv=slotVal(id,s.path);
+      if(qualityOf(sv)!=='verified'||!sv.metric||sv.metric===mk) return null;
+      var sr=metricSeries(sv.metric);
+      return (sr&&sr.length>1)?(SECN[s.key]||s.key)+': '+nf(sr[sr.length-1].v)+' ('+sr[sr.length-1].label+')':null;
+    }).filter(Boolean);
     body=ser&&ser.length>1
       ? svgLine(ser,accent,W,H,false)+
         '<div class="pvax">'+esc(ser[0].label)+' — '+esc(ser[ser.length-1].label)+
-        ' · '+ser.length+' '+esc(utxt('preview.points','цэг'))+(kind==='multiline'?' · '+esc(utxt('preview.five_lines','5 салбарын шугам')):'')+'</div>'
+        ' · '+ser.length+' '+esc(utxt('preview.points','цэг'))+(kind==='multiline'?' · '+esc(utxt('preview.five_lines','5 салбарын шугам')):'')+'</div>'+
+        (extraSer.length?'<div class="pvax" data-pvextra="1">+ '+esc(extraSer.join(' · '))+'</div>':'')
       : '<div class="pvempty">'+esc(FEED.state==='ready'?utxt('preview.no_series','цуваа алга'):utxt('feed.error','дата ачаалагдаагүй'))+'</div>';
   } else if(kind==='bar'){
     var ser2=mk?metricSeries(mk):null;
@@ -2194,7 +2248,7 @@ var SITE_LOC={
   filter:'home|s1', range:'home|s1', months:'home|s1', sector_short:'home|s1',
   week:'home|s2', community:'home|s3', community_data:'home|s3', updates:'home|s3',
   rank:'home|s4', sector_kpi:'home|s4', sector_kpi_air_live:'home|s4',
-  sector_kpi_rail_live:'home|s4',
+  sector_kpi_rail_live:'home|s4', sector_chart_rail_live:'home|s5',
   sector_rank_rail_live:'home|s4', sector_rank_rail_other:'home|s4',
   sector_chart2_rail_live:'home|s5',
   ds_schema_rail_wagon:'browse|body',
@@ -4691,7 +4745,7 @@ Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
   /* Урьдчилан харах картыг ЖИНХЭНЭ дата цэгээр зурахын тулд сайт өөрөө
      уншдаг feed-ийг ачаална. Амжилтгүй ч гэсэн хэрэгсэл БҮРЭН ажиллана —
      preview зөвхөн бүтцээ харуулж, "дата ачаалагдаагүй" гэж ил хэлнэ. */
-  Promise.all([loadFeed(),loadRailWagon()]).then(render);
+  Promise.all([loadFeed(),loadRailWagon(),loadRailPax()]).then(render);
 })
 .catch(function(err){
   showState('<h2>'+esc(utxt('boot.read_fail','Файл уншиж чадсангүй'))+'</h2><p>'+esc(err.message)+'</p>'+

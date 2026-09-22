@@ -36,7 +36,7 @@
           "would_need": "Backend-д \"transit\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/transit/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (НТГ) хэрэгтэй, transform биш."
         }
       },
-      "note": "SECTORS[activeSector].kpis (8 мөр) — air сонгосон үед бүгд applyRealFlightsData-аас, бусад үед бүгд статик. kpis[0] (НИЙТ НИСЛЭГ) нь hero_fl-тэй яг ижил air.flight_count_last_month; kpis[1-7] нь тухайн үеийн Sector-хуудасны Он/Сар шүүлтээр тодорхойлогдох жилийн эхнээс өнөөдрийг хүртэлх нийлбэр — өөр цонхтой ч тус бүрийн шошго (compareLabel) үнэн зөв тул зөрчилгүй. 2026-09-18: rail нь УБТЗ-ийн вагон ачилтын хоногийн мэдээнд холбогдов — 3 мөр (ачилт/буулгалт/станц), гурвуулаа НЭГ хоногийн дүн тул мөр хооронд цонхны зөрчил алга. Үлдсэн 3 салбар статик хэвээр."
+      "note": "SECTORS[activeSector].kpis (8 мөр) — air сонгосон үед бүгд applyRealFlightsData-аас, бусад үед бүгд статик. kpis[0] (НИЙТ НИСЛЭГ) нь hero_fl-тэй яг ижил air.flight_count_last_month; kpis[1-7] нь тухайн үеийн Sector-хуудасны Он/Сар шүүлтээр тодорхойлогдох жилийн эхнээс өнөөдрийг хүртэлх нийлбэр — өөр цонхтой ч тус бүрийн шошго (compareLabel) үнэн зөв тул зөрчилгүй. 2026-09-18: rail нь УБТЗ-ийн вагон ачилтын хоногийн мэдээнд холбогдов — 3 мөр (ачилт/буулгалт/станц), гурвуулаа НЭГ хоногийн дүн тул мөр хооронд цонхны зөрчил алга. Үлдсэн 3 салбар статик хэвээр. 2026-09-22: rail-д 4 дэх мөр \"ЗОРЧИГЧ / САР\" (сүүлийн бүтэн сар, MoM — өмнөх оны дата алга тул YoY биш) нэмэгдэв; spark нь бодит сарын цуваа."
     },
     "ls": {
       "sectors": {
@@ -108,25 +108,51 @@
       "note": "RECENT мөр бүр САЛБАРААРАА холбогдоно (өмнө нь ганц хавтгай metric байсан тул админ дээр air-ийг салгахад бүх мөр зэрэг унтардаг байв). air = flights feed-ийн fetchedAt; rail = вагон ачилтын өгөгдлийн сүүлийн хоног. Үлдсэн 3 мөр эх сурвалжгүй тул огноо нь \"мэдээлэл алга\"."
     },
     "t05": {
-      "metric": "air.monthly_flight_series",
-      "sectors": [
-        "air"
-      ],
-      "note": "sector.c1d-ийг шууд уншина, код өөрчлөлт шаардлагагүй байсан."
+      "sectors": {
+        "air": {
+          "metric": "air.monthly_flight_series",
+          "quality": "verified"
+        },
+        "rail": {
+          "metric": "rail.monthly_passenger_series",
+          "quality": "verified"
+        },
+        "road": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Авто замын сарын цуваа — road.veritech.vehicle_registry bronze-д татагдаж байгаа ч талбарын толь → silver.road_traffic transform дутуу. Transform бичигдвэл /api/sectors/road/summary unit:\"тээврийн хэрэгсэл\"-ээр сарын цуваа өгнө."
+        },
+        "water": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Backend-д \"sea\" салбарт ЯМАР Ч эх систем холбогдоогүй — эхлээд эх сурвалж (Далайн захиргаа) хэрэгтэй."
+        },
+        "public": {
+          "metric": null,
+          "quality": "none",
+          "label": "мэдээлэл алга",
+          "would_need": "Backend-д \"transit\" салбарт ЯМАР Ч эх систем холбогдоогүй — эхлээд эх сурвалж (НТГ) хэрэгтэй."
+        }
+      },
+      "note": "Идэвхтэй салбарын SECTORS[k].c1d-г зурна. 2026-09-22: ХАВТГАЙ (sectors:[\"air\"]) хэлбэрээс САЛБАРЫН слот руу — rail нь бодит сарын зорчигчтой болов. Сайт seriesVerified()-ээр registry + _liveSeries хоёуланг шална: registry verified ч цуваа ирээгүй бол статик демо муруйг амьд гэж зурахгүй."
     },
     "i06": {
       "metric": "air.monthly_growth_index",
       "sectors": [
-        "air"
+        "air",
+        "rail"
       ],
-      "note": "TREND.air (статик, SECTORS.air.c1d-ээс бүрэн тусгаарлагдсан хуурамч цуваа) байсныг live индексээр сольсон (H4 3/3). Харьцуулах цонх (compareWindow()) динамик — бүх 5 салбарыг ижил уртаар (одоогоор 1-7 сар) харуулна. road/rail/water/public verified бус тул 0 (хавтгай шугам) — тусгай стиль (тасархай, саарал) байхгүй, ердийн шугам (H5)."
+      "note": "TREND.air (статик, SECTORS.air.c1d-ээс бүрэн тусгаарлагдсан хуурамч цуваа) байсныг live индексээр сольсон (H4 3/3). Харьцуулах цонх (compareWindow()) динамик — бүх 5 салбарыг ижил уртаар (одоогоор 1-7 сар) харуулна. road/rail/water/public verified бус тул 0 (хавтгай шугам) — тусгай стиль (тасархай, саарал) байхгүй, ердийн шугам (H5). 2026-09-22: rail нэмэгдэв — шугам нь rail.monthly_passenger_series-ийг compareWindow()-ын ИЖИЛ он/урт дээр 1-р сар=100 болгон индексжүүлнэ. trendFor() verified салбарт статик TREND-ийг ЗУРАХАА БОЛИВ (бодит цуваа эсвэл 0). Сайтын код sectors-ийг МАССИВ гэж уншдаг тул энэ бичлэг хавтгай хэвээр."
     },
     "r06": {
       "metric": "air.monthly_growth_index",
       "sectors": [
-        "air"
+        "air",
+        "rail"
       ],
-      "note": "i06-тэй ЯГ ижил compareWindow()/trendFor() ашиглана. road/rail/water/public 0 тул эхлэл утга (a=0) — 0-той харьцуулж хувь тооцохгүй, '—' харуулна (NaN-аас сэргийлнэ). Тэргүүлэгч/хоцрогдогч шошго зөвхөн verified (air) салбар дундаас; verified 2-с цөөн үед (одоогоор ганц) огт харуулахгүй."
+      "note": "i06-тэй ЯГ ижил compareWindow()/trendFor() ашиглана. road/rail/water/public 0 тул эхлэл утга (a=0) — 0-той харьцуулж хувь тооцохгүй, '—' харуулна (NaN-аас сэргийлнэ). Тэргүүлэгч/хоцрогдогч шошго зөвхөн verified (air) салбар дундаас; verified 2-с цөөн үед (одоогоор ганц) огт харуулахгүй. 2026-09-22: rail нэмэгдэв — шугам нь rail.monthly_passenger_series-ийг compareWindow()-ын ИЖИЛ он/урт дээр 1-р сар=100 болгон индексжүүлнэ. trendFor() verified салбарт статик TREND-ийг ЗУРАХАА БОЛИВ (бодит цуваа эсвэл 0). Сайтын код sectors-ийг МАССИВ гэж уншдаг тул энэ бичлэг хавтгай хэвээр."
     },
     "uk": {
       "metric": null,
@@ -457,9 +483,9 @@
       "name": "Төмөр замын хоногийн вагон үзүүлэлтийн багц (KPI)",
       "source": "EHBackend.fetchRailWagonLoading → applyRailWagonData (index.html)",
       "dataset": "silver.rail_wagon_loading",
-      "column": "count (ачилт) · unloaded_count (буулгалт) · station_count (станцын тоо) — бүгд НЭГ хариунаас",
+      "column": "count (ачилт) · unloaded_count (буулгалт) · station_count (станцын тоо) — бүгд НЭГ хариунаас · + сарын зорчигч (rail.monthly_passenger_series-ийн сүүлийн бүтэн сар)",
       "agg": "MIXED",
-      "filter": "kpis[0]=ачсан вагон; kpis[1]=буусан вагон; kpis[2]=ачилт бүртгэсэн станцын тоо. Гурвуулаа rail.wagon_loading-ийн ЯГ ТЭР хоног (сүүлийн БҮРЭН бүртгэгдсэн өдөр)",
+      "filter": "kpis[0]=ачсан вагон; kpis[1]=буусан вагон; kpis[2]=ачилт бүртгэсэн станцын тоо — гурвуулаа rail.wagon_loading-ийн ЯГ ТЭР хоног. kpis[3]=сүүлийн БҮТЭН сарын зорчигч (rail.monthly_passenger_series), өмнөх сартай харьцуулсан — мөр бүр өөрийн цонхны шошготой.",
       "transform": "",
       "unit": "mixed",
       "additive": false,
@@ -478,6 +504,19 @@
       "additive": false,
       "quality": "verified",
       "period_note": "ETL хоногт нэг ажилладаг (etransport-etl-rail.timer, 01:30 UTC) тул энэ огноо нь татсан цаг БИШ, ӨГӨГДЛИЙН сүүлийн хоног. air.feed_updated_at нь fetchedAt (feed татсан цаг) — өөр утга учир тусдаа метрик."
+    },
+    "rail.monthly_passenger_series": {
+      "name": "Төмөр замын сарын зорчигчийн тоо (цуврал)",
+      "source": "EHBackend.fetchSectorSummary(\"rail\") → sectorSummaryToSeries → applyRailPassengerData (index.html)",
+      "dataset": "silver.rail_operations",
+      "column": "passenger_count = Veritech rail.veritech.passengers-ийн TOTAL (галт тэрэг × чиглэл × өдөр)",
+      "agg": "SUM by month (gold.monthly_summary_by_sector)",
+      "filter": "Одоогийн (УБ цагаар) календарийн сар ХАСАГДАНА — явагдаж буй сар дутуу. Сүүлийн оны 1-р сараас завсаргүй хэсэг л; unit ирээгүй бол цуваа огт харуулахгүй.",
+      "transform": "",
+      "unit": "зорчигч/сар",
+      "additive": true,
+      "quality": "verified",
+      "period_note": "БАТАЛГААЖУУЛАЛТ (2026-09-21) — талбарын толь ирээгүй тул АРИФМЕТИКААР: bronze-ийн бодит 500 мөр дээр KASS+KIOSK+WEB+SMS+PHONE+TAPA = TOTAL (100%) ба ORON+OLON = TOTAL (100%); бүх 12,392 мөр дээр channelMismatch 0. Grain = өдөр+дугаар+чиглэл (3,116 түлхүүр = 3,116 өвөрмөц эх ID; №33/34 нэг дугаартай хоёр чиглэлтэй). 1–9-р сарын нийлбэр 1,161,261 — probe-ийн тооцоотой яг тэнцсэн. Гадны албан ёсны тайлантай ХАРААХАН тулгаагүй (вагон ачилтын xlsx шиг) — эх тайлан ирвэл нэмж тулгана. Backend: etransport-backend migrations/007, 008, src/etl/rail/passengersMap.js."
     }
   },
   "removed": {
