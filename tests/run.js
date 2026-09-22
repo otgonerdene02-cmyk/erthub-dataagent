@@ -2017,6 +2017,22 @@ async function groupN() {
       if(leaf){ leaf.click(); await sleep(1100) }
       R.editor=!!d.querySelector('[data-tf]');
       R.hint=(d.getElementById('saveHint')||{}).textContent||'';
+      /* N5 — бичсэн ч «Хэрэглэх» дараагүй үед hint "Өөрчлөлт алга" гэж
+         худал хэлдэг байв (амьд туршилтад агент гацсан). render()-гүйгээр
+         бичих ДАРУЙД солигдох ёстой. */
+      const hint=()=>(d.getElementById('saveHint')||{}).textContent||'';
+      const ti=d.querySelector('[data-tf="title"]');
+      if(ti){
+        const orig=ti.value;
+        ti.value='ZZPENDZZ'; ti.dispatchEvent(new w.Event('input',{bubbles:true}));
+        R.hintPend=hint();
+        const sv=d.querySelector('[data-tsave]'); if(sv) sv.click(); await sleep(400);
+        R.hintApplied=hint();
+        const t2=d.querySelector('[data-tf="title"]');
+        t2.value=orig; t2.dispatchEvent(new w.Event('input',{bubbles:true}));
+        const sv2=d.querySelector('[data-tsave]'); if(sv2&&!sv2.disabled) sv2.click(); await sleep(400);
+        R.hintBack=hint();
+      }
       return R;
     }`, 90000);
     if (R.__err) { bad('N4. Каталогийн модны DOM шалгалт', R.__err); return; }
@@ -2033,6 +2049,15 @@ async function groupN() {
       (R.crumb.match(/02 · Долоо/g) || []).length <= 1, R.crumb.replace(/\s+/g, ' '));
     check('N4. Навч дарахад засварын дэлгэц нээгдэнэ', R.editor === true);
     check('N4. Хадгалах мөр дараагийн алхмыг хэлнэ', /Дараагийн алхам/.test(R.hint), R.hint);
+    const pendTxt = con.ui.save.hint_pending;
+    check('N5. Бичсэн даруйд (Хэрэглэх-ээс ӨМНӨ) hint «Хэрэглэх»-ийг заана',
+      !!R.hintPend && R.hintPend.includes(pendTxt), R.hintPend);
+    check('N5. «Хэрэглэх» дарсны дараа pending заавар арилна',
+      !!R.hintApplied && !R.hintApplied.includes(pendTxt) && /Дараагийн алхам/.test(R.hintApplied), R.hintApplied);
+    check('N5. Буцааж анхны утгад оруулахад "Өөрчлөлт алга" руу буцна',
+      !!R.hintBack && R.hintBack.includes(con.ui.save.hint_clean), R.hintBack);
+    check('N5. Нийтлэх товчны тайлбар хэрэглээгүй ноорогт «Хэрэглэх»-ийг заана',
+      adm.includes("if(pendingCount()) return utxt('publish.need_apply'"));
   } finally { srv.close(); }
 }
 
@@ -4529,6 +4554,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
   else if (process.argv.includes('--only=G4')) { await groupG4(); }
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
+  else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
