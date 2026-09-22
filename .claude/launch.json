@@ -6,6 +6,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["scripts/serve.js", "8080"],
       "port": 8080
+    },
+    {
+      "name": "erthub-mockpub",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/serve.js", "8090", "--mock-publish"],
+      "port": 8090
     }
   ]
 }

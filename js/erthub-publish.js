@@ -29,7 +29,10 @@
 (function () {
   'use strict';
 
-  var BASE = (typeof ETRANSPORT_BACKEND_BASE !== 'undefined' && ETRANSPORT_BACKEND_BASE) || '';
+  /* EH_PUBLISH_BASE — зөвхөн localhost дээр js/publish-mock.js тавина
+     (scripts/serve.js --mock-publish). Бусад үед амьд backend. */
+  var BASE = window.EH_PUBLISH_BASE ||
+    (typeof ETRANSPORT_BACKEND_BASE !== 'undefined' && ETRANSPORT_BACKEND_BASE) || '';
   var URL_ = BASE ? BASE + '/api/site-content' : null;
   /* Сайт эхний зурагтаа хүлээхгүй — overlay хожуу ирвэл дахин зурна.
      Гэхдээ хязгааргүй хүлээхгүй: сүлжээ муу үед тестийн probe (headless)
