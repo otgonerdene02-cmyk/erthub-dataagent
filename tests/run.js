@@ -3991,7 +3991,7 @@ async function groupBE() {
   check('BE16. Админ backend модулийг ачаална',
     /erthub-backend\.js/.test(read('admin/index.html')) && /backend-config\.js/.test(read('admin/index.html')));
   check('BE16. Админ вагон ачилтыг тусад нь (flights-ээс хамааралгүй) уншина',
-    /function loadRailWagon\(\)/.test(adm) && /Promise\.all\(\[loadFeed\(\),loadRailWagon\(\),loadRailPax\(\)\]\)/.test(adm));
+    /function loadRailWagon\(\)/.test(adm) && /Promise\.all\(\[loadFeed\(\),loadRailWagon\(\),loadSectorSeries\(\)\]\)/.test(adm));
   check('BE16. metricValue rail.wagon_* -г RAIL-ээс өгнө (FEED-ээс БИШ)',
     /mk\.indexOf\('rail\.wagon'\)===0/.test(adm) && /RAIL\.state!=='ready'/.test(adm));
   check('BE16. u07 preview огноог МЕТРИКЭЭС уншина (хатуу air шалгалт устсан)',
@@ -4202,28 +4202,37 @@ async function groupBE() {
   check('BE25. Админ ба сайт — ижил завсар/нэгжийн дүрэм',
     admSeries(gap, NOW_0922) === null && admSeries({ ...PAX, unit: '' }, NOW_0922) === null &&
     (admSeries(PAX, NOW_1005) || { series: [] }).series.length === 9);
-  check('BE25. Админ metricSeries rail-ийг RAILPAX-аас (flights FEED-ээс ХАМААРАХГҮЙ)',
-    /if\(mk==='rail\.monthly_passenger_series'\) return RAILPAX\.state==='ready'\?RAILPAX\.series:null;\s*\n\s*if\(FEED\.state!=='ready'\) return null;/.test(adm25));
+  /* 2026-09-22: салбарын цуваа ЕРӨНХИЙ болов (SERIES_METRIC → SERIES[api]) */
+  check('BE25. Админ metricSeries салбарын цувааг SERIES-ээс (flights FEED-ээс ХАМААРАХГҮЙ)',
+    /if\(SERIES_METRIC\[mk\]\)\{ var ss=SERIES\[SERIES_METRIC\[mk\]\]; return \(ss&&ss\.state==='ready'\)\?ss\.series:null; \}\s*\n\s*if\(FEED\.state!=='ready'\) return null;/.test(adm25));
   check('BE25. Админ гурван эх сурвалжийг зэрэг ачаална',
-    /Promise\.all\(\[loadFeed\(\),loadRailWagon\(\),loadRailPax\(\)\]\)/.test(adm25));
+    /Promise\.all\(\[loadFeed\(\),loadRailWagon\(\),loadSectorSeries\(\)\]\)/.test(adm25));
+  check('BE25. Админ rail.monthly_passenger_series → rail',
+    /var SERIES_METRIC=\{'rail\.monthly_passenger_series':'rail'/.test(adm25));
   check('BE25. Line preview бусад verified слотын цувааг ч харуулна (rail холбоос тусна)',
     /data-pvextra="1"/.test(adm25) && /sv\.metric===mk\) return null;/.test(adm25));
 
-  /* ── BE26. applyRailPassengerData() ба зорчигчийн KPI мөр ── */
-  const ap26 = dcScript().match(/\n  applyRailPassengerData\(\)\{([\s\S]*?)\n  \}\n/);
-  const kr26 = dcScript().match(/\n  railPaxKpiRow\(\)\{([\s\S]*?)\n  \}\n/);
-  if (!ap26 || !kr26) { bad('BE26. applyRailPassengerData()/railPaxKpiRow() олдсонгүй'); return; }
+  /* ── BE26. applySectorSeries(k) ба seriesKpiRow(k) — ЕРӨНХИЙ (2026-09-22) ──
+     rail-ийн анхны хэрэгжилтийг ерөнхийлсөн; rail дээрх зан төлөв ЯГ хэвээр
+     байхыг ижил фикстураар шална. Тохиргоо нь сайтын ЖИНХЭНЭ SECTOR_SERIES. */
+  const ap26 = dcScript().match(/\n  applySectorSeries\(k\)\{([\s\S]*?)\n  \}\n/);
+  const kr26 = dcScript().match(/\n  seriesKpiRow\(k\)\{([\s\S]*?)\n  \}\n/);
+  const ss26 = dcScript().match(/const SECTOR_SERIES=(\{[\s\S]*?\n\});/);
+  if (!ap26 || !kr26 || !ss26) { bad('BE26. applySectorSeries()/seriesKpiRow()/SECTOR_SERIES олдсонгүй'); return; }
   const PAXTXT = { 'sector_chart_rail_live': 'Сарын зорчигч', 'sector_kpi_rail_live.3': 'ЗОРЧИГЧ / САР',
     'unit.passenger': 'зорчигч', 'chart.compare_mom_mid': '· өмнөх сартай (', 'chart.compare_mom_end': ') харьцуулбал',
     'status.no_compare': 'харьцуулах өгөгдөл алга' };
   const st26 = (p, f) => (PAXTXT[p] !== undefined ? PAXTXT[p] : f);
   const fmt26 = (n) => Number(n).toLocaleString('en-US');
-  const mkPax = new Function('SECTORS', 'stxt', 'return function(){' + ap26[1] + '}');
-  const mkRow = new Function('stxt', 'fmtNum', 'MONTHS', 'return function(){' + kr26[1] + '}');
+  const SS26 = new Function('stxt', 'return ' + ss26[1])(st26);
+  const mkPaxRaw = new Function('SECTORS', 'SECTOR_SERIES', 'k', ap26[1]);
+  const mkRowRaw = new Function('SECTOR_SERIES', 'stxt', 'fmtNum', 'MONTHS', 'k', kr26[1]);
+  /* Хуучин (rail-д зориулсан) дуудлагын хэлбэрийг хадгалж, доорх тестүүд ХЭВЭЭР үлдэнэ */
+  const mkRow = (st, fmt, MON) => ({ call: (c) => mkRowRaw.call({ _sectorSeries: { rail: c._railPaxSeries } }, SS26, st, fmt, MON, 'rail') });
   const runPax = (series) => {
     const SEC = { rail: { c1: 'Сарын зорчигч (мянга)', c1d: [290, 270, 310], _liveKpis: true } };
-    const ctx = { _railPaxSeries: series, _st: null, setState(s) { this._st = s; } };
-    mkPax(SEC, st26).call(ctx);
+    const ctx = { _sectorSeries: { rail: series }, _st: null, setState(s) { this._st = s; } };
+    mkPaxRaw.call(ctx, SEC, SS26, 'rail');
     return { SEC, ctx };
   };
   const P26 = runPax({ unit: 'зорчигч', year: 2026, counts: JAN_AUG.slice(), lastMonth: 8 });
@@ -4257,7 +4266,7 @@ async function groupBE() {
     const SEC = { rail: { label: 'Төмөр зам', kpis: [['НИЙТ ЗАМ', '1,815', 'км', '+0.4%', 'up']] } };
     const DSS = { rail_wagon: { head: [], types: [], notes: [], rows: [] } };
     const ctx = { _railWagonLoading: { count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' },
-      setSourceMeta() {}, setState() {}, railPaxKpiRow: () => paxRow };
+      setSourceMeta() {}, setState() {}, seriesKpiRow: (k) => (k === 'rail' ? paxRow : null) };
     /* dataAgeDays/WAGON_STALE_DAYS — вагоны хоцролтын тайлбар (PR #3). 1 хоног = хоцроогүй. */
     mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f), fmt26, () => 1, 2).call(ctx);
     return SEC.rail.kpis;
@@ -4268,11 +4277,38 @@ async function groupBE() {
   check('BE26. Зорчигчийн дата алга → 3 мөр хэвээр', withPax(null).length === 3);
 
   /* ── BE27. Дараалал ба давхар баталгаа ── */
-  check('BE27. reapplyLiveText: зорчигч ЭХЛЭЭД, дараа нь вагон (мөр дахин баригдахад зорчигч алдагдахгүй)',
-    /reapplyLiveText\(\)\{[\s\S]*?this\.applyRailPassengerData\(\);[\s\S]*?this\.applyRailWagonData\(\);[\s\S]*?this\.recomputeAirData\(\);/.test(dcScript()));
-  check('BE27. loadEtransportBackend хоёр endpoint-ийг ЗЭРЭГ, зорчигчийг вагоноос ӨМНӨ барина',
-    /Promise\.all\(\[EHBackend\.fetchRailWagonLoading\(\),[\s\S]*?fetchSectorSummary\('rail'\)/.test(dcScript()) &&
-    /this\._railPaxSeries=sectorSummaryToSeries\(sum\);\s*this\.applyRailPassengerData\(\);[\s\S]*?this\.applyRailWagonData\(\);/.test(dcScript()));
+  check('BE27. reapplyLiveText: салбарын цуваа ЭХЛЭЭД, дараа нь вагон (мөр дахин баригдахад алдагдахгүй)',
+    /reapplyLiveText\(\)\{[\s\S]*?Object\.keys\(SECTOR_SERIES\)\.forEach\(k=>this\.applySectorSeries\(k\)\);[\s\S]*?this\.applyRailWagonData\(\);[\s\S]*?this\.recomputeAirData\(\);/.test(dcScript()));
+  check('BE27. loadEtransportBackend: вагон + тохиргооны БҮХ салбарыг ЗЭРЭГ, цувааг вагоноос ӨМНӨ',
+    /Promise\.all\(\[EHBackend\.fetchRailWagonLoading\(\),\s*\.\.\.seriesKeys\.map\(k=>EHBackend\.fetchSectorSummary\?EHBackend\.fetchSectorSummary\(SECTOR_SERIES\[k\]\.api\):null\)\]\)/.test(dcScript()) &&
+    /seriesKeys\.forEach\(\(k,i\)=>\{ this\._sectorSeries\[k\]=sectorSummaryToSeries\(sums\[i\]\); this\.applySectorSeries\(k\); \}\);[\s\S]*?this\.applyRailWagonData\(\);/.test(dcScript()));
+
+  /* ── BE27b. ЕРӨНХИЙ ГЭРЭЭ — шинэ салбар нэмэхэд код өөрчлөхгүй ── */
+  check('BE27b. SECTOR_SERIES бичлэг бүр api/dataset/kpi/labels-тэй, kpi ∈ {append, replace}',
+    Object.values(SS26).every((c) => c.api && c.dataset && ['append', 'replace'].includes(c.kpi) && typeof c.labels === 'function'));
+  check('BE27b. Сайтын салбар бүр админд ч цуваатай (preview = сайт)',
+    Object.values(SS26).every((c) => new RegExp("'[a-z_.]+':'" + c.api + "'").test(adm25)));
+  /* 'replace' горим — амьд KPI мөргүй салбарт цуваа мөр нь ЦОРЫН ГАНЦ мөр болно
+     (road vehicle_registry-д зориулсан зам — синтетик тохиргоо, гараар бодсон) */
+  const SSR = { road: { api: 'road', dataset: 'Тест датасэт', kpi: 'replace',
+    labels: () => ({ chart: 'Сарын Х', kpi: 'Х / САР', unit: 'нэгж' }) } };
+  const SECR = { road: { c1: 'демо', c1d: [1, 2, 3], kpis: [['НИЙТ ЗАМ', '48,210', 'км', '+2.1%', 'up']] } };
+  const ctxR = { _sectorSeries: { road: { unit: 'нэгж', year: 2026, counts: [100, 110, 99], lastMonth: 3 } },
+    setState() {}, seriesKpiRow(k) { return mkRowRaw.call(this, SSR, st26, fmt26, MONTHS25, k); } };
+  mkPaxRaw.call(ctxR, SECR, SSR, 'road');
+  check('BE27b. replace: статик демо мөрүүд (48,210 км) бүрэн солигдож 1 амьд мөр',
+    SECR.road.kpis.length === 1 && SECR.road.kpis[0][0] === 'Х / САР' && SECR.road.kpis[0][1] === '99' &&
+    SECR.road._liveKpis === true, JSON.stringify(SECR.road.kpis));
+  /* (99 − 110) / 110 × 100 = −10.0% */
+  check('BE27b. replace: MoM гараар бодсон -10.0% (down), цуваа k[6]',
+    SECR.road.kpis[0][3] === '-10.0%' && SECR.road.kpis[0][4] === 'down' && JSON.stringify(SECR.road.kpis[0][6]) === '[100,110,99]');
+  check('BE27b. replace: c1d/шошго/датасэт тэмдэглэгдэнэ',
+    JSON.stringify(SECR.road.c1d) === '[100,110,99]' && SECR.road.c1 === 'Сарын Х' &&
+    SECR.road._liveSeries === true && SECR.road._liveSeriesDs === 'Тест датасэт' && SECR.road.c1dYear === 2026);
+  const SECA = { rail: { c1: 'x', c1d: [1], kpis: [['A', '1', 'вагон', '—', 'flat']], _liveKpis: true } };
+  mkPaxRaw.call({ _sectorSeries: { rail: { year: 2026, counts: JAN_AUG.slice(), lastMonth: 8 } }, setState() {} }, SECA, SS26, 'rail');
+  check('BE27b. append (rail): KPI мөрийг ЭНД хөндөхгүй — вагоны apply залгана',
+    SECA.rail.kpis.length === 1 && SECA.rail.kpis[0][0] === 'A');
   const sv27 = dcScript().match(/\n  seriesVerified\(widgetId,sectorKey\)\{([\s\S]*?)\n  \}\n/);
   if (!sv27) { bad('BE27. seriesVerified() олдсонгүй'); return; }
   const svFn = new Function('SECTORS', 'widgetId', 'sectorKey', sv27[1]);
