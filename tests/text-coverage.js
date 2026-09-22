@@ -25,7 +25,8 @@ const http = require('http');
 const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const PORT = 8973;
+const { listenFree } = require('./lib/listen');
+let PORT = 0;   /* serve() бүр OS-оос сул порт онооно — tests/lib/listen.js */
 const LIST_ALL = process.argv.includes('--list');
 let pass = 0, fail = 0;
 const failures = [];
@@ -166,7 +167,7 @@ let PROBE_JS = '', PROBE_TARGET = '/index.html', PROBE_RESULT = null;
 function serve() {
   const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
     '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
-  return http.createServer((req, res) => {
+  const srv = http.createServer((req, res) => {
     const p = decodeURIComponent(req.url.split('?')[0]);
     if (p === '/__result__' && req.method === 'POST') {
       /* Chunk-ийг ТУС ТУСАД нь мөр болгож нийлүүлбэл (b += c) кирилл үсэг
@@ -207,7 +208,9 @@ function serve() {
         'Cache-Control': 'no-store' });
       res.end(data);
     });
-  }).listen(PORT);
+  });
+  PORT = listenFree(srv);
+  return srv;
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
