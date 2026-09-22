@@ -60,7 +60,39 @@ function corpusOf(objs) {
     Object.keys(o).forEach((k) => walk(o[k]));
   };
   objs.forEach(walk);
-  return [...out].filter((s) => s.length >= 2).sort((a, b) => b.length - a.length);
+  const list = [...out].filter((s) => s.length >= 2).sort((a, b) => b.length - a.length);
+  list.templates = templatesOf(objs);
+  return list;
+}
+
+/* {…} нүдтэй ТЕМПЛЕЙТ (жиш. site.ai.qa[].a_live) — нүд нь кодоос
+   тооцоологддог утга (тоо, сар, feed-ийн улсын нэр). Өгүүлбэрийг
+   темплейтээр БҮТНЭЭР нь таньж хасна. Хэсгүүдийг ("оны", "нийт")
+   тусад нь корпуст оруулбал тэр үгс хуудасны ХААНА Ч "хамрагдсан"
+   болж тест сулрах байсан. Дундах нүд дурын утга авна (өөр
+   бүртгэлтэй темплейт ч байж болно: {delta} → ai.delta_yoy). Захын
+   нүд КИРИЛЛ ҮСЭГ ЗАЛГИХГҮЙ — эс тэгвэл өгүүлбэрийн өмнөх/хойдох
+   бүртгэлгүй текстийг нүдний утга мэт "хамруулна". */
+function templatesOf(objs) {
+  const out = [];
+  const esc = (x) => x.replace(/\s+/g, ' ').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const walk = (o) => {
+    if (o == null) return;
+    if (typeof o === 'string') {
+      if (!/\{\w+\}/.test(o) || !CYR.test(o)) return;
+      const parts = o.trim().split(/\{\w+\}/);
+      const edge = '[^\\u0400-\\u04FF]*';
+      let src = parts.map(esc).join('[\\s\\S]*?');
+      if (parts[0] === '') src = edge + src.replace(/^\[\\s\\S\]\*\?/, '');
+      if (parts[parts.length - 1] === '') src = src.replace(/\[\\s\\S\]\*\?$/, '') + edge;
+      out.push(new RegExp(src, 'gi'));
+      return;
+    }
+    if (typeof o !== 'object') return;
+    Object.keys(o).forEach((k) => walk(o[k]));
+  };
+  objs.forEach(walk);
+  return out;
 }
 
 /* Динамикаар үүсдэг, ЯМАР Ч файлд мөрөөр хадгалагдах боломжгүй хэсгүүд.
@@ -79,6 +111,7 @@ const DYNAMIC = [
    \u0441\u0430\u043D\u0430\u043C\u0441\u0430\u0440\u0433\u04AF\u0439 \u04AF\u0435\u043D\u0438\u0439 \u0434\u0430\u0432\u0445\u0446\u0430\u043B \u0431\u04AF\u0445\u043D\u0438\u0439\u0433 "\u0445\u0430\u043C\u0440\u0430\u0433\u0434\u0441\u0430\u043D" \u0431\u043E\u043B\u0433\u043E\u043D\u043E. */
 function uncoveredPart(phrase, corpus) {
   let s = ' ' + phrase.replace(/\s+/g, ' ').trim() + ' ';
+  (corpus.templates || []).forEach((re) => { s = s.replace(re, (m) => ' '.repeat(m.length)); });
   let low = s.toLowerCase();
   const cut = (needle) => {
     const n = needle.toLowerCase();

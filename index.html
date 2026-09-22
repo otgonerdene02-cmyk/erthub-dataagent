@@ -1312,10 +1312,10 @@
               <sc-if value="{{ m.isBot }}">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
                   <div style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};box-shadow:0 0 8px {{ activeColor }};flex-shrink:0;"></div>
-                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(199,213,232,.55);white-space:nowrap;">{{ m.source }}</div>
+                  <div data-ai-src="" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;line-height:1.5;text-transform:uppercase;color:rgba(199,213,232,.55);min-width:0;overflow-wrap:anywhere;">{{ m.source }}</div>
                 </div>
               </sc-if>
-              <div style="{{ m.textStyle }}">{{ m.text }}</div>
+              <div data-ai-text="{{ m.role }}" style="{{ m.textStyle }}">{{ m.text }}</div>
             </div>
           </div>
         </sc-for>
@@ -3960,12 +3960,28 @@ const TREND={
   public:[98,97,101,104,106,109,112,111,107,104,100,99]
 };
 const AI_STEPS=['Асуултыг задлан шинжилж байна','Холбогдох датасетуудыг хайж байна','Тоон үзүүлэлтийг тооцоолж байна','Хариултыг эмхэтгэж байна'];
-const AI_SOURCES=['Агаарын тээврийн статистик · 2026','Замын хөдөлгөөний бодит ачаалал','Зорчигч тээврийн бүртгэл','Нийтийн тээврийн GPS сан','Салбарын нэгдсэн үзүүлэлт'];
+const AI_SOURCES=['ИНЕГ · нислэгийн бүртгэл','Авто замын хөдөлгөөний ачаалал','ИНЕГ · зорчигчийн бүртгэл','Нийтийн тээврийн бүртгэл','Салбарын нэгдсэн үзүүлэлт'];
+/* 08 — AI туслахын бэлэн асуулт. Хариулт нь ТЕМПЛЕЙТ: {…} нүдийг
+   aiResolve() АМЬД датаас дүүргэнэ — тоо энд ч, content.json-д ч
+   БИЧИГДЭХГҮЙ (answerAirAi-тай ижил "хариултыг файлаас ЗОХИОХГҮЙ"
+   гэрээ). `ans` — ямар амьд утгаар дүүргэхийг заана (текст биш, логик
+   тул кодод үлдэнэ). `a_nodata` — эх сурвалж холбогдоогүй эсвэл дата
+   хараахан ирээгүй үеийн шударга хариулт.
+   ӨМНӨ НЬ "Энэ онд нийт 11,979 нислэг … +8.4%" гэж хатуу бичигдсэн
+   байсан тул hero/k04-ийн амьд тоотой (2,450) зөрчилдөж, нэг хуудас
+   хоёр өөр нийт дүн хэлж байв. Бусад 3 хариулт ч эх сурвалжгүй
+   салбарын зохиомол тоо байв. */
 const AI_QA=[
-  {q:'Өнөөдөр хэдэн нислэг бүртгэгдсэн бэ?',a:'Энэ онд нийт 11,979 нислэг бүртгэгдсэн байна — өмнөх оноос +8.4% өссөн үзүүлэлт. Дэлгэрэнгүйг Агаарын тээврийн самбараас харна уу.'},
-  {q:'Авто замын өнөөдрийн ачаалал?',a:'Өдрийн дундаж ачаалал 214.3 мянган тээврийн хэрэгсэл байна, өмнөх сартай харьцуулахад +3.2% өссөн байна.'},
-  {q:'Хамгийн их зорчигчтой чиглэл аль вэ?',a:'Агаарын тээврээр хамгийн их зорчигч Өмнөд Солонгос чиглэлд (457,815 хүн) явдаг, дараа нь Хятад (357,372 хүн) орж байна.'},
-  {q:'Нийтийн тээврийн хамрах хүрээ?',a:'Нийтийн тээвэр 139 чиглэл, 959 идэвхтэй автобустай бөгөөд өдөрт дунджаар 312 мянган зорчигч үйлчилдэг.'}
+  {ans:'flights_last_month',q:'Сүүлийн бүтэн сард хэдэн нислэг бүртгэгдсэн бэ?',
+   a_live:'Сүүлийн бүтэн сар буюу {year} оны {month}: нийт {value} нислэг бүртгэгдсэн{delta}. Дэлгэрэнгүйг Агаарын тээврийн самбараас харна уу.',
+   a_nodata:'Нислэгийн эх сурвалжаас дата хараахан ирээгүй тул тоо хэлэх боломжгүй — мэдээлэл алга.'},
+  {ans:null,q:'Авто замын өнөөдрийн ачаалал?',
+   a_nodata:'Авто замын хөдөлгөөний ачааллын эх сурвалж хараахан холбогдоогүй тул тоо хэлэх боломжгүй — мэдээлэл алга. Одоогоор амьд холбогдсон салбар: {connected}.'},
+  {ans:'top_countries_pax',q:'Хамгийн их зорчигчтой чиглэл аль вэ?',
+   a_live:'{year} онд ({last} хүртэл) агаарын тээврээр хамгийн их зорчигч {top1} чиглэлд ({v1} хүн) зорчсон, дараа нь {top2} ({v2} хүн).',
+   a_nodata:'Нислэгийн эх сурвалжаас дата хараахан ирээгүй тул чиглэлийн эрэмбэ гаргах боломжгүй — мэдээлэл алга.'},
+  {ans:null,q:'Нийтийн тээврийн хамрах хүрээ?',
+   a_nodata:'Нийтийн тээврийн эх сурвалж хараахан холбогдоогүй тул чиглэл, автобус, зорчигчийн тоо хэлэх боломжгүй — мэдээлэл алга. Одоогоор амьд холбогдсон салбар: {connected}.'}
 ];
 
 const PAGES=[
@@ -4375,10 +4391,12 @@ function applySiteContent(){
   });
   /* 08 — AI туслахын асуулт/хариулт, эх сурвалж, алхмууд */
   const ai=S.ai;
+  /* Зөвхөн ТЕКСТ талбар давхарлана — `ans` (аль амьд утгаар дүүргэх)
+     нь логик тул кодод үлдэнэ. Тоо энд ОРОХГҮЙ: aiResolve() {…} нүдийг
+     хариулах агшинд амьд датаас дүүргэнэ. */
   if(ai&&Array.isArray(ai.qa)) ai.qa.forEach((x,i)=>{
     if(!AI_QA[i]||!x) return;
-    if(x.q) AI_QA[i].q=x.q;
-    if(x.a) AI_QA[i].a=x.a;
+    ['q','a_live','a_nodata'].forEach(f=>{ if(x[f]) AI_QA[i][f]=x[f]; });
   });
   if(ai&&Array.isArray(ai.sources)) ai.sources.forEach((x,i)=>{ if(x) AI_SOURCES[i]=x; });
   if(ai&&Array.isArray(ai.steps))   ai.steps.forEach((x,i)=>{ if(x) AI_STEPS[i]=x; });
@@ -5572,7 +5590,13 @@ class Component extends DCLogic {
     const win=this.lastFullMonthWindow(years[0]);
     if(!win) return;
     const count=this._flightsCache[win.lmYear].filter(f=>f.year===win.lmYear&&f.month===win.lmMonth).length;
-    this._heroFlLastMonth={count,year:win.lmYear,month:win.lmMonth,monthLabel:win.monthLabel};
+    /* Өмнөх оны МӨН сар — k04-ийн НИЙТ НИСЛЭГ мөрийн YoY-той ижил цонх
+       (MoM биш: агаарын тээвэр улирлын хэлбэлзэлтэй). AI туслах ч энэ
+       объектоос уншдаг тул тоо, сар, хувь НЭГ эх сурвалжаас гарна.
+       Өмнөх оны cache алга бол null — 0 гэж ЗОХИОХГҮЙ (хувь ч гарахгүй). */
+    const prevSrc=this._flightsCache[win.lmYear-1];
+    const prevCount=prevSrc?prevSrc.filter(f=>f.year===win.lmYear-1&&f.month===win.lmMonth).length:null;
+    this._heroFlLastMonth={count,year:win.lmYear,month:win.lmMonth,monthLabel:win.monthLabel,prevCount};
   }
   flightsMeta(idx,years,newestYearFlights){
     const list=idx.years||[];
@@ -6196,10 +6220,89 @@ class Component extends DCLogic {
       window.auth.signInWithEmailAndPassword(em,pw).then(cred=>finish(cred.user)).catch(onErr);
     }
   }
+  /* 08 — Бэлэн хариултыг АМЬД датаас бүрдүүлнэ. Хариулах/зурах агшинд
+     тооцдог (шингээдэггүй) тул content.json эсвэл нийтлэл хожуу ирсэн ч
+     reapplyLiveText() шаардлагагүй. Нислэгийн тоо, сар, YoY хувь нь
+     hero_fl/k04-тэй ЯГ ИЖИЛ объектоос (_heroFlLastMonth) — нэг хуудас
+     хоёр өөр нийт дүн хэлэхгүй. Амьд утга алга бол a_nodata; дүүрээгүй
+     {…} нүдтэй темплейтийг ХЭЗЭЭ Ч харуулахгүй (админ буруу нүд
+     бичсэн ч түүхий хаалт сайтад гарахгүй). */
+  aiResolve(i){
+    const qa=AI_QA[i];
+    if(!qa) return null;
+    const src=AI_SOURCES[i%AI_SOURCES.length]||'';
+    const noData=stxt('status.no_data','мэдээлэл алга');
+    const fill=(t,v)=>String(t||'').replace(/\{(\w+)\}/g,(m,k)=>v[k]!=null?String(v[k]):m);
+    const vals=qa.ans?this.aiLiveValues(qa.ans):null;
+    if(vals&&qa.a_live){
+      const text=fill(qa.a_live,vals);
+      if(!/\{\w+\}/.test(text)) return {text,source:src,live:true};
+    }
+    /* Эх сурвалжгүй үед ЯМАР салбар амьд холбогдсоныг registry +
+       бодит дата хоёулангаас нь (kpiVerified) нэрлэнэ — жагсаалтыг
+       текстэд хатуу бичвэл шинэ салбар холбогдоход хуучирна. */
+    const on=Object.keys(SECTORS).filter(k=>this.kpiVerified('k04',k)).map(k=>SECTORS[k].label);
+    return {text:fill(qa.a_nodata,{connected:on.length?on.join(', '):noData}),
+      source:src+' · '+noData,live:false};
+  }
+  /* Темплейтийн нүдийн утга. Дата ирээгүй бол null — aiResolve a_nodata
+     руу унана. Утга бүр Sector хуудасны шүүлтээс ЗОРИУД тусгаарлагдсан
+     (hero_fl/weeklyAirStats-тэй адил) бөгөөд хугацаагаа ИЛ хэлнэ. */
+  aiLiveValues(kind){
+    if(kind==='flights_last_month'){
+      const h=this._heroFlLastMonth;
+      if(!h||h.count==null) return null;
+      const d=h.prevCount>0?(h.count-h.prevCount)/h.prevCount*100:null;
+      return {year:h.year,month:h.monthLabel,value:h.count.toLocaleString('en-US'),
+        delta:d==null?'':stxt('ai.delta_yoy',' — өмнөх оны мөн сартай харьцуулахад {pct}')
+          .replace('{pct}',(d>=0?'+':'')+d.toFixed(1)+'%')};
+    }
+    if(kind==='top_countries_pax'){
+      /* Сүүлийн оны эхнээс сүүлийн бичлэг хүртэл, шүүлтгүй — нүүр
+         хуудасны "Улс тус бүрийн зорчигч"-ийн анхны төлөвтэй ижил
+         тодорхойлолт (Монгол = дотоод нислэг тул хасна). */
+      const y=(this._flightsYears||[]).slice().sort((a,b)=>b-a)[0];
+      const list=y&&this._flightsCache&&this._flightsCache[y];
+      if(!list||!list.length) return null;
+      const by={};
+      let newest=null;
+      for(const f of list){
+        if(f.cntry&&f.cntry!=='Монгол') by[f.cntry]=(by[f.cntry]||0)+(f.pax||0);
+        if(!newest||f.unixtimestamp>newest.unixtimestamp) newest=f;
+      }
+      const top=Object.entries(by).sort((a,b)=>b[1]-a[1]);
+      if(top.length<2) return null;
+      const p=n=>String(n).padStart(2,'0');
+      return {year:y,last:newest.year+'-'+p(newest.month)+'-'+p(newest.day),
+        top1:top[0][0],v1:top[0][1].toLocaleString('en-US'),
+        top2:top[1][0],v2:top[1][1].toLocaleString('en-US')};
+    }
+    return null;
+  }
+  /* Чөлөөт асуултыг бэлэн асуулттай түлхүүр үгээр тааруулна. Индекс
+     эсвэл -1. Хариултын темплейтийг ({…} нүдгүйгээр) ч хайна. */
+  aiMatch(q){
+    const stop=['байна','ямар','хэдэн','өнөөдрийн','тээврийн','байгаа','болох','вэ?','юу'];
+    const w=Array.from(new Set(String(q||'').toLowerCase().replace(/[?.,!]/g,'').split(/\s+/)
+      .filter(t=>t.length>3&&stop.indexOf(t)<0)));
+    let best=0,hit=-1;
+    AI_QA.forEach((x,i)=>{
+      const ql=x.q.toLowerCase(), al=((x.a_live||'')+' '+(x.a_nodata||'')).toLowerCase();
+      let sc=0;
+      w.forEach(t=>{
+        const stem=t.slice(0,Math.max(4,t.length-2));
+        if(ql.indexOf(stem)>=0) sc+=3;
+        else if(al.indexOf(stem)>=0) sc+=1;
+      });
+      if(sc>best){best=sc;hit=i;}
+    });
+    return best<3?-1:hit;
+  }
   askAi(q,presetIdx){
     q=(q||'').trim();
     if(!q||this.state.aiThinking) return;
-    const prior=this.state.aiThread||[{role:'bot',text:AI_QA[0].a,source:AI_SOURCES[0]}];
+    const r0=this.aiResolve(0);
+    const prior=this.state.aiThread||[{role:'bot',text:r0.text,source:r0.source}];
     this.setState({aiThread:prior.concat([{role:'user',text:q}]),aiInput:'',aiThinking:true,aiStep:0});
     if(this._aiT) this._aiT.forEach(clearTimeout);
     this._aiT=[];
@@ -6207,28 +6310,14 @@ class Component extends DCLogic {
       this._aiT.push(setTimeout(()=>this.setState({aiStep:i}),i*430));
     });
     this._aiT.push(setTimeout(()=>{
-      let hit=null;
-      if(typeof presetIdx==='number'&&AI_QA[presetIdx]) hit=AI_QA[presetIdx];
-      else {
-        const stop=['байна','ямар','хэдэн','өнөөдрийн','тээврийн','байгаа','болох','вэ?','юу'];
-        const w=Array.from(new Set(q.toLowerCase().replace(/[?.,!]/g,'').split(/\s+/)
-          .filter(t=>t.length>3&&stop.indexOf(t)<0)));
-        let best=0;
-        AI_QA.forEach(x=>{
-          const ql=x.q.toLowerCase(), al=x.a.toLowerCase();
-          let sc=0;
-          w.forEach(t=>{
-            const stem=t.slice(0,Math.max(4,t.length-2));
-            if(ql.indexOf(stem)>=0) sc+=3;
-            else if(al.indexOf(stem)>=0) sc+=1;
-          });
-          if(sc>best){best=sc;hit=x;}
-        });
-        if(best<3) hit=null;
-      }
-      const ans=hit?hit.a:'Асуултад тохирох шууд үзүүлэлт олдсонгүй. Нээлттэй өгөгдлийн санд '+DATASETS.length+' датасет байна — салбар, хугацааг тодруулж дахин асуувал тодорхой тоо гаргаж чадна.';
-      const src=hit?AI_SOURCES[AI_QA.indexOf(hit)%AI_SOURCES.length]:'Салбарын нэгдсэн үзүүлэлт';
-      void src;
+      const idx=(typeof presetIdx==='number'&&AI_QA[presetIdx])?presetIdx:this.aiMatch(q);
+      const hit=idx>=0?AI_QA[idx]:null;
+      /* Хариултыг ХАРИУЛАХ агшинд бүрдүүлнэ — "бодож байна" хугацаанд
+         дата ирсэн бол шинэ утга нь орно. */
+      const r=hit?this.aiResolve(AI_QA.indexOf(hit)):null;
+      const ans=r?r.text:stxt('ai.no_match','Асуултад тохирох шууд үзүүлэлт олдсонгүй. Нээлттэй өгөгдлийн санд {n} датасет байна — салбар, хугацааг тодруулж дахин асууна уу.')
+        .replace('{n}',String(DATASETS.length));
+      const src=r?r.source:stxt('ai.fallback_source','Салбарын нэгдсэн үзүүлэлт');
       this.setState(s=>({aiThread:(s.aiThread||[]).concat([{role:'bot',text:ans,source:src}]),aiThinking:false,aiStep:0}));
     },AI_STEPS.length*430+320));
   }
@@ -7262,13 +7351,17 @@ class Component extends DCLogic {
     const compareGeom={axisX1:pL,axisX2:W-pR,axisY:(Hh-pB).toFixed(1),padT:pT};
     const compareLastLabel=cw.lastLabel;
 
-    const ai=this.state.aiIndex;
     const aiChips=AI_QA.map((qa,i)=>({q:qa.q,pick:()=>this.askAi(qa.q,i),
-      style:'cursor:pointer;text-align:left;font-family:inherit;border-radius:999px;padding:8px 15px;font-size:12px;line-height:1.35;white-space:nowrap;transition:.16s var(--ease);border:1px solid rgba(var(--surface-rgb),.16);background:rgba(var(--surface-rgb),.06);color:rgba(230,238,250,.86);'}));
-    const thread=this.state.aiThread||[{role:'bot',text:AI_QA[0].a,source:AI_SOURCES[0]}];
+      /* Урт асуулт (жиш. "Сүүлийн бүтэн сард …") утасны өргөнд картаас
+         халиж тасардаг байсан тул мөр шилжинэ (nowrap биш). */
+      style:'cursor:pointer;text-align:left;font-family:inherit;border-radius:999px;padding:8px 15px;font-size:12px;line-height:1.35;max-width:100%;transition:.16s var(--ease);border:1px solid rgba(var(--surface-rgb),.16);background:rgba(var(--surface-rgb),.06);color:rgba(230,238,250,.86);'}));
+    /* Анхны бөмбөлөг render БҮРД амьд датаас — дата ирэхэд (flightsLive)
+       "мэдээлэл алга"-аас бодит тоо руу өөрөө шилжинэ. */
+    const r0=this.aiResolve(0);
+    const thread=this.state.aiThread||[{role:'bot',text:r0.text,source:r0.source}];
     const aiThread=thread.map(m=>{
       const bot=m.role==='bot';
-      return {isBot:bot,text:m.text,source:m.source||AI_SOURCES[0],
+      return {isBot:bot,role:bot?'bot':'user',text:m.text,source:m.source||AI_SOURCES[0],
         rowStyle:'display:flex;justify-content:'+(bot?'flex-start':'flex-end')+';',
         bubbleStyle:bot
           ?'max-width:80%;background:rgba(var(--surface-rgb),.055);border:1px solid rgba(var(--surface-rgb),.11);border-radius:16px 16px 16px 5px;padding:16px 19px;backdrop-filter:blur(8px);'
@@ -7331,7 +7424,7 @@ class Component extends DCLogic {
           open:()=>{ this.setState({page:'community',commTab:'policy',projOpen:'p'+POLICIES.indexOf(q)}); }};
       })(),
       cLagLabel:cLag.label,cLagCh:(cLag.ch>0?'+':'')+cLag.ch.toFixed(1)+'%',cLagColor:cLag.color,
-      aiChips,aiQuestion:AI_QA[ai].q,aiAnswer:AI_QA[ai].a,
+      aiChips,
       aiThread,aiSteps,aiThinking:this.state.aiThinking,
       aiStatusLabel:this.state.aiThinking?stxt('ai.status_busy','Ажиллаж байна'):stxt('ai.status_ready','Бэлэн'),
       aiInput:this.state.aiInput||'',
@@ -8896,7 +8989,7 @@ class Component extends DCLogic {
       // sub-д ОРООГүй; зөвхөн мөр 1276-ийн бодит sub мөрийг холбов.
       ai08Sub:this.txt('ai08','sub','v2.4 · туршилтын хувилбар'),
       ai08Foot:this.txt('ai08','foot','Хариултууд нээлттэй өгөгдлийн сан дээр үндэслэнэ. Албан ёсны шийдвэрт эх сурвалжийг шалгана уу.')
-        +(this.isWidgetMock('ai08')?' '+stxt('status.ai08_mock','* AI туслах туршилтын горимд — хариулт нь жишээ асуулт-хариулт дээр суурилна.'):''),
+        +(this.isWidgetMock('ai08')?' '+stxt('status.ai08_mock','* AI туслах туршилтын горимд — зөвхөн бэлэн асуултад хариулна. Тоо нь холбогдсон эх сурвалжаас шууд тооцоологдоно; холбогдоогүй салбарт "мэдээлэл алга" гэнэ.'):''),
       sector:s,
       sectorTabs,
       orbitDots,
