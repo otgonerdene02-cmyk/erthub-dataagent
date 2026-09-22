@@ -436,8 +436,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="../js/firebase-config.js"></script>
-<script src="../js/erthub-publish.js"></script>
 <script src="../js/backend-config.js"></script>
+<script src="../js/erthub-publish.js"></script>
 <script src="../js/erthub-backend.js"></script>
 <script src="../js/erthub-chart.js"></script>
 </head>
@@ -4132,7 +4132,7 @@ document.addEventListener('click',function(e){
   if(t.closest&&t.closest('[data-invpub]')){
     var pbtn=$('pubBtn');
     if(pbtn&&!pbtn.disabled){ pbtn.click(); return }
-    toast(($('saveHint')||{}).textContent||utxt('publish.disabled','Firebase тохируулаагүй — нийтлэх боломжгүй'));
+    toast(($('saveHint')||{}).textContent||utxt('publish.disabled','Backend тохируулаагүй — нийтлэх боломжгүй'));
     return;
   }
   if((el=t.closest&&t.closest('[data-sv-add]'))){
@@ -4497,9 +4497,9 @@ $('revBtn').addEventListener('click',function(){
 /* ══════════════════ САЙТАД НИЙТЛЭХ ══════════════════
    Админ ФАЙЛ РУУ бичдэггүй тул засвар нь өмнө нь зөвхөн санах ойд үлдэж,
    Экспортлох → гар хуулалт → commit → push хийж байж сайтад гардаг байв.
-   "Сайтад нийтлэх" нь тэр гинжийг таслаад CON/REG-ийг Firestore-ийн
-   site_content/current баримтад бичнэ; сайт үүнийг файлын ДЭЭР давхарлан
-   уншина (js/erthub-publish.js).
+   "Сайтад нийтлэх" нь тэр гинжийг таслаад CON/REG-ийг etransport-backend-ийн
+   PUT /api/site-content руу (Postgres, хувилбар бүр тусдаа мөр) бичнэ; сайт
+   үүнийг файлын ДЭЭР давхарлан уншина (js/erthub-publish.js).
 
    Экспорт ХЭВЭЭР хэрэгтэй: нийтлэл нь шуурхай харагдац, git нь бүртгэл.
    Хоёуланг нь хийхийг хэрэглэгчид ил сануулна. */
@@ -4513,9 +4513,9 @@ function renderAuth(){
   if(!w) return;
   var enabled=(typeof EHPublish!=='undefined')&&EHPublish.enabled;
   if(!enabled){
-    w.textContent=utxt('publish.disabled','Firebase тохируулаагүй — нийтлэх боломжгүй');
+    w.textContent=utxt('publish.disabled','Backend тохируулаагүй — нийтлэх боломжгүй');
     li.style.display='none'; lo.style.display='none';
-    if(pb){pb.disabled=true;pb.title=utxt('publish.disabled','Firebase тохируулаагүй — нийтлэх боломжгүй')}
+    if(pb){pb.disabled=true;pb.title=utxt('publish.disabled','Backend тохируулаагүй — нийтлэх боломжгүй')}
     return;
   }
   var u=window.auth&&window.auth.currentUser;
@@ -4526,16 +4526,16 @@ function renderAuth(){
     return;
   }
   li.style.display='none'; lo.style.display='';
-  /* uid-ыг ИЛ үзүүлнэ — Firestore дээр admins/<uid> баримт үүсгэхэд
-     хэрэглэгчид энэ утга зайлшгүй хэрэгтэй. */
+  /* uid-ыг ИЛ үзүүлнэ — backend-ийн portal_admins хүснэгтэд нэмэхэд
+     хэрэглэгчид энэ утга хэрэгтэй (и-мэйлээр ч нэмж болно). */
   w.innerHTML=esc(u.email||u.uid)+' <code title="'+esc(utxt('publish.uid_hint',
-    'Firestore → admins коллекцод ЭНЭ ID-гаар баримт үүсгэвэл нийтлэх эрх нээгдэнэ'))+
+    'portal_admins хүснэгтэд ЭНЭ ID (эсвэл и-мэйлийг) нэмбэл нийтлэх эрх нээгдэнэ'))+
     '">'+esc(u.uid)+'</code>';
   if(pb){
     pb.disabled=!PUBSTATE.canPublish||dirtyCount()===0;
     pb.title=PUBSTATE.canPublish
       ?utxt('publish.hint','Одоогийн өөрчлөлтийг сайтад шууд нийтэлнэ')
-      :utxt('publish.no_rights','Нийтлэх эрхгүй — Firestore дээр admins/<uid> баримт үүсгэнэ үү');
+      :utxt('publish.no_rights','Нийтлэх эрхгүй — backend-ийн portal_admins хүснэгтэд таны и-мэйл эсвэл uid-г нэмүүлнэ үү');
   }
 }
 function refreshPubBtn(){
@@ -4579,7 +4579,7 @@ if(typeof EHPublish!=='undefined'&&EHPublish.enabled&&window.auth){
     if(!PUBSTATE.signedIn) return;
     EHPublish.canPublish().then(function(ok){
       PUBSTATE.canPublish=ok; renderAuth();
-      if(!ok) pubMsg(utxt('publish.no_rights','Нийтлэх эрхгүй — Firestore дээр admins/<uid> баримт үүсгэнэ үү'),'err');
+      if(!ok) pubMsg(utxt('publish.no_rights','Нийтлэх эрхгүй — backend-ийн portal_admins хүснэгтэд таны и-мэйл эсвэл uid-г нэмүүлнэ үү'),'err');
       else pubMsg('');
     });
   });
@@ -4587,7 +4587,7 @@ if(typeof EHPublish!=='undefined'&&EHPublish.enabled&&window.auth){
 document.addEventListener('click',function(e){
   var t=e.target;
   if(t&&t.id==='loginBtn'){
-    if(!window.googleProvider){pubMsg(utxt('publish.disabled','Firebase тохируулаагүй — нийтлэх боломжгүй'),'err');return}
+    if(!window.googleProvider){pubMsg(utxt('publish.disabled','Backend тохируулаагүй — нийтлэх боломжгүй'),'err');return}
     window.auth.signInWithPopup(window.googleProvider)
       .catch(function(err){pubMsg(err.message,'err')});
     return;
