@@ -4556,6 +4556,23 @@ function sectorSummaryToValue(json){
      нь 1-р сар (сарын шүүлт slice(mFrom-1)-ээр тайрдаг); завсрыг 0-ээр
      нөхвөл зохиомол уналт болно.
    - Тоон бус / сөрөг утгатай сар → тэр сар алга гэж үзнэ (завсар). */
+/* ── САЛБАРЫН САРЫН ЦУВАА — ЕРӨНХИЙ ТОХИРГОО ─────────────────────────────
+   etransport-backend /api/sectors/<api>/summary (gold ← silver ← Veritech).
+   Шинэ салбар нэмэх = ЭНД нэг мөр + content.json-ийн шошго + registry-ийн
+   холбоос (t05/i06/r06, k04/ls). Код өөрчлөхгүй — t05/i06/r06/датасэтийн
+   хуудас бүгд SECTORS[k].c1d + _liveSeries-ээс уншдаг.
+     api      — backend-ийн салбарын түлхүүр (water→sea, public→transit)
+     dataset  — цуваа ЯМАР датасэтийнх (dsHasTrend; харагдах текст БИШ)
+     kpi      — 'append': тухайн салбар өөр амьд KPI мөртэй (rail-ийн вагон)
+                бол АРД нь залгана; 'replace': ганц амьд мөр болно
+     labels() — stxt()-ийг ДУУДАХ агшинд уншина (амьд текстийг дахин барих
+                гэрээ); литерал зам нь текстийн хамрах хүрээний тестэд хэрэгтэй */
+const SECTOR_SERIES={
+  rail:{api:'rail',dataset:'Зорчигчийн галт тэрэгний мэдээ',kpi:'append',
+    labels:()=>({chart:stxt('sector_chart_rail_live','Сарын зорчигч'),
+      kpi:stxt('sector_kpi_rail_live.3','ЗОРЧИГЧ / САР'),unit:stxt('unit.passenger','зорчигч')})}
+};
+
 function sectorSummaryToSeries(json,now){
   if(!json||json.status!=='ok') return null;
   const unit=typeof json.unit==='string'?json.unit.trim():'';
@@ -5215,13 +5232,13 @@ class Component extends DCLogic {
       /* Хоёр endpoint бие биеэсээ хамааралгүй — зэрэг татна. fetch* бүр
          алдаагаа өөрөө барьж null буцаадаг тул нэг нь унасан ч нөгөө нь
          хэвийн (Promise.all-ийг унагахгүй). */
-      const [d,sum]=await Promise.all([EHBackend.fetchRailWagonLoading(),
-        EHBackend.fetchSectorSummary?EHBackend.fetchSectorSummary('rail'):null]);
-      /* Зорчигчийн сарын цуваа (rail.veritech.passengers → gold). Вагоны
-         мөрүүдээс ӨМНӨ барина: applyRailWagonData() нь KPI мөрийг бүтнээр
-         нь солиод ТӨГСГӨЛД нь зорчигчийн мөрийг залгадаг. */
-      this._railPaxSeries=sectorSummaryToSeries(sum);
-      this.applyRailPassengerData();
+      const seriesKeys=Object.keys(SECTOR_SERIES);
+      const [d,...sums]=await Promise.all([EHBackend.fetchRailWagonLoading(),
+        ...seriesKeys.map(k=>EHBackend.fetchSectorSummary?EHBackend.fetchSectorSummary(SECTOR_SERIES[k].api):null)]);
+      /* Салбарын сарын цуваа. Вагоны мөрүүдээс ӨМНӨ барина: applyRailWagonData()
+         нь rail-ийн KPI мөрийг бүтнээр нь солиод ТӨГСГӨЛД цуваа мөрийг залгадаг. */
+      this._sectorSeries={};
+      seriesKeys.forEach((k,i)=>{ this._sectorSeries[k]=sectorSummaryToSeries(sums[i]); this.applySectorSeries(k); });
       /* Хариуг ШУУД хадгалахгүй — val() нь {count} хүлээдэг. Вагон ачилт
          одоо ТУСДАА endpoint-оос ирдэг тул wagonLoadingToValue()-ээр
          хөрвүүлнэ (summary-ийн sectorSummaryToValue() БИШ — тэр нь
@@ -5271,7 +5288,7 @@ class Component extends DCLogic {
     if(w.stationCount!=null)  rows.push([kl('АЧИЛТТАЙ СТАНЦ',2),fmtNum(w.stationCount),us,'—','flat',note]);
     /* Зорчигчийн сарын мөр — ЭНД залгана (тусдаа функцээр kpis-д push хийвэл
        reapplyLiveText() энэ функцийг дахин дуудах бүрд алга болно). */
-    const px=this.railPaxKpiRow?this.railPaxKpiRow():null;
+    const px=this.seriesKpiRow?this.seriesKpiRow('rail'):null;
     if(px) rows.push(px);
     SECTORS.rail.kpis=rows;
     SECTORS.rail._liveKpis=true;
@@ -5329,41 +5346,43 @@ class Component extends DCLogic {
   reapplyLiveText(){
     /* Дараалал: зорчигчийн цуваа ЭХЛЭЭД (c1 шошго), дараа нь вагон —
        сүүлийнх нь KPI мөрийг зорчигчийн мөртэй хамт дахин барина. */
-    this.applyRailPassengerData();
+    Object.keys(SECTOR_SERIES).forEach(k=>this.applySectorSeries(k));
     this.applyRailWagonData();
     this.recomputeAirData();
   }
-  // ── УБТЗ · зорчигчийн сарын цуваа → SECTORS.rail.c1d ─────────────────
-  // /api/sectors/rail/summary (gold ← silver.rail_operations ← Veritech
-  // rail.veritech.passengers, TOTAL багана). 05-р хэсгийн "Сарын зорчигч"
-  // график (t05), 06-р хэсгийн салбар хоорондын индекс (i06/r06), салбарын
+  // ── Салбарын сарын цуваа → SECTORS[k].c1d (ЕРӨНХИЙ, SECTOR_SERIES) ────
+  // 05-р хэсгийн график (t05), 06-р хэсгийн индекс (i06/r06), салбарын
   // дэлгэрэнгүй хуудас — бүгд c1d-ээс уншина. Дата ирээгүй бол ОГТ
   // ХӨНДӨХГҮЙ: статик демо c1d хэвээр ч _liveSeries худал тул seriesVerified()
-  // түүнийг "амьд" гэж тэмдэглэхгүй.
-  applyRailPassengerData(){
-    const s=this._railPaxSeries;
-    if(!s||!Array.isArray(s.counts)||s.counts.length<2) return;
-    SECTORS.rail.c1d=s.counts.slice();
-    SECTORS.rail.c1dYear=s.year;
-    /* Шошго амьд мөрөөс ТУСДАА (статик "Сарын зорчигч (мянга)" нь демо
-       утгын нэгжийг хэлдэг — бодит тоо мянгачлагдаагүй). applySiteContent()
-       c1-ийг статик шошгоор дарах тул энэ функц reapplyLiveText()-д бий. */
-    SECTORS.rail.c1=stxt('sector_chart_rail_live','Сарын зорчигч');
-    SECTORS.rail._liveSeries=true;
-    /* Цуваа нь ЭНЭ датасэтийнх — вагон ачилтын датасэтийн хуудсан дээр
-       зорчигчийн муруй гаргахгүйн тулд (dsHasTrend). */
-    /* Харагдах текст БИШ — датасэтийн нэртэй тулгах түлхүүр (Veritech-ийн
-       rail.veritech.passengers-ийн display_name). content.json-д тавибал
-       засварласнаар тааралт чимээгүй тасарна. */
-    SECTORS.rail._liveSeriesDs='Зорчигчийн галт тэрэгний мэдээ';
-    this.setState({railPaxMonth:s.year*100+s.lastMonth});
+  // түүнийг "амьд" гэж тэмдэглэхгүй. rail-ийн анхны хэрэгжилтийг (зорчигч,
+  // 2026-09-22) бусад салбарт давтах боломжтой болгож ерөнхийлөв.
+  applySectorSeries(k){
+    const cfg=SECTOR_SERIES[k], s=this._sectorSeries&&this._sectorSeries[k];
+    if(!cfg||!SECTORS[k]||!s||!Array.isArray(s.counts)||s.counts.length<2) return;
+    const L=cfg.labels();
+    SECTORS[k].c1d=s.counts.slice();
+    SECTORS[k].c1dYear=s.year;
+    /* Шошго статик шошгоос ТУСДАА (демо утгын нэгж өөр байж болно —
+       rail: "(мянга)"). applySiteContent() c1-ийг статикаар дарах тул энэ
+       функц reapplyLiveText()-д бий. */
+    SECTORS[k].c1=L.chart;
+    SECTORS[k]._liveSeries=true;
+    /* Цуваа ЭНЭ датасэтийнх — өөр датасэтийн хуудсан дээр муруй гаргахгүй */
+    SECTORS[k]._liveSeriesDs=cfg.dataset;
+    /* Өөр амьд KPI мөргүй салбарт цуваа мөр нь цорын ганц амьд мөр болно */
+    if(cfg.kpi==='replace'){
+      const row=this.seriesKpiRow(k);
+      if(row){ SECTORS[k].kpis=[row]; SECTORS[k]._liveKpis=true; }
+    }
+    this.setState({['series_'+k]:s.year*100+s.lastMonth});
   }
   /* k04.rail-ийн 4 дэх мөр: сүүлийн БҮТЭН сарын зорчигч + өмнөх сартай
      харьцуулалт. Өмнөх оны дата алга тул YoY БИШ MoM — шошгон дээр ил
      бичнэ. k[6] = бодит сарын цуваа (spark нь ЗОХИОМОЛ биш). */
-  railPaxKpiRow(){
-    const s=this._railPaxSeries;
-    if(!s||!Array.isArray(s.counts)||!s.counts.length) return null;
+  seriesKpiRow(k){
+    const cfg=SECTOR_SERIES[k], s=this._sectorSeries&&this._sectorSeries[k];
+    if(!cfg||!s||!Array.isArray(s.counts)||!s.counts.length) return null;
+    const L=cfg.labels();
     const n=s.counts.length, cur=s.counts[n-1], prev=n>1?s.counts[n-2]:null;
     let delta='—', dir='flat', cmp=stxt('status.no_compare','харьцуулах өгөгдөл алга');
     if(prev){
@@ -5373,8 +5392,7 @@ class Component extends DCLogic {
       cmp=MONTHS[n-1]+' '+stxt('chart.compare_mom_mid','· өмнөх сартай (')+MONTHS[n-2]+
         stxt('chart.compare_mom_end',') харьцуулбал');
     }
-    return [stxt('sector_kpi_rail_live.3','ЗОРЧИГЧ / САР'),fmtNum(cur),
-      stxt('unit.passenger','зорчигч'),delta,dir,cmp,s.counts.slice()];
+    return [L.kpi,fmtNum(cur),L.unit,delta,dir,cmp,s.counts.slice()];
   }
   // kpiVerified()-ийн ЦУВААНЫ хувилбар: registry verified + БОДИТ сарын цуваа
   // ирсэн (_liveSeries). Өмнө нь t05 зөвхөн registry-г шалгадаг байсан тул

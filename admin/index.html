@@ -653,9 +653,11 @@ var FEED={state:'idle',err:null,months:[],index:[],weekPax:null,weekCargo:null,
    нөгөө preview хэвийн ажиллана (нэг Promise.all болговол нэгнийх нь
    алдаа хоёуланг нь унтраана). */
 var RAIL={state:'idle',date:null,loaded:null,unloaded:null,stations:null};
-/* УБТЗ · зорчигчийн сарын цуваа (/api/sectors/rail/summary). Вагоноос ТУСДАА
-   эх сурвалж — нэг нь унасан ч нөгөөгийн preview хэвийн. */
-var RAILPAX={state:'idle',series:null,unit:null};
+/* Салбарын САРЫН ЦУВАА (/api/sectors/<api>/summary) — сайтын SECTOR_SERIES-ийн
+   толь. Метрик → backend-ийн салбар. Шинэ салбар = энд нэг мөр (сайт ба админ
+   ХОЁУЛАНД). Эх сурвалж бүр тусдаа төлөвтэй — нэг нь унасан ч бусад хэвийн. */
+var SERIES_METRIC={'rail.monthly_passenger_series':'rail'};
+var SERIES={};
 
 var $=function(i){return document.getElementById(i)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -922,19 +924,24 @@ function paxSeriesFromSummary(json,now){
   if(!out.length||maxM!==out.length) return null;
   return {unit:unit,series:out};
 }
-function loadRailPax(){
-  if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchSectorSummary){ RAILPAX.state='off'; return Promise.resolve() }
-  RAILPAX.state='loading';
-  return EHBackend.fetchSectorSummary('rail').then(function(j){
-    var p=paxSeriesFromSummary(j);
-    if(!p||p.series.length<2){ RAILPAX.state='error'; return }
-    RAILPAX.series=p.series; RAILPAX.unit=p.unit; RAILPAX.state='ready';
-  },function(){ RAILPAX.state='error' });
+function loadSectorSeries(){
+  var apis={};
+  Object.keys(SERIES_METRIC).forEach(function(mk){ apis[SERIES_METRIC[mk]]=1 });
+  return Promise.all(Object.keys(apis).map(function(api){
+    var st=SERIES[api]={state:'idle',series:null,unit:null};
+    if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchSectorSummary){ st.state='off'; return Promise.resolve() }
+    st.state='loading';
+    return EHBackend.fetchSectorSummary(api).then(function(j){
+      var p=paxSeriesFromSummary(j);
+      if(!p||p.series.length<2){ st.state='error'; return }
+      st.series=p.series; st.unit=p.unit; st.state='ready';
+    },function(){ st.state='error' });
+  }));
 }
 function metricSeries(mk){
   /* rail-ийн цуваа flights feed-ээс ХАМААРАХГҮЙ — FEED.state-ээр хаавал
      backend амьд байхад ч preview хоосон харагдана. */
-  if(mk==='rail.monthly_passenger_series') return RAILPAX.state==='ready'?RAILPAX.series:null;
+  if(SERIES_METRIC[mk]){ var ss=SERIES[SERIES_METRIC[mk]]; return (ss&&ss.state==='ready')?ss.series:null; }
   if(FEED.state!=='ready') return null;
   if(mk==='air.monthly_flight_series') return FEED.months;
   if(mk==='air.monthly_growth_index')  return FEED.index;
@@ -4771,7 +4778,7 @@ Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
   /* Урьдчилан харах картыг ЖИНХЭНЭ дата цэгээр зурахын тулд сайт өөрөө
      уншдаг feed-ийг ачаална. Амжилтгүй ч гэсэн хэрэгсэл БҮРЭН ажиллана —
      preview зөвхөн бүтцээ харуулж, "дата ачаалагдаагүй" гэж ил хэлнэ. */
-  Promise.all([loadFeed(),loadRailWagon(),loadRailPax()]).then(render);
+  Promise.all([loadFeed(),loadRailWagon(),loadSectorSeries()]).then(render);
 })
 .catch(function(err){
   showState('<h2>'+esc(utxt('boot.read_fail','Файл уншиж чадсангүй'))+'</h2><p>'+esc(err.message)+'</p>'+
