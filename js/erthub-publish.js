@@ -142,5 +142,41 @@
     return out;
   }
 
-  window.EHPublish = { load: load, publish: publish, canPublish: canPublish, layer: layer, enabled: !!URL_ };
+  /* layer()-ийн УРВУУ: base (git файл) дээр layer() хийхэд cur гарах ХАМГИЙН
+     БАГА давхарга. Өөрчлөгдөөгүй бол undefined.
+     ЯАГААД: админ өмнө нь content/registry-г БҮТНЭЭР нь нийтэлдэг байв. Бүтэн
+     хуулбар нь нийтэлсний ДАРАА git-д хийсэн бүх өөрчлөлтийг амьд сайт дээр
+     ДАЛДАЛДАГ (2026-09-22: version 1 нь git-тэй 0 зөрүүтэй хуулбар атал
+     t05/i06/r06-ийн шинэ rail холбоос, PR #2-ын AI хариултыг дарж байв).
+     Зөрүүгээр нийтэлбэл админы ЖИНХЭНЭ засвар л давхарлагдаж, үлдсэн нь
+     git-ээс уншигдана.
+     Хязгаар (layer()-тэй адил): түлхүүр УСТГАХЫГ илэрхийлэх боломжгүй —
+     base-д байгаа түлхүүр давхаргад байхгүй бол хэвээр үлдэнэ. Бүтэн хуулбар
+     ч үүнийг илэрхийлж чаддаггүй байсан тул алдагдал биш. */
+  function same(a, b) {
+    if (a === b) return true;
+    if (Array.isArray(a) || Array.isArray(b)) {
+      if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+      for (var i = 0; i < a.length; i++) if (!same(a[i], b[i])) return false;
+      return true;
+    }
+    if (!isObj(a) || !isObj(b)) return false;
+    var k;
+    for (k in a) if (has(a, k) && (!has(b, k) || !same(a[k], b[k]))) return false;
+    for (k in b) if (has(b, k) && !has(a, k)) return false;
+    return true;
+  }
+  function diff(base, cur) {
+    if (same(base, cur)) return undefined;
+    if (!isObj(base) || !isObj(cur)) return cur;
+    var out = {}, any = false, k, d;
+    for (k in cur) {
+      if (!has(cur, k)) continue;
+      d = has(base, k) ? diff(base[k], cur[k]) : cur[k];
+      if (d !== undefined) { out[k] = d; any = true; }
+    }
+    return any ? out : undefined;
+  }
+
+  window.EHPublish = { load: load, publish: publish, canPublish: canPublish, layer: layer, diff: diff, enabled: !!URL_ };
 })();
