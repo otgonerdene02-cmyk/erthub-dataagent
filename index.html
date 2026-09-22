@@ -5053,10 +5053,8 @@ class Component extends DCLogic {
       // бичигдсэн боловч нүүр хуудсан дээр 20 гаруй газар харагддаг тул
       // content.json-оос удирдах боломжтой байх ёстой. SECTORS-ыг ЭНД
       // НЭГ УДАА дарж бичнэ — дараагийн рендерүүд шинэ нэрийг авна.
-      SITE_TEXT=(json&&json.site)||null;
-      applySiteContent();
-      this.reapplyLiveText();
-      this.setState({content:json});
+      this._fileContent=json;
+      this.applyContentLayers();
       /* content.json бол датасэтийн нэрийн эцсийн эх сурвалж — одоо ч
          олдохгүй бол холбоос хуучирсан. */
       this.resolvePendingRoute(true);
@@ -5107,16 +5105,36 @@ class Component extends DCLogic {
   // сүлжээнээс хамааралгүй), overlay хожуу ирээд дахин зурна. Backend
   // унтарсан/хаалттай/сүлжээгүй бол сайт ЯГ ӨМНӨХ ШИГЭЭ ажиллана —
   // нийтлэл бол НЭМЭЛТ давхарга, шаардлага биш.
+  /* Файл ба нийтлэлийг НЭГ давхаргаар зурна — аль нь түрүүлж ирсэн ч.
+     loadContent/loadMetricRegistry ба loadPublished ЗЭРЭГ эхэлдэг
+     (componentDidMount) тул дараалал баталгаагүй: нийтлэл түрүүлж,
+     файл хожуу ирвэл өмнө нь файл нийтлэлийг ДАРЖ устгадаг байв.
+     Хоёр хувилбарыг тус тусад нь хадгалж, ирэх бүрд дахин давхарлана.
+     Давхарлах дүрэм ганц газар — EHPublish.layer (админ ч ашиглана). */
+  layerOf(f,p){
+    if(f&&p&&typeof EHPublish!=='undefined'&&EHPublish.layer) return EHPublish.layer(f,p);
+    return p||f||null;
+  }
+  applyContentLayers(){
+    const json=this.layerOf(this._fileContent,this._pubContent);
+    if(!json) return;
+    SITE_TEXT=(json&&json.site)||null;
+    applySiteContent();
+    this.reapplyLiveText();
+    this.setState({content:json});
+  }
+  applyRegistryLayers(){
+    const reg=this.layerOf(this._fileRegistry,this._pubRegistry);
+    if(reg) this.setState({metricRegistry:reg});
+  }
   async loadPublished(){
     if(typeof EHPublish==='undefined'||!EHPublish.enabled) return;
     let pub=null;
     try{ pub=await EHPublish.load(); }catch(e){ return }
     if(!pub) return;
     if(pub.content){
-      SITE_TEXT=(pub.content&&pub.content.site)||SITE_TEXT;
-      applySiteContent();
-      this.reapplyLiveText();
-      this.setState({content:pub.content});
+      this._pubContent=pub.content;
+      this.applyContentLayers();
       this.resolvePendingRoute(false);
     }
     /* Нийтлэгдсэн registry нь файлын ДЭЭР давхарлана — бүтнээр СОЛИХГҮЙ.
@@ -5125,10 +5143,8 @@ class Component extends DCLogic {
        сайтад ХЭЗЭЭ Ч хүрэхгүй болно — хуучин снапшот "pending" байвал
        kpiVerified() false болж амьд тоо алга болох байв. */
     if(pub.registry){
-      const base=this.state.metricRegistry||{};
-      this.setState({metricRegistry:{...base,...pub.registry,
-        widgets:{...(base.widgets||{}),...(pub.registry.widgets||{})},
-        metrics:{...(base.metrics||{}),...(pub.registry.metrics||{})}}});
+      this._pubRegistry=pub.registry;
+      this.applyRegistryLayers();
     }
     console.info('[ErtHub] нийтлэгдсэн контент хэрэглэгдлээ:',
       (pub.meta&&pub.meta.at)||'—', (pub.meta&&pub.meta.by)||'');
@@ -5138,7 +5154,8 @@ class Component extends DCLogic {
       const res=await fetch('metric_registry.json?t='+Date.now(),{cache:'no-store'});
       if(!res.ok) return;
       const json=await res.json();
-      this.setState({metricRegistry:json});
+      this._fileRegistry=json;
+      this.applyRegistryLayers();
     }catch(e){
       console.info('[ErtHub] metric_registry.json ачаалагдсангүй, статик тоо үлдэнэ:',e.message);
     }

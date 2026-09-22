@@ -4674,8 +4674,12 @@ Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
   if(typeof EHPublish!=='undefined'&&EHPublish.enabled){
     EHPublish.load().then(function(pub){
       if(!pub) return;
-      if(pub.content){ CON=pub.content; CON0=clone(CON) }
-      if(pub.registry){ REG=pub.registry; REG0=clone(REG) }
+      /* Файлын ДЭЭР давхарлана (EHPublish.layer) — бүтнээр сольвол
+         нийтэлсний дараа git-ээр нэмсэн текст энд засагдахгүй, дараагийн
+         нийтлэлээр бүр мөсөн хаягдана. */
+      var lay=EHPublish.layer||function(a,b){return b};
+      if(pub.content){ CON=lay(CON,pub.content); CON0=clone(CON) }
+      if(pub.registry){ REG=lay(REG,pub.registry); REG0=clone(REG) }
       PUBSTATE.fromPublished=true;
       PUBSTATE.lastAt=pub.meta&&pub.meta.at; PUBSTATE.lastBy=pub.meta&&pub.meta.by;
       applyContentText(); S.td=null; render();

@@ -28,6 +28,7 @@ const PORT = 8971;
 let pass = 0, fail = 0, skip = 0;
 const failures = [];
 
+const NLc = String.fromCharCode(10), CR_LF = String.fromCharCode(13, 10);
 function group(name) { console.log('\n══ ' + name + ' ' + '═'.repeat(Math.max(0, 58 - name.length))); }
 function ok(name) { pass++; console.log('  PASS  ' + name); }
 function bad(name, detail) {
@@ -984,6 +985,83 @@ async function groupG3() {
   check('G3.9 нэвтрээгүй publish → "Нэвтрээгүй" алдаа', eNo && /Нэвтрээгүй/.test(eNo.message));
   const f = mk('https://x.test', (q) => q.m === 'GET' ? [200, { version: 2, content: [1], registry: 'x' }] : [200, {}]);
   check('G3.10 хэлбэр буруу content/registry → load null (сайт файлаараа)', (await f.P.load()) === null);
+
+  /* ── G3.11 layer() — ГАРААР БОДОХ фикстур ── */
+  const lay = off.P.layer;
+  check('G3.11 layer экспортлогдсон', typeof lay === 'function');
+  const F = { a: 1, site: { x: 'файл', y: 'файл-y' }, arr: [1, 2, 3], keep: { z: 1 } };
+  const O = { a: 2, site: { x: 'нийтлэл' }, arr: [9], extra: 'o' };
+  const R = lay(F, O);
+  check('G3.11 нийтлэлийн утга ялна (a=2, site.x)', R.a === 2 && R.site.x === 'нийтлэл');
+  check('G3.11 нийтлэлд алга түлхүүр файлаас үлдэнэ (site.y, keep.z)', R.site.y === 'файл-y' && R.keep.z === 1);
+  check('G3.11 массивыг БҮТНЭЭР солино (индексээр холихгүй)', JSON.stringify(R.arr) === '[9]');
+  check('G3.11 зөвхөн нийтлэлд буй түлхүүр хадгалагдана', R.extra === 'o');
+  check('G3.11 түлхүүрийн дараалал файлынхаар', Object.keys(R).join() === 'a,site,arr,keep,extra', Object.keys(R).join());
+  check('G3.11 оролтыг ӨӨРЧЛӨХГҮЙ', F.site.x === 'файл' && F.a === 1 && O.site.y === undefined);
+  check('G3.11 null нийтлэл нь утга (слот салгах) — файлынхыг дарна',
+    lay({ m: { metric: 'air.x' } }, { m: { metric: null } }).m.metric === null);
+  check('G3.11 хэлбэр зөрвөл нийтлэл ялна (объект ↔ мөр)', lay({ t: { a: 1 } }, { t: 's' }).t === 's');
+
+  /* ── G3.12 РЕГРЕСС (2026-09-22): нийтлэл version 1 нь status.rail_wagon_asof /
+     rail_wagon_stale нэмэгдэхээс ӨМНӨХ снапшот. Хуучин код site{}-ийг
+     бүтнээр сольдог тул эдгээр түлхүүр амьд сайт ба админд алга болж,
+     дараагийн нийтлэлээр бүр мөсөн хаягдах байв. */
+  const fileCon = readJson('content.json');
+  const v1 = JSON.parse(JSON.stringify(fileCon));
+  delete v1.site.status.rail_wagon_asof; delete v1.site.status.rail_wagon_stale;
+  v1.site.status.no_data = 'НИЙТЭЛСЭН: алга';
+  const lc = lay(fileCon, v1);
+  check('G3.12 git-ээр нэмсэн түлхүүр нийтлэлийн дараа ч үлдэнэ',
+    !!fileCon.site.status.rail_wagon_asof &&
+    lc.site.status.rail_wagon_asof === fileCon.site.status.rail_wagon_asof &&
+    lc.site.status.rail_wagon_stale === fileCon.site.status.rail_wagon_stale);
+  check('G3.12 нийтэлсэн засвар хэвээр ялна', lc.site.status.no_data === 'НИЙТЭЛСЭН: алга');
+  check('G3.12 site{}-ийн бүлгүүд бүрэн (түлхүүр тоо файлынхтай тэнцүү)',
+    Object.keys(lc.site).length === Object.keys(fileCon.site).length);
+
+  /* ── G3.13 Сайт ба админ ХОЁУЛАА ижил layer-ийг ашиглана ── */
+  const idxS = read('index.html'), admS = read('admin/index.html');
+  check('G3.13 админ нийтлэлийг файлын ДЭЭР давхарлана (бүтнээр солихгүй)',
+    admS.includes('CON=lay(CON,pub.content)') && admS.includes('REG=lay(REG,pub.registry)') &&
+    !admS.includes('CON=pub.content;') && !admS.includes('REG=pub.registry;'));
+  check('G3.13 сайт EHPublish.layer-ээр давхарлана',
+    idxS.includes('return EHPublish.layer(f,p);') && !idxS.includes('SITE_TEXT=(pub.content&&pub.content.site)'));
+
+  /* ── G3.14 ДАРААЛЛААС ҮЛ ХАМААРНА — нийтлэл ТҮРҮҮЛЖ, файл ХОЖУУ ──
+     Регресс: loadContent ба loadPublished зэрэг эхэлдэг. Хуучин код
+     файл хожуу ирвэл SITE_TEXT-ийг файлаар ДАРЖ нийтлэлийг устгадаг байв. */
+  const dcs = dcScript().split(CR_LF).join(NLc);
+  const body = (name) => { const i = dcs.indexOf(NLc + '  ' + name + '('); if (i < 0) return null;
+    const k = dcs.indexOf('{', i); const j = dcs.indexOf(NLc + '  }' + NLc, i); return dcs.slice(k + 1, j); };
+  const bL = body('layerOf'), bC = body('applyContentLayers'), bR = body('applyRegistryLayers');
+  if (!bL || !bC || !bR) { bad('G3.14 layerOf/applyContentLayers/applyRegistryLayers олдсонгүй'); return; }
+  const mkComp = () => {
+    const st = { SITE_TEXT: null, applied: 0 };
+    const comp = { state: {}, setState(o) { Object.assign(this.state, o); }, reapplyLiveText() { st.applied++; } };
+    comp.layerOf = new Function('EHPublish', 'return function(f,p){' + bL + '}')({ layer: lay });
+    comp.applyContentLayers = new Function('ST', 'applySiteContent', 'return function(){' +
+      bC.split('SITE_TEXT=').join('ST.SITE_TEXT=') + '}')(st, () => {});
+    comp.applyRegistryLayers = new Function('return function(){' + bR + '}')();
+    return { comp, st };
+  };
+  const FILE = { site: { a: 'файл', b: 'файл-b' } }, PUB = { site: { a: 'нийтлэл' } };
+  const X = mkComp();
+  X.comp._pubContent = PUB; X.comp.applyContentLayers();
+  X.comp._fileContent = FILE; X.comp.applyContentLayers();
+  check('G3.14 нийтлэл түрүүлж, файл хожуу ирсэн ч нийтлэл ЯЛНА',
+    X.st.SITE_TEXT.a === 'нийтлэл' && X.st.SITE_TEXT.b === 'файл-b', JSON.stringify(X.st.SITE_TEXT));
+  const Y = mkComp();
+  Y.comp._fileContent = FILE; Y.comp.applyContentLayers();
+  Y.comp._pubContent = PUB; Y.comp.applyContentLayers();
+  check('G3.14 урвуу дараалалд ижил үр дүн',
+    JSON.stringify(Y.st.SITE_TEXT) === JSON.stringify(X.st.SITE_TEXT) && Y.st.applied === 2);
+  const Z = mkComp();
+  Z.comp._fileRegistry = { widgets: { u07: { sectors: { air: { metric: 'a' }, rail: { metric: 'r' } } } } };
+  Z.comp._pubRegistry = { widgets: { u07: { sectors: { air: { metric: null } } } } };
+  Z.comp.applyRegistryLayers();
+  const zs = Z.comp.state.metricRegistry.widgets.u07.sectors;
+  check('G3.14 registry: нийтэлсэн салгалт ялж, git-ийн шинэ слот үлдэнэ',
+    zs.air.metric === null && zs.rail.metric === 'r', JSON.stringify(zs));
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -3796,10 +3874,12 @@ async function groupBE() {
      Регресс: applyRailWagonData() мөрийн НЭРийг stxt()-ээр тухайн агшинд
      шингээдэг тул текст нь хожуу ирвэл (нийтлэл нь ҮРГЭЛЖ хамгийн сүүлд
      ирдэг) админаас засварласан шошго сайтад ХЭЗЭЭ Ч гарахгүй байв. */
-  check('BE20. loadContent() applySiteContent-ийн ДАРАА reapplyLiveText дуудна',
-    /applySiteContent\(\);\s*this\.reapplyLiveText\(\);\s*this\.setState\(\{content:json\}\)/.test(dcScript()));
-  check('BE20. loadPublished() ч ижил (нийтэлсэн шошго амьд мөрөнд хүрнэ)',
-    /applySiteContent\(\);\s*this\.reapplyLiveText\(\);\s*this\.setState\(\{content:pub\.content\}\)/.test(dcScript()));
+  const dc20 = dcScript().split(CR_LF).join(NLc);
+  check('BE20. applyContentLayers: applySiteContent → reapplyLiveText → setState',
+    dc20.includes(['    applySiteContent();', '    this.reapplyLiveText();', '    this.setState({content:json});'].join(NLc)));
+  check('BE20. loadContent ба loadPublished ХОЁУЛАА applyContentLayers-аар (нийтэлсэн шошго амьд мөрөнд хүрнэ)',
+    dc20.includes('this._fileContent=json;' + NLc + '      this.applyContentLayers();') &&
+    dc20.includes('this._pubContent=pub.content;' + NLc + '      this.applyContentLayers();'));
   check('BE20. reapplyLiveText нь rail ба air ХОЁУЛАНГ нь дахин барина',
     /reapplyLiveText\(\)\{[\s\S]*?this\.applyRailWagonData\(\);[\s\S]*?this\.recomputeAirData\(\);[\s\S]*?\}/.test(dcScript()));
   /* Дарааллыг УРВУУЛЖ давтана: backend түрүүлж ирээд ДАРАА нь content.json */
@@ -3826,10 +3906,12 @@ async function groupBE() {
   /* ── BE21. Нийтлэгдсэн registry нь файлынхыг ДАВХАРЛАНА (бүтнээр солихгүй) ──
      Регресс: overlay үргэлж сүүлд ирдэг тул бүтнээр дарвал нийтэлсний
      дараах git засвар (quality: verified) амьд сайтад хүрэхгүй болно. */
-  check('BE21. loadPublished registry-г СОЛИХГҮЙ, давхарлана',
-    !/if\(pub\.registry\) this\.setState\(\{metricRegistry:pub\.registry\}\)/.test(dcScript()) &&
-    /metricRegistry:\{\.\.\.base,\.\.\.pub\.registry,/.test(dcScript()) &&
-    /widgets:\{\.\.\.\(base\.widgets\|\|\{\}\),\.\.\.\(pub\.registry\.widgets\|\|\{\}\)\}/.test(dcScript()));
+  check('BE21. loadPublished registry-г СОЛИХГҮЙ, давхарлана (EHPublish.layer, дарааллаас үл хамаарна)',
+    !dcScript().includes('this.setState({metricRegistry:pub.registry})') &&
+    !dcScript().includes('this.setState({metricRegistry:json})') &&
+    dcScript().includes('this._pubRegistry=pub.registry;') &&
+    dcScript().includes('this._fileRegistry=json;') &&
+    dcScript().includes('const reg=this.layerOf(this._fileRegistry,this._pubRegistry);'));
 
   /* ── BE22. Схем нь ДАТАСЭТЭЭР сонгогдоно (салбараар БИШ) ── */
   check('BE22. buildPreview схемийг dsel.schema-аар сонгоно',
