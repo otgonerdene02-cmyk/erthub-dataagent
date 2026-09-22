@@ -4543,6 +4543,7 @@ document.addEventListener('input',function(e){
   S.td[tf.dataset.tf]=tf.value;
   stashDraft(S.widget);
   syncPendingBar();
+  if(typeof refreshPubBtn==='function') refreshPubBtn();
   /* Зөвхөн товчийг шинэчилнэ — бүтэн дахин зурвал курсор алдагдана */
   var d=dirtyTextFields(S.widget);
   var sv=document.querySelector('[data-tsave]'), cn=document.querySelector('[data-tcancel]');
@@ -4618,16 +4619,21 @@ function renderAuth(){
   w.innerHTML=esc(u.email||u.uid)+' <code title="'+esc(utxt('publish.uid_hint',
     'portal_admins хүснэгтэд ЭНЭ ID (эсвэл и-мэйлийг) нэмбэл нийтлэх эрх нээгдэнэ'))+
     '">'+esc(u.uid)+'</code>';
-  if(pb){
-    pb.disabled=!PUBSTATE.canPublish||dirtyCount()===0;
-    pb.title=PUBSTATE.canPublish
-      ?utxt('publish.hint','Одоогийн өөрчлөлтийг сайтад шууд нийтэлнэ')
-      :utxt('publish.no_rights','Нийтлэх эрхгүй — backend-ийн portal_admins хүснэгтэд таны и-мэйл эсвэл uid-г нэмүүлнэ үү');
-  }
+  if(pb){ pb.disabled=!PUBSTATE.canPublish||dirtyCount()===0; pb.title=pubBtnTitle() }
+}
+/* Идэвхгүй товч ЯАГААД идэвхгүйг хэлнэ. Бичсэн текст «Хэрэглэх»
+   дарагдаагүй бол dirtyCount() 0 хэвээр тул товч чимээгүй идэвхгүй
+   байж, засварлагч шалтгааныг олдоггүй байв. */
+function pubBtnTitle(){
+  if(!PUBSTATE.canPublish)
+    return utxt('publish.no_rights','Нийтлэх эрхгүй — backend-ийн portal_admins хүснэгтэд таны и-мэйл эсвэл uid-г нэмүүлнэ үү');
+  if(pendingCount()) return utxt('publish.need_apply','Эхлээд «Хэрэглэх» дарж бичсэн текстээ хэрэглэнэ үү');
+  return utxt('publish.hint','Одоогийн өөрчлөлтийг сайтад шууд нийтэлнэ');
 }
 function refreshPubBtn(){
   var pb=$('pubBtn'); if(!pb) return;
   pb.disabled=!PUBSTATE.canPublish||dirtyCount()===0;
+  if(PUBSTATE.signedIn) pb.title=pubBtnTitle();
   refreshSaveHint();
 }
 /* Хадгалалтын ДАРААГИЙН АЛХАМ. Засварлагч "өөрчлөлт хадгалагдаагүй"
@@ -4638,7 +4644,13 @@ function refreshSaveHint(){
   var el=$('saveHint'), dot=$('saveDot'); if(!el) return;
   var n=dirtyCount(), pubOn=(typeof EHPublish!=='undefined'&&EHPublish.enabled);
   var t, cls='';
-  if(!n){
+  /* Хэрэглээгүй ноорог ТЭРГҮҮН — нийтлэл/экспорт зөвхөн хэрэглэгдсэн
+     текстийг илгээнэ. Эс тэгвэл "Өөрчлөлт алга" гэж худал хэлж, эсвэл
+     бусад засвартай хамт нийтлэхэд бичсэн текст чимээгүй орхигдоно. */
+  if(pendingCount()){
+    t=utxt('save.hint_pending','Бичсэн текст хэрэглэгдээгүй байна — эхлээд «Хэрэглэх» дарна уу. Хэрэглээгүй засвар нийтлэл, экспортод ОРОХГҮЙ.');
+    cls='warn';
+  } else if(!n){
     t=PUBSTATE.lastAt
       ? utxt('save.hint_done','Нийтлэгдлээ — сайтаа сэргээж (F5) шалгана уу.')
       : utxt('save.hint_clean','Өөрчлөлт алга. Засвар хийвэл энд гарч ирнэ.');
