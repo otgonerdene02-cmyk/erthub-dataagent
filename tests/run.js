@@ -28,6 +28,7 @@ const PORT = 8971;
 let pass = 0, fail = 0, skip = 0;
 const failures = [];
 
+const NLc = String.fromCharCode(10), CR_LF = String.fromCharCode(13, 10);
 function group(name) { console.log('\n══ ' + name + ' ' + '═'.repeat(Math.max(0, 58 - name.length))); }
 function ok(name) { pass++; console.log('  PASS  ' + name); }
 function bad(name, detail) {
@@ -984,6 +985,83 @@ async function groupG3() {
   check('G3.9 нэвтрээгүй publish → "Нэвтрээгүй" алдаа', eNo && /Нэвтрээгүй/.test(eNo.message));
   const f = mk('https://x.test', (q) => q.m === 'GET' ? [200, { version: 2, content: [1], registry: 'x' }] : [200, {}]);
   check('G3.10 хэлбэр буруу content/registry → load null (сайт файлаараа)', (await f.P.load()) === null);
+
+  /* ── G3.11 layer() — ГАРААР БОДОХ фикстур ── */
+  const lay = off.P.layer;
+  check('G3.11 layer экспортлогдсон', typeof lay === 'function');
+  const F = { a: 1, site: { x: 'файл', y: 'файл-y' }, arr: [1, 2, 3], keep: { z: 1 } };
+  const O = { a: 2, site: { x: 'нийтлэл' }, arr: [9], extra: 'o' };
+  const R = lay(F, O);
+  check('G3.11 нийтлэлийн утга ялна (a=2, site.x)', R.a === 2 && R.site.x === 'нийтлэл');
+  check('G3.11 нийтлэлд алга түлхүүр файлаас үлдэнэ (site.y, keep.z)', R.site.y === 'файл-y' && R.keep.z === 1);
+  check('G3.11 массивыг БҮТНЭЭР солино (индексээр холихгүй)', JSON.stringify(R.arr) === '[9]');
+  check('G3.11 зөвхөн нийтлэлд буй түлхүүр хадгалагдана', R.extra === 'o');
+  check('G3.11 түлхүүрийн дараалал файлынхаар', Object.keys(R).join() === 'a,site,arr,keep,extra', Object.keys(R).join());
+  check('G3.11 оролтыг ӨӨРЧЛӨХГҮЙ', F.site.x === 'файл' && F.a === 1 && O.site.y === undefined);
+  check('G3.11 null нийтлэл нь утга (слот салгах) — файлынхыг дарна',
+    lay({ m: { metric: 'air.x' } }, { m: { metric: null } }).m.metric === null);
+  check('G3.11 хэлбэр зөрвөл нийтлэл ялна (объект ↔ мөр)', lay({ t: { a: 1 } }, { t: 's' }).t === 's');
+
+  /* ── G3.12 РЕГРЕСС (2026-09-22): нийтлэл version 1 нь status.rail_wagon_asof /
+     rail_wagon_stale нэмэгдэхээс ӨМНӨХ снапшот. Хуучин код site{}-ийг
+     бүтнээр сольдог тул эдгээр түлхүүр амьд сайт ба админд алга болж,
+     дараагийн нийтлэлээр бүр мөсөн хаягдах байв. */
+  const fileCon = readJson('content.json');
+  const v1 = JSON.parse(JSON.stringify(fileCon));
+  delete v1.site.status.rail_wagon_asof; delete v1.site.status.rail_wagon_stale;
+  v1.site.status.no_data = 'НИЙТЭЛСЭН: алга';
+  const lc = lay(fileCon, v1);
+  check('G3.12 git-ээр нэмсэн түлхүүр нийтлэлийн дараа ч үлдэнэ',
+    !!fileCon.site.status.rail_wagon_asof &&
+    lc.site.status.rail_wagon_asof === fileCon.site.status.rail_wagon_asof &&
+    lc.site.status.rail_wagon_stale === fileCon.site.status.rail_wagon_stale);
+  check('G3.12 нийтэлсэн засвар хэвээр ялна', lc.site.status.no_data === 'НИЙТЭЛСЭН: алга');
+  check('G3.12 site{}-ийн бүлгүүд бүрэн (түлхүүр тоо файлынхтай тэнцүү)',
+    Object.keys(lc.site).length === Object.keys(fileCon.site).length);
+
+  /* ── G3.13 Сайт ба админ ХОЁУЛАА ижил layer-ийг ашиглана ── */
+  const idxS = read('index.html'), admS = read('admin/index.html');
+  check('G3.13 админ нийтлэлийг файлын ДЭЭР давхарлана (бүтнээр солихгүй)',
+    admS.includes('CON=lay(CON,pub.content)') && admS.includes('REG=lay(REG,pub.registry)') &&
+    !admS.includes('CON=pub.content;') && !admS.includes('REG=pub.registry;'));
+  check('G3.13 сайт EHPublish.layer-ээр давхарлана',
+    idxS.includes('return EHPublish.layer(f,p);') && !idxS.includes('SITE_TEXT=(pub.content&&pub.content.site)'));
+
+  /* ── G3.14 ДАРААЛЛААС ҮЛ ХАМААРНА — нийтлэл ТҮРҮҮЛЖ, файл ХОЖУУ ──
+     Регресс: loadContent ба loadPublished зэрэг эхэлдэг. Хуучин код
+     файл хожуу ирвэл SITE_TEXT-ийг файлаар ДАРЖ нийтлэлийг устгадаг байв. */
+  const dcs = dcScript().split(CR_LF).join(NLc);
+  const body = (name) => { const i = dcs.indexOf(NLc + '  ' + name + '('); if (i < 0) return null;
+    const k = dcs.indexOf('{', i); const j = dcs.indexOf(NLc + '  }' + NLc, i); return dcs.slice(k + 1, j); };
+  const bL = body('layerOf'), bC = body('applyContentLayers'), bR = body('applyRegistryLayers');
+  if (!bL || !bC || !bR) { bad('G3.14 layerOf/applyContentLayers/applyRegistryLayers олдсонгүй'); return; }
+  const mkComp = () => {
+    const st = { SITE_TEXT: null, applied: 0 };
+    const comp = { state: {}, setState(o) { Object.assign(this.state, o); }, reapplyLiveText() { st.applied++; } };
+    comp.layerOf = new Function('EHPublish', 'return function(f,p){' + bL + '}')({ layer: lay });
+    comp.applyContentLayers = new Function('ST', 'applySiteContent', 'return function(){' +
+      bC.split('SITE_TEXT=').join('ST.SITE_TEXT=') + '}')(st, () => {});
+    comp.applyRegistryLayers = new Function('return function(){' + bR + '}')();
+    return { comp, st };
+  };
+  const FILE = { site: { a: 'файл', b: 'файл-b' } }, PUB = { site: { a: 'нийтлэл' } };
+  const X = mkComp();
+  X.comp._pubContent = PUB; X.comp.applyContentLayers();
+  X.comp._fileContent = FILE; X.comp.applyContentLayers();
+  check('G3.14 нийтлэл түрүүлж, файл хожуу ирсэн ч нийтлэл ЯЛНА',
+    X.st.SITE_TEXT.a === 'нийтлэл' && X.st.SITE_TEXT.b === 'файл-b', JSON.stringify(X.st.SITE_TEXT));
+  const Y = mkComp();
+  Y.comp._fileContent = FILE; Y.comp.applyContentLayers();
+  Y.comp._pubContent = PUB; Y.comp.applyContentLayers();
+  check('G3.14 урвуу дараалалд ижил үр дүн',
+    JSON.stringify(Y.st.SITE_TEXT) === JSON.stringify(X.st.SITE_TEXT) && Y.st.applied === 2);
+  const Z = mkComp();
+  Z.comp._fileRegistry = { widgets: { u07: { sectors: { air: { metric: 'a' }, rail: { metric: 'r' } } } } };
+  Z.comp._pubRegistry = { widgets: { u07: { sectors: { air: { metric: null } } } } };
+  Z.comp.applyRegistryLayers();
+  const zs = Z.comp.state.metricRegistry.widgets.u07.sectors;
+  check('G3.14 registry: нийтэлсэн салгалт ялж, git-ийн шинэ слот үлдэнэ',
+    zs.air.metric === null && zs.rail.metric === 'r', JSON.stringify(zs));
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1758,6 +1836,14 @@ async function groupN() {
     idx.includes('lsCols:String(Math.max(1,livestrip.length))') &&
     idx.includes('Math.max(1,wPax.delta.length)') &&
     idx.includes('Math.max(1,wCargo.delta.length)'));
+  /* Регресс (browser, 2026-09-21): 375px-д livestrip-ийн 5 нүд бүр ~59px,
+     хөл бичгийн сав 36px болж огноо/хоцролтын тэмдэглэл бүр таслагдаж
+     байв. Desktop-ын lsCols гэрээг ХӨНДӨХГҮЙ — зөвхөн нарийн дэлгэцэд. */
+  const css = read('style.css');
+  check('N1. Livestrip нарийн дэлгэцэд мөр нэмнэ (auto-fit, desktop-ыг хөндөхгүй)',
+    idx.includes('class="eh-ls-grid" style="display:grid;grid-template-columns:repeat({{ lsCols }}') &&
+    css.includes('@media (max-width: 1100px) {') &&
+    css.includes('.eh-ls-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important; }'));
   check('N1. repeat(5, … хатуу бичиглэл ҮЛДЭЭГҮЙ',
     !idx.includes('repeat(5,minmax(0,1fr))'),
     'хаа нэгтээ 5 багана хатуу үлдсэн');
@@ -3536,13 +3622,17 @@ async function groupBE() {
      хуучнаараа үлдвэл хуудас ХУДАЛ тайлбарлана). */
   const arm = dcScript().match(/\n  applyRailWagonData\(\)\{([\s\S]*?)\n  \}\n/);
   if (!arm) { bad('BE12. applyRailWagonData() олдсонгүй'); return; }
-  const mkApply = new Function('SECTORS', 'DS_SCHEMA', 'stxt', 'fmtNum', 'return function(){' + arm[1] + '}');
+  /* dataAgeDays/WAGON_STALE_DAYS-ийг ГАДНААС өгнө: эс тэгвэл тест
+     "өнөөдөр" хэзээ ажиллахаас хамаарч ногоон/улаан солигдоно. */
+  const mkApply = new Function('SECTORS', 'DS_SCHEMA', 'stxt', 'fmtNum',
+    'dataAgeDays', 'WAGON_STALE_DAYS', 'return function(){' + arm[1] + '}');
   const RAILTXT = {
     'sector_kpi_rail_live.0': 'ХОНОГИЙН АЧИЛТ',
     'sector_kpi_rail_live.1': 'ХОНОГИЙН БУУЛГАЛТ',
     'sector_kpi_rail_live.2': 'АЧИЛТТАЙ СТАНЦ',
     'unit.wagon': 'вагон', 'unit.station': 'станц',
     'status.rail_wagon_compare': 'харьцуулах өгөгдөл алга (өмнөх хоногийн дүн ирээгүй)',
+    'status.rail_wagon_asof': 'Хоногийн мэдээ:', 'status.rail_wagon_stale': 'хоног шинэчлэгдээгүй',
     'ds_schema_rail_wagon.head.0': 'Станц', 'ds_schema_rail_wagon.head.1': 'Код',
     'ds_schema_rail_wagon.head.2': 'Ачсан (вагон)', 'ds_schema_rail_wagon.head.3': 'Буулгасан (вагон)',
     'ds_schema_rail_wagon.head.4': 'Төлөв',
@@ -3550,7 +3640,7 @@ async function groupBE() {
     'sector_rank_rail_live': 'Станц тус бүрийн ачилт', 'sector_rank_rail_other': 'Бусад станц',
     'sector_chart2_rail_live': 'Ачилт ихтэй станц'
   };
-  const runApply = (live) => {
+  const runApply = (live, ageDays) => {
     const SEC = { rail: { label: 'Төмөр зам', kpis: [['НИЙТ ЗАМ', '1,815', 'км', '+0.4%', 'up']],
       rt: 'Чиглэл тус бүрийн ачаа', rank: [['УБ–Замын-Үүд', '8.4M', '37.2%']],
       c2: 'Ачааны төрлөөр (тонн)', bars: [['Нүүрс', 88, '12.4M тн']] } };
@@ -3558,9 +3648,11 @@ async function groupBE() {
     const ctx = { _railWagonLoading: live, _meta: null, _st: null,
       setSourceMeta(id, m) { this._meta = { id, m } }, setState(s) { this._st = s } };
     mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f),
-      (n) => Number(n).toLocaleString('en-US')).call(ctx);
+      (n) => Number(n).toLocaleString('en-US'),
+      () => (ageDays === undefined ? 1 : ageDays), 2).call(ctx);
     return { SEC, ctx, DSS };
   };
+  const con12 = readJson('content.json');
   const A = runApply({ count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' });
   const kr = A.SEC.rail.kpis;
   check('BE12. 3 мөр үүснэ (ачилт/буулгалт/станц)', kr.length === 3, JSON.stringify(kr));
@@ -3571,8 +3663,11 @@ async function groupBE() {
   check('BE12. kpis[2] = АЧИЛТТАЙ СТАНЦ · 35 · станц',
     kr[2][0] === 'АЧИЛТТАЙ СТАНЦ' && kr[2][1] === '35' && kr[2][2] === 'станц', JSON.stringify(kr[2]));
   check('BE12. Өөрчлөлтийн хувь ЗОХИОХГҮЙ — мөр бүр "—"', kr.every(r => r[3] === '—'));
-  check('BE12. Харьцуулалтын мөр шалтгаанаа ил хэлнэ',
-    kr.every(r => /харьцуулах өгөгдөл алга/.test(r[5] || '')), JSON.stringify(kr[0][5]));
+  check('BE12. Мөр бүр ЯМАР ӨДРИЙН тоо болохоо хэлнэ (огноогүй тоо = "өнөөдрийнх" мэт уншигдана)',
+    kr.every(r => String(r[5] || '').includes('Хоногийн мэдээ: 2026-09-17')), JSON.stringify(kr[0][5]));
+  check('BE12. ШИНЭ дата (1 хоног) үед харьцуулалтын шалтгаан хэвээр',
+    kr.every(r => /харьцуулах өгөгдөл алга/.test(r[5] || '')) &&
+    kr.every(r => !/шинэчлэгдээгүй/.test(r[5] || '')), JSON.stringify(kr[0][5]));
   check('BE12. Хуучин статик мөр (1,815 км) БҮРЭН солигдоно',
     !JSON.stringify(kr).includes('1,815') && !JSON.stringify(kr).includes('НИЙТ ЗАМ'));
   check('BE12. _liveKpis=true (KPI мөр амьд боллоо)', A.SEC.rail._liveKpis === true);
@@ -3585,6 +3680,60 @@ async function groupBE() {
   const A1 = runApply({ count: 900, unloadedCount: null, stationCount: null, date: '2026-09-17' });
   check('BE12. Дутуу талбар → тэр мөр ОГТ гарахгүй (0 гэж зохиохгүй)',
     A1.SEC.rail.kpis.length === 1 && A1.SEC.rail.kpis[0][1] === '900');
+
+  /* ── BE12b. ХОЦОРСОН дата — 2026-09-21-нд илэрсэн РЕГРЕСС ──
+     Dispatcher өдөр бүр амжилттай гүйсэн (6 датасэтийн last_synced_at =
+     тухайн өглөө) атал вагон ачилтын сүүлийн бичлэг 09-17 дээр зогссон:
+     ETL эрүүл байхад ЭХ СУРВАЛЖ хоцорсон. Хуудсан дээр 1182 вагон
+     огноогүй зогсож байсан тул өнөөдрийн дүн мэт уншигдана. */
+  const AS = runApply({ count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' }, 4);
+  const ks = AS.SEC.rail.kpis;
+  check('BE12b. Хоцорсон үед мөр бүр "4 хоног шинэчлэгдээгүй" гэж ил хэлнэ',
+    ks.length === 3 && ks.every(r => String(r[5] || '').includes('4 хоног шинэчлэгдээгүй')),
+    JSON.stringify(ks[0][5]));
+  check('BE12b. Хоцорсон үед: огноо + хоцролт, ЧУХАЛ нь урд (шошгогүй)',
+    ks.every(r => r[5] === '2026-09-17 · 4 хоног шинэчлэгдээгүй'), JSON.stringify(ks[0][5]));
+  /* Регресс (browser, 1280px): хөл бичгийн сав ~214px, 8px mono үсэг
+     ~4.4–4.8px → ~44 тэмдэгт. Шошготой хувилбар 51 тэмдэгт болж
+     "шинэчлэгдээгүй" гэдэг үг таслагдаж байв. 3 оронтой хоцролтод ч
+     (365 хоног) 40 тэмдэгтээс хэтрэхгүй байх ёстой. */
+  const s365 = String(runApply({ count: 5, unloadedCount: null, stationCount: null,
+    date: '2026-09-17' }, 365).SEC.rail.kpis[0][5]);
+  check('BE12b. Хоцролтын хөл бичиг 40 тэмдэгтэд багтана (таслагдахгүй)',
+    ks[0][5].length <= 40 && s365.length <= 40, ks[0][5].length + ' / ' + s365.length);
+  check('BE12b. Хоцролт нь харьцуулалтын тайлбарыг СОЛИНО (хөл бичиг уншигдахгүй болохгүй)',
+    ks.every(r => !/харьцуулах өгөгдөл алга/.test(r[5] || '')), JSON.stringify(ks[0][5]));
+  check('BE12b. ТОО нь хэвээр (хоцорлоо гээд утгыг нуухгүй/зохиохгүй)',
+    ks[0][1] === '1,182' && ks[1][1] === '1,027' && ks[2][1] === '35');
+  /* Хил: D+1/D+2 нь хэвийн нийтлэлийн хоцролт — сэрэмжлүүлэг ГАРАХГҮЙ. */
+  const edge = (n) => String(runApply({ count: 5, unloadedCount: null, stationCount: null,
+    date: '2026-09-17' }, n).SEC.rail.kpis[0][5] || '');
+  check('BE12b. 2 хоног = ХЭВИЙН (сэрэмжлүүлэг алга)', !/шинэчлэгдээгүй/.test(edge(2)), edge(2));
+  check('BE12b. 3 хоног = хоцорсон', /3 хоног шинэчлэгдээгүй/.test(edge(3)), edge(3));
+  const AN = runApply({ count: 5, unloadedCount: null, stationCount: null, date: null }, null);
+  check('BE12b. Огноогүй хариу → огноо ЗОХИОХГҮЙ, зөвхөн харьцуулалтын шалтгаан',
+    !/Хоногийн мэдээ/.test(AN.SEC.rail.kpis[0][5]) &&
+    /харьцуулах өгөгдөл алга/.test(AN.SEC.rail.kpis[0][5]), JSON.stringify(AN.SEC.rail.kpis[0][5]));
+  check('BE12b. Хоцролтын текст content.json-д бүртгэгдсэн',
+    !!(con12.site.status.rail_wagon_asof && con12.site.status.rail_wagon_stale));
+
+  /* ── BE12c. dataAgeDays() — ГАРААР БОДОХ фикстур, "өнөөдөр"-ийг өгнө ── */
+  const dam = dcScript().match(/function dataAgeDays\(dateStr,now\)\{([\s\S]*?)\n\}/);
+  if (!dam) { bad('BE12c. dataAgeDays() олдсонгүй'); return; }
+  const age = new Function('dateStr', 'now', dam[1]);
+  const T = new Date(2026, 8, 21); // 2026-09-21 (орон нутгийн)
+  check('BE12c. 09-17 → 4 хоног', age('2026-09-17', T) === 4, String(age('2026-09-17', T)));
+  check('BE12c. Өнөөдөр → 0', age('2026-09-21', T) === 0);
+  check('BE12c. Сарын хил дамжина (08-31 → 2)', age('2026-08-31', new Date(2026, 8, 2)) === 2,
+    String(age('2026-08-31', new Date(2026, 8, 2))));
+  check('BE12c. Ирээдүйн огноо сөрөг (хоцорсон гэж ХУДАЛ хэлэхгүй)', age('2026-09-22', T) === -1);
+  check('BE12c. ISO цагтай огноо ч уншигдана', age('2026-09-17T00:00:00.000Z', T) === 4);
+  check('BE12c. Хоосон/буруу огноо → null ("0 хоног" гэж ЗОХИОХГҮЙ)',
+    age('', T) === null && age(null, T) === null && age(undefined, T) === null &&
+    age('тодорхойгүй', T) === null && age('2026-9-1', T) === null);
+  check('BE12c. Хуваарьт хэмжээ кодод, content.json-д БИШ (текст биш тохиргоо)',
+    /const WAGON_STALE_DAYS=2;/.test(dcScript()) &&
+    con12.site.status.rail_wagon_stale.indexOf('2') === -1);
 
   /* ── BE13. kpiVerified() — registry "verified" ≠ дата ИРСЭН ──
      Регресс: backend/feed унасан үед статик демо тоо (1,815 км / 11,979)
@@ -3725,34 +3874,44 @@ async function groupBE() {
      Регресс: applyRailWagonData() мөрийн НЭРийг stxt()-ээр тухайн агшинд
      шингээдэг тул текст нь хожуу ирвэл (нийтлэл нь ҮРГЭЛЖ хамгийн сүүлд
      ирдэг) админаас засварласан шошго сайтад ХЭЗЭЭ Ч гарахгүй байв. */
-  check('BE20. loadContent() applySiteContent-ийн ДАРАА reapplyLiveText дуудна',
-    /applySiteContent\(\);\s*this\.reapplyLiveText\(\);\s*this\.setState\(\{content:json\}\)/.test(dcScript()));
-  check('BE20. loadPublished() ч ижил (нийтэлсэн шошго амьд мөрөнд хүрнэ)',
-    /applySiteContent\(\);\s*this\.reapplyLiveText\(\);\s*this\.setState\(\{content:pub\.content\}\)/.test(dcScript()));
+  const dc20 = dcScript().split(CR_LF).join(NLc);
+  check('BE20. applyContentLayers: applySiteContent → reapplyLiveText → setState',
+    dc20.includes(['    applySiteContent();', '    this.reapplyLiveText();', '    this.setState({content:json});'].join(NLc)));
+  check('BE20. loadContent ба loadPublished ХОЁУЛАА applyContentLayers-аар (нийтэлсэн шошго амьд мөрөнд хүрнэ)',
+    dc20.includes('this._fileContent=json;' + NLc + '      this.applyContentLayers();') &&
+    dc20.includes('this._pubContent=pub.content;' + NLc + '      this.applyContentLayers();'));
   check('BE20. reapplyLiveText нь rail ба air ХОЁУЛАНГ нь дахин барина',
     /reapplyLiveText\(\)\{[\s\S]*?this\.applyRailWagonData\(\);[\s\S]*?this\.recomputeAirData\(\);[\s\S]*?\}/.test(dcScript()));
   /* Дарааллыг УРВУУЛЖ давтана: backend түрүүлж ирээд ДАРАА нь content.json */
-  const RAILTXT2 = Object.assign({}, RAILTXT, { 'sector_kpi_rail_live.0': 'АЧСАН ВАГОН' });
-  const lateApply = () => {
+  const RAILTXT2 = Object.assign({}, RAILTXT, { 'sector_kpi_rail_live.0': 'АЧСАН ВАГОН',
+    'status.rail_wagon_stale': 'хоног шинэ мэдээ ирээгүй' });
+  const lateApply = (ageNow = 1) => {
     const SEC = { rail: { label: 'Төмөр зам', kpis: [['НИЙТ ЗАМ', '1,815', 'км', '+0.4%', 'up']] } };
     const DSS = { rail_wagon: { head: [], types: [], notes: [], rows: [] } };
     const ctx = { _railWagonLoading: { count: 1182, unloadedCount: 1027, stationCount: 35, date: '2026-09-17' },
       _meta: null, _st: null, setSourceMeta() {}, setState() {} };
     const fmt = (n) => Number(n).toLocaleString('en-US');
-    mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f), fmt).call(ctx);
-    mkApply(SEC, DSS, (p, f) => (RAILTXT2[p] !== undefined ? RAILTXT2[p] : f), fmt).call(ctx);
+    mkApply(SEC, DSS, (p, f) => (RAILTXT[p] !== undefined ? RAILTXT[p] : f), fmt, () => ageNow, 2).call(ctx);
+    mkApply(SEC, DSS, (p, f) => (RAILTXT2[p] !== undefined ? RAILTXT2[p] : f), fmt, () => ageNow, 2).call(ctx);
     return SEC;
   };
   check('BE20. Backend ТҮРҮҮЛЖ ирсэн ч шинэ шошго мөрөнд ТУСНА',
     lateApply().rail.kpis[0][0] === 'АЧСАН ВАГОН', JSON.stringify(lateApply().rail.kpis[0]));
+  /* Хоцролтын тайлбар ч ижил гэрээнд орно — админаас засаад нийтэлсэн
+     status.rail_wagon_stale хожуу ирсэн ч сайтын мөрөнд ТУСАХ ёстой. */
+  check('BE20. Хожуу ирсэн хоцролтын текст ч мөрөнд ТУСНА',
+    lateApply(4).rail.kpis[0][5] === '2026-09-17 · 4 хоног шинэ мэдээ ирээгүй',
+    JSON.stringify(lateApply(4).rail.kpis[0][5]));
 
   /* ── BE21. Нийтлэгдсэн registry нь файлынхыг ДАВХАРЛАНА (бүтнээр солихгүй) ──
      Регресс: overlay үргэлж сүүлд ирдэг тул бүтнээр дарвал нийтэлсний
      дараах git засвар (quality: verified) амьд сайтад хүрэхгүй болно. */
-  check('BE21. loadPublished registry-г СОЛИХГҮЙ, давхарлана',
-    !/if\(pub\.registry\) this\.setState\(\{metricRegistry:pub\.registry\}\)/.test(dcScript()) &&
-    /metricRegistry:\{\.\.\.base,\.\.\.pub\.registry,/.test(dcScript()) &&
-    /widgets:\{\.\.\.\(base\.widgets\|\|\{\}\),\.\.\.\(pub\.registry\.widgets\|\|\{\}\)\}/.test(dcScript()));
+  check('BE21. loadPublished registry-г СОЛИХГҮЙ, давхарлана (EHPublish.layer, дарааллаас үл хамаарна)',
+    !dcScript().includes('this.setState({metricRegistry:pub.registry})') &&
+    !dcScript().includes('this.setState({metricRegistry:json})') &&
+    dcScript().includes('this._pubRegistry=pub.registry;') &&
+    dcScript().includes('this._fileRegistry=json;') &&
+    dcScript().includes('const reg=this.layerOf(this._fileRegistry,this._pubRegistry);'));
 
   /* ── BE22. Схем нь ДАТАСЭТЭЭР сонгогдоно (салбараар БИШ) ── */
   check('BE22. buildPreview схемийг dsel.schema-аар сонгоно',

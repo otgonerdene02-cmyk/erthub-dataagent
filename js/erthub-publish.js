@@ -123,5 +123,24 @@
       .catch(function () { return false; });
   }
 
-  window.EHPublish = { load: load, publish: publish, canPublish: canPublish, enabled: !!URL_ };
+  /* Нийтлэлийг ФАЙЛЫН ДЭЭР давхарлана — бүтнээр СОЛИХГҮЙ. Нийтлэл бол
+     тухайн агшны снапшот: дараа нь git-ээр нэмсэн түлхүүр түүнд байхгүй.
+     Бүтнээр сольвол шинэ текст/холбоос амьд сайт ба админд ХЭЗЭЭ Ч
+     хүрэхгүй, дараагийн нийтлэл түүнийг бүр мөсөн хаяна.
+     Энгийн объект → түлхүүр бүрээр гүн нийлүүлнэ. Массив, утга, null →
+     нийтлэлийнх ялна (массивыг индексээр холивол мөрийн тоо зөрнө).
+     Түлхүүрийн дараалал файлынхаар — экспорт git-тэй зөрөхгүй.
+     Сайт ба админ ХОЁУЛАА энийг ашиглана (ганц эх сурвалж). */
+  function isObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
+  function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function layer(base, over) {
+    if (over === undefined) return base;
+    if (!isObj(base) || !isObj(over)) return over;
+    var out = {}, k;
+    for (k in base) if (has(base, k)) out[k] = has(over, k) ? layer(base[k], over[k]) : base[k];
+    for (k in over) if (has(over, k) && !has(base, k)) out[k] = over[k];
+    return out;
+  }
+
+  window.EHPublish = { load: load, publish: publish, canPublish: canPublish, layer: layer, enabled: !!URL_ };
 })();

@@ -38,6 +38,16 @@ body{margin:0;}
 @media (min-width: 769px) {
   .eh-nav-mobile { display: none !important; }
 }
+
+/* Livestrip ("01 · Үндсэн үзүүлэлтүүд"). Desktop дээр repeat(lsCols) хэвээр
+   (нуусан салбарын зай үлдэхгүй — tests N1). Нарийн дэлгэцэд 5 нүдийг НЭГ
+   мөрөнд шахвал 375px-д нүд бүр ~59px болж тоо, нэгж, хөл бичиг (огноо,
+   "N хоног шинэчлэгдээгүй") бүгд таслагдаж байв. auto-fit нь нүд 190px-ээс
+   нарийсах үед л мөр нэмж, хоосон трекийг хураана — нуусан салбарын
+   зарчим энд ч хэвээр. */
+@media (max-width: 1100px) {
+  .eh-ls-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important; }
+}
 @keyframes driftA{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(6%,8%,0) scale(1.15);}}
 @keyframes driftB{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(-8%,-5%,0) scale(1.2);}}
 @keyframes driftC{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(5%,-9%,0) scale(1.1);}}
