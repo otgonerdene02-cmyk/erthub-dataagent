@@ -1083,6 +1083,68 @@ async function groupG3() {
   const zs = Z.comp.state.metricRegistry.widgets.u07.sectors;
   check('G3.14 registry: нийтэлсэн салгалт ялж, git-ийн шинэ слот үлдэнэ',
     zs.air.metric === null && zs.rail.metric === 'r', JSON.stringify(zs));
+
+  /* ══ G3.15–G3.17 ЗӨРҮҮГЭЭР НИЙТЛЭХ (EHPublish.diff) ══
+     Регресс (2026-09-22, амьд сайт дээр илэрсэн): админ content/registry-г
+     БҮТНЭЭР нийтэлдэг байв. version 1 нь тухайн үеийн git-тэй 0 зөрүүтэй
+     registry хуулбар атал, дараа нь git-д нэмэгдсэн t05 (хавтгай → салбарын
+     слот) ба i06/r06-ийн rail холбоосыг амьд сайт дээр ДАРЖ байв. Content ч
+     мөн адил: ганц жинхэнэ засвар (ui.badge.live_service) атал git-ийн 6
+     замыг далдалж байв. */
+  const DP = mk('https://x.test', () => [200, { version: 2 }]).P;
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  check('G3.15 diff: өөрчлөлтгүй → undefined (давхарга ҮҮСЭХГҮЙ)',
+    DP.diff({ a: 1, b: { c: [1, 2] } }, { a: 1, b: { c: [1, 2] } }) === undefined);
+  check('G3.15 diff: түлхүүрийн дараалал өөр ч утга ижил → undefined',
+    DP.diff({ a: 1, b: 2 }, { b: 2, a: 1 }) === undefined);
+  check('G3.15 diff: зөвхөн өөрчилсөн навч',
+    same(DP.diff({ ui: { badge: { live: 'амьд · вэб сервис', mock: 'түр' } } },
+      { ui: { badge: { live: 'амьд · вэб сервисээр', mock: 'түр' } } }),
+    { ui: { badge: { live: 'амьд · вэб сервисээр' } } }));
+  check('G3.15 diff: шинэ түлхүүр бүтнээрээ', same(DP.diff({ a: 1 }, { a: 1, n: { x: 1 } }), { n: { x: 1 } }));
+  check('G3.15 diff: массив өөрчлөгдвөл БҮТНЭЭР (layer массивыг солидог)',
+    same(DP.diff({ q: ['a', 'b'] }, { q: ['a', 'c'] }), { q: ['a', 'c'] }));
+  /* Буцах чадвар: layer(base, diff(base, cur)) === cur */
+  const CASES = [
+    [{ w: { t05: { sectors: { air: { m: 'a' } } } } }, { w: { t05: { sectors: { air: { m: 'a' }, rail: { m: 'r' } } } } }],
+    [{ a: [1, 2], b: { c: 1 } }, { a: [3], b: { c: 1, d: null } }],
+    [{ s: 'x' }, { s: 'x' }],
+  ];
+  check('G3.16 layer(base, diff(base,cur)) === cur (3 тохиолдол)',
+    CASES.every(([b, c]) => same(DP.layer(b, DP.diff(b, c)), c)));
+
+  /* Бодит сценари: админ ЮУ Ч засаагүй → registry нийтлэгдэхгүй (null) тул
+     git-ийн ДАРААГИЙН өөрчлөлт амьд сайт дээр харагдана. */
+  const FILE_OLD = { widgets: { t05: { metric: 'air.monthly_flight_series', sectors: ['air'] }, i06: { sectors: ['air'] } } };
+  const FILE_NEW = { widgets: { t05: { sectors: { air: { metric: 'air.monthly_flight_series' }, rail: { metric: 'rail.monthly_passenger_series' } } },
+    i06: { sectors: ['air', 'rail'] } } };
+  const adminUntouched = JSON.parse(JSON.stringify(FILE_OLD));
+  const overlayOld = DP.diff(FILE_OLD, adminUntouched);           // ЗАСВАРГҮЙ нийтлэл
+  const liveAfterGit = DP.layer(FILE_NEW, overlayOld);             // git шинэчлэгдсэний дараа
+  check('G3.16 засваргүй нийтлэл → registry давхарга ҮҮСЭХГҮЙ', overlayOld === undefined);
+  check('G3.16 дараагийн git өөрчлөлт (t05 rail, i06 rail) амьд сайтад ХҮРНЭ',
+    liveAfterGit.widgets.t05.sectors.rail.metric === 'rail.monthly_passenger_series' &&
+    same(liveAfterGit.widgets.i06.sectors, ['air', 'rail']), JSON.stringify(liveAfterGit.widgets.t05));
+  /* Хуучин (бүтэн хуулбар) арга яг энэ алдааг гаргадгийг баримтжуулна */
+  const liveOldWay = DP.layer(FILE_NEW, adminUntouched);
+  check('G3.16 ХУУЧИН бүтэн хуулбар нь git-ийн шинэ t05/i06-г ДАРДАГ байсан (регрессийн баримт)',
+    Array.isArray(liveOldWay.widgets.t05.sectors) && same(liveOldWay.widgets.i06.sectors, ['air']));
+  /* Админы ЖИНХЭНЭ засвар хадгалагдана */
+  const adminEdited = JSON.parse(JSON.stringify(FILE_OLD)); adminEdited.widgets.i06.hidden = true;
+  const ov2 = DP.diff(FILE_OLD, adminEdited);
+  check('G3.16 жинхэнэ засвар л давхаргад орж, git-ийн шинэ утгатай нийлнэ',
+    same(ov2, { widgets: { i06: { hidden: true } } }) &&
+    DP.layer(FILE_NEW, ov2).widgets.i06.hidden === true && same(DP.layer(FILE_NEW, ov2).widgets.i06.sectors, ['air', 'rail']));
+
+  /* ── G3.17 Админ ЗӨРҮҮГЭЭР нийтэлнэ ── */
+  check('G3.17 админ git файлын суурийг (REGF/CONF) давхаргагүйгээр хадгална',
+    /REGF=clone\(REG\);CONF=clone\(CON\);/.test(admS) && /var REGF=null, CONF=null;/.test(admS));
+  check('G3.17 нийтлэл = diff(файл, одоогийн) — бүтэн хуулбар БИШ',
+    /var dCon=pubDiff\(CONF,CON\), dReg=pubDiff\(REGF,REG\);/.test(admS) &&
+    /EHPublish\.publish\(pCon,pReg\)/.test(admS) && !/EHPublish\.publish\(CON,REG\)/.test(admS));
+  check('G3.17 content-д widgets{} үргэлж (PUT шалгалт), registry өөрчлөлтгүй бол null',
+    /var pCon=Object\.assign\(\{widgets:\{\}\},dCon\|\|\{\}\);/.test(admS) &&
+    /var pReg=dReg\?Object\.assign\(\{widgets:\{\}\},dReg\):null;/.test(admS));
 }
 
 /* ══════════════════════════════════════════════════════════════════

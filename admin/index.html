@@ -628,6 +628,9 @@ var SWAPPABLE={line:['line','bar'],donut:['donut','bar'],bignum:['bignum','bar']
 
 /* ══════════════════ ТӨЛӨВ ══════════════════ */
 var REG=null, CON=null, REG0=null, CON0=null;
+/* git-ийн файл ӨӨРӨӨ (давхаргагүй) — нийтлэхдээ ЭНЭЭС ялгаатай хэсгийг л
+   илгээнэ (EHPublish.diff). REG0/CON0 нь "нийтлэгдсэн суурь" тул өөр. */
+var REGF=null, CONF=null;
 var S={tab:'data',ds:null,level:'sections',section:null,widget:null,td:null,q:'',
        /* drafts — "Хэрэглэх" дараагүй текст засвар, виджетээр. Өмнө нь
           дэлгэц сольмогц ЧИМЭЭГҮЙ алга болдог байв (бичсэн ажил устана). */
@@ -4681,7 +4684,17 @@ document.addEventListener('click',function(e){
     if(t.disabled) return;
     t.disabled=true;
     pubMsg(utxt('publish.publishing','Нийтэлж байна…'));
-    EHPublish.publish(CON,REG).then(function(r){
+    /* ЗӨВХӨН git файлаас ялгаатай хэсгийг нийтэлнэ — бүтэн хуулбар нь
+       дараагийн git өөрчлөлтийг амьд сайт дээр далдалдаг (EHPublish.diff-ийн
+       тайлбарыг үз). widgets{} нь backend-ийн PUT шалгалтад шаардлагатай,
+       хоосон объект нь layer()-ээр нэгтгэхэд нөлөөгүй. Content-ийг хоосон ч
+       гэсэн ҮРГЭЛЖ илгээнэ: бүх засвараа буцаасан бол өмнөх давхаргыг ЦЭВЭРЛЭХ
+       ёстой (content ч registry ч null мөр backend-д хориотой). */
+    var pubDiff=EHPublish.diff||function(a,b){return b};
+    var dCon=pubDiff(CONF,CON), dReg=pubDiff(REGF,REG);
+    var pCon=Object.assign({widgets:{}},dCon||{});
+    var pReg=dReg?Object.assign({widgets:{}},dReg):null;
+    EHPublish.publish(pCon,pReg).then(function(r){
       /* Нийтэлсэн төлөв нь шинэ "суурь" болно — дараагийн dirty тоолол
          файлаас БИШ, нийтлэгдсэн хувилбараас тоологдоно. */
       CON0=clone(CON); REG0=clone(REG);
@@ -4710,7 +4723,7 @@ function getJson(u){
 }
 Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
 .then(function(r){
-  REG=r[0];CON=r[1];REG0=clone(REG);CON0=clone(CON);
+  REG=r[0];CON=r[1];REG0=clone(REG);CON0=clone(CON);REGF=clone(REG);CONF=clone(CON);
   applyContentText();
   var missing=SCOPE.filter(function(id){return !REG.widgets[id]||!CON.widgets[id]})
     .concat(Object.keys(TEXT_ONLY).filter(function(id){return !CON.widgets[id]}));
