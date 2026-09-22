@@ -107,47 +107,44 @@ does not exist` буцаахад `erthubStore.available` нь `false` болж, 
 Админ самбар (`admin/index.html`) файл руу бичдэггүй тул засвар нь урьд нь
 `Экспортлох` → гар хуулалт → `commit` → `push` хийж байж сайтад гардаг байв.
 Одоо **"Сайтад нийтлэх"** товч нь `content.json` / `metric_registry.json`-ий
-**дээр давхарлагдах** баримтыг Firestore-т бичнэ; сайт ачаалахдаа түүнийг
-уншиж хэрэглэнэ. Дарангуут бүх зочин шинэ текстийг харна.
+**дээр давхарлагдах** хувилбарыг **etransport-backend (Postgres)**-д бичнэ;
+сайт ачаалахдаа түүнийг уншиж хэрэглэнэ. Дарангуут бүх зочин шинэ текстийг харна.
 
-- Firestore зам: `site_content/current` — талбарууд нь `content`, `registry`
-  (JSON-г МӨРӨӨР), `updatedAt`, `byUid`, `byEmail`.
-- Уншилт нээлттэй, бичих эрх нь `admins/{uid}` баримт үүссэн хэрэглэгчид.
-- Firestore унтарсан, дүрэм хаасан, сүлжээгүй бол сайт **файлаараа** хэвийн
-  ажиллана — нийтлэл бол нэмэлт давхарга, шаардлага биш.
+- API: `GET /api/site-content` (нээлттэй) · `GET /api/site-content/me` ·
+  `PUT /api/site-content` (Firebase ID token + `portal_admins`).
+- Хадгалалт: `public.site_content_versions` — нийтлэл **бүр шинэ мөр**
+  (түүхтэй, буцаах боломжтой). `json` төрөл тул түлхүүрийн дараалал хадгалагдана.
+- Нэвтрэлт нь Firebase Auth (Google) хэвээр; backend токеныг Google-ийн нийтийн
+  гэрчилгээгээр шалгана. **Firestore сан шаардлагагүй.**
+- Давхар нийтлэлээс хамгаална: админ ачаалсан хувилбарын дугаарыг илгээж,
+  хооронд нь өөр хүн нийтэлсэн бол backend `409` буцаана.
+- Backend унтарсан/сүлжээгүй бол сайт **файлаараа** хэвийн ажиллана — нийтлэл
+  бол нэмэлт давхарга, шаардлага биш.
 
-### Идэвхжүүлэх (нэг удаа)
+### Идэвхжүүлэх (нэг удаа, серверт)
 
-1. **Firestore мэдээллийн сан үүсгэх.** Firebase Console → төсөл
-   `open-data-62ed3` (`js/firebase-config.js`-ийн `projectId`) → **Build →
-   Firestore Database → Create database**.
-   - Database ID: **`(default)`**-ийг хэвээр үлдээнэ. Сайт яг энэ нэрээр
-     уншдаг тул өөр нэр өгвөл нийтлэл харагдахгүй.
-   - Байршил: ойр бүс (жиш. `asia-east2` эсвэл `asia-northeast1`). Үүсгэсний
-     дараа **солих боломжгүй**.
-   - Эхлэх горим: **Production mode**. Дүрмийг дараагийн алхамд тавина —
-     "test mode" нь 30 хоног бүх хүнд бичих эрх нээдэг тул хэрэглэхгүй.
-2. Firebase Console → **Firestore Database → Rules** → энэ репо дэх
-   `firestore.rules`-ийг бүтнээр нь хуулж **Publish**.
-3. Firebase Console → **Authentication → Sign-in method**-д **Google**
-   идэвхтэй, **Settings → Authorized domains**-д
-   `otgonerdene02-cmyk.github.io` нэмэгдсэн эсэхийг шалгах.
-4. Админ самбарыг нээж баруун дээд буланд **Нэвтрэх (Google)** дарна.
-   Нэвтэрсний дараа и-мэйлийн хажууд **uid** харагдана.
-5. Firebase Console → Firestore → `admins` коллекц үүсгээд **Document ID = тэр
-   uid** гэж баримт нэмнэ (талбар шаардлагагүй). Хуудсаа сэргээнэ.
-6. Одооноос **Сайтад нийтлэх** товч идэвхжинэ.
+Дэлгэрэнгүй: etransport-backend репо → `docs/site-content-publish.md`.
 
-**Шалгах:** хөтчөөр
-`https://firestore.googleapis.com/v1/projects/open-data-62ed3/databases/(default)/documents/site_content/current`
-хаягийг нээнэ.
+1. `git pull` → `npm run migrate` (`009_site_content.sql`).
+2. `.env`-д `FIREBASE_PROJECT_ID=open-data-62ed3` нэмээд
+   `sudo systemctl restart etransport-backend`.
+3. Админ самбарт **Нэвтрэх (Google)** дарахад и-мэйлийн хажууд **uid** гарна.
+   Серверт: `INSERT INTO public.portal_admins (email, note) VALUES ('…', '…');`
+   (эсвэл `uid`-аар). Хуудсаа сэргээхэд **Сайтад нийтлэх** идэвхжинэ.
+4. Firebase Console → **Authentication → Settings → Authorized domains**-д
+   `otgonerdene02-cmyk.github.io` байгаа эсэхийг шалгана.
+
+**Шалгах:** `https://portal.mrt.gov.mn/api/site-content`
 
 | Хариу | Утга |
 |---|---|
-| `The database (default) does not exist` | 1-р алхам хийгдээгүй |
-| `PERMISSION_DENIED` | 2-р алхмын дүрэм Publish хийгдээгүй |
-| `Document ... not found` | Бэлэн — зүгээр л одоогоор нийтлэл алга |
-| JSON (`fields.content`) | Нийтлэл байгаа, сайт үүнийг давхарлана |
+| `{"error":{"message":"Олдсонгүй",…,"path":…}}` | Шинэ код deploy хийгдээгүй |
+| `{"error":{"message":"Нийтлэл алга"…}}` | Бэлэн — одоогоор нийтлэл алга |
+| JSON (`version`, `content`) | Нийтлэл байгаа, сайт үүнийг давхарлана |
+
+**Буцаах:** серверт өмнөх мөрийг шинэ мөр болгож хуулна —
+`INSERT INTO public.site_content_versions (content, registry, published_by_uid, published_by_email)
+SELECT content, registry, 'rollback', 'rollback' FROM public.site_content_versions WHERE id = <N>;`
 
 ### Нийтэлсний дараа
 

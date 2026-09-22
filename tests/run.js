@@ -840,19 +840,19 @@ const SITE_PROBE = `async function(d,w){
 }`;
 
 /* ══════════════════════════════════════════════════════════════════
-   G. САЙТАД НИЙТЛЭХ ДАВХАРГА (Firestore overlay)
+   G. САЙТАД НИЙТЛЭХ ДАВХАРГА (backend overlay)
 
    Админ ФАЙЛ РУУ бичдэггүй тул засвар нь өмнө нь Экспортлох → гар
    хуулалт → commit хийж байж сайтад гардаг байв. Одоо "Сайтад нийтлэх"
    нь content.json/metric_registry.json-ий ДЭЭР давхарлагдах баримтыг
-   Firestore-т бичдэг. Энэ бүлэг Firestore-гүйгээр (эх модулийг санах
+   backend-д бичдэг. Энэ бүлэг backend-гүйгээр (эх модулийг санах
    ойн хуурамч хувилбараар орлуулж) хоёр зүйлийг шалгана:
      G1. Нийтлэл БАЙХГҮЙ / уншигдахгүй үед сайт ФАЙЛААРАА ажиллана
          (нийтлэл бол НЭМЭЛТ давхарга, шаардлага биш)
      G2. Нийтлэл БАЙВАЛ сайт түүнийг файлын дээр давхарлан харуулна
    ══════════════════════════════════════════════════════════════════ */
 async function groupG() {
-  group('G. Сайтад нийтлэх давхарга (Firestore overlay)');
+  group('G. Сайтад нийтлэх давхарга (backend overlay)');
   if (!CHROME) { skipped('G бүлэг бүхэлдээ', 'Chrome олдсонгүй'); return; }
 
   /* Статик шалгалт — холбоос бүрэн эсэх */
@@ -861,13 +861,20 @@ async function groupG() {
     idx.includes('js/erthub-publish.js') && idx.includes('loadPublished()'));
   check('admin нийтлэх товч ба модультай', adm.includes('erthub-publish.js') &&
     adm.includes("id=\"pubBtn\"") && adm.includes('EHPublish.publish('));
-  check('Нийтлэл JSON-г МӨРӨӨР хадгална (массив доторх массивын хязгаар)',
-    pub.includes('stringValue: JSON.stringify(content)'));
-  check('firestore.rules-д site_content ба admins зам бүртгэгдсэн',
-    read('firestore.rules').includes('match /site_content/{docId}') &&
-    read('firestore.rules').includes('match /admins/{uid}'));
-  check('Нийтлэх эрхийг admins/{uid} баримтаар шийднэ (жагсаалт хатуу биш)',
-    read('firestore.rules').includes('documents/admins/$(request.auth.uid)'));
+  check('Нийтлэл backend-ийн /api/site-content руу явна (Firestore БИШ)',
+    pub.includes("'/api/site-content'") && !/firestore\.googleapis/.test(pub));
+  /* backend-config нь ӨМНӨ ачаалагдахгүй бол ETRANSPORT_BACKEND_BASE
+     тодорхойгүй → EHPublish.enabled=false болж нийтлэл ЧИМЭЭГҮЙ унтарна. */
+  const before = (h, a, b) => h.indexOf(a) >= 0 && h.indexOf(a) < h.indexOf(b);
+  check('index.html: backend-config.js нь erthub-publish.js-ээс ӨМНӨ',
+    before(idx, 'js/backend-config.js', 'js/erthub-publish.js'));
+  check('admin: backend-config.js нь erthub-publish.js-ээс ӨМНӨ',
+    before(adm, '../js/backend-config.js', '../js/erthub-publish.js'));
+  check('firestore.rules-д site_content/admins бичих зам ҮЛДЭЭГҮЙ (backend руу шилжсэн)',
+    !read('firestore.rules').includes('match /site_content/') &&
+    !read('firestore.rules').includes('match /admins/'));
+  check('Админы текстэд Firestore-ийн заавар үлдээгүй',
+    !/Firestore/.test(JSON.stringify(readJson('content.json').ui.publish)));
 
   const srv = serve();
   try {
@@ -895,6 +902,88 @@ async function groupG() {
     PROBE_SRC = '/admin/index.html';
     srv.close();
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   G3. НИЙТЛЭЛИЙН МОДУЛЬ ↔ BACKEND ГЭРЭЭ (js/erthub-publish.js)
+
+   Жинхэнэ модулийг vm дотор хуурамч fetch-тэй ажиллуулж, backend-ийн
+   /api/site-content гэрээг (etransport-backend test/siteContent.test.js-тэй
+   ИЖИЛ) гараар бодох боломжтой хариугаар шалгана.
+   ══════════════════════════════════════════════════════════════════ */
+async function groupG3() {
+  group('G3. Нийтлэлийн модуль ↔ backend гэрээ');
+  const vm = require('vm');
+  const src = read('js/erthub-publish.js');
+  function mk(BASE, routes, user) {
+    const calls = [];
+    const ctx = { window: { auth: user === undefined
+        ? { currentUser: { getIdToken: () => Promise.resolve('TOK') } }
+        : { currentUser: user } },
+      console: { info() {}, warn() {} }, setTimeout, clearTimeout, AbortController,
+      ETRANSPORT_BACKEND_BASE: BASE,
+      fetch: (u, o) => {
+        const c = { u, m: (o && o.method) || 'GET', h: (o && o.headers) || {},
+          b: o && o.body ? JSON.parse(o.body) : null };
+        calls.push(c);
+        const [status, body] = routes(c);
+        return Promise.resolve({ ok: status < 300, status, json: () => Promise.resolve(body) });
+      } };
+    vm.runInNewContext(src, ctx);
+    return { P: ctx.window.EHPublish, calls };
+  }
+  const CON = { widgets: { ls: { title: 'Т' } }, site: {} }, REG = { widgets: {} };
+
+  const off = mk('', () => [500, {}]);
+  check('G3.1 BASE хоосон → enabled=false, load=null, сүлжээ 0',
+    off.P.enabled === false && (await off.P.load()) === null && off.calls.length === 0);
+
+  /* Нийтлэл алга (404) → анхны нийтлэл baseVersion:null-тэй явна */
+  const a = mk('https://x.test', (c) => c.m === 'GET' ? [404, { error: {} }]
+    : [200, { version: 1, at: '2026-09-22T00:00:00Z' }]);
+  const l0 = await a.P.load();
+  check('G3.2 404 → load() null', l0 === null);
+  check('G3.2 URL = BASE + /api/site-content', a.calls[0].u === 'https://x.test/api/site-content', a.calls[0].u);
+  const r1 = await a.P.publish(CON, REG);
+  const put = a.calls[1];
+  check('G3.3 publish → PUT, Bearer токен', put.m === 'PUT' && put.h.Authorization === 'Bearer TOK');
+  check('G3.3 404-ийн дараах нийтлэл baseVersion:null (өөр хүн хооронд нь нийтэлбэл 409)',
+    put.b && 'baseVersion' in put.b && put.b.baseVersion === null, JSON.stringify(put.b && put.b.baseVersion));
+  check('G3.3 content/registry ОБЪЕКТООР (мөр БИШ) явна',
+    put.b.content.widgets.ls.title === 'Т' && typeof put.b.registry === 'object');
+  check('G3.3 хариу {version:1}', r1.version === 1);
+  await a.P.publish(CON, REG);
+  check('G3.4 дараагийн нийтлэл шинэ суурь baseVersion:1-тэй', a.calls[2].b.baseVersion === 1);
+
+  /* Нийтлэл байгаа (version 7) */
+  const b = mk('https://x.test', (c) => c.m === 'GET'
+    ? [200, { version: 7, content: CON, registry: null, meta: { at: 'T', by: 'a@b.mn' } }]
+    : [409, { error: { message: 'Өөр хүн нийтэлсэн', latest: 9 } }]);
+  const l1 = await b.P.load();
+  check('G3.5 load → content объект, registry null, meta.version 7',
+    l1 && l1.content.widgets.ls.title === 'Т' && l1.registry === null && l1.meta.version === 7 && l1.meta.by === 'a@b.mn');
+  let e409 = null; try { await b.P.publish(CON, REG); } catch (e) { e409 = e; }
+  check('G3.6 baseVersion:7 илгээгээд 409 → backend-ийн мессеж хэрэглэгчид хүрнэ',
+    b.calls[1].b.baseVersion === 7 && e409 && e409.message === 'Өөр хүн нийтэлсэн', e409 && e409.message);
+
+  /* Уншилт амжилтгүй (сүлжээ) → baseVersion илгээхгүй (шалгалтгүй) */
+  const c = mk('https://x.test', (q) => q.m === 'GET' ? [500, null] : [200, { version: 3 }]);
+  await c.P.load(); await c.P.publish(CON, REG);
+  check('G3.7 уншилт 500 → load null, нийтлэлд baseVersion ОГТ байхгүй',
+    !('baseVersion' in c.calls[1].b));
+
+  /* canPublish */
+  const d = mk('https://x.test', (q) => q.u.endsWith('/me') ? [200, { canPublish: true }] : [404, {}]);
+  check('G3.8 canPublish → /me, true', (await d.P.canPublish()) === true &&
+    d.calls[0].u === 'https://x.test/api/site-content/me' && d.calls[0].h.Authorization === 'Bearer TOK');
+  const d2 = mk('https://x.test', () => [403, {}]);
+  check('G3.8 /me 403 → false', (await d2.P.canPublish()) === false);
+  const d3 = mk('https://x.test', () => [200, { canPublish: true }], null);
+  check('G3.8 нэвтрээгүй → false, сүлжээ 0', (await d3.P.canPublish()) === false && d3.calls.length === 0);
+  let eNo = null; try { await d3.P.publish(CON, REG); } catch (e) { eNo = e; }
+  check('G3.9 нэвтрээгүй publish → "Нэвтрээгүй" алдаа', eNo && /Нэвтрээгүй/.test(eNo.message));
+  const f = mk('https://x.test', (q) => q.m === 'GET' ? [200, { version: 2, content: [1], registry: 'x' }] : [200, {}]);
+  check('G3.10 хэлбэр буруу content/registry → load null (сайт файлаараа)', (await f.P.load()) === null);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -3697,9 +3786,10 @@ console.log('ErtHub — систем тест');
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
+  else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
-  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupH();
+  groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupH();
   groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE();
   }
 
