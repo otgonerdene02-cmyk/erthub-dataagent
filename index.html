@@ -4543,6 +4543,51 @@ function sectorSummaryToValue(json){
           monthLabel:MONTHS[d.getUTCMonth()]};
 }
 
+/* Салбарын хураангуй → САРЫН ЦУВАА (t05/i06/r06-ийн c1d). sectorSummaryToValue
+   нь ганц сүүлийн сарыг өгдөг бол энэ нь бүтэн цувааг өгнө.
+   Хатуу дүрмүүд (аль нь ч зөрчигдвөл null — сайт "мэдээлэл алга" хэвээр):
+   - unit ЗААВАЛ. Нэгжгүй тоо харуулахгүй (PO-гийн 2026-09-18 шийдвэр;
+     backend 02da104-аас хойш өгдөг).
+   - Одоогийн (УБ цагаар) календарийн сар ХАСАГДАНА — явагдаж буй сар
+     ДУТУУ тул цуваанд оруулбал хуурамч уналт зурна (09-р сар 20-ны
+     өдөр хүртэл: 71,261 ↔ бүтэн сар ~150,000).
+   - Сүүлийн оны цуваа 1-р сараас ЗАВСАРГҮЙ эхлэх ёстой. c1d-ийн индекс 0
+     нь 1-р сар (сарын шүүлт slice(mFrom-1)-ээр тайрдаг); завсрыг 0-ээр
+     нөхвөл зохиомол уналт болно.
+   - Тоон бус / сөрөг утгатай сар → тэр сар алга гэж үзнэ (завсар). */
+function sectorSummaryToSeries(json,now){
+  if(!json||json.status!=='ok') return null;
+  const unit=typeof json.unit==='string'?json.unit.trim():'';
+  if(!unit) return null;
+  const rows=Array.isArray(json.data)?json.data:[];
+  const ub=new Date((now==null?Date.now():now)+8*3600000);
+  const curKey=ub.getUTCFullYear()*100+(ub.getUTCMonth()+1);
+  const byKey=new Map();
+  for(const r of rows){
+    const t=Date.parse(r&&r.month);
+    if(!isFinite(t)) continue;
+    const raw=r.total_volume;
+    if(raw==null||String(raw).trim()==='') continue;
+    const n=Number(raw);
+    if(!isFinite(n)||n<0) continue;
+    const d=new Date(t), y=d.getUTCFullYear(), m=d.getUTCMonth()+1;
+    if(y*100+m>=curKey) continue;
+    byKey.set(y*100+m,n);
+  }
+  if(!byKey.size) return null;
+  const year=Math.floor(Math.max.apply(null,[...byKey.keys()])/100);
+  const counts=[];
+  for(let m=1;m<=12;m++){
+    if(!byKey.has(year*100+m)) break;
+    counts.push(byKey.get(year*100+m));
+  }
+  /* Тухайн онд 1-р сараас хойш завсаргүй хэсэг л хүчинтэй. Завсрын ДАРААХ
+     сар байвал (жиш. 1,2,4) цуваа бүрэн биш — хэсэгчилж зурахгүй. */
+  const maxM=Math.max.apply(null,[...byKey.keys()].filter(k=>Math.floor(k/100)===year).map(k=>k%100));
+  if(!counts.length||maxM!==counts.length) return null;
+  return {unit,year,counts,lastMonth:counts.length};
+}
+
 /* Вагон ачилтын ТУСДАА endpoint (/api/sectors/rail/wagon-loading) →
    val()-ийн хүлээх хэлбэр. Дээрх summary-гаас ЯЛГААТАЙ: энэ нь count-ыг
    ШУУД өгдөг бөгөөд СҮҮЛИЙН ХОНОГИЙН дүн (сарын БИШ) тул сарын шошго
@@ -5166,7 +5211,16 @@ class Component extends DCLogic {
   async loadEtransportBackend(){
     if(typeof EHBackend==='undefined'||!EHBackend.enabled) return;
     try{
-      const d=await EHBackend.fetchRailWagonLoading();
+      /* Хоёр endpoint бие биеэсээ хамааралгүй — зэрэг татна. fetch* бүр
+         алдаагаа өөрөө барьж null буцаадаг тул нэг нь унасан ч нөгөө нь
+         хэвийн (Promise.all-ийг унагахгүй). */
+      const [d,sum]=await Promise.all([EHBackend.fetchRailWagonLoading(),
+        EHBackend.fetchSectorSummary?EHBackend.fetchSectorSummary('rail'):null]);
+      /* Зорчигчийн сарын цуваа (rail.veritech.passengers → gold). Вагоны
+         мөрүүдээс ӨМНӨ барина: applyRailWagonData() нь KPI мөрийг бүтнээр
+         нь солиод ТӨГСГӨЛД нь зорчигчийн мөрийг залгадаг. */
+      this._railPaxSeries=sectorSummaryToSeries(sum);
+      this.applyRailPassengerData();
       /* Хариуг ШУУД хадгалахгүй — val() нь {count} хүлээдэг. Вагон ачилт
          одоо ТУСДАА endpoint-оос ирдэг тул wagonLoadingToValue()-ээр
          хөрвүүлнэ (summary-ийн sectorSummaryToValue() БИШ — тэр нь
@@ -5214,6 +5268,10 @@ class Component extends DCLogic {
     const rows=[[kl('ХОНОГИЙН АЧИЛТ',0),fmtNum(w.count),uw,'—','flat',note]];
     if(w.unloadedCount!=null) rows.push([kl('ХОНОГИЙН БУУЛГАЛТ',1),fmtNum(w.unloadedCount),uw,'—','flat',note]);
     if(w.stationCount!=null)  rows.push([kl('АЧИЛТТАЙ СТАНЦ',2),fmtNum(w.stationCount),us,'—','flat',note]);
+    /* Зорчигчийн сарын мөр — ЭНД залгана (тусдаа функцээр kpis-д push хийвэл
+       reapplyLiveText() энэ функцийг дахин дуудах бүрд алга болно). */
+    const px=this.railPaxKpiRow?this.railPaxKpiRow():null;
+    if(px) rows.push(px);
     SECTORS.rail.kpis=rows;
     SECTORS.rail._liveKpis=true;
     /* "Сүүлд шинэчлэгдсэн өгөгдөл" (u07) мөрийн огноо — RECENT-ийн
@@ -5268,8 +5326,61 @@ class Component extends DCLogic {
      гардаггүй байсан ҮНДСЭН шалтгаан яг энэ.
      Хоёр функц хоёул дата ирээгүй бол шууд буцдаг тул давтан дуудахад аюулгүй. */
   reapplyLiveText(){
+    /* Дараалал: зорчигчийн цуваа ЭХЛЭЭД (c1 шошго), дараа нь вагон —
+       сүүлийнх нь KPI мөрийг зорчигчийн мөртэй хамт дахин барина. */
+    this.applyRailPassengerData();
     this.applyRailWagonData();
     this.recomputeAirData();
+  }
+  // ── УБТЗ · зорчигчийн сарын цуваа → SECTORS.rail.c1d ─────────────────
+  // /api/sectors/rail/summary (gold ← silver.rail_operations ← Veritech
+  // rail.veritech.passengers, TOTAL багана). 05-р хэсгийн "Сарын зорчигч"
+  // график (t05), 06-р хэсгийн салбар хоорондын индекс (i06/r06), салбарын
+  // дэлгэрэнгүй хуудас — бүгд c1d-ээс уншина. Дата ирээгүй бол ОГТ
+  // ХӨНДӨХГҮЙ: статик демо c1d хэвээр ч _liveSeries худал тул seriesVerified()
+  // түүнийг "амьд" гэж тэмдэглэхгүй.
+  applyRailPassengerData(){
+    const s=this._railPaxSeries;
+    if(!s||!Array.isArray(s.counts)||s.counts.length<2) return;
+    SECTORS.rail.c1d=s.counts.slice();
+    SECTORS.rail.c1dYear=s.year;
+    /* Шошго амьд мөрөөс ТУСДАА (статик "Сарын зорчигч (мянга)" нь демо
+       утгын нэгжийг хэлдэг — бодит тоо мянгачлагдаагүй). applySiteContent()
+       c1-ийг статик шошгоор дарах тул энэ функц reapplyLiveText()-д бий. */
+    SECTORS.rail.c1=stxt('sector_chart_rail_live','Сарын зорчигч');
+    SECTORS.rail._liveSeries=true;
+    /* Цуваа нь ЭНЭ датасэтийнх — вагон ачилтын датасэтийн хуудсан дээр
+       зорчигчийн муруй гаргахгүйн тулд (dsHasTrend). */
+    /* Харагдах текст БИШ — датасэтийн нэртэй тулгах түлхүүр (Veritech-ийн
+       rail.veritech.passengers-ийн display_name). content.json-д тавибал
+       засварласнаар тааралт чимээгүй тасарна. */
+    SECTORS.rail._liveSeriesDs='Зорчигчийн галт тэрэгний мэдээ';
+    this.setState({railPaxMonth:s.year*100+s.lastMonth});
+  }
+  /* k04.rail-ийн 4 дэх мөр: сүүлийн БҮТЭН сарын зорчигч + өмнөх сартай
+     харьцуулалт. Өмнөх оны дата алга тул YoY БИШ MoM — шошгон дээр ил
+     бичнэ. k[6] = бодит сарын цуваа (spark нь ЗОХИОМОЛ биш). */
+  railPaxKpiRow(){
+    const s=this._railPaxSeries;
+    if(!s||!Array.isArray(s.counts)||!s.counts.length) return null;
+    const n=s.counts.length, cur=s.counts[n-1], prev=n>1?s.counts[n-2]:null;
+    let delta='—', dir='flat', cmp=stxt('status.no_compare','харьцуулах өгөгдөл алга');
+    if(prev){
+      const d=(cur-prev)/prev*100;
+      delta=(d>=0?'+':'')+d.toFixed(1)+'%';
+      dir=d>0?'up':(d<0?'down':'flat');
+      cmp=MONTHS[n-1]+' '+stxt('chart.compare_mom_mid','· өмнөх сартай (')+MONTHS[n-2]+
+        stxt('chart.compare_mom_end',') харьцуулбал');
+    }
+    return [stxt('sector_kpi_rail_live.3','ЗОРЧИГЧ / САР'),fmtNum(cur),
+      stxt('unit.passenger','зорчигч'),delta,dir,cmp,s.counts.slice()];
+  }
+  // kpiVerified()-ийн ЦУВААНЫ хувилбар: registry verified + БОДИТ сарын цуваа
+  // ирсэн (_liveSeries). Өмнө нь t05 зөвхөн registry-г шалгадаг байсан тул
+  // feed ирэхээс өмнө статик демо муруйг "амьд" гэж зурж байв.
+  seriesVerified(widgetId,sectorKey){
+    if(!this.sectorVerified(widgetId,sectorKey)) return false;
+    return !!(SECTORS[sectorKey]&&SECTORS[sectorKey]._liveSeries);
   }
   // Registry-ийн "verified" нь ХОЛБООС байгааг л хэлнэ — дата ИРСЭН гэсэн
   // үг БИШ. Эх сурвалж унасан үед статик демо тоо (11,979 нислэг,
@@ -7326,12 +7437,26 @@ class Component extends DCLogic {
        өөрчлөгдөх ёсгүй (өмнө нь хоёулаа i06-ийн trendFor-ыг хуваалцдаг). */
     const airI06=airFromSpec(this.valueSpecRaw('i06'))||cw.airCounts;
     const airR06=airFromSpec(this.valueSpecRaw('r06'))||cw.airCounts;
+    /* Air-аас бусад салбарын бодит сарын цуваа (rail — зорчигч). compareWindow-
+       той ИЖИЛ он, хүрэлцэхүйц урттай байх ёстой — эс бөгөөс null (0 шугам). */
+    const liveSeriesFor=(k)=>{
+      const ss=SECTORS[k];
+      if(!ss||!ss._liveSeries||!Array.isArray(ss.c1d)) return null;
+      if(cw.year&&ss.c1dYear!==cw.year) return null;
+      return ss.c1d.length>=months?ss.c1d:null;
+    };
     const trendFor=(k,air)=>{
       const src=(air===undefined)?airI06:air;
       if(k==='air'&&src){ const b=src[0]||1; return src.slice(0,months).map(v=>v/b*100); }
       if(!verifiedSet.has(k)) return new Array(months).fill(0);
-      return TREND[k].slice(0,months);
+      /* TREND нь СТАТИК ЗОХИОМОЛ массив — verified гэж бүртгэгдсэн салбарт
+         ч түүнийг зурахгүй. Бодит цуваа л (эсвэл 0). */
+      const ls=k==='air'?null:liveSeriesFor(k);
+      if(ls){ const b=ls[0]||1; return ls.slice(0,months).map(v=>v/b*100); }
+      return new Array(months).fill(0);
     };
+    /* "Бодит өгөгдөлтэй" гэдэг нь registry-д бүртгэгдсэн + цуваа ИРСЭН. */
+    const liveI06=(k)=>verifiedSet.has(k)&&(k==='air'?!!airI06:!!liveSeriesFor(k));
     const W=620,Hh=200,pL=40,pR=62,pT=14,pB=26;
     const all=ckeys.filter(k=>!off.includes(k));
     const vals=all.length?all.flatMap(k=>trendFor(k)):[60,130];
@@ -7374,14 +7499,18 @@ class Component extends DCLogic {
       // H5 (нэмэлт): verified бус мөрийг (start=end=0, chLabel='—') ил
       // тайлбарлана — template-д аль хэдийн бэлэн байсан боловч энд хоосон
       // байсан слот.
-      mockTag:verifiedSet.has(r.key)?'':stxt('status.no_data','мэдээлэл алга'),
+      mockTag:liveI06(r.key)?'':stxt('status.no_data','мэдээлэл алга'),
       rowStyle:'display:grid;grid-template-columns:22px 20px minmax(0,1fr) 62px;gap:9px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);opacity:'+(r.muted?'.42':'1')+';transition:.2s var(--ease);'
     }));
     // "Тэргүүлэгч"/"Хоцрогдож байгаа" шошгыг ЗӨВХӨН verified салбараас
     // сонгоно (H4b) — mock дата дээр "тэргүүлж байна" гэх нь худал
     // мэдээлэл. Verified 2-с цөөн бол хоёр шошгыг огт харуулахгүй: нэг
     // элементийг "тэргүүлэгч" гэж нэрлэх утгагүй.
-    const verifiedRank=cRank.filter(r=>verifiedSet.has(r.key));
+    /* Registry-д бүртгэгдсэн ч цуваа нь ИРЭЭГҮЙ салбар (0 шугам, ch=null)
+       тэргүүлэгч/хоцрогдогч болж болохгүй. Регресс (2026-09-22): rail-ийг
+       i06/r06-д бүртгэмэгц backend хариу ирэхээс өмнөх агшинд cLag=rail
+       (ch=null) болж null.toFixed() БҮХ хуудсыг унагаж байв. */
+    const verifiedRank=cRank.filter(r=>liveI06(r.key)&&r.ch!=null);
     const showLeadLag=verifiedRank.length>=2;
     const cLead=verifiedRank[0]||{label:'',ch:0,color:'#828EA8'};
     const cLag=verifiedRank[verifiedRank.length-1]||{label:'',ch:0,color:'#828EA8'};
@@ -7460,7 +7589,7 @@ class Component extends DCLogic {
         btnStyle:'cursor:pointer;font-family:inherit;width:26px;height:26px;border-radius:8px;flex-shrink:0;font-size:12px;line-height:1;'+(this.state.f05Open?'border:1px solid #2E7CF6;background:#2E7CF61a;color:#2E7CF6;':'border:1px solid var(--line);background:var(--surface);color:var(--ink3);')},
       f07:{open:!!this.state.f07Open,toggle:()=>this.setState(s=>({f07Open:!s.f07Open})),
         btnStyle:'cursor:pointer;font-family:inherit;width:24px;height:24px;border-radius:7px;flex-shrink:0;font-size:11px;line-height:1;'+(this.state.f07Open?'border:1px solid #7C5CF0;background:#7C5CF01a;color:#7C5CF0;':'border:1px solid var(--line);background:var(--surface);color:var(--ink3);')},
-      cLeadLabel:cLead.label,cLeadCh:(cLead.ch>0?'+':'')+cLead.ch.toFixed(1)+'%',cLeadColor:cLead.color,
+      cLeadLabel:cLead.label,cLeadCh:cLead.ch==null?'—':((cLead.ch>0?'+':'')+cLead.ch.toFixed(1)+'%'),cLeadColor:cLead.color,
       goCommunity:()=>this.setState({page:'community',commTab:'projects'}),
       spotlightProject:(()=>{
         const p=PROJECTS.reduce((a,b)=>parseFloat(b.views)>parseFloat(a.views)?b:a);
@@ -7474,7 +7603,7 @@ class Component extends DCLogic {
         return {title:q.title,by:q.by,stage:q.stage,support:q.support.toLocaleString(),goal:q.goal.toLocaleString(),pctWidth:pct+'%',
           open:()=>{ this.setState({page:'community',commTab:'policy',projOpen:'p'+POLICIES.indexOf(q)}); }};
       })(),
-      cLagLabel:cLag.label,cLagCh:(cLag.ch>0?'+':'')+cLag.ch.toFixed(1)+'%',cLagColor:cLag.color,
+      cLagLabel:cLag.label,cLagCh:cLag.ch==null?'—':((cLag.ch>0?'+':'')+cLag.ch.toFixed(1)+'%'),cLagColor:cLag.color,
       aiChips,
       aiThread,aiSteps,aiThinking:this.state.aiThinking,
       aiStatusLabel:this.state.aiThinking?stxt('ai.status_busy','Ажиллаж байна'):stxt('ai.status_ready','Бэлэн'),
@@ -7680,7 +7809,11 @@ class Component extends DCLogic {
        датасэт дээр "САРЫН ЗОРЧИГЧ" муруй). _liveKpis нь KPI мөр амьд
        гэдгийг л хэлнэ — цуваа нь тусдаа тугтай (_liveSeries). */
     const dsSec=SECTORS[dsel.sector];
-    const dsHasTrend=!dsSec._liveKpis||!!dsSec._liveSeries;
+    /* _liveSeriesDs — цуваа ЯМАР датасэтийнх. Rail-ийн зорчигчийн цуваа
+       вагон ачилтын датасэтийн хуудсан дээр гарахгүй (өмнөх засвар яг
+       ийм "САРЫН ЗОРЧИГЧ" муруйг арилгасан). Air-д тэмдэглээгүй тул хэвээр. */
+    const dsHasTrend=!dsSec._liveKpis||(!!dsSec._liveSeries&&
+      (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name));
     const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d):null;
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
@@ -8767,8 +8900,11 @@ class Component extends DCLogic {
       /* Өөрчлөлт "—" (харьцуулах өгөгдөл алга) бол сум/цэг тэмдэг утгагүй —
          "• —" гэж уншигдахгүйн тулд тэмдгийг хоосон үлдээнэ. */
       const deltaGlyph = (verified&&delta!=='—')?(dir==='up'?'▲':dir==='down'?'▼':'•'):'';
-      const hasSeries=!!(vs&&vs.spark);
-      const spark=hasSeries?vs.spark:flatSpark;
+      /* k[6] — мөр өөрөө бодит цуваатай бол (rail-ийн сарын зорчигч) spark нь
+         ТҮҮНЭЭС. Зохиомол муруй (устгасан miniSpark) хэзээ ч биш. */
+      const ownSeries=(verified&&Array.isArray(k[6])&&k[6].length>1)?k[6]:null;
+      const hasSeries=!!(vs&&vs.spark)||!!ownSeries;
+      const spark=(vs&&vs.spark)?vs.spark:(ownSeries?pathFor(ownSeries,120,32,3).line:flatSpark);
       /* Хөл бичиг ("12 сарын чиг хандлага") нь БОДИТ цуваатай карт дээр л
          үнэн. Үгүй бол ЯГ ЮУ дутууг нь хэлнэ — картын дээд талын
          "харьцуулах өгөгдөл алга" нь ӨӨРЧЛӨЛТИЙН тухай, энэ нь ГРАФИКИЙН
@@ -8822,7 +8958,7 @@ class Component extends DCLogic {
     // график, үгүй үед зөвхөн хавтгай 0 шугам зурж, AI прогноз/оргил
     // тэмдэглэгээг (утгагүй болдог тул) нуун, тэдгээрийн оронд "мэдээлэл
     // алга" гэсэн тэмдэглэгээ үзүүлнэ.
-    const t05Verified=this.sectorVerified('t05',key);
+    const t05Verified=this.seriesVerified('t05',key);
     /* Утгын тохиргоо байвал ЦУВАА нь сонгосон хэмжигдэхүүний сар тутмын
        бодит цуваа болно (жиш. нислэгийн тооны оронд зорчигчийн нийлбэр).
        Графикийн ЗАГВАР (тэнхлэг, прогноз, оргил) хэвээр. */
