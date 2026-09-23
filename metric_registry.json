@@ -1,8 +1,8 @@
 {
   "$schema": "erthub-metrics/v1",
   "version": "0.1.0",
-  "updated": "2026-09-06",
-  "note": "H3 шатны хамгийн анхны хэрэгжилт байсан. 2026-09-18: rail-ийн вагон ачилт (k04/ls/u07) амьд холбогдов. 2026-09-19: холбогдоогүй слот бүрийн would_need-ийг backend-ийн БОДИТ төлөвөөр (API тандалт + docs/etl-scheduling.md) шинэчлэв — \"эх сурвалж тодорхойгүй\" гэсэн ерөнхий үгийн оронд ЯГ ЮУ дутууг (датасэт, indicator, толь, transform, нэгж) нэрлэв. Гол хэв маяг: 4 датасэт (rail passengers/freight, road vehicle_registry/inspections) bronze-д ТАТАГДАЖ БАЙНА, харин талбарын толь дутуу тул silver transform бичигдээгүй; sea/transit салбарт эх систем ОГТ холбогдоогүй.",
+  "updated": "2026-09-23",
+  "note": "H3 шатны хамгийн анхны хэрэгжилт байсан. 2026-09-18: rail-ийн вагон ачилт (k04/ls/u07) амьд холбогдов. 2026-09-19: холбогдоогүй слот бүрийн would_need-ийг backend-ийн БОДИТ төлөвөөр (API тандалт + docs/etl-scheduling.md) шинэчлэв — \"эх сурвалж тодорхойгүй\" гэсэн ерөнхий үгийн оронд ЯГ ЮУ дутууг (датасэт, indicator, толь, transform, нэгж) нэрлэв. Гол хэв маяг: 4 датасэт (rail passengers/freight, road vehicle_registry/inspections) bronze-д ТАТАГДАЖ БАЙНА, харин талбарын толь дутуу тул silver transform бичигдээгүй; sea/transit салбарт эх систем ОГТ холбогдоогүй. 2026-09-23: road-ийн техникийн хяналтын үзлэг (k04/ls/u07) амьд холбогдов — толь + эх системийн xlsx экспортоор (2,790 мөр) баталсан silver.road_inspections (backend migration 012). Үлдсэн road слотууд (t05/d05/w2*) нь ӨӨР хэмжигдэхүүн шаарддаг тул would_need-д ЯГ ЮУ дутууг нэрлэв.",
   "widgets": {
     "hero_fl": {
       "metric": "air.flight_count_last_month",
@@ -17,9 +17,8 @@
           "quality": "verified"
         },
         "road": {
-          "metric": null,
-          "quality": "mock",
-          "would_need": "Авто замын сүлжээний урт (Замын газар) эх сурвалж хэвээр алга. БОЛОМЖТОЙ ЗАМ: road.veritech.vehicle_registry (indicator 14996840) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-18). Дутуу нь: талбарын толь → silver.road_traffic transform → gold. Түүний дараа /api/sectors/road/summary нь unit:\"тээврийн хэрэгсэл\"-ээр сарын дүн өгнө. Тэр үед слотын шаардах нэгжийг (\"км\") метриктэй ХАМТ солино."
+          "metric": "road.inspection_kpi_set",
+          "quality": "verified"
         },
         "rail": {
           "metric": "rail.wagon_kpi_set",
@@ -45,9 +44,8 @@
           "quality": "verified"
         },
         "road": {
-          "metric": null,
-          "quality": "mock",
-          "would_need": "Авто замын сүлжээний урт (Замын газар) эх сурвалж хэвээр алга. БОЛОМЖТОЙ ЗАМ: road.veritech.vehicle_registry (indicator 14996840) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-18). Дутуу нь: талбарын толь → silver.road_traffic transform → gold. Түүний дараа /api/sectors/road/summary нь unit:\"тээврийн хэрэгсэл\"-ээр сарын дүн өгнө. Тэр үед шаардах нэгж (\"км\") ХАМТ солигдоно."
+          "metric": "road.inspection_count",
+          "quality": "verified"
         },
         "rail": {
           "metric": "rail.wagon_loading",
@@ -87,10 +85,8 @@
           "quality": "verified"
         },
         "road": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Энэ мөрийн датасэт (замын хөдөлгөөний ачаалал) backend-д ОГТ бүртгэлгүй. /api/sectors/road/datasets нь ӨӨР хоёр датасэтийн бодит last_synced_at-ыг өгдөг (vehicle_registry, inspections) — мөрийг тэдгээрийн аль нэгээр СОЛИХ эсэхийг шийдвэл огноо шууд амьдарна."
+          "metric": "road.feed_updated_at",
+          "quality": "verified"
         },
         "public": {
           "metric": null,
@@ -121,7 +117,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "Авто замын сарын цуваа — road.veritech.vehicle_registry bronze-д татагдаж байгаа ч талбарын толь → silver.road_traffic transform дутуу. Transform бичигдвэл /api/sectors/road/summary unit:\"тээврийн хэрэгсэл\"-ээр сарын цуваа өгнө."
+          "would_need": "Авто замын САРЫН цуваа. 2026-09-23-нд road.veritech.inspections silver-т буув (migration 012) — гэхдээ тэр нь ХОНОГИЙН үзлэг: t05 нь 12 сарын цуваа зурдаг тул хоногийн 30 утгыг сарын тэнхлэгт тавибал хуудас ХУДАЛ уншигдана. Дутуу нь: (а) silver.road_inspections-д хоёроос дээш БҮТЭН сарын дата хуримтлагдах, (б) сарын нэгтгэлийг gold-д нэмэх (эсвэл /api/sectors/road/inspections-д by_month нэмэх). Замын ачааллын (vehicle_registry → silver.road_traffic) зам нь мөн хэвээр нээлттэй."
         },
         "water": {
           "metric": null,
@@ -170,7 +166,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "Авто замын 7 ХОНОГИЙН зорчигчийн дата эх сурвалжид алга. Одоо татагдаж буй road.veritech.vehicle_registry нь ТЭЭВРИЙН ХЭРЭГСЛИЙН бүртгэл — зорчигчийн тоо БИШ тул энэ слотыг хангахгүй."
+          "would_need": "Авто замын 7 ХОНОГИЙН зорчигчийн дата эх сурвалжид алга. Амьд болсон road.veritech.inspections нь техникийн ҮЗЛЭГ — зорчигчийн тоо БИШ; vehicle_registry нь тээврийн хэрэгслийн бүртгэл. Хоёулаа энэ слотыг хангахгүй."
         },
         "rail": {
           "metric": null,
@@ -224,7 +220,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "w2p.road-той ижил блокер: vehicle_registry нь зорчигчийн тоо БИШ."
+          "would_need": "w2p.road-той ижил блокер: үзлэг ч, vehicle_registry ч зорчигчийн тоо БИШ."
         },
         "rail": {
           "metric": null,
@@ -257,7 +253,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "Авто замын 7 хоногийн ачааны дата эх сурвалжид алга (Veritech-ийн road датасэтүүд нь үзлэг ба тээврийн хэрэгслийн бүртгэл — ачааны хэмжээ БИШ)."
+          "would_need": "Авто замын 7 хоногийн ачааны дата эх сурвалжид алга (Veritech-ийн road датасэтүүд нь техникийн үзлэг ба тээврийн хэрэгслийн бүртгэл — ачааны хэмжээ БИШ)."
         },
         "rail": {
           "metric": null,
@@ -350,7 +346,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "Донут нь БҮХ салбарыг НЭГ нэгжээр нийлүүлдэг тул vehicle_registry (тээврийн хэрэгслийн тоо) энд шууд нэмэгдэхгүй — эхлээд донутын нийтлэг хэмжүүрийг (жиш. \"сарын тээвэрлэлт\") тодорхойлно. road.veritech.vehicle_registry (indicator 14996840) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-18). Дутуу нь: талбарын толь → silver.road_traffic transform → gold. Түүний дараа /api/sectors/road/summary нь unit:\"тээврийн хэрэгсэл\"-ээр сарын дүн өгнө."
+          "would_need": "Донут нь БҮХ салбарыг НЭГ нэгжээр нийлүүлдэг тул үзлэгийн тоо (road.inspection_count, нэгж 'үзлэг') энд шууд нэмэгдэхгүй — эхлээд донутын нийтлэг хэмжүүрийг (жиш. 'сарын тээвэрлэлт') тодорхойлно. Үзлэг нь тээвэрлэлтийн хэмжээ БИШ, хяналтын үйл явдлын тоо."
         },
         "rail": {
           "metric": null,
@@ -517,6 +513,45 @@
       "additive": true,
       "quality": "verified",
       "period_note": "БАТАЛГААЖУУЛАЛТ (2026-09-21) — талбарын толь ирээгүй тул АРИФМЕТИКААР: bronze-ийн бодит 500 мөр дээр KASS+KIOSK+WEB+SMS+PHONE+TAPA = TOTAL (100%) ба ORON+OLON = TOTAL (100%); бүх 12,392 мөр дээр channelMismatch 0. Grain = өдөр+дугаар+чиглэл (3,116 түлхүүр = 3,116 өвөрмөц эх ID; №33/34 нэг дугаартай хоёр чиглэлтэй). 1–9-р сарын нийлбэр 1,161,261 — probe-ийн тооцоотой яг тэнцсэн. Гадны албан ёсны тайлантай ХАРААХАН тулгаагүй (вагон ачилтын xlsx шиг) — эх тайлан ирвэл нэмж тулгана. Backend: etransport-backend migrations/007, 008, src/etl/rail/passengersMap.js."
+    },
+    "road.inspection_count": {
+      "name": "Техникийн хяналтын үзлэгийн хоногийн тоо",
+      "source": "EHBackend.fetchRoadInspections (js/erthub-backend.js → GET /api/sectors/road/inspections)",
+      "dataset": "silver.road_inspections",
+      "column": "count — мөрийн тоо (эх ID = lid). Нэг мөр = нэг ҮЗЛЭГ",
+      "agg": "COUNT — сүүлийн бүртгэгдсэн хоногийн бүх үзлэг",
+      "filter": "record_date = max(record_date). Вагон ачилтын '80% бүрэн байдал' эвристикийг ХЭРЭГЛЭХГҮЙ: үзлэгийн хоногийн мөрийн тоо нь ӨӨРӨӨ хэмжигдэхүүн (амралтын өдөр бодитоор бага) тул бага тоог 'дутуу таталт' гэж үзвэл жинхэнэ өдөр хаягдана — оронд нь огноог хуудсан дээр ИЛ бичнэ",
+      "transform": "",
+      "unit": "үзлэг",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "ЗУРАГЛАЛ БАТАЛГААЖСАН (2026-09-23): толь (2026-09-22) + хэрэглэгчийн эх системийн xlsx экспорт (2,790 мөр, 2026-09-21) — backend-ийн scripts/probe-inspections-export.js бүх мөрийг дахин тооцов: толинд байхгүй багана/утга 0, өвөрмөц ID 2,790/2,790 (grain зөв), PASSEDNAME='Тэнцээгүй' ⟺ 6 хэсгийн дор хаяж нэг нь тэнцээгүй (202/202, зөрчил 0), 'Тэнцсэн БЗЗ' 171 мөрийн хэсэг бүгд тэнцсэн. АНХААР — НЭГЖ: 'үзлэг', тээврийн хэрэгсэл БИШ (2,790 үзлэг / 2,692 ТХ: 98 ТХ нэг өдөрт хоёр удаа). ETL: 7 ХОНОГТ нэг (Бямба 14:20, датасэт 892,693 мөртэй) тул 8 хоног хүртэлх хоцролт ХЭВИЙН — сайт INSPECT_STALE_DAYS=8-аар л сэрэмжлүүлнэ. ХАМААРАЛ: backend PR #9 (migration 012) серверт суулгагдаж, dispatcher нэг удаа ажилласны дараа л endpoint утга буцаана; түүнээс өмнө сайт статик тоогоо хадгална (kpiVerified() нь _liveKpis-ийг ДАВХАР шалгадаг)."
+    },
+    "road.inspection_kpi_set": {
+      "name": "Авто замын техникийн үзлэгийн хоногийн үзүүлэлтийн багц (KPI)",
+      "source": "EHBackend.fetchRoadInspections → applyRoadInspectionData (index.html)",
+      "dataset": "silver.road_inspections",
+      "column": "count (үзлэг) · failed (тэнцээгүй) · vehicle_count (шалгасан ТХ) — бүгд НЭГ хариунаас",
+      "agg": "MIXED",
+      "filter": "kpis[0]=хоногийн үзлэг (spark нь by_day-ийн 30 хоногийн БОДИТ цуваа, өөрчлөлтийн хувь нь өмнөх бүртгэлтэй хоногтой харьцуулсан); kpis[1]=тэнцээгүй үзлэг + үзлэгийн тооноос тооцсон хувь; kpis[2]=шалгасан ТХ (үзлэгээс ЦӨӨН байж болно — дахин үзлэг)",
+      "transform": "",
+      "unit": "mixed",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "Хоногийн цонх — сар/жилийн дүн БИШ. Мөрийн нэр: content.json → site.sector_kpi_road_live. Салбарын дэлгэрэнгүй хуудасны 'бүтэц' (тэнцээгүй шалтгаан хэсгээр) ба 'багана' (аймгаар) мөн ЭНЭ хариунаас — өмнө нь зохиомол км/ачааллын тоо байсан. Тэнцээгүй ХЭСГҮҮДИЙН нийлбэр (жишээ датад 355) нь тэнцээгүй ҮЗЛЭГИЙН тооноос (202) ИХ — нэг үзлэг хэд хэдэн хэсгээр тэнцэхгүй байж болно, тиймээс хэсгийн хувийг ХЭСГҮҮДИЙН нийлбэр дээр тооцно."
+    },
+    "road.feed_updated_at": {
+      "name": "Техникийн хяналтын үзлэгийн дата сүүлд шинэчлэгдсэн огноо",
+      "source": "EHBackend.fetchRoadInspections → date (setSourceMeta(\"roadInspect\"))",
+      "dataset": "silver.road_inspections",
+      "column": "record_date (INSPDATE — үзлэгт хамрагдсан огноо)",
+      "agg": "MAX — сүүлийн бүртгэгдсэн хоног",
+      "filter": "",
+      "transform": "",
+      "unit": "огноо",
+      "additive": false,
+      "quality": "verified",
+      "period_note": "Энэ нь татсан цаг БИШ, ӨГӨГДЛИЙН сүүлийн хоног (CREATEDDATE = системд бүртгэсэн цаг нь тусдаа талбар, silver-т registered_date). rail.feed_updated_at-тай ижил зарчим."
     }
   },
   "removed": {

@@ -183,6 +183,11 @@ function groupB() {
          ИНДЕКСЭЭР уншдаг тул бүтэн зам мөрөөр олдохгүй (sector_kpi_*_live-тэй
          ижил зарчим). */
       'ds_schema_rail_wagon',
+      /* `sector_kpi_road_live` ба `road_fail_cats` — техникийн хяналтын
+         үзлэгийн KPI мөрийн нэр ба тэнцээгүй хэсгийн шошго.
+         applyRoadInspectionData() дотор ИНДЕКСЭЭР уншдаг
+         (sector_kpi_*_live-тэй ижил зарчим). */
+      'sector_kpi_road_live', 'road_fail_cats',
       /* `datasets` — нээлттэй өгөгдлийн каталог. stxt() биш, applySiteContent()
          дотор массиваар (индексээр) DATASETS дээр давхарлагддаг тул бусад
          динамик бүлэгтэй ижил зарчмаар шалгагдана. */
@@ -2672,7 +2677,10 @@ async function groupU() {
       R.dataNodes.some((t) => /Төмөр замын вагон ачилт/.test(t)),
       R.dataNodes.join(' | '));
     check('U4. Порталын картад "тооцоологдоно датасет" гарахгүй, бодит тоо гарна',
-      !/тооцоологдоно\s*датасет/i.test(R.ukText) && /\b10\b\s*датасет/.test(R.ukText),
+      /* Тоог кодод хатуу бичихгүй — каталогийн БОДИТ уртаас (шинэ датасэт
+         нэмэхэд тест утгаа алдахгүй, "бодит тоо" гэдэг шалгуур хүчинтэй). */
+      !/тооцоологдоно\s*датасет/i.test(R.ukText) &&
+      new RegExp('\\b' + readJson('content.json').site.datasets.length + '\\b\\s*датасет').test(R.ukText),
       R.ukText.slice(0, 160));
   } finally { srv.close(); }
 }
@@ -2858,8 +2866,12 @@ async function groupX() {
       (r.cards || []).every((c) => c.note === ''), JSON.stringify((r.cards || []).map((c) => c.note)));
     check('X4. Жижиг график хэвтээ шугам (зохиомол муруй алга)',
       (r.cards || []).every((c) => c.flat === true), JSON.stringify((r.cards || []).map((c) => c.flat)));
-    check('X4. Бодит тоо хэвээр (10 датасет, 11 үйлчилгээ)',
-      (byLb['НЭЭЛТТЭЙ ӨГӨГДӨЛ'] || {}).value === '10' && (byLb['ЦАХИМ ҮЙЛЧИЛГЭЭ'] || {}).value === '11',
+    /* Тоо нь каталогийн БОДИТ уртаас тооцоологддог тул тестэд ч хатуу
+       бичихгүй — шинэ датасэт нэмэхэд шалгуур утгаа алдахгүй. */
+    const cat4 = readJson('content.json').site;
+    check('X4. Бодит тоо хэвээр (' + cat4.datasets.length + ' датасет, ' + cat4.services.length + ' үйлчилгээ)',
+      (byLb['НЭЭЛТТЭЙ ӨГӨГДӨЛ'] || {}).value === String(cat4.datasets.length) &&
+      (byLb['ЦАХИМ ҮЙЛЧИЛГЭЭ'] || {}).value === String(cat4.services.length),
       JSON.stringify((r.cards || []).map((c) => c.lb + '=' + c.value)));
   } finally {
     PROBE_SRC = '/admin/index.html';
@@ -3797,8 +3809,10 @@ async function groupBE() {
     JSON.stringify(sl('u07', 'rail')));
   check('BE11. u07.air холбоос ХЭВЭЭР (air.feed_updated_at)',
     sl('u07', 'air').metric === 'air.feed_updated_at');
-  check('BE11. u07-ийн эх сурвалжгүй 3 мөр "мэдээлэл алга" шошготой',
-    ['road', 'water', 'public'].every(k => sl('u07', k).metric === null && sl('u07', k).label && sl('u07', k).would_need));
+  /* 2026-09-23: road нь техникийн хяналтын үзлэгээр холбогдсон тул
+     эх сурвалжгүй нь 2 мөр (water, public) үлдэв. */
+  check('BE11. u07-ийн эх сурвалжгүй 2 мөр "мэдээлэл алга" шошготой',
+    ['water', 'public'].every(k => sl('u07', k).metric === null && sl('u07', k).label && sl('u07', k).would_need));
   check('BE11. Шинэ метрик 2 нь metrics{}-д verified',
     ['rail.wagon_kpi_set', 'rail.feed_updated_at']
       .every(k => reg2.metrics[k] && reg2.metrics[k].quality === 'verified'));
@@ -3963,7 +3977,7 @@ async function groupBE() {
   const recBlock = (dcScript().match(/const RECENT = \[([\s\S]*?)\n\];/) || [])[1] || '';
   const recN = (recBlock.match(/\{title:/g) || []).length;
   check('BE14. RECENT мөрийн тоо = content.json site.updates-ийн урт',
-    recN === con14.site.updates.length && recN === 6, recN + ' vs ' + con14.site.updates.length);
+    recN === con14.site.updates.length && recN === 7, recN + ' vs ' + con14.site.updates.length);
   check('BE14. Вагон ачилтын мөр railWagon эх сурвалжтай, огноо ЗОХИОГҮЙ',
     /source:'railWagon'/.test(recBlock) && /date:'', sector:'rail'/.test(recBlock));
   check('BE14. SOURCES-д railWagon бүртгэлтэй (auditBindings анхааруулахгүй)',
@@ -4367,6 +4381,262 @@ async function groupBE() {
     c29.unit.passenger === 'зорчигч' && !!c29.chart.compare_mom_mid && !!c29.chart.compare_mom_end && !!c29.status.no_compare);
   check('BE29. Админы required_unit-д шинэ нэгжүүд', ['зорчигч/сар', 'тээврийн хэрэгсэл/сар', 'хөлөг онгоц/сар']
     .every((u) => readJson('content.json').ui.required_unit[u] === u));
+
+  /* ══ BE30–BE32. Авто замын ТЕХНИКИЙН ХЯНАЛТЫН ҮЗЛЭГ (2026-09-23) ══
+     Эх сурвалж: etransport-backend /api/sectors/road/inspections ←
+     silver.road_inspections ← Veritech road.veritech.inspections.
+     Фикстур нь хэрэглэгчийн ирүүлсэн ЭХ СИСТЕМИЙН ЭКСПОРТЫН (2026-09-21,
+     2,790 мөр) бодит дүн — backend-ийн probe-inspections-export.js-ээр
+     бүх мөрөөр тооцсон: тэнцээгүй 202, тэнцсэн 2,417 + БЗЗ 171, ТХ 2,692,
+     хэсгээр: ерөнхий 107 · тоормос 68 · жол.мех 52 · гэрэл 69 · утаа 51 ·
+     дуу чимээ 8 (нийт 355 — үзлэгийн тооноос ИХ, учир нь нэг үзлэг хэд
+     хэдэн хэсгээр тэнцэхгүй байж болно). Хүлээгдэх утга бүр ГАРААР бодсон. */
+  const INSP_LIVE = { sector: 'road', metric: 'inspections', status: 'ok', date: '2026-09-21',
+    unit: 'үзлэг', measure: 'Техникийн хяналтын үзлэгийн тоо',
+    count: 2790, passed: 2588, passed_strict: 2417, passed_minor: 171, failed: 202,
+    unknown_result: 0, vehicle_count: 2692,
+    failed_by_category: { general: 107, brake: 68, steering: 52, light: 69, emission: 51, noise: 8 },
+    unchecked_emission: 128,
+    by_day: [{ date: '2026-09-20', count: 2600, failed: 180 }, { date: '2026-09-21', count: 2790, failed: 202 }],
+    by_aimag: [{ aimag: 'Улаанбаатар', count: 1621, failed: 120 }, { aimag: 'Орхон', count: 131, failed: 9 },
+      { aimag: 'Өмнөговь', count: 124, failed: 7 }] };
+
+  /* ── BE30. roadInspectionsToValue() — цэвэр хөрвүүлэлт ── */
+  const is30 = dcScript().match(/function roadInspectionsToValue\(json\)\{([\s\S]*?)\n\}/);
+  if (!is30) { bad('BE30. roadInspectionsToValue() олдсонгүй'); return; }
+  const toI = new Function('json', is30[1]);
+  const i1 = toI(INSP_LIVE);
+  check('BE30. count 2,790 · огноо 2026-09-21 · нэгж "үзлэг"',
+    !!i1 && i1.count === 2790 && i1.date === '2026-09-21' && i1.unit === 'үзлэг', JSON.stringify(i1 && i1.count));
+  check('BE30. Шошго нь ОГНОО (сарын нэр БИШ — хоногийн датаг сар мэт харуулахгүй)',
+    !!i1 && i1.monthLabel === '2026-09-21' && !/сар/.test(String(i1.monthLabel)));
+  check('BE30. Тэнцсэн (2,588 = 2,417 + БЗЗ 171) ба тэнцээгүй (202) дамжина',
+    !!i1 && i1.passed === 2588 && i1.passedMinor === 171 && i1.failed === 202);
+  check('BE30. ТХ-ийн тоо ТУСАД нь (2,692 ≠ 2,790 үзлэг — 98 ТХ хоёр удаа)',
+    !!i1 && i1.vehicleCount === 2692 && i1.vehicleCount !== i1.count);
+  check('BE30. Хэсгийн задаргаа бүтнээр (нийлбэр 355)',
+    !!i1 && Object.values(i1.failedBy).reduce((a, v) => a + v, 0) === 355, JSON.stringify(i1 && i1.failedBy));
+  check('BE30. "Шалгаагүй" утаа (128) хадгалагдана — тэнцсэн гэж ЗОХИОХГҮЙ',
+    !!i1 && i1.uncheckedEmission === 128);
+  check('BE30. by_day / by_aimag хадгалагдана (spark ба багана эднээс)',
+    !!i1 && i1.byDay.length === 2 && i1.byAimag.length === 3);
+  check('BE30. status:"no_data" → null', toI({ status: 'no_data', message: 'Мэдээлэл алга', count: null }) === null);
+  check('BE30. Хариугүй → null', toI(null) === null && toI(undefined) === null);
+  check('BE30. count дутуу/хоосон/тоон бус/сөрөг → null (тоо ЗОХИОХГҮЙ)',
+    toI({ status: 'ok', date: '2026-09-21' }) === null && toI({ status: 'ok', count: '' }) === null &&
+    toI({ status: 'ok', count: 'тодорхойгүй' }) === null && toI({ status: 'ok', count: -3 }) === null);
+  check('BE30. count 0 бол 0 (бодит тэг ≠ дата алга)', (toI({ status: 'ok', count: 0 }) || {}).count === 0);
+  check('BE30. Дутуу задаргаа → null (0 гэж ХУДАЛ харуулахгүй)',
+    (toI({ status: 'ok', count: 5 }) || {}).failed === null &&
+    (toI({ status: 'ok', count: 5 }) || {}).failedBy.brake === null &&
+    JSON.stringify((toI({ status: 'ok', count: 5 }) || {}).byAimag) === '[]');
+  check('BE30. Сайт үзлэгийг roadInspectionsToValue-ээр хөрвүүлнэ',
+    dcScript().includes('this._roadInspections=roadInspectionsToValue(d)') &&
+    dcScript().includes("if(!EHBackend.fetchRoadInspections) return;"));
+  /* Модулийг vm дотор ачаалж URL-ийг ЯГ шалгана (BE3-ийн ижил зарчим):
+     endpoint-ийг андуурвал road-ийн summary (замын ачаалал) руу унаж,
+     үзлэгийн тоог ӨӨР хэмжигдэхүүнээр солих байв. */
+  const ins = load('https://x.test', okJson(INSP_LIVE));
+  const rIns = await ins.B.fetchRoadInspections();
+  check('BE30. URL = BASE + /api/sectors/road/inspections',
+    ins.calls[0] === 'https://x.test/api/sectors/road/inspections', ins.calls[0]);
+  check('BE30. JSON хариу дамжина (count 2,790)', !!rIns && rIns.count === 2790);
+  const insN = load('https://x.test', () => Promise.reject(new Error('net down')));
+  check('BE30. Сүлжээний алдаа → null (сайт унахгүй)', (await insN.B.fetchRoadInspections()) === null);
+  const insH = load('https://x.test', () => Promise.resolve({ ok: false, status: 404 }));
+  check('BE30. HTTP 404 (endpoint суулгагдаагүй) → null, статик тоо хэвээр',
+    (await insH.B.fetchRoadInspections()) === null);
+  const insOff = load('', okJson(INSP_LIVE));
+  check('BE30. BASE хоосон → хүсэлт ОГТ явахгүй',
+    insOff.calls.length === 0 && (await insOff.B.fetchRoadInspections()) === null);
+
+  /* ── BE31. applyRoadInspectionData() — ГАРААР БОДОХ фикстур ──
+     Тоо · НЭГЖИЙН ШОШГО · МӨРИЙН НЭР · ӨӨРЧЛӨЛТИЙН ХУВЬ · SPARK
+     тавыг ХАМТ шалгана (аль нэг нь хуучнаараа үлдвэл хуудас ХУДАЛ
+     тайлбарлана). dataAgeDays/INSPECT_STALE_DAYS-ийг ГАДНААС өгнө. */
+  const irm = dcScript().match(/\n  applyRoadInspectionData\(\)\{([\s\S]*?)\n  \}\n/);
+  if (!irm) { bad('BE31. applyRoadInspectionData() олдсонгүй'); return; }
+  const mkInsp = new Function('SECTORS', 'stxt', 'fmtNum', 'dataAgeDays', 'INSPECT_STALE_DAYS',
+    'return function(){' + irm[1] + '}');
+  const RTXT = {
+    'sector_kpi_road_live.0': 'ХОНОГИЙН ҮЗЛЭГ', 'sector_kpi_road_live.1': 'ТЭНЦЭЭГҮЙ',
+    'sector_kpi_road_live.2': 'ШАЛГАСАН ТХ', 'unit.inspection': 'үзлэг',
+    'status.road_inspect_asof': 'Хоногийн мэдээ:', 'status.road_inspect_stale': 'хоног шинэчлэгдээгүй',
+    'status.road_inspect_compare': 'өмнөх бүртгэлтэй хоногтой харьцуулбал',
+    'status.no_compare': 'харьцуулах өгөгдөл алга',
+    'road_fail_cats.0': 'Ерөнхий', 'road_fail_cats.1': 'Тоормос', 'road_fail_cats.2': 'Жолооны механизм',
+    'road_fail_cats.3': 'Гэрэл', 'road_fail_cats.4': 'Утаа', 'road_fail_cats.5': 'Дуу чимээ',
+    'sector_rank_road_live': 'Тэнцээгүй шалтгааны бүтэц (хэсгээр)',
+    'sector_chart2_road_live': 'Аймаг тус бүрийн үзлэг',
+    'chart.daily_trend': 'хоногийн чиг хандлага'
+  };
+  const runInsp = (live, ageDays) => {
+    const SEC = { road: { label: 'Авто зам', kpis: [['НИЙТ ЗАМ', '48,210', 'км', '+2.1%', 'up']],
+      rt: 'Замын ангиллын хуваарилалт', rank: [['Орон нутгийн', '19,410', '40.3%']],
+      c2: 'Аймаг тус бүрийн ачаалал', bars: [['Улаанбаатар', 92, '214,300']] } };
+    const ctx = { _roadInspections: live, _meta: null, _st: null,
+      setSourceMeta(id, m) { this._meta = { id, m } }, setState(s) { this._st = s } };
+    mkInsp(SEC, (p, f) => (RTXT[p] !== undefined ? RTXT[p] : f),
+      (n) => Number(n).toLocaleString('en-US'),
+      () => (ageDays === undefined ? 1 : ageDays), 8).call(ctx);
+    return { SEC, ctx };
+  };
+  const I = runInsp(toI(INSP_LIVE));
+  const ir = I.SEC.road.kpis;
+  check('BE31. 3 мөр үүснэ (үзлэг / тэнцээгүй / ТХ)', ir.length === 3, JSON.stringify(ir));
+  check('BE31. kpis[0] = ХОНОГИЙН ҮЗЛЭГ · 2,790 · үзлэг',
+    ir[0][0] === 'ХОНОГИЙН ҮЗЛЭГ' && ir[0][1] === '2,790' && ir[0][2] === 'үзлэг', JSON.stringify(ir[0]));
+  /* (2790 − 2600) / 2600 × 100 = 7.3077 → "+7.3%" (ГАРААР) */
+  check('BE31. Өмнөх хоногтой харьцуулсан хувь = +7.3% (by_day-аас, ЗОХИОМОЛ БИШ)',
+    ir[0][3] === '+7.3%' && ir[0][4] === 'up', JSON.stringify([ir[0][3], ir[0][4]]));
+  check('BE31. Харьцуулалт ЯМАР өдөртэй болохыг хэлнэ (2026-09-20)',
+    /өмнөх бүртгэлтэй хоногтой харьцуулбал \(2026-09-20\)/.test(ir[0][5]), JSON.stringify(ir[0][5]));
+  check('BE31. spark нь БОДИТ хоногийн цуваа (k[6] = [2600, 2790])',
+    JSON.stringify(ir[0][6]) === '[2600,2790]', JSON.stringify(ir[0][6]));
+  /* Цувааны ТАЙЛБАР мөр дээрээ (k[7]): виджетийн ерөнхий "12 сарын чиг
+     хандлага" нь 30 хоногийн график дээр ХУДАЛ уншигдана. */
+  check('BE31. Цувааны тайлбар мөрийн ӨӨРИЙНХ ("хоногийн чиг хандлага")',
+    ir[0][7] === 'хоногийн чиг хандлага' && !/сарын/.test(String(ir[0][7])), JSON.stringify(ir[0][7]));
+  /* ТЭНЦЭЭГҮЙ мөрийн spark нь ТЭНЦЭЭГҮЙН цуваа — үзлэгийн цувааг ДАХИН
+     хэрэглэвэл хоёр мөр ижил график зурж, хандлагыг ХУДАЛ харуулна. */
+  check('BE31. ТЭНЦЭЭГҮЙ мөрийн spark = тэнцээгүйн хоногийн цуваа [180, 202]',
+    JSON.stringify(ir[1][6]) === '[180,202]' && ir[1][7] === 'хоногийн чиг хандлага',
+    JSON.stringify(ir[1][6]));
+  check('BE31. failed цуваа дутуу өдөртэй бол spark ОГТ гарахгүй (зохиохгүй)',
+    runInsp(toI(Object.assign({}, INSP_LIVE, { by_day: [{ date: '2026-09-20', count: 2600 },
+      { date: '2026-09-21', count: 2790, failed: 202 }] }))).SEC.road.kpis[1][6] === null);
+  /* 202 / 2790 × 100 = 7.2401 → "7.2%" (ГАРААР) */
+  check('BE31. kpis[1] = ТЭНЦЭЭГҮЙ · 202 · 7.2%',
+    ir[1][0] === 'ТЭНЦЭЭГҮЙ' && ir[1][1] === '202' && ir[1][2] === '7.2%', JSON.stringify(ir[1]));
+  check('BE31. kpis[2] = ШАЛГАСАН ТХ · 2,692 · нэгжгүй ("үзлэг" гэвэл ХУДАЛ)',
+    ir[2][0] === 'ШАЛГАСАН ТХ' && ir[2][1] === '2,692' && ir[2][2] === '', JSON.stringify(ir[2]));
+  check('BE31. Мөр бүр ЯМАР ӨДРИЙН тоо болохоо хэлнэ',
+    ir.every((r) => String(r[5] || '').includes('Хоногийн мэдээ: 2026-09-21')), JSON.stringify(ir[0][5]));
+  check('BE31. Хуучин статик мөр (48,210 км) БҮРЭН солигдоно',
+    !JSON.stringify(ir).includes('48,210') && !JSON.stringify(ir).includes('НИЙТ ЗАМ'));
+  check('BE31. _liveKpis=true', I.SEC.road._liveKpis === true);
+  check('BE31. u07-ийн огноо roadInspect мета руу бичигдэнэ',
+    I.ctx._meta && I.ctx._meta.id === 'roadInspect' && I.ctx._meta.m.updatedAt === '2026-09-21',
+    JSON.stringify(I.ctx._meta));
+  /* Хэсгийн бүтэц: 107/355 = 30.1% (ГАРААР), эрэмбэ нь буурахаар */
+  check('BE31. Бүтэц = тэнцээгүй шалтгаан, эрэмбэ буурахаар, хувь нь ХЭСГҮҮДИЙН нийлбэрээс',
+    I.SEC.road.rt === 'Тэнцээгүй шалтгааны бүтэц (хэсгээр)' &&
+    JSON.stringify(I.SEC.road.rank) === JSON.stringify([['Ерөнхий', '107', '30.1%'], ['Гэрэл', '69', '19.4%'],
+      ['Тоормос', '68', '19.2%'], ['Жолооны механизм', '52', '14.6%'], ['Утаа', '51', '14.4%'],
+      ['Дуу чимээ', '8', '2.3%']]), JSON.stringify(I.SEC.road.rank));
+  check('BE31. Зохиомол бүтэц (19,410 км · 40.3%) БҮРЭН солигдоно',
+    !JSON.stringify(I.SEC.road.rank).includes('19,410'));
+  check('BE31. Багана = аймгийн үзлэг, хамгийн их нь 100%',
+    I.SEC.road.c2 === 'Аймаг тус бүрийн үзлэг' &&
+    JSON.stringify(I.SEC.road.bars) === JSON.stringify([['Улаанбаатар', 100, '1,621 үзлэг'],
+      ['Орхон', 8, '131 үзлэг'], ['Өмнөговь', 8, '124 үзлэг']]), JSON.stringify(I.SEC.road.bars));
+  check('BE31. Зохиомол багана (214,300) БҮРЭН солигдоно',
+    !JSON.stringify(I.SEC.road.bars).includes('214,300'));
+  const I0 = runInsp(null);
+  check('BE31. Дата ирээгүй → SECTORS.road ОГТ хөндөгдөхгүй',
+    I0.SEC.road.kpis.length === 1 && I0.SEC.road.kpis[0][1] === '48,210' && !I0.SEC.road._liveKpis &&
+    I0.SEC.road.rt === 'Замын ангиллын хуваарилалт');
+  const I1 = runInsp(toI({ status: 'ok', count: 900, date: '2026-09-21' }));
+  check('BE31. Дутуу талбар → тэр мөр ОГТ гарахгүй, хувь "—"',
+    I1.SEC.road.kpis.length === 1 && I1.SEC.road.kpis[0][1] === '900' && I1.SEC.road.kpis[0][3] === '—' &&
+    /харьцуулах өгөгдөл алга/.test(I1.SEC.road.kpis[0][5]), JSON.stringify(I1.SEC.road.kpis));
+  check('BE31. Цуваа нэг өдөр → харьцуулалт ЗОХИОХГҮЙ',
+    runInsp(toI(Object.assign({}, INSP_LIVE, { by_day: [{ date: '2026-09-21', count: 2790 }] })))
+      .SEC.road.kpis[0][3] === '—');
+  /* ХОЦРОЛТ: үзлэгийн ETL 7 хоногт нэг тул 8 хоног = ХЭВИЙН, 9 = хоцорсон */
+  const iedge = (n) => String(runInsp(toI(INSP_LIVE), n).SEC.road.kpis[0][5] || '');
+  check('BE31. 8 хоног = ХЭВИЙН (7 хоногийн ETL — сэрэмжлүүлэг алга)',
+    !/шинэчлэгдээгүй/.test(iedge(8)), iedge(8));
+  check('BE31. 9 хоног = хоцорсон гэж ил хэлнэ', /9 хоног шинэчлэгдээгүй/.test(iedge(9)), iedge(9));
+  check('BE31. Хоцролт нь харьцуулалтын тайлбарыг СОЛИНО (хөл бичиг таслагдахгүй)',
+    !/харьцуулах|харьцуулбал/.test(iedge(9)) && iedge(9).length <= 40, iedge(9).length + ' ' + iedge(9));
+  const IN = runInsp(toI(Object.assign({}, INSP_LIVE, { date: null })), null);
+  check('BE31. Огноогүй хариу → огноо ЗОХИОХГҮЙ',
+    !/Хоногийн мэдээ/.test(IN.SEC.road.kpis[0][5]), JSON.stringify(IN.SEC.road.kpis[0][5]));
+  /* ── BE31b. k04/ls-ийн ХӨЛ БИЧИГ ба SPARK — мөрийн өөрийн цуваатай үед ──
+     Регресс: k04-ийн "12 сарын чиг хандлага" ба ls-ийн "өмнөх сартай
+     харьцуулбал · 12 сарын график" нь ХОНОГИЙН мөрөнд ХУДАЛ (browser-оор
+     илрүүлэв: 2,790 үзлэг · +7.3% гэсэн мөрийн доор "12 сарын" гэж
+     бичигдэж байв). Мөр өөрийн тайлбартай бол түүнийг үзүүлнэ. */
+  /* pathFor-ыг ГАДНААС: spark-ийн ЗАМ өөрөө энэ тестийн сэдэв биш —
+     цуваа байгаа/байхгүйгээс хамаарах хөл бичиг л сэдэв. */
+  const pathForStub = (data) => ({ line: 'M0,0 L' + (data || []).length + ',0' });
+  const bk = dcScript().match(/\n  buildKpis\(kpis,color,verified,spec,foot\)\{([\s\S]*?)\n  \}\n/);
+  if (!bk) { bad('BE31b. buildKpis() олдсонгүй'); return; }
+  const buildKpis = new Function('pathFor', 'stxt', 'return function(kpis,color,verified,spec,foot){' + bk[1] + '}')
+    (pathForStub, (p, f) => f);
+  const dayRow = ['ХОНОГИЙН ҮЗЛЭГ', '2,790', 'үзлэг', '+7.3%', 'up', 'нот', [2600, 2790], 'хоногийн чиг хандлага'];
+  const monRow = ['ЗОРЧИГЧ / САР', '148,470', 'зорчигч', '+1.2%', 'up', 'нот', [143220, 148470]];
+  const noSer = ['ШАЛГАСАН ТХ', '2,692', '', '—', 'flat', 'нот'];
+  const bkOut = buildKpis([dayRow, monRow, noSer], '#000', true, null, '12 сарын чиг хандлага');
+  check('BE31b. Хоногийн мөр ерөнхий "12 сарын" хөл бичгийг НУУНА',
+    bkOut[0].footNote === 'хоногийн чиг хандлага' && bkOut[0].footBaseStyle === 'display:none;' &&
+    bkOut[0].footText === 'хоногийн чиг хандлага', JSON.stringify(bkOut[0].footNote));
+  check('BE31b. Сарын мөр (өөрийн тайлбаргүй) виджетийн хөл бичгээ ХЭВЭЭР үзүүлнэ',
+    bkOut[1].footText === '12 сарын чиг хандлага' && bkOut[1].footBaseStyle === '' &&
+    bkOut[1].footNoteStyle === 'display:none;');
+  check('BE31b. Цуваагүй мөр "чиг хандлагын цуваа алга" гэж ил хэлнэ',
+    bkOut[2].hasSeries === false && /цуваа алга/.test(bkOut[2].footNote));
+  check('BE31b. Админы холбоос (data-eh-field="foot") DOM-оос ХАСАГДАХГҮЙ — зөвхөн нуугдана',
+    /data-eh-card="k04" data-eh-field="foot" style="\{\{ k\.footBaseStyle \}\}"/.test(read('index.html')));
+  check('BE31b. ls-ийн spark мөрийн өөрийн цуваанаас (хавтгай шугам биш)',
+    /spark:\(vs&&vs\.spark\)\|\|\(ownSeries\?pathFor\(ownSeries,120,32,3\)\.line:flatSpark\)/.test(dcScript()));
+  check('BE31b. ls-ийн ерөнхий хөл бичиг өөрийн цуваатай мөрөнд ГАРАХГҮЙ',
+    /const hasCmp=verified&&!ownSeries&&/.test(dcScript()));
+  check('BE31b. Цувааны тайлбар content.json-д бүртгэлтэй',
+    readJson('content.json').site.chart.daily_trend === 'хоногийн чиг хандлага');
+
+  check('BE31. reapplyLiveText нь үзлэгийн мөрийг ч ДАХИН барина (нийтэлсэн шошго хүрнэ)',
+    /reapplyLiveText\(\)\{[\s\S]*?this\.applyRoadInspectionData\(\);[\s\S]*?this\.recomputeAirData\(\);/.test(dcScript()));
+
+  /* ── BE32. Registry / админ / content — ГЭРЭЭ (хоёр талыг ХАМТ) ── */
+  const reg32 = readJson('metric_registry.json');
+  const sl32 = (id, k) => ((reg32.widgets[id] || {}).sectors || {})[k] || {};
+  check('BE32. ls.road → road.inspection_count (verified)',
+    sl32('ls', 'road').metric === 'road.inspection_count' && sl32('ls', 'road').quality === 'verified',
+    JSON.stringify(sl32('ls', 'road')));
+  check('BE32. k04.road → road.inspection_kpi_set (verified)',
+    sl32('k04', 'road').metric === 'road.inspection_kpi_set' && sl32('k04', 'road').quality === 'verified');
+  check('BE32. u07.road → road.feed_updated_at (verified)',
+    sl32('u07', 'road').metric === 'road.feed_updated_at' && sl32('u07', 'road').quality === 'verified');
+  check('BE32. Гурван метрик registry-д, датасэт нь silver.road_inspections',
+    ['road.inspection_count', 'road.inspection_kpi_set', 'road.feed_updated_at']
+      .every((m) => reg32.metrics[m] && reg32.metrics[m].dataset === 'silver.road_inspections'));
+  check('BE32. Метрикийн нэгж: үзлэг / mixed / огноо',
+    reg32.metrics['road.inspection_count'].unit === 'үзлэг' &&
+    reg32.metrics['road.inspection_kpi_set'].unit === 'mixed' &&
+    reg32.metrics['road.feed_updated_at'].unit === 'огноо');
+  check('BE32. Баталгаажуулалтын нотолгоо (2,790 мөр, 202 тэнцээгүй) registry-д ил',
+    /2,790/.test(reg32.metrics['road.inspection_count'].period_note) &&
+    /2,692/.test(reg32.metrics['road.inspection_count'].period_note));
+  check('BE32. val()-д хоёр getter холбогдсон',
+    dcScript().includes("'road.inspection_count':()=>this._roadInspections") &&
+    dcScript().includes("'road.inspection_kpi_set':()=>this._roadInspections"));
+  const fu32 = (read('admin/index.html').match(/var FIXED_UNIT=\{([\s\S]*?)\n\};/) || [])[1] || '';
+  const fx32 = {}; for (const fm of fu32.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)) fx32[fm[1]] = fm[2];
+  check('BE32. FIXED_UNIT ls.road = "үзлэг" (хуучин "км" бол why() холбоосыг САЛГАНА)',
+    fx32['ls.road'] === reg32.metrics['road.inspection_count'].unit, fx32['ls.road']);
+  check('BE32. FIXED_UNIT k04.road = "mixed"',
+    fx32['k04.road'] === reg32.metrics['road.inspection_kpi_set'].unit, fx32['k04.road']);
+  check('BE32. Админы required_unit-д "үзлэг" бүртгэлтэй',
+    readJson('content.json').ui.required_unit['үзлэг'] === 'үзлэг');
+  check('BE32. Админ каталогт silver.road_inspections нэртэй (түүхий код гарахгүй)',
+    /'silver\.road_inspections':\{n:/.test(read('admin/index.html')) &&
+    !!(readJson('content.json').ui.dataset.silver_road_inspections || {}).name);
+  const c32 = readJson('content.json').site;
+  check('BE32. Шинэ харагдах текст content.json-д бүртгэгдсэн',
+    JSON.stringify(c32.sector_kpi_road_live) === JSON.stringify(['ХОНОГИЙН ҮЗЛЭГ', 'ТЭНЦЭЭГҮЙ', 'ШАЛГАСАН ТХ']) &&
+    (c32.road_fail_cats || []).length === 6 && c32.unit.inspection === 'үзлэг' &&
+    !!c32.sector_rank_road_live && !!c32.sector_chart2_road_live &&
+    !!c32.status.road_inspect_asof && !!c32.status.road_inspect_stale && !!c32.status.road_inspect_compare);
+  check('BE32. Каталог ба u07-ийн мөр content.json-д (код дээрх текст давхардахгүй)',
+    (readJson('content.json').site.datasets || []).some((d) => d.name === 'Техникийн хяналтын үзлэгийн мэдээ') &&
+    (readJson('content.json').site.updates || []).some((u) => u.title === 'Техникийн хяналтын үзлэгийн мэдээ'));
+  check('BE32. Хоцролтын босго 8 хоног (7 хоногийн ETL-д тохирсон)',
+    /const INSPECT_STALE_DAYS=8;/.test(dcScript()));
+  check('BE32. t05.road ХОЛБОГДООГҮЙ хэвээр — хоногийн цуваа сарын тэнхлэгт тохирохгүй',
+    sl32('t05', 'road').metric === null && /ХОНОГИЙН/.test(sl32('t05', 'road').would_need || ''),
+    JSON.stringify(sl32('t05', 'road').metric));
 }
 
 /* ══════════════════════════════════════════════════════════════════
