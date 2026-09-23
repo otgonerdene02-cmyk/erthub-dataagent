@@ -572,7 +572,10 @@ var DSMETA={
   'silver.rail_wagon_loading':{n:'Төмөр замын вагон ачилт (хоногийн мэдээ)', a:'УБТЗ · дотоод сүлжээ', s:'rail'},
   /* rail.monthly_passenger_series-ийн датасэт — бүртгэлгүй бол каталогт
      "silver.rail_operations" гэсэн түүхий код гарна (вагоны ижил тохиолдол). */
-  'silver.rail_operations':{n:'Төмөр замын зорчигч (галт тэрэг × өдөр)', a:'УБТЗ · Veritech', s:'rail'}
+  'silver.rail_operations':{n:'Төмөр замын зорчигч (галт тэрэг × өдөр)', a:'УБТЗ · Veritech', s:'rail'},
+  /* road.inspection_* метрикүүдийн датасэт (2026-09-23). Бүртгэлгүй бол
+     каталогт "silver.road_inspections" гэсэн түүхий код гарна. */
+  'silver.road_inspections':{n:'Техникийн хяналтын үзлэг (үзлэг × өдөр)', a:'ЗТХЕГ · Veritech', s:'road'}
 };
 /* Слот бүр ЮУ ХАРУУЛДАГ, түүнээсээ шалтгаалан ямар нэгж шаардахыг энд
    тунхаглана. Одоогийн холбоосоос НЬ УНШИХГҮЙ — эс тэгвэл "одоо юу
@@ -588,8 +591,8 @@ var FIXED_UNIT={
   'u07.air':'огноо','u07.rail':'огноо','u07.road':'огноо',
   'u07.water':'огноо','u07.public':'огноо',
   'i06.':'индекс (1-р сар=100)','r06.':'индекс (1-р сар=100)',
-  'k04.air':'mixed','k04.road':'км','k04.rail':'mixed','k04.water':'км','k04.public':'чиглэл',
-  'ls.air':'нислэг', 'ls.road':'км', 'ls.rail':'вагон', 'ls.water':'км', 'ls.public':'чиглэл',
+  'k04.air':'mixed','k04.road':'mixed','k04.rail':'mixed','k04.water':'км','k04.public':'чиглэл',
+  'ls.air':'нислэг', 'ls.road':'үзлэг', 'ls.rail':'вагон', 'ls.water':'км', 'ls.public':'чиглэл',
   'hero_px.public':'хүн'
 };
 var SUM_WIDGETS={d05:1,w2p:1,w2px:1,w2c:1,w2cx:1};
@@ -2255,6 +2258,8 @@ var SITE_LOC={
   sector_kpi_rail_live:'home|s4', sector_chart_rail_live:'home|s5',
   sector_rank_rail_live:'home|s4', sector_rank_rail_other:'home|s4',
   sector_chart2_rail_live:'home|s5',
+  sector_kpi_road_live:'home|s4', road_fail_cats:'home|s4',
+  sector_rank_road_live:'home|s4', sector_chart2_road_live:'home|s5',
   ds_schema_rail_wagon:'browse|body',
   sector_chart:'home|s5', chart:'home|s5', compare_window:'home|s6',
   feed:'home|s7', ai:'home|s8',
@@ -3368,7 +3373,21 @@ function metricSelect(id,path,sectorKey){
       fo.join('')+'</optgroup>');
   }
   /* Тохирохгүй метрикүүд ХАМГИЙН СҮҮЛД, өөрийн бүлгийн нэрээр — сонгож
-     чадахгүй ч "яагаад болохгүй вэ" гэдэг нь харагдана. */
+     чадахгүй ч "яагаад болохгүй вэ" гэдэг нь харагдана.
+     ГЭХДЭЭ ӨӨР САЛБАРЫН тохирохгүй метрикийг ОРУУЛАХГҮЙ: төмөр замын
+     вагоныг агаарын слотод хэзээ ч холбохгүй тул тайлбар нь хэрэггүй
+     мөр болж жагсаалтыг л урсгана (метрик нэмэгдэх тутам урт болно).
+     Слотын салбарыг тодорхойлж чадахгүй бол ЮУ Ч ХАСАХГҮЙ. */
+  var slotSec=sectorKey||(function(){
+    var s=(REG.widgets[id]||{}).sectors;
+    if(Array.isArray(s)&&s.length===1&&SECN[s[0]]) return s[0];
+    return '';
+  })();
+  if(slotSec) badOpts=badOpts.filter(function(o){
+    var mk=(o.match(/value="([^"]+)"/)||[])[1]||'';
+    var ms=invSectorOfMetric(mk);
+    return !ms||ms===slotSec;
+  });
   if(badOpts.length){
     opts.push('<optgroup label="'+esc(utxt('metric.unfit_group','Тохирохгүй (нэгж үл нийцнэ)'))+'">'+
       badOpts.join('')+'</optgroup>');

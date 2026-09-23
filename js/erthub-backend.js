@@ -61,9 +61,27 @@
       });
   }
 
+  /* Техникийн хяналтын үзлэг — ТУСДАА endpoint (road summary БИШ). road-ийн
+     summary нь gold-ийн замын хөдөлгөөний ачаалал (vehicle_count) бөгөөд
+     үзлэгийн тоо ӨӨР нэгжтэй тул хоёрыг хольж болохгүй. Хариу:
+     {status,date,unit,count,passed,passed_minor,failed,vehicle_count,
+      failed_by_category{},unchecked_emission,by_day[],by_aimag[]} эсвэл
+     {status:'no_data',count:null}.
+     НЭГЖ: "үзлэг" — нэг мөр = нэг үзлэг, тээврийн хэрэгсэл БИШ (нэг ТХ нэг
+     өдөрт хоёр удаа орж болно; vehicle_count нь ТУСАД нь ирдэг). */
+  function fetchRoadInspections() {
+    if (!BASE) return Promise.resolve(null);
+    return fetchJson(BASE + '/api/sectors/road/inspections')
+      .catch(function (e) {
+        console.info('[ErtHub] backend (road/inspections) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
   window.EHBackend = {
     enabled: !!BASE,
     fetchSectorSummary: fetchSectorSummary,
-    fetchRailWagonLoading: fetchRailWagonLoading
+    fetchRailWagonLoading: fetchRailWagonLoading,
+    fetchRoadInspections: fetchRoadInspections
   };
 })();

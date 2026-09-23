@@ -3751,7 +3751,11 @@ const RECENT = [
      `date` нь ЗОРИУД хоосон: backend ирээгүй үед огноо ЗОХИОХГҮЙ,
      buildRecent() "мэдээлэл алга" гэж ил харуулна. */
   {title:'Ачилт буулгалтын хоногийн мэдээ (вагон)', agency:'УБТЗ', src:'API', date:'', sector:'rail',
-   dataset:'Ачилт буулгалтын хоногийн мэдээ (вагон)', source:'railWagon', bind:{date:'feedUpdated'}}
+   dataset:'Ачилт буулгалтын хоногийн мэдээ (вагон)', source:'railWagon', bind:{date:'feedUpdated'}},
+  /* Техникийн хяналтын үзлэг — вагонтой ижил зарчим: `date` ЗОРИУД хоосон,
+     backend ирээгүй үед огноо ЗОХИОХГҮЙ. */
+  {title:'Техникийн хяналтын үзлэгийн мэдээ', agency:'ЗТХЕГ', src:'API', date:'', sector:'road',
+   dataset:'Техникийн хяналтын үзлэгийн мэдээ', source:'roadInspect', bind:{date:'feedUpdated'}}
 ];
 const RATIO = {
   road:{labels:['Хатуу хучилттай','Шороон зам'],pct:67.8},
@@ -4049,7 +4053,11 @@ const SOURCES={
   // УБТЗ-ийн вагон ачилт (etransport-backend → /api/sectors/rail/wagon-loading).
   // Backend хаалттай/BASE хоосон бол EHBackend.enabled=false тул ямар ч
   // хүсэлт явахгүй — мөр нь "мэдээлэл алга" хэвээр үлдэнэ.
-  railWagon:{label:'УБТЗ · вагон ачилтын хоногийн мэдээ', load:app=>app.loadEtransportBackend()}
+  railWagon:{label:'УБТЗ · вагон ачилтын хоногийн мэдээ', load:app=>app.loadEtransportBackend()},
+  // Техникийн хяналтын үзлэг (etransport-backend → /api/sectors/road/inspections).
+  // silver.road_inspections ← Veritech road.veritech.inspections (indicator
+  // 15403413). Backend хаалттай бол мөр "мэдээлэл алга" хэвээр үлдэнэ.
+  roadInspect:{label:'ЗТХЕГ · техникийн хяналтын үзлэгийн мэдээ', load:app=>app.loadRoadInspections()}
 };
 // Карт өөрөө өөрөөр зарлаагүй бол эдгээр метрик автоматаар үйлчилнэ —
 // үзэлтийн тоо бол салбар, эх сурвалж харгалзахгүй бүх датасэтэд утга учиртай.
@@ -4113,7 +4121,10 @@ const DATASETS=[
   {sector:'rail',name:'Ачилт буулгалтын хоногийн мэдээ (вагон)',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нийтийн API нээлттэй',desc:'Буудал тус бүрийн вагон ачилт, буулгалтын хоногийн бодит мэдээ. ETL хуваарийн дагуу өдөр бүр автоматаар шинэчлэгдэнэ.',
    /* schema — энэ датасэт салбарын схемийг БИШ өөрийн станцын задаргааг
       үзүүлнэ; source/bind — дэлгэрэнгүйн картууд амьд метаг уншина. */
-   schema:'rail_wagon',source:'railWagon',bind:{freq:'lastRecord'}}
+   schema:'rail_wagon',source:'railWagon',bind:{freq:'lastRecord'}},
+  {sector:'road',name:'Техникийн хяналтын үзлэгийн мэдээ',agency:'ЗТХЕГ',fmt:'API',badges:['Үнэгүй'],freq:'7 хоног тутам',use:'Нийтийн API нээлттэй',desc:'Тээврийн хэрэгслийн техникийн хяналтын үзлэгийн бүртгэл — салбар, аймаг, тэнцсэн эсэх, тэнцээгүй хэсгээр (ерөнхий, тоормос, жолооны механизм, гэрэл, утаа, дуу чимээ). Нэг мөр = нэг үзлэг: нэг тээврийн хэрэгсэл нэг өдөрт хоёр удаа үзлэгт орж болно.',
+   /* source/bind — дэлгэрэнгүйн картууд амьд метаг уншина (вагонтой ижил). */
+   source:'roadInspect',bind:{freq:'lastRecord'}}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
 // ЗОХИОХГҮЙ, DATASETS/SERVICES-ийн бодит уртаас тооцоолно (KPI_UNIFIED-ийн
@@ -4287,7 +4298,7 @@ function applySiteContent(){
     /* Нэгжийн товчлол — кодын анхны утгаар нь таньж солино (idempotent) */
     SECTORS[k].kpis.forEach(r=>{
       const key={'км':'km','тн':'tn','тонн':'ton','хүн':'person',
-                 'вагон':'wagon','станц':'station'}[r[2]];
+                 'вагон':'wagon','станц':'station','үзлэг':'inspection'}[r[2]];
       if(key) r[2]=stxt('unit.'+key,r[2]);
     });
   });
@@ -4610,6 +4621,39 @@ function wagonLoadingToValue(json){
           byStation:Array.isArray(json.by_station)?json.by_station:[]};
 }
 
+/* Техникийн хяналтын үзлэг (/api/sectors/road/inspections) → val()-ийн
+   хүлээх хэлбэр. Вагон ачилттай ижил зарчим: СҮҮЛИЙН ХОНОГИЙН дүн тул
+   сарын шошго БИШ огноо буцаана.
+   ЗӨВХӨН тоон, сөрөг биш утгыг хүлээж авна — бусад бүх тохиолдолд null
+   болж "—" харагдана (тоо ЗОХИОХГҮЙ). "Тэнцсэн" нь backend дээр
+   "Тэнцсэн" + "Тэнцсэн БЗЗ"-ийн НИЙЛБЭР (passed), задаргааг нь
+   passedMinor-оор тусад нь өгдөг. */
+function roadInspectionsToValue(json){
+  if(!json||json.status!=='ok') return null;
+  const num=v=>{ if(v==null||String(v).trim()==='') return null;
+    const n=Number(v); return (!isFinite(n)||n<0)?null:n; };
+  const n=num(json.count);
+  if(n==null) return null;
+  const cat=json.failed_by_category||{};
+  const date=typeof json.date==='string'?json.date:null;
+  return {count:n,date,monthLabel:date,unit:json.unit||null,
+          passed:num(json.passed),passedMinor:num(json.passed_minor),
+          failed:num(json.failed),vehicleCount:num(json.vehicle_count),
+          uncheckedEmission:num(json.unchecked_emission),
+          /* Тэнцээгүй ХЭСГҮҮД — нэг үзлэг хэд хэдэн хэсгээр тэнцэхгүй байж
+             болох тул эдгээрийн нийлбэр нь failed-ээс ИХ гарна (жишээ дата:
+             202 үзлэг / 355 хэсэг). Хувийг зөвхөн хэсгүүдийн НИЙЛБЭР дээр
+             тооцно — үзлэгийн тоог суурь болговол 100%-иас хэтэрнэ. */
+          failedBy:{general:num(cat.general),brake:num(cat.brake),
+            steering:num(cat.steering),light:num(cat.light),
+            emission:num(cat.emission),noise:num(cat.noise)},
+          /* Хоногийн цуваа (30 хоног) — KPI мөрийн spark ба өмнөх хоногтой
+             харьцуулалт энэнээс тооцоологдоно (ЗОХИОМОЛ муруй БИШ). */
+          byDay:Array.isArray(json.by_day)?json.by_day:[],
+          /* Аймгийн задаргаа — салбарын бүтэц ба багана энэнээс уншина. */
+          byAimag:Array.isArray(json.by_aimag)?json.by_aimag:[]};
+}
+
 /* Хоногийн мэдээний НАС (хоногоор). ETL амьд ажиллаж байхад ч эх сурвалж
    хоцорч болно (2026-09-21: dispatcher өдөр бүр гүйсэн атал вагон ачилтын
    сүүлийн бичлэг 09-17 дээр зогссон). Огноогүй том тоо нь хуудсан дээр
@@ -4628,6 +4672,12 @@ function dataAgeDays(dateStr,now){
    ХЭВИЙН. Түүнээс хойшхыг л "шинэчлэгдээгүй" гэж тэмдэглэнэ — эс тэгвэл
    хэвийн хоцролт бүрд сэрэмжлүүлэг гарч утгаа алдана. */
 const WAGON_STALE_DAYS=2;
+/* Техникийн хяналтын үзлэгийн ETL нь 7 ХОНОГТ нэг ажилладаг (backend-ийн
+   docs/etl-scheduling.md — датасэт 892,693 мөртэй тул өдөр тутам бүтнээр
+   татах нь эх сервэрт үндэслэлгүй ачаалал). Иймд 8 хоног хүртэлх хоцролт
+   ХЭВИЙН — вагоны 2 хоногийн босгоор шалгавал үргэлж "шинэчлэгдээгүй"
+   гэж сэрэмжлүүлж, сэрэмжлүүлэг утгаа алдана. */
+const INSPECT_STALE_DAYS=8;
 
 function buildTrendChart(data,off){
   off=off||0;
@@ -5233,6 +5283,106 @@ class Component extends DCLogic {
       console.info('[ErtHub] etransport-backend уншигдсангүй:',e.message);
     }
   }
+  /* Техникийн хяналтын үзлэг — ТУСДАА эх сурвалж (SOURCES.roadInspect).
+     Вагонтой ХАМТ татахгүй: хоёр салбарын хоёр өөр датасэт, нэг нь
+     унасан нь нөгөөг хөндөх ёсгүй. */
+  async loadRoadInspections(){
+    if(typeof EHBackend==='undefined'||!EHBackend.enabled) return;
+    if(!EHBackend.fetchRoadInspections) return;   // хуучин кэштэй js файл
+    try{
+      const d=await EHBackend.fetchRoadInspections();
+      this._roadInspections=roadInspectionsToValue(d);
+      this.applyRoadInspectionData();
+    }catch(e){
+      console.info('[ErtHub] road/inspections уншигдсангүй:',e.message);
+    }
+  }
+  // ── ЗТХЕГ · техникийн хяналтын үзлэг → SECTORS.road ───────────────────
+  // applyRailWagonData()-тай ЯГ ИЖИЛ зарчим: бодит дата ирмэгц SECTORS.road-ийн
+  // KPI мөр, салбарын бүтэц, багана гурвууланг дарж бичнэ (k04 / ls / салбарын
+  // дэлгэрэнгүй бүгд тэднээс уншдаг). Дата ирээгүй бол ОГТ ХӨНДӨХГҮЙ —
+  // статик демо мөр үлдэх ба kpiVerified() түүнийг "амьд" гэж тэмдэглэхгүй.
+  // НЭГЖ: "үзлэг". ТХ-ийн тоо (vehicleCount) нь ТУСДАА мөр — нэг ТХ нэг
+  // өдөрт хоёр удаа үзлэгт орж болно (жишээ датад 2,790 үзлэг / 2,692 ТХ).
+  applyRoadInspectionData(){
+    const w=this._roadInspections;
+    if(!w||w.count==null) return;
+    const kl=(x,i)=>stxt('sector_kpi_road_live.'+i,x);
+    const ui=stxt('unit.inspection','үзлэг');
+    /* Мэдээний НАС: үзлэгийн ETL 7 ХОНОГТ нэг ажилладаг (вагоны 2 хоногийн
+       босго энд хэтэрхий хатуу — хэвийн хоцролт бүрд сэрэмжлүүлэг гарна). */
+    const age=dataAgeDays(w.date);
+    const stale=(age!=null&&age>INSPECT_STALE_DAYS)
+      ? age+' '+stxt('status.road_inspect_stale','хоног шинэчлэгдээгүй') : '';
+    const asof=!w.date?'':(stale?w.date:stxt('status.road_inspect_asof','Хоногийн мэдээ:')+' '+w.date);
+    /* Өмнөх ХОНОГТОЙ харьцуулалт — by_day-ийн сүүлийн хоёр бүртгэлтэй
+       өдрөөс тооцно (эх сурвалж өдөр тутам ижил хэмжээний үзлэг хийдэггүй
+       тул хувь нь "хандлага" БИШ, ЯГ хоёр хоногийн зөрүү — шошгон дээр ил
+       бичнэ). Цуваа хоёр өдрөөс бага бол "—" (ЗОХИОХГҮЙ). */
+    const days=w.byDay.filter(d=>d&&Number(d.count)>=0);
+    let delta='—', dir='flat', cmp=stxt('status.no_compare','харьцуулах өгөгдөл алга');
+    if(days.length>1){
+      const cur=Number(days[days.length-1].count), prev=Number(days[days.length-2].count);
+      if(prev>0){
+        const p=(cur-prev)/prev*100;
+        delta=(p>=0?'+':'')+p.toFixed(1)+'%';
+        dir=p>0?'up':(p<0?'down':'flat');
+        cmp=stxt('status.road_inspect_compare','өмнөх бүртгэлтэй хоногтой харьцуулбал')+
+          ' ('+days[days.length-2].date+')';
+      }
+    }
+    const note=[asof,stale||cmp].filter(Boolean).join(' · ');
+    /* Хоногийн цуваа — KPI мөрийн spark (k[6]) ба түүний ТАЙЛБАР (k[7]).
+       Тайлбарыг мөр өөрөө өгөх ёстой: виджетийн ерөнхий "12 сарын чиг
+       хандлага" нь хоногийн график дээр ХУДАЛ уншигдана. */
+    const sFoot=stxt('chart.daily_trend','хоногийн чиг хандлага');
+    const spark=days.map(d=>Number(d.count));
+    const rows=[[kl('ХОНОГИЙН ҮЗЛЭГ',0),fmtNum(w.count),ui,delta,dir,note,
+      spark.length>1?spark:null,sFoot]];
+    if(w.failed!=null){
+      /* Тэнцээгүйн ХУВЬ — үзлэгийн тооноос тооцсон бодит хувь (3-р талбар
+         нь air-ийн "ОУ НИСЛЭГ 75%"-тай ижил дэд тэмдэглэгээ).
+         spark нь ТЭНЦЭЭГҮЙН хоногийн цуваа — үзлэгийн цувааг ДАХИН
+         хэрэглэвэл хоёр мөр ижил график зурж, тэнцээгүйн хандлагыг
+         ХУДАЛ харуулна. */
+      const sh=w.count>0?(w.failed/w.count*100).toFixed(1)+'%':'';
+      const fSpark=days.filter(d=>Number.isFinite(Number(d.failed))).map(d=>Number(d.failed));
+      rows.push([kl('ТЭНЦЭЭГҮЙ',1),fmtNum(w.failed),sh,'—','flat',note,
+        fSpark.length===days.length&&fSpark.length>1?fSpark:null,sFoot]);
+    }
+    /* Шалгасан ТХ — үзлэгээс ЦӨӨН байж болно (дахин үзлэг). Нэгжийг
+       хоосон орхино: "үзлэг" гэвэл ХУДАЛ уншигдана. */
+    if(w.vehicleCount!=null) rows.push([kl('ШАЛГАСАН ТХ',2),fmtNum(w.vehicleCount),'','—','flat',note]);
+    SECTORS.road.kpis=rows;
+    SECTORS.road._liveKpis=true;
+    /* u07 ("Сүүлд шинэчлэгдсэн өгөгдөл") мөр — RECENT-ийн source:'roadInspect'
+       бичлэг bindCard()-аар ЭНЭ метагаас уншина. */
+    this.setSourceMeta('roadInspect',{updatedAt:w.date,updatedAtFull:w.date,lastRecord:w.date});
+    /* ── Тэнцээгүйн шалтгаан (хэсгээр) → салбарын бүтэц ────────────────
+       Статик "Замын ангиллын хуваарилалт" нь зохиомол тоо (19,410 км г.м.)
+       байв. Бодит хэсгийн задаргаа ирэхэд дарна; хувь нь ХЭСГҮҮДИЙН
+       нийлбэр дээр тооцоологдоно (нийлбэр 100% болно). */
+    const FK=['general','brake','steering','light','emission','noise'];
+    const cats=FK.map((k,i)=>[stxt('road_fail_cats.'+i,
+        ['Ерөнхий','Тоормос','Жолооны механизм','Гэрэл','Утаа','Дуу чимээ'][i]),
+      w.failedBy[k]]).filter(r=>r[1]!=null);
+    const catTot=cats.reduce((a,r)=>a+r[1],0);
+    if(cats.length&&catTot>0){
+      SECTORS.road.rt=stxt('sector_rank_road_live','Тэнцээгүй шалтгааны бүтэц (хэсгээр)');
+      SECTORS.road.rank=cats.slice().sort((a,b)=>b[1]-a[1])
+        .map(r=>[r[0],fmtNum(r[1]),(r[1]/catTot*100).toFixed(1)+'%']);
+    }
+    /* ── Аймгийн задаргаа → багана ──────────────────────────────────── */
+    const ba=w.byAimag.filter(r=>r&&r.aimag&&Number(r.count)>0);
+    if(ba.length){
+      const top=ba.slice().sort((a,b)=>Number(b.count)-Number(a.count));
+      const mx=Number(top[0].count);
+      SECTORS.road.c2=stxt('sector_chart2_road_live','Аймаг тус бүрийн үзлэг');
+      SECTORS.road.bars=top.slice(0,5).map(r=>[r.aimag,
+        mx?Math.round(Number(r.count)/mx*100):0,fmtNum(Number(r.count))+' '+ui]);
+    }
+    this.setState({roadInspectDate:w.date||''});
+  }
   // ── УБТЗ · вагон ачилтын хоногийн мэдээ → SECTORS.rail ────────────────
   // Агаарын applyRealFlightsData()-тай ЯГ ИЖИЛ зарчим: бодит дата ирмэгц
   // SECTORS тогтмолын KPI мөрийг ДАРЖ бичнэ. Ингэснээр 04-р хэсэг (k04),
@@ -5331,6 +5481,10 @@ class Component extends DCLogic {
        сүүлийнх нь KPI мөрийг зорчигчийн мөртэй хамт дахин барина. */
     this.applyRailPassengerData();
     this.applyRailWagonData();
+    /* Үзлэгийн мөрүүд ч stxt()-ийг тухайн агшинд шингээдэг тул ЭНД байх
+       ЗААВАЛ: эс тэгвэл админаас sector_kpi_road_live / status.road_inspect_*
+       засаад нийтлэхэд сайтад хүрэхгүй. */
+    this.applyRoadInspectionData();
     this.recomputeAirData();
   }
   // ── УБТЗ · зорчигчийн сарын цуваа → SECTORS.rail.c1d ─────────────────
@@ -5403,7 +5557,11 @@ class Component extends DCLogic {
       'rail.wagon_loading':()=>this._railWagonLoading,
       /* KPI багцын "толгой" тоо нь ЯГ ижил хоногийн ачилт (kpis[0]) —
          hero_fl ↔ air.kpi_set хосын ижил зарчим. */
-      'rail.wagon_kpi_set':()=>this._railWagonLoading
+      'rail.wagon_kpi_set':()=>this._railWagonLoading,
+      /* Үзлэгийн хоногийн тоо — ls.road ("Авто зам" нүд) ба k04.road-ийн
+         толгой мөр ЯГ ижил утгыг уншина (rail-ийн wagon хосын ижил зарчим). */
+      'road.inspection_count':()=>this._roadInspections,
+      'road.inspection_kpi_set':()=>this._roadInspections
     };
     const live=metricId&&getters[metricId]&&getters[metricId]();
     if(!live||live.count==null) return {value:fallback,isFallback:true,monthLabel:null};
@@ -8905,6 +9063,11 @@ class Component extends DCLogic {
          ТҮҮНЭЭС. Зохиомол муруй (устгасан miniSpark) хэзээ ч биш. */
       const ownSeries=(verified&&Array.isArray(k[6])&&k[6].length>1)?k[6]:null;
       const hasSeries=!!(vs&&vs.spark)||!!ownSeries;
+      /* k[7] — мөр өөрөө цувааны ТАЙЛБАРЫГ өгч болно. Виджетийн ерөнхий
+         хөл бичиг "12 сарын чиг хандлага" нь ХОНОГИЙН цуваатай мөрөнд
+         (авто замын үзлэг) ХУДАЛ: график 30 хоногийг зурж байхад "12 сар"
+         гэж уншигдана. Мөр өөрийн тайлбартай бол түүнийг үзүүлнэ. */
+      const ownFoot=(ownSeries&&typeof k[7]==='string'&&k[7])?k[7]:null;
       const spark=(vs&&vs.spark)?vs.spark:(ownSeries?pathFor(ownSeries,120,32,3).line:flatSpark);
       /* Хөл бичиг ("12 сарын чиг хандлага") нь БОДИТ цуваатай карт дээр л
          үнэн. Үгүй бол ЯГ ЮУ дутууг нь хэлнэ — картын дээд талын
@@ -8913,10 +9076,13 @@ class Component extends DCLogic {
       const footNote=stxt('status.no_series','чиг хандлагын цуваа алга');
       return {label:vs?vs.label:k[0],
         hasSeries,
-        footText:hasSeries?foot:footNote,
-        footNote:hasSeries?'':footNote,
-        footBaseStyle:hasSeries?'':'display:none;',
-        footNoteStyle:hasSeries?'display:none;':'',
+        /* Мөрийн өөрийн тайлбар (ownFoot) байвал виджетийн ерөнхий текстийг
+           НУУНА — DOM-оос ХАСАХГҮЙ: админы холбоос (data-eh-field="foot")
+           хэвээр ажиллана (ls-ийн ижил зарчим). */
+        footText:hasSeries?(ownFoot||foot):footNote,
+        footNote:hasSeries?(ownFoot||''):footNote,
+        footBaseStyle:(hasSeries&&!ownFoot)?'':'display:none;',
+        footNoteStyle:(hasSeries&&!ownFoot)?'display:none;':'',
         value:vs?vs.value:(verified?k[1]:'0'),
         unit:vs?(vs.unit||''):k[2],
         delta,dir,deltaColor,deltaGlyph,
@@ -9003,6 +9169,15 @@ class Component extends DCLogic {
       const q=this.sectorQuality('ls',k), verified=this.kpiVerified('ls',k);
       const lsFootTxt=this.txt('ls','foot','өмнөх сартай харьцуулбал · 12 сарын график');
       const vs=(k==='air'&&verified)?lsSpec:null;
+      /* Мөр ӨӨРИЙН цуваатай бол (k[6] — авто замын үзлэгийн 30 хоногийн
+         дата) spark-ыг ТҮҮНЭЭС зурна: хавтгай шугамын хажууд "+7.3%"
+         гэж бичвэл "хөдөлгөөнгүй" гэж ХУДАЛ уншигдана. Мөн виджетийн
+         ерөнхий хөл бичиг ("өмнөх САРтай харьцуулбал · 12 САРын график")
+         нь хоногийн мөрөнд ҮНЭН БИШ тул мөрийн өөрийн тайлбарыг
+         (огноо + харьцуулалтын суурь) үзүүлнэ. k04-ийн ownSeries-тэй
+         ижил зарчим. */
+      const ownSeries=(verified&&Array.isArray(sk.kpis[0][6])&&sk.kpis[0][6].length>1)
+        ?sk.kpis[0][6]:null;
       return {key:k,label:sk.label,
         value:vs?vs.value:(verified?sk.kpis[0][1]:'0'),
         unit:vs?(vs.unit||sk.kpis[0][2]):sk.kpis[0][2],color:verified?NEON[k]:'#828EA8',on,
@@ -9020,7 +9195,7 @@ class Component extends DCLogic {
           {road:'Авто зам',rail:'Төмөр зам',air:'Агаар',water:'Усан замын',public:'Нийтийн'}[k]),
         deltaColor:(function(d){return verified?(d==='up'?'#0E8F63':(d==='down'?'#C8443A':'#6B7896')):'#828EA8'})(vs?vs.dir:dir),
         // Тохиргоотой бол сар тутмын БОДИТ цуваа; үгүй бол өмнөх зан төлөв.
-        spark:(vs&&vs.spark)||flatSpark,
+        spark:(vs&&vs.spark)||(ownSeries?pathFor(ownSeries,120,32,3).line:flatSpark),
         /* Хөл бичиг: виджетийн ерөнхий текст ("өмнөх сартай харьцуулбал
            · 12 сарын график") нь харьцуулалт ҮНЭХЭЭР байгаа нүдэнд л
            үнэн. Өөрчлөлт "—" (хоногийн вагон мэдээ) эсвэл нүд
@@ -9028,7 +9203,7 @@ class Component extends DCLogic {
            хавтгай шугам, "—" хоёрын доор "өмнөх сартай харьцуулбал"
            гэж ХУДАЛ бичигдэнэ. */
         ...(()=>{
-          const hasCmp=verified&&((vs?(vs.delta||'—'):sk.kpis[0][3])!=='—');
+          const hasCmp=verified&&!ownSeries&&((vs?(vs.delta||'—'):sk.kpis[0][3])!=='—');
           const note=verified?(sk.kpis[0][5]||stxt('status.no_data','мэдээлэл алга'))
                              :stxt('status.no_data','мэдээлэл алга');
           return {footText:hasCmp?lsFootTxt:note,
