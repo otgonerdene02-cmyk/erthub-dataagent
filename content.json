@@ -474,6 +474,7 @@
       "road_inspect_asof": "Хоногийн мэдээ:",
       "road_inspect_stale": "хоног шинэчлэгдээгүй",
       "no_series": "чиг хандлагын цуваа алга",
+      "partial_month": "* дуусаагүй сар цуваанд ороогүй",
       "no_compare": "харьцуулах өгөгдөл алга"
     },
     "range": {
@@ -1640,7 +1641,9 @@
     },
     "slot_text": {
       "label": "Preview дээрх шошго",
-      "would_need": "Шаардлагатай эх сурвалж"
+      "would_need": "Шаардлагатай эх сурвалж",
+      "completeness": "Эх сурвалжийн бүрэн байдал",
+      "blocks_publication": "дутуу таталт тул тоо нийтлэхгүй"
     },
     "publish": {
       "login": "Нэвтрэх (Google)",
