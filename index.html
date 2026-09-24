@@ -1075,7 +1075,7 @@
 
     
 
-    <div id="sec-05" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-05" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}{{ t05CovNote }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
       <button sc-camel-on-click="{{ f05.toggle }}" aria-label="{{ sA11yFilter }}" style="{{ f05.btnStyle }}">⚗</button>
     </div>
     <sc-if value="{{ f05.open }}">
@@ -4612,18 +4612,46 @@ function sectorSummaryToValue(json){
      labels() — stxt()-ийг ДУУДАХ агшинд уншина (амьд текстийг дахин барих
                 гэрээ); литерал зам нь текстийн хамрах хүрээний тестэд хэрэгтэй */
 const SECTOR_SERIES={
-  rail:{api:'rail',dataset:'Зорчигчийн галт тэрэгний мэдээ',source:'railPax',kpi:'append',
+  rail:{api:'rail',metric:'rail.monthly_passenger_series',
+    dataset:'Зорчигчийн галт тэрэгний мэдээ',source:'railPax',kpi:'append',
     labels:()=>({chart:stxt('sector_chart_rail_live','Сарын зорчигч'),
       kpi:stxt('sector_kpi_rail_live.3','ЗОРЧИГЧ / САР'),unit:stxt('unit.passenger','зорчигч')})}
 };
 
-function sectorSummaryToSeries(json,now){
+/* Сарын цувааны ХАМРАХ ХҮРЭЭ — metric_registry.json →
+   metrics.<id>.period_coverage. Өмнө нь энэ дүрэм ХОЁР газар ХОЁР
+   ӨӨРӨӨР хатуу бичигдсэн байв: rail нь явагдаж буй сарыг ХАСДАГ,
+   air нь сүүлийн дата бүхий сарыг БҮТЭН мэт ҮЛДЭЭДЭГ. Иймд t05 дээр
+   air сонговол дуусаагүй сарын цэг бүтэн сартай зэрэгцэж "уналт" мэт
+   уншигдаж байв. Registry ирээгүй/зарлаагүй бол ӨМНӨХ зан төлөв. */
+const COVERAGE_DEFAULT={grain:'month',excludes_current:true};
+
+/* 1-ээс эхэлсэн сарын цувааны СҮҮЛИЙН цэг нь ЯВАГДАЖ БУЙ сар бол хасна.
+   `counts` нь 1-р сараас завсаргүй тул counts.length === сүүлийн сарын
+   дугаар. Зөвхөн ОДООГИЙН он/сард хамаарна — өнгөрсөн оны 12-р сар
+   бүтэн тул хөндөхгүй. Улаанбаатарын цагаар (UTC+8) шийднэ: хөтчийн
+   бүсээс хамааран сар солигдох ёсгүй. */
+function dropPartialMonth(counts,year,cov,now){
+  const src=Array.isArray(counts)?counts:[];
+  if(!src.length||(cov||COVERAGE_DEFAULT).excludes_current===false) return {counts:src,partial:null};
+  const ub=new Date((now==null?Date.now():now)+8*3600000);
+  const last=src.length;
+  if(year!==ub.getUTCFullYear()||last!==ub.getUTCMonth()+1) return {counts:src,partial:null};
+  return {counts:src.slice(0,last-1),partial:year+'-'+String(last).padStart(2,'0')};
+}
+
+function sectorSummaryToSeries(json,now,cov){
   if(!json||json.status!=='ok') return null;
   const unit=typeof json.unit==='string'?json.unit.trim():'';
   if(!unit) return null;
   const rows=Array.isArray(json.data)?json.data:[];
   const ub=new Date((now==null?Date.now():now)+8*3600000);
   const curKey=ub.getUTCFullYear()*100+(ub.getUTCMonth()+1);
+  const cv=cov||COVERAGE_DEFAULT;
+  const dropCur=cv.excludes_current!==false;
+  /* Хасагдсан ДУУСААГҮЙ мөчлөг — хэрэглэгчид "яагаад 9-р сар алга вэ"
+     гэдгийг хэлэхийн тулд тэмдэглэж авна (тоо ЗОХИОХГҮЙ, зөвхөн шошго). */
+  let partial=null;
   const byKey=new Map();
   for(const r of rows){
     const t=Date.parse(r&&r.month);
@@ -4633,7 +4661,10 @@ function sectorSummaryToSeries(json,now){
     const n=Number(raw);
     if(!isFinite(n)||n<0) continue;
     const d=new Date(t), y=d.getUTCFullYear(), m=d.getUTCMonth()+1;
-    if(y*100+m>=curKey) continue;
+    if(dropCur&&y*100+m>=curKey){
+      if(y*100+m===curKey) partial=y+'-'+String(m).padStart(2,'0');
+      continue;
+    }
     byKey.set(y*100+m,n);
   }
   if(!byKey.size) return null;
@@ -4647,7 +4678,7 @@ function sectorSummaryToSeries(json,now){
      сар байвал (жиш. 1,2,4) цуваа бүрэн биш — хэсэгчилж зурахгүй. */
   const maxM=Math.max.apply(null,[...byKey.keys()].filter(k=>Math.floor(k/100)===year).map(k=>k%100));
   if(!counts.length||maxM!==counts.length) return null;
-  return {unit,year,counts,lastMonth:counts.length};
+  return {unit,year,counts,lastMonth:counts.length,partial};
 }
 
 /* Вагон ачилтын ТУСДАА endpoint (/api/sectors/rail/wagon-loading) →
@@ -5321,7 +5352,10 @@ class Component extends DCLogic {
       /* Салбарын сарын цуваа. Вагоны мөрүүдээс ӨМНӨ барина: applyRailWagonData()
          нь rail-ийн KPI мөрийг бүтнээр нь солиод ТӨГСГӨЛД цуваа мөрийг залгадаг. */
       this._sectorSeries={};
-      seriesKeys.forEach((k,i)=>{ this._sectorSeries[k]=sectorSummaryToSeries(sums[i]); this.applySectorSeries(k); });
+      seriesKeys.forEach((k,i)=>{
+        this._sectorSeries[k]=sectorSummaryToSeries(sums[i],null,this.coverageOf(SECTOR_SERIES[k].metric));
+        this.applySectorSeries(k);
+      });
       /* Хариуг ШУУД хадгалахгүй — val() нь {count} хүлээдэг. Вагон ачилт
          одоо ТУСДАА endpoint-оос ирдэг тул wagonLoadingToValue()-ээр
          хөрвүүлнэ (summary-ийн sectorSummaryToValue() БИШ — тэр нь
@@ -5575,6 +5609,8 @@ class Component extends DCLogic {
        функц reapplyLiveText()-д бий. */
     SECTORS[k].c1=L.chart;
     SECTORS[k]._liveSeries=true;
+    /* t05-ийн толгойд "* … дуусаагүй" тэмдэглэгээ ҮҮНЭЭС гарна */
+    SECTORS[k]._partialDropped=s.partial||null;
     /* Цуваа ЭНЭ датасэтийнх — өөр датасэтийн хуудсан дээр муруй гаргахгүй */
     SECTORS[k]._liveSeriesDs=cfg.dataset;
     /* Датасэтийн мета — u07-ийн мөр ба датасэтийн дэлгэрэнгүй ҮҮНЭЭС
@@ -5648,6 +5684,13 @@ class Component extends DCLogic {
   }
   sourceData(id){ return (this._src||{})[id]||{}; }
   // meta — датасэтийн түвшний, шүүлтүүрээс хамааралгүй үнэн.
+  /* Метрикийн хамрах хүрээний дүрэм. Registry ачаалагдаагүй эсвэл
+     period_coverage зарлаагүй бол COVERAGE_DEFAULT — сайт ӨМНӨХ шигээ. */
+  coverageOf(mk){
+    const reg=this.state.metricRegistry;
+    const m=mk&&reg&&reg.metrics&&reg.metrics[mk];
+    return (m&&m.period_coverage)||COVERAGE_DEFAULT;
+  }
   setSourceMeta(id,meta){ this._src=this._src||{}; this._src[id]={...this.sourceData(id),meta}; }
   // view — тухайн үед дэлгэц дээр харагдаж буй шүүлтүүрийн зураглал.
   setSourceView(id,view){ this._src=this._src||{}; this._src[id]={...this.sourceData(id),view}; }
@@ -6317,8 +6360,16 @@ class Component extends DCLogic {
     // year fed a fake cliff-to-zero into that regression instead.
     const c1dFull=[]; for(let m=1;m<=12;m++) c1dFull.push(cur.monthCounts[m]||0);
     const lastRealIdx=(()=>{ for(let i=11;i>=0;i--) if(c1dFull[i]>0) return i; return -1; })();
-    const lastRealM=lastRealIdx>=0?lastRealIdx+1:12;
-    SECTORS.air.c1d=lastRealIdx>=0?c1dFull.slice(0,lastRealIdx+1):c1dFull;
+    /* ЯВАГДАЖ БУЙ сарыг цуваанаас хасна — rail-тай ИЖИЛ дүрэм
+       (metrics.air.monthly_flight_series.period_coverage). Өмнө нь энд
+       дутуу сар бүтэн сартай зэрэгцэж "уналт" мэт уншигдаж, ижил
+       графикийн rail шугам эсрэгээр хасагддаг байв. monthLabels ба
+       сарын хүснэгт ч lastRealM-ээр энэ дүрмийг дагана. */
+    const airTrim=dropPartialMonth(lastRealIdx>=0?c1dFull.slice(0,lastRealIdx+1):[],
+      year,this.coverageOf('air.monthly_flight_series'));
+    SECTORS.air._partialDropped=airTrim.partial;
+    SECTORS.air.c1d=airTrim.counts;
+    const lastRealM=airTrim.counts.length||12;
     /* Энэ салбарын сарын ЦУВАА нь бодит (_liveKpis нь зөвхөн KPI мөр амьд
        гэдгийг л хэлнэ). Хоёрыг ЯЛГАХ шалтгаан: rail-д KPI амьд боловч
        цуваа байхгүй — тэнд зохиомол муруй зурах ёсгүй. */
@@ -9417,6 +9468,12 @@ class Component extends DCLogic {
       k04Title:this.txt('k04','title','Түлхүүр үзүүлэлт'),
       k04Foot:this.txt('k04','foot','12 сарын чиг хандлага'),
       t05Title:this.txt('t05','title','Чиг хандлага'),
+      /* Хамрах хүрээний тэмдэглэгээ (Eurostat-ийн "p" флагийн зарчим):
+         цуваанаас ДУУСААГҮЙ мөчлөг хасагдсан бол яагаад гэдгийг ил хэлнэ.
+         Хасагдаагүй бол ХООСОН мөр — хуудсан дээр юу ч нэмэгдэхгүй. */
+      t05CovNote:(s&&s._partialDropped)
+        ?' · '+stxt('status.partial_month','* дуусаагүй сар цуваанд ороогүй')+
+          ' ('+s._partialDropped+')':'',
       t05Foot:this.txt('t05','foot','Дундаж шугам харуулах'),
       i06Title:this.txt('i06','title','Салбар хоорондын харьцуулалт (индекс)'),
       i06Sub:this.txt('i06','sub','суурь индекс = 100'),
