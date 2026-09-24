@@ -656,6 +656,8 @@ var FEED={state:'idle',err:null,months:[],index:[],weekPax:null,weekCargo:null,
    нөгөө preview хэвийн ажиллана (нэг Promise.all болговол нэгнийх нь
    алдаа хоёуланг нь унтраана). */
 var RAIL={state:'idle',date:null,loaded:null,unloaded:null,stations:null};
+/* Техникийн хяналтын үзлэг — вагонтой ИЖИЛ зарчмаар ТУСДАА төлөв. */
+var INSP={state:'idle',date:null,count:null,failed:null,vehicles:null};
 /* Салбарын САРЫН ЦУВАА (/api/sectors/<api>/summary) — сайтын SECTOR_SERIES-ийн
    толь. Метрик → backend-ийн салбар. Шинэ салбар = энд нэг мөр (сайт ба админ
    ХОЁУЛАНД). Эх сурвалж бүр тусдаа төлөвтэй — нэг нь унасан ч бусад хэвийн. */
@@ -865,6 +867,15 @@ function metricValue(mk){
     if(mk==='rail.wagon_loading'||mk==='rail.wagon_kpi_set') return RAIL.loaded;
     return null;
   }
+  /* Үзлэг ч мөн ТУСДАА эх сурвалж. Энэ салаа БАЙХГҮЙ байсан тул
+     preview "Авто зам 0" гэж үзүүлэх зэрэгцээ "Слотын чанар" нь
+     "амьд утга" гэсэн ногоон badge гаргаж, админ өөртэйгөө
+     зөрчилдөж байв (сайт дээр 2,594 үзлэг зөв гарч байхад). */
+  if(mk&&mk.indexOf('road.inspection')===0){
+    if(INSP.state!=='ready') return null;
+    if(mk==='road.inspection_count'||mk==='road.inspection_kpi_set') return INSP.count;
+    return null;
+  }
   if(FEED.state!=='ready') return null;
   switch(mk){
     case 'air.flight_count_last_month': return FEED.lastMonthCount;
@@ -884,6 +895,8 @@ function metricDate(mk){
     return (FEED.state==='ready'&&FEED.fetchedAt)?String(FEED.fetchedAt).slice(0,10):null;
   if(mk==='rail.feed_updated_at')
     return (RAIL.state==='ready'&&RAIL.date)?String(RAIL.date).slice(0,10):null;
+  if(mk==='road.feed_updated_at')
+    return (INSP.state==='ready'&&INSP.date)?String(INSP.date).slice(0,10):null;
   return null;
 }
 /* Хоногийн вагон мэдээ — сайтын loadEtransportBackend()-тэй ИЖИЛ endpoint,
@@ -899,6 +912,20 @@ function loadRailWagon(){
     RAIL.stations=Number(d.station_count)||null;
     RAIL.state='ready';
   },function(){ RAIL.state='error' });
+}
+/* Үзлэгийн хоногийн мэдээ — сайтын roadInspectionsToValue()-тэй ИЖИЛ
+   шалгуур (status!=='ok' эсвэл count хоосон бол тоо ЗОХИОХГҮЙ). */
+function loadRoadInspections(){
+  if(typeof EHBackend==='undefined'||!EHBackend.enabled){ INSP.state='off'; return Promise.resolve() }
+  INSP.state='loading';
+  return EHBackend.fetchRoadInspections().then(function(d){
+    if(!d||d.status!=='ok'||d.count==null||isNaN(Number(d.count))){ INSP.state='error'; return }
+    INSP.date=typeof d.date==='string'?d.date:null;
+    INSP.count=Number(d.count);
+    INSP.failed=(d.failed==null)?null:Number(d.failed);
+    INSP.vehicles=(d.vehicle_count==null)?null:Number(d.vehicle_count);
+    INSP.state='ready';
+  },function(){ INSP.state='error' });
 }
 /* Сайтын sectorSummaryToSeries()-ийн толь: unit ЗААВАЛ, одоогийн (УБ) сар
    хасагдана, сүүлийн оны 1-р сараас завсаргүй. Зөрүүтэй бол preview ба сайт
@@ -2268,6 +2295,7 @@ var SITE_LOC={
   sector_kpi_road_live:'home|s4', road_fail_cats:'home|s4',
   sector_rank_road_live:'home|s4', sector_chart2_road_live:'home|s5',
   ds_schema_rail_wagon:'browse|body',
+  ds_schema_road_inspect:'browse|body',
   sector_chart:'home|s5', chart:'home|s5', compare_window:'home|s6',
   feed:'home|s7', ai:'home|s8',
   eservices:'eservices|body', 'eservices.hero':'eservices|hero', 'eservices.tabs':'eservices|tabs',
@@ -4797,7 +4825,7 @@ Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
   /* Урьдчилан харах картыг ЖИНХЭНЭ дата цэгээр зурахын тулд сайт өөрөө
      уншдаг feed-ийг ачаална. Амжилтгүй ч гэсэн хэрэгсэл БҮРЭН ажиллана —
      preview зөвхөн бүтцээ харуулж, "дата ачаалагдаагүй" гэж ил хэлнэ. */
-  Promise.all([loadFeed(),loadRailWagon(),loadSectorSeries()]).then(render);
+  Promise.all([loadFeed(),loadRailWagon(),loadRoadInspections(),loadSectorSeries()]).then(render);
 })
 .catch(function(err){
   showState('<h2>'+esc(utxt('boot.read_fail','Файл уншиж чадсангүй'))+'</h2><p>'+esc(err.message)+'</p>'+
