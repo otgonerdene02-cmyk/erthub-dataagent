@@ -409,9 +409,9 @@
         <div style="position:relative;overflow:hidden;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);box-shadow:var(--shadow);margin-bottom:26px;max-width:520px;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);">
           <div style="position:absolute;top:0;bottom:0;display:flex;align-items:center;gap:34px;white-space:nowrap;padding-left:14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--ink2);animation:tickerScroll 20s linear infinite;">
             <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>{{ sTickAi }}</span>
-            <span>{{ sTickRoad }}</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>{{ sTickLive }}</span>
+            <span>{{ sTickRoad }}</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span>{{ heroPxNote }}</span><span>{{ sTickLive }}</span>
             <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>{{ sTickAi }}</span>
-            <span>{{ sTickRoad }}</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span></span><span>{{ sTickLive }}</span>
+            <span>{{ sTickRoad }}</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span>{{ heroPxNote }}</span><span>{{ sTickLive }}</span>
           </div>
         </div>
         <div style="position:relative;">
@@ -3744,7 +3744,13 @@ const RECENT = [
   {title:'Агаарын тээврийн статистик', agency:'ИНЕГ', src:'Вэбсервис', date:'2026-07-30', sector:'air',
    dataset:'Агаарын тээврийн статистик', bind:{date:'feedUpdated'}},
   {title:'Улаанбаатарын замын хөдөлгөөний ачаалал', agency:'ЗТХЕГ', src:'Вэбсервис', date:'2026-07-29', sector:'road'},
-  {title:'Зорчигчийн галт тэрэгний мэдээ', agency:'УБТЗ', src:'Вэбсервис', date:'2026-07-28', sector:'rail'},
+  /* Зорчигчийн сарын цуваа — амьд датасэт. Өмнө нь `source` байхгүй тул
+     u07-ийн мөр "мэдээлэл алга" гэж ХУДАЛ хэлж байв (H5 хамгаалалт
+     статик 2026-07-28-ыг зөв нуусан ч амьд огноог олж чаддаггүй байв),
+     тэр хооронд ижил датасэтээс 05-р хэсгийн бүтэн график зурагдаж
+     байсан — нэг датасэт, хоёр өөр үнэн. */
+  {title:'Зорчигчийн галт тэрэгний мэдээ', agency:'УБТЗ', src:'Вэбсервис', date:'2026-07-28', sector:'rail',
+   dataset:'Зорчигчийн галт тэрэгний мэдээ', source:'railPax', bind:{date:'feedUpdated'}},
   {title:'Автобусны бодит цагийн байршил', agency:'НТБГ', src:'API', date:'2026-07-27', sector:'public'},
   {title:'Боомтын ачаа эргэлтийн мэдээ', agency:'ЗТЯ', src:'Эксэл', date:'2026-07-25', sector:'water'},
   /* Вагон ачилт — БОДИТ огноотой хоёр дахь мөр (эх сурвалж: railWagon).
@@ -3900,6 +3906,19 @@ const DS_SCHEMA={
     notes:['Ачилт, буулгалт бүртгэгдсэн өртөөний нэр','УБТЗ-ийн өртөөний код',
       'Тухайн хоногт ачигдсан вагоны тоо','Тухайн хоногт буулгасан вагоны тоо',
       'Тухайн хоногт ачилт хийгдсэн эсэх'],
+    rows:[]},
+  /* Техникийн хяналтын үзлэг — вагонтой ЯГ ИЖИЛ зарчим: энэ нь САЛБАРЫН
+     (road) биш ДАТАСЭТИЙН схем. schema түлхүүр бичигдээгүй үед
+     schemaKey=dsel.schema||dsel.sector нь DS_SCHEMA.road-ын ЗОХИОМОЛ замын
+     хөдөлгөөний мөрүүдийг ("Сансар товчоо 4,820 · Түгжрэлтэй") үзлэгийн
+     дата мэт харуулж, Excel татах товч түүнийг файлаар гаргаж байв —
+     "Тоо ЗОХИОХГҮЙ" дүрмийн шууд зөрчил. rows нь ХООСОН эхэлнэ: backend-ээс
+     by_aimag ирэх хүртэл хүснэгт "мэдээлэл алга" гэж ил хэлнэ. */
+  road_inspect:{head:['Аймаг, нийслэл','Үзлэг','Тэнцээгүй','Тэнцээгүй хувь','Төлөв'],
+    types:['string','int','int','float','enum'],
+    notes:['Үзлэг хийсэн салбарын харьяалагдах аймаг, нийслэл',
+      'Тухайн хоногт бүртгэгдсэн үзлэгийн тоо','Тэнцээгүй дүгнэлт авсан үзлэгийн тоо',
+      'Тэнцээгүй үзлэгийн эзлэх хувь','Тухайн аймагт тэнцээгүй үзлэг бүртгэгдсэн эсэх'],
     rows:[]},
   air:{head:['Огноо','Нислэг','Чиглэл','Зорчигч','Төлөв'],
     types:['date','string','string','int','enum'],
@@ -4057,7 +4076,12 @@ const SOURCES={
   // Техникийн хяналтын үзлэг (etransport-backend → /api/sectors/road/inspections).
   // silver.road_inspections ← Veritech road.veritech.inspections (indicator
   // 15403413). Backend хаалттай бол мөр "мэдээлэл алга" хэвээр үлдэнэ.
-  roadInspect:{label:'ЗТХЕГ · техникийн хяналтын үзлэгийн мэдээ', load:app=>app.loadRoadInspections()}
+  roadInspect:{label:'ЗТХЕГ · техникийн хяналтын үзлэгийн мэдээ', load:app=>app.loadRoadInspections()},
+  /* Зорчигчийн САРЫН цуваа (/api/sectors/rail/summary). Энэ нь вагонтой
+     НЭГ багцаар (loadEtransportBackend нь summary-г зэрэг татдаг) ирдэг
+     тул энд ДАХИН татахгүй — мөр нь зөвхөн source нэрийг бүртгэж,
+     auditBindings()/sourceHint() ажиллах боломж өгнө. */
+  railPax:{label:'УБТЗ · зорчигчийн галт тэрэгний сарын мэдээ', load:()=>{}}
 };
 // Карт өөрөө өөрөөр зарлаагүй бол эдгээр метрик автоматаар үйлчилнэ —
 // үзэлтийн тоо бол салбар, эх сурвалж харгалзахгүй бүх датасэтэд утга учиртай.
@@ -4123,8 +4147,17 @@ const DATASETS=[
       үзүүлнэ; source/bind — дэлгэрэнгүйн картууд амьд метаг уншина. */
    schema:'rail_wagon',source:'railWagon',bind:{freq:'lastRecord'}},
   {sector:'road',name:'Техникийн хяналтын үзлэгийн мэдээ',agency:'ЗТХЕГ',fmt:'API',badges:['Үнэгүй'],freq:'7 хоног тутам',use:'Нийтийн API нээлттэй',desc:'Тээврийн хэрэгслийн техникийн хяналтын үзлэгийн бүртгэл — салбар, аймаг, тэнцсэн эсэх, тэнцээгүй хэсгээр (ерөнхий, тоормос, жолооны механизм, гэрэл, утаа, дуу чимээ). Нэг мөр = нэг үзлэг: нэг тээврийн хэрэгсэл нэг өдөрт хоёр удаа үзлэгт орж болно.',
-   /* source/bind — дэлгэрэнгүйн картууд амьд метаг уншина (вагонтой ижил). */
-   source:'roadInspect',bind:{freq:'lastRecord'}}
+   /* schema — вагонтой ижил: салбарын схемийг БИШ өөрийн аймгийн задаргааг
+      үзүүлнэ; source/bind — дэлгэрэнгүйн картууд амьд метаг уншина. */
+   schema:'road_inspect',source:'roadInspect',bind:{freq:'lastRecord'}},
+  /* Зорчигчийн сарын цуваа. ТӨГСГӨЛД нэмэгдэв: content.json-ы
+     site.datasets нь ИНДЕКСЭЭР давхарладаг тул дунд нь оруулбал
+     түүнээс хойших бүх бичлэгийн нэр/агентлаг нэг байр гулсана.
+     SECTOR_SERIES.rail.dataset нь ЭНЭ нэрийг заадаг — өмнө нь ийм
+     нэртэй бичлэг БАЙХГҮЙ тул dsHasTrend() тэнцэхгүй, амьд зорчигчийн
+     муруй ямар ч датасэтийн хуудсан дээр гарахгүй байв. */
+  {sector:'rail',name:'Зорчигчийн галт тэрэгний мэдээ',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Сар бүр',use:'Нийтийн API нээлттэй',desc:'Зорчигчийн галт тэрэгний сарын зорчигчийн тоо. Явагдаж буй сар ДУУСААГҮЙ тул цуваанаас хасагдаж, сүүлийн БҮТЭН сар харагдана.',
+   source:'railPax',bind:{freq:'lastRecord'}}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
 // ЗОХИОХГҮЙ, DATASETS/SERVICES-ийн бодит уртаас тооцоолно (KPI_UNIFIED-ийн
@@ -4579,7 +4612,7 @@ function sectorSummaryToValue(json){
      labels() — stxt()-ийг ДУУДАХ агшинд уншина (амьд текстийг дахин барих
                 гэрээ); литерал зам нь текстийн хамрах хүрээний тестэд хэрэгтэй */
 const SECTOR_SERIES={
-  rail:{api:'rail',dataset:'Зорчигчийн галт тэрэгний мэдээ',kpi:'append',
+  rail:{api:'rail',dataset:'Зорчигчийн галт тэрэгний мэдээ',source:'railPax',kpi:'append',
     labels:()=>({chart:stxt('sector_chart_rail_live','Сарын зорчигч'),
       kpi:stxt('sector_kpi_rail_live.3','ЗОРЧИГЧ / САР'),unit:stxt('unit.passenger','зорчигч')})}
 };
@@ -5397,6 +5430,27 @@ class Component extends DCLogic {
       SECTORS.road.c2=stxt('sector_chart2_road_live','Аймаг тус бүрийн үзлэг');
       SECTORS.road.bars=top.slice(0,5).map(r=>[r.aimag,
         mx?Math.round(Number(r.count)/mx*100):0,fmtNum(Number(r.count))+' '+ui]);
+      /* Датасэтийн дэлгэрэнгүй хуудасны ХҮСНЭГТ (DS_SCHEMA.road_inspect) —
+         вагоны by_station-той ижил зарчим. Энэ 22 мөр ХАЯГДАЖ, хуудас нь
+         DS_SCHEMA.road-ын зохиомол замын ачааллыг үзүүлж байв. Бодит дата
+         ирэхэд дарна; ирээгүй бол ОГТ ХӨНДӨХГҮЙ. */
+      const h=(x,i)=>stxt('ds_schema_road_inspect.head.'+i,x);
+      const nt=(x,i)=>stxt('ds_schema_road_inspect.notes.'+i,x);
+      DS_SCHEMA.road_inspect.head=[h('Аймаг, нийслэл',0),h('Үзлэг',1),
+        h('Тэнцээгүй',2),h('Тэнцээгүй хувь',3),h('Төлөв',4)];
+      DS_SCHEMA.road_inspect.notes=[
+        nt('Үзлэг хийсэн салбарын харьяалагдах аймаг, нийслэл',0),
+        nt('Тухайн хоногт бүртгэгдсэн үзлэгийн тоо',1),
+        nt('Тэнцээгүй дүгнэлт авсан үзлэгийн тоо',2),
+        nt('Тэнцээгүй үзлэгийн эзлэх хувь',3),
+        nt('Тухайн аймагт тэнцээгүй үзлэг бүртгэгдсэн эсэх',4)];
+      const stBad=stxt('ds_schema_road_inspect.st_fail','Тэнцээгүй бүртгэгдсэн');
+      const stOkA=stxt('ds_schema_road_inspect.st_clean','Бүгд тэнцсэн');
+      DS_SCHEMA.road_inspect.rows=top.map(r=>{
+        const c=Number(r.count)||0, f=Number(r.failed)||0;
+        return [String(r.aimag||''),c,f,c?Number((f/c*100).toFixed(1)):0,
+          (f>0?'warn:'+stBad:'ok:'+stOkA)];
+      });
     }
     this.setState({roadInspectDate:w.date||''});
   }
@@ -5523,6 +5577,13 @@ class Component extends DCLogic {
     SECTORS[k]._liveSeries=true;
     /* Цуваа ЭНЭ датасэтийнх — өөр датасэтийн хуудсан дээр муруй гаргахгүй */
     SECTORS[k]._liveSeriesDs=cfg.dataset;
+    /* Датасэтийн мета — u07-ийн мөр ба датасэтийн дэлгэрэнгүй ҮҮНЭЭС
+       уншина. Сарын цуваа тул огноо нь СҮҮЛИЙН БҮТЭН САР (явагдаж буй
+       сар хасагдсан) — хоногийн огноо ЗОХИОХГҮЙ. */
+    if(cfg.source){
+      const mLbl=s.year+'-'+String(s.lastMonth).padStart(2,'0');
+      this.setSourceMeta(cfg.source,{updatedAt:mLbl,updatedAtFull:mLbl,lastRecord:mLbl});
+    }
     /* Өөр амьд KPI мөргүй салбарт цуваа мөр нь цорын ганц амьд мөр болно */
     if(cfg.kpi==='replace'){
       const row=this.seriesKpiRow(k);
@@ -9323,7 +9384,14 @@ class Component extends DCLogic {
       // quality!=='verified') тул 0 — K/M форматлагч ("312K" маягийн)
       // ХЭРЭГЛЭХГүй, цэвэр "0" (w2p/w2c-д олдсон нэгжийн давхар масштабын
       // алдаанаас сэргийлэх зорилгоор).
-      heroPxValue:this.isWidgetMock('hero_px')?'0':'312K',
+      /* H5-ийн дараах засвар: цэвэр "0" нь "өнөөдөр зорчигч байхгүй" гэж
+         УНШИГДАЖ, 04-р хэсгийн амьд "148,470 зорчигч/сар"-тай зөрчилдөж
+         байв. Бусад бүх хоосон слот "— · мэдээлэл алга" гэж ил хэлдэг тул
+         ticker-ийг ч ижил гэрээнд оруулав (status.no_data ДАХИН ашиглана —
+         текстийг давхардуулахгүй). */
+      heroPxValue:this.isWidgetMock('hero_px')?'—':'312K',
+      heroPxNote:this.isWidgetMock('hero_px')
+        ?' · '+stxt('status.no_data','мэдээлэл алга'):'',
       ukTitle:this.txt('uk','title','Порталын нийт үзүүлэлт'),
       ukSub:this.txt('uk','sub','2026 · III улирал'),
       // uk-ийн эх сурвалж (KPI_UNIFIED) 02-р хэсгийн WEEK_DATA-с ӨӨР тул

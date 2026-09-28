@@ -1,8 +1,8 @@
 {
   "$schema": "erthub-metrics/v1",
   "version": "0.1.0",
-  "updated": "2026-09-23",
-  "note": "H3 шатны хамгийн анхны хэрэгжилт байсан. 2026-09-18: rail-ийн вагон ачилт (k04/ls/u07) амьд холбогдов. 2026-09-19: холбогдоогүй слот бүрийн would_need-ийг backend-ийн БОДИТ төлөвөөр (API тандалт + docs/etl-scheduling.md) шинэчлэв — \"эх сурвалж тодорхойгүй\" гэсэн ерөнхий үгийн оронд ЯГ ЮУ дутууг (датасэт, indicator, толь, transform, нэгж) нэрлэв. Гол хэв маяг: 4 датасэт (rail passengers/freight, road vehicle_registry/inspections) bronze-д ТАТАГДАЖ БАЙНА, харин талбарын толь дутуу тул silver transform бичигдээгүй; sea/transit салбарт эх систем ОГТ холбогдоогүй. 2026-09-23: road-ийн техникийн хяналтын үзлэг (k04/ls/u07) амьд холбогдов — толь + эх системийн xlsx экспортоор (2,790 мөр) баталсан silver.road_inspections (backend migration 012). Үлдсэн road слотууд (t05/d05/w2*) нь ӨӨР хэмжигдэхүүн шаарддаг тул would_need-д ЯГ ЮУ дутууг нэрлэв. 2026-09-24: vehicle_registry-г bronze дээр probe хийлээ — түүний блокер нь ТОЛЬ БИШ (багана нэрээрээ уншигдана), харин ТАТАЛТ: 1,941,092 мөрийн 2,000 нь л ирдэг (эх сервэр ижил хуудсыг давтана). Иймд энэ датасэтийн төлөв: толь хүлээхээ больсон, таталтын засвар хүлээж байна.",
+  "updated": "2026-09-24",
+  "note": "H3 шатны хамгийн анхны хэрэгжилт байсан. 2026-09-18: rail-ийн вагон ачилт (k04/ls/u07) амьд холбогдов. 2026-09-19: холбогдоогүй слот бүрийн would_need-ийг backend-ийн БОДИТ төлөвөөр (API тандалт + docs/etl-scheduling.md) шинэчлэв — \"эх сурвалж тодорхойгүй\" гэсэн ерөнхий үгийн оронд ЯГ ЮУ дутууг (датасэт, indicator, толь, transform, нэгж) нэрлэв. Гол хэв маяг (2026-09-24-нд шинэчлэв): rail passengers ба road inspections silver-т буусан (АМЬД); rail freight зөвхөн bronze-д (толь + silver + endpoint дутуу); road vehicle_registry-д толь ШААРДЛАГАГҮЙ нь батлагдсан ч таталт эвдэрсэн; sea/transit салбарт эх систем ОГТ холбогдоогүй. 2026-09-23: road-ийн техникийн хяналтын үзлэг (k04/ls/u07) амьд холбогдов — толь + эх системийн xlsx экспортоор (2,790 мөр) баталсан silver.road_inspections (backend migration 012). Үлдсэн road слотууд (t05/d05/w2*) нь ӨӨР хэмжигдэхүүн шаарддаг тул would_need-д ЯГ ЮУ дутууг нэрлэв. 2026-09-24: vehicle_registry-г bronze дээр probe хийлээ — түүний блокер нь ТОЛЬ БИШ (багана нэрээрээ уншигдана), харин ТАТАЛТ: 1,941,092 мөрийн 2,000 нь л ирдэг (эх сервэр ижил хуудсыг давтана). Иймд энэ датасэтийн төлөв: толь хүлээхээ больсон, таталтын засвар хүлээж байна. 2026-09-24: w2p/w2px/w2c/w2cx/d05-ийн rail слотуудын would_need-ийг бодит төлөвөөр солив — зорчигчийн ӨДРИЙН silver аль хэдийн байгаа тул тэдгээрийн блокер нь \"толь\" БИШ, ГАНЦ endpoint.",
   "widgets": {
     "hero_fl": {
       "metric": "air.flight_count_last_month",
@@ -172,7 +172,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.passengers (indicator 14996751) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-18). Дутуу нь: талбарын толь → silver.rail_operations transform → gold. Түүний дараа /api/sectors/rail/summary нь unit:\"зорчигч\"-оор САРЫН дүн өгнө. АНХААР: gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул толь ирж transform бичигдсэн ч энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй — өдрийн нарийвчлалтай silver (rail_wagon_loading шиг) хэрэгтэй."
+          "would_need": "rail.veritech.passengers → silver.rail_operations АЛЬ ХЭДИЙН амьд (толь + transform + gold бэлэн, migrations/007-008; t05.rail нь 2026-09-24-нд verified, /api/sectors/rail/summary нь unit:\"зорчигч\"-оор сарын дүн өгч байна). silver-ийн grain нь ӨДРИЙН түвшинтэй (dataset_id + record_date + train_no + line_name) тул 7 хоногийн цонх ГАРГАХ БОЛОМЖТОЙ — толь ч, шинэ transform ч ШААРДЛАГАГҮЙ. Дутуу нь ГАНЦ зүйл: өдрийн задаргаа буцаадаг endpoint (жиш. GET /api/sectors/rail/passengers, by_day[] — road/inspections-ийн загвараар). Одоогийн summary нь gold-ийн САРЫН нэгтгэл тул энэ слотод хүрэлцэхгүй."
         },
         "water": {
           "metric": null,
@@ -226,7 +226,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.passengers (indicator 14996751) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-18). Дутуу нь: талбарын толь → silver.rail_operations transform → gold. Түүний дараа /api/sectors/rail/summary нь unit:\"зорчигч\"-оор САРЫН дүн өгнө. АНХААР: gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул толь ирж transform бичигдсэн ч энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй — өдрийн нарийвчлалтай silver (rail_wagon_loading шиг) хэрэгтэй."
+          "would_need": "rail.veritech.passengers → silver.rail_operations АЛЬ ХЭДИЙН амьд (толь + transform + gold бэлэн, migrations/007-008; t05.rail нь 2026-09-24-нд verified, /api/sectors/rail/summary нь unit:\"зорчигч\"-оор сарын дүн өгч байна). silver-ийн grain нь ӨДРИЙН түвшинтэй (dataset_id + record_date + train_no + line_name) тул 7 хоногийн цонх ГАРГАХ БОЛОМЖТОЙ — толь ч, шинэ transform ч ШААРДЛАГАГҮЙ. Дутуу нь ГАНЦ зүйл: өдрийн задаргаа буцаадаг endpoint (жиш. GET /api/sectors/rail/passengers, by_day[] — road/inspections-ийн загвараар). Одоогийн summary нь gold-ийн САРЫН нэгтгэл тул энэ слотод хүрэлцэхгүй."
         },
         "water": {
           "metric": null,
@@ -259,7 +259,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.freight_ubtz (indicator 15399738) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-18). Дутуу нь: талбарын толь → шинэ silver хүснэгт + migration → endpoint. АНХААР: gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул толь ирж transform бичигдсэн ч энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй — өдрийн нарийвчлалтай silver (rail_wagon_loading шиг) хэрэгтэй. Вагон ачилт (амьд) нь ВАГОНЫ ТОО — тонн БИШ тул энэ слотод тавьж болохгүй."
+          "would_need": "rail.veritech.freight_ubtz (indicator 15399738) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-23), гэвч ямар ч endpoint-оор ГАРАХГҮЙ: src/etl/silver/specs/-д freight-ийн spec бичигдээгүй, src/routes/sectors.js-д маршрут алга. Дутуу нь дарааллаараа: (1) талбарын толь, (2) silver хүснэгт + migration, (3) ӨДРИЙН задаргаатай endpoint — gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй. Вагон ачилт (амьд) нь ВАГОНЫ ТОО — тонн БИШ тул энэ слотод тавьж болохгүй."
         },
         "water": {
           "metric": null,
@@ -313,7 +313,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.freight_ubtz (indicator 15399738) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-18). Дутуу нь: талбарын толь → шинэ silver хүснэгт + migration → endpoint. АНХААР: gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул толь ирж transform бичигдсэн ч энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй — өдрийн нарийвчлалтай silver (rail_wagon_loading шиг) хэрэгтэй."
+          "would_need": "rail.veritech.freight_ubtz (indicator 15399738) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-23), гэвч ямар ч endpoint-оор ГАРАХГҮЙ: src/etl/silver/specs/-д freight-ийн spec бичигдээгүй, src/routes/sectors.js-д маршрут алга. Дутуу нь дарааллаараа: (1) талбарын толь, (2) silver хүснэгт + migration, (3) ӨДРИЙН задаргаатай endpoint — gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй. Вагон ачилт (амьд) нь ВАГОНЫ ТОО — тонн БИШ тул энэ слотод тавьж болохгүй."
         },
         "water": {
           "metric": null,
@@ -352,7 +352,7 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "Вагон ачилт амьд боловч нэгж нь \"вагон\" — донутын бусад гишүүн (нислэг) өөр нэгжтэй тул нийлүүлбэл утгагүй тоо гарна. rail.veritech.passengers (indicator 14996751) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-18). Дутуу нь: талбарын толь → silver.rail_operations transform → gold. Түүний дараа /api/sectors/rail/summary нь unit:\"зорчигч\"-оор САРЫН дүн өгнө. Зорчигчийн сарын дүн ирвэл ч агаарын \"нислэг\"-тэй нийлэхгүй хэвээр — донутын нийтлэг хэмжүүрийг эхлээд шийднэ."
+          "would_need": "Вагон ачилт амьд боловч нэгж нь \"вагон\"; зорчигчийн САРЫН дүн ч 2026-09-24-ний байдлаар амьд (rail.monthly_passenger_series, unit \"зорчигч\"). Гэвч донутын бусад гишүүн (агаарын \"нислэг\") ӨӨР нэгжтэй тул аль нь ч шууд нийлэхгүй. Энэ слотын блокер нь ЭХ СУРВАЛЖ БИШ, ШИЙДВЭР: донутын нийтлэг хэмжүүрийг (жиш. \"сарын зорчигч\" эсвэл \"сарын тээвэрлэлтийн үйл явдал\") эхлээд тодорхойлж, салбар бүрийн метрикийг тэр рүү хөрвүүлэх дүрэм бичсэний дараа холбоно."
         },
         "water": {
           "metric": null,

@@ -183,6 +183,9 @@ function groupB() {
          ИНДЕКСЭЭР уншдаг тул бүтэн зам мөрөөр олдохгүй (sector_kpi_*_live-тэй
          ижил зарчим). */
       'ds_schema_rail_wagon',
+      /* `ds_schema_road_inspect` — үзлэгийн датасэтийн баганын нэр/тайлбар.
+         applyRoadInspectionData() дотор ИНДЕКСЭЭР уншдаг (вагонтой ижил). */
+      'ds_schema_road_inspect',
       /* `sector_kpi_road_live` ба `road_fail_cats` — техникийн хяналтын
          үзлэгийн KPI мөрийн нэр ба тэнцээгүй хэсгийн шошго.
          applyRoadInspectionData() дотор ИНДЕКСЭЭР уншдаг
@@ -4005,7 +4008,7 @@ async function groupBE() {
   check('BE16. Админ backend модулийг ачаална',
     /erthub-backend\.js/.test(read('admin/index.html')) && /backend-config\.js/.test(read('admin/index.html')));
   check('BE16. Админ вагон ачилтыг тусад нь (flights-ээс хамааралгүй) уншина',
-    /function loadRailWagon\(\)/.test(adm) && /Promise\.all\(\[loadFeed\(\),loadRailWagon\(\),loadSectorSeries\(\)\]\)/.test(adm));
+    /function loadRailWagon\(\)/.test(adm) && adm.includes('Promise.all([loadFeed(),loadRailWagon(),loadRoadInspections(),loadSectorSeries()])'));
   check('BE16. metricValue rail.wagon_* -г RAIL-ээс өгнө (FEED-ээс БИШ)',
     /mk\.indexOf\('rail\.wagon'\)===0/.test(adm) && /RAIL\.state!=='ready'/.test(adm));
   check('BE16. u07 preview огноог МЕТРИКЭЭС уншина (хатуу air шалгалт устсан)',
@@ -4219,8 +4222,8 @@ async function groupBE() {
   /* 2026-09-22: салбарын цуваа ЕРӨНХИЙ болов (SERIES_METRIC → SERIES[api]) */
   check('BE25. Админ metricSeries салбарын цувааг SERIES-ээс (flights FEED-ээс ХАМААРАХГҮЙ)',
     /if\(SERIES_METRIC\[mk\]\)\{ var ss=SERIES\[SERIES_METRIC\[mk\]\]; return \(ss&&ss\.state==='ready'\)\?ss\.series:null; \}\s*\n\s*if\(FEED\.state!=='ready'\) return null;/.test(adm25));
-  check('BE25. Админ гурван эх сурвалжийг зэрэг ачаална',
-    /Promise\.all\(\[loadFeed\(\),loadRailWagon\(\),loadSectorSeries\(\)\]\)/.test(adm25));
+  check('BE25. Админ ДӨРВӨН эх сурвалжийг зэрэг ачаална (үзлэг нэмэгдсэн)',
+    adm25.includes('Promise.all([loadFeed(),loadRailWagon(),loadRoadInspections(),loadSectorSeries()])'));
   check('BE25. Админ rail.monthly_passenger_series → rail',
     /var SERIES_METRIC=\{'rail\.monthly_passenger_series':'rail'/.test(adm25));
   check('BE25. Line preview бусад verified слотын цувааг ч харуулна (rail холбоос тусна)',
@@ -4245,11 +4248,18 @@ async function groupBE() {
   const mkRow = (st, fmt, MON) => ({ call: (c) => mkRowRaw.call({ _sectorSeries: { rail: c._railPaxSeries } }, SS26, st, fmt, MON, 'rail') });
   const runPax = (series) => {
     const SEC = { rail: { c1: 'Сарын зорчигч (мянга)', c1d: [290, 270, 310], _liveKpis: true } };
-    const ctx = { _sectorSeries: { rail: series }, _st: null, setState(s) { this._st = s; } };
+    /* applySectorSeries одоо датасэтийн мета бичдэг (u07-ийн зорчигчийн
+       мөр ҮҮНЭЭС уншина) тул стаб ЗААВАЛ хэрэгтэй. */
+    const ctx = { _sectorSeries: { rail: series }, _st: null, _meta: null,
+      setSourceMeta(id, m) { this._meta = { id, m }; }, setState(s) { this._st = s; } };
     mkPaxRaw.call(ctx, SEC, SS26, 'rail');
     return { SEC, ctx };
   };
   const P26 = runPax({ unit: 'зорчигч', year: 2026, counts: JAN_AUG.slice(), lastMonth: 8 });
+  check('BE36. Цувааны мета railPax-д, сүүлийн БҮТЭН сараар (2026-08)',
+    !!P26.ctx._meta && P26.ctx._meta.id === 'railPax' &&
+    P26.ctx._meta.m.updatedAt === '2026-08' && P26.ctx._meta.m.lastRecord === '2026-08',
+    JSON.stringify(P26.ctx._meta));
   check('BE26. c1d = бодит 1–8-р сар (демо [290,270,310] бүрэн солигдоно)',
     JSON.stringify(P26.SEC.rail.c1d) === JSON.stringify(JAN_AUG));
   check('BE26. Шошго "Сарын зорчигч" — "(мянга)" БИШ (бодит тоо мянгачлагдаагүй)',
@@ -4308,7 +4318,8 @@ async function groupBE() {
     labels: () => ({ chart: 'Сарын Х', kpi: 'Х / САР', unit: 'нэгж' }) } };
   const SECR = { road: { c1: 'демо', c1d: [1, 2, 3], kpis: [['НИЙТ ЗАМ', '48,210', 'км', '+2.1%', 'up']] } };
   const ctxR = { _sectorSeries: { road: { unit: 'нэгж', year: 2026, counts: [100, 110, 99], lastMonth: 3 } },
-    setState() {}, seriesKpiRow(k) { return mkRowRaw.call(this, SSR, st26, fmt26, MONTHS25, k); } };
+    setState() {}, setSourceMeta() {},
+    seriesKpiRow(k) { return mkRowRaw.call(this, SSR, st26, fmt26, MONTHS25, k); } };
   mkPaxRaw.call(ctxR, SECR, SSR, 'road');
   check('BE27b. replace: статик демо мөрүүд (48,210 км) бүрэн солигдож 1 амьд мөр',
     SECR.road.kpis.length === 1 && SECR.road.kpis[0][0] === 'Х / САР' && SECR.road.kpis[0][1] === '99' &&
@@ -4320,7 +4331,8 @@ async function groupBE() {
     JSON.stringify(SECR.road.c1d) === '[100,110,99]' && SECR.road.c1 === 'Сарын Х' &&
     SECR.road._liveSeries === true && SECR.road._liveSeriesDs === 'Тест датасэт' && SECR.road.c1dYear === 2026);
   const SECA = { rail: { c1: 'x', c1d: [1], kpis: [['A', '1', 'вагон', '—', 'flat']], _liveKpis: true } };
-  mkPaxRaw.call({ _sectorSeries: { rail: { year: 2026, counts: JAN_AUG.slice(), lastMonth: 8 } }, setState() {} }, SECA, SS26, 'rail');
+  mkPaxRaw.call({ _sectorSeries: { rail: { year: 2026, counts: JAN_AUG.slice(), lastMonth: 8 } },
+    setState() {}, setSourceMeta() {} }, SECA, SS26, 'rail');
   check('BE27b. append (rail): KPI мөрийг ЭНД хөндөхгүй — вагоны apply залгана',
     SECA.rail.kpis.length === 1 && SECA.rail.kpis[0][0] === 'A');
   const sv27 = dcScript().match(/\n  seriesVerified\(widgetId,sectorKey\)\{([\s\S]*?)\n  \}\n/);
@@ -4456,7 +4468,7 @@ async function groupBE() {
      тайлбарлана). dataAgeDays/INSPECT_STALE_DAYS-ийг ГАДНААС өгнө. */
   const irm = dcScript().match(/\n  applyRoadInspectionData\(\)\{([\s\S]*?)\n  \}\n/);
   if (!irm) { bad('BE31. applyRoadInspectionData() олдсонгүй'); return; }
-  const mkInsp = new Function('SECTORS', 'stxt', 'fmtNum', 'dataAgeDays', 'INSPECT_STALE_DAYS',
+  const mkInsp = new Function('SECTORS', 'DS_SCHEMA', 'stxt', 'fmtNum', 'dataAgeDays', 'INSPECT_STALE_DAYS',
     'return function(){' + irm[1] + '}');
   const RTXT = {
     'sector_kpi_road_live.0': 'ХОНОГИЙН ҮЗЛЭГ', 'sector_kpi_road_live.1': 'ТЭНЦЭЭГҮЙ',
@@ -4468,7 +4480,12 @@ async function groupBE() {
     'road_fail_cats.3': 'Гэрэл', 'road_fail_cats.4': 'Утаа', 'road_fail_cats.5': 'Дуу чимээ',
     'sector_rank_road_live': 'Тэнцээгүй шалтгааны бүтэц (хэсгээр)',
     'sector_chart2_road_live': 'Аймаг тус бүрийн үзлэг',
-    'chart.daily_trend': 'хоногийн чиг хандлага'
+    'chart.daily_trend': 'хоногийн чиг хандлага',
+    'ds_schema_road_inspect.head.0': 'Аймаг, нийслэл', 'ds_schema_road_inspect.head.1': 'Үзлэг',
+    'ds_schema_road_inspect.head.2': 'Тэнцээгүй', 'ds_schema_road_inspect.head.3': 'Тэнцээгүй хувь',
+    'ds_schema_road_inspect.head.4': 'Төлөв',
+    'ds_schema_road_inspect.st_fail': 'Тэнцээгүй бүртгэгдсэн',
+    'ds_schema_road_inspect.st_clean': 'Бүгд тэнцсэн'
   };
   const runInsp = (live, ageDays) => {
     const SEC = { road: { label: 'Авто зам', kpis: [['НИЙТ ЗАМ', '48,210', 'км', '+2.1%', 'up']],
@@ -4476,10 +4493,13 @@ async function groupBE() {
       c2: 'Аймаг тус бүрийн ачаалал', bars: [['Улаанбаатар', 92, '214,300']] } };
     const ctx = { _roadInspections: live, _meta: null, _st: null,
       setSourceMeta(id, m) { this._meta = { id, m } }, setState(s) { this._st = s } };
-    mkInsp(SEC, (p, f) => (RTXT[p] !== undefined ? RTXT[p] : f),
+    /* Датасэтийн хуудасны схем — вагоны DS_SCHEMA.rail_wagon-той ижил
+       зарчим. Анхны төлөв нь ХООСОН мөр (зохиомол дата алга). */
+    const DSS = { road_inspect: { head: [], types: [], notes: [], rows: [] } };
+    mkInsp(SEC, DSS, (p, f) => (RTXT[p] !== undefined ? RTXT[p] : f),
       (n) => Number(n).toLocaleString('en-US'),
       () => (ageDays === undefined ? 1 : ageDays), 8).call(ctx);
-    return { SEC, ctx };
+    return { SEC, ctx, DSS };
   };
   const I = runInsp(toI(INSP_LIVE));
   const ir = I.SEC.road.kpis;
@@ -4588,6 +4608,114 @@ async function groupBE() {
 
   check('BE31. reapplyLiveText нь үзлэгийн мөрийг ч ДАХИН барина (нийтэлсэн шошго хүрнэ)',
     /reapplyLiveText\(\)\{[\s\S]*?this\.applyRoadInspectionData\(\);[\s\S]*?this\.recomputeAirData\(\);/.test(dcScript()));
+
+  /* ── BE33. Датасэтийн дэлгэрэнгүйн ХҮСНЭГТ (DS_SCHEMA.road_inspect) ──
+     Үзлэгийн датасэт `schema` зарлаагүй байсан тул schemaKey нь салбар
+     руу (DS_SCHEMA.road) уначихаж, хуудас нь ЗАМЫН ХӨДӨЛГӨӨНИЙ зохиомол
+     мөрүүдийг ("Сансар товчоо 4,820") үзлэгийн дата мэт харуулж, Excel
+     татах товч түүнийг файлаар гаргаж байв. Гараар бодох фикстур: УБ
+     120/1621 = 7.4028 → 7.4; Орхон 9/131 = 6.8702 → 6.9. */
+  check('BE33. Үзлэгийн датасэт ӨӨРИЙН схем зарлана (салбарын схем БИШ)',
+    /schema:'road_inspect',source:'roadInspect'/.test(dcScript()));
+  check('BE33. DS_SCHEMA.road_inspect анхнаасаа ХООСОН мөртэй (зохиомол дата алга)',
+    /road_inspect:\{head:\[[\s\S]*?rows:\[\]\}/.test(dcScript()));
+  const ISch = I.DSS.road_inspect;
+  check('BE33. by_aimag-ийн 3 мөр хүснэгтэд буув', ISch.rows.length === 3, JSON.stringify(ISch.rows.length));
+  check('BE33. Толгой content.json-оос (5 багана)',
+    ISch.head.length === 5 && ISch.head[0] === 'Аймаг, нийслэл' && ISch.head[1] === 'Үзлэг' &&
+    ISch.head[3] === 'Тэнцээгүй хувь', JSON.stringify(ISch.head));
+  check('BE33. Мөр 1 = Улаанбаатар · 1,621 · 120 · 7.4% (ГАРААР бодов)',
+    ISch.rows[0][0] === 'Улаанбаатар' && ISch.rows[0][1] === 1621 &&
+    ISch.rows[0][2] === 120 && ISch.rows[0][3] === 7.4, JSON.stringify(ISch.rows[0]));
+  check('BE33. Мөр 2 = Орхон · 131 · 9 · 6.9% (ГАРААР бодов)',
+    ISch.rows[1][0] === 'Орхон' && ISch.rows[1][3] === 6.9, JSON.stringify(ISch.rows[1]));
+  check('BE33. Үзлэгийн тоогоор БУУРАХ эрэмбэтэй',
+    ISch.rows[0][1] > ISch.rows[1][1] && ISch.rows[1][1] > ISch.rows[2][1]);
+  check('BE33. Тэнцээгүйтэй аймаг "warn:", тайлбар нь content.json-оос',
+    ISch.rows[0][4] === 'warn:Тэнцээгүй бүртгэгдсэн', ISch.rows[0][4]);
+  /* Бүгд тэнцсэн аймаг → "ok:" (хувь 0). Эсрэг тохиолдлыг ЗААВАЛ шалгана:
+     эс тэгвэл status үргэлж "warn" байсан ч тест ногоон үлдэнэ. */
+  const ICl = runInsp(toI({ ...INSP_LIVE,
+    by_aimag: [{ aimag: 'Говьсүмбэр', count: 40, failed: 0 }] })).DSS.road_inspect;
+  check('BE33. Тэнцээгүйгүй аймаг → "ok:Бүгд тэнцсэн" · хувь 0',
+    ICl.rows[0][3] === 0 && ICl.rows[0][4] === 'ok:Бүгд тэнцсэн', JSON.stringify(ICl.rows[0]));
+  /* by_aimag ирээгүй бол хүснэгтийг ОГТ ХӨНДӨХГҮЙ (хуучин байдал хэвээр) */
+  const INo = runInsp(toI({ ...INSP_LIVE, by_aimag: [] })).DSS.road_inspect;
+  check('BE33. by_aimag хоосон → мөр ҮҮСГЭХГҮЙ (тоо ЗОХИОХГҮЙ)', INo.rows.length === 0);
+  check('BE33. Шинэ харагдах текст content.json-д бүртгэгдсэн',
+    (() => { const d = readJson('content.json').site.ds_schema_road_inspect || {};
+      return (d.head || []).length === 5 && (d.notes || []).length === 5 &&
+        d.st_fail === 'Тэнцээгүй бүртгэгдсэн' && d.st_clean === 'Бүгд тэнцсэн'; })());
+
+  /* ── BE34. Hero ticker-ийн зорчигч — цэвэр "0" БИШ ──
+     "0 ЗОРЧИГЧ / ӨДӨР" нь "өнөөдөр зорчигч байхгүй" гэж уншигдаж, 04-р
+     хэсгийн амьд "148,470 зорчигч/сар"-тай зөрчилдөж байв. */
+  check('BE34. hero_px эх сурвалжгүй үед "0" гэж ХУДАЛ тоо гаргахгүй',
+    !dcScript().includes("heroPxValue:this.isWidgetMock('hero_px')?'0':") &&
+    dcScript().includes("heroPxValue:this.isWidgetMock('hero_px')?'—':"));
+  check('BE34. Оронд нь "мэдээлэл алга" гэж ИЛ хэлнэ (status.no_data ДАХИН ашиглав)',
+    dcScript().includes("heroPxNote:this.isWidgetMock('hero_px')") &&
+    dcScript().includes("stxt('status.no_data'") &&
+    read('index.html').includes('{{ heroPxTitle }}</span>{{ heroPxNote }}'));
+
+  /* ── BE35. Админы preview нь үзлэгийн АМЬД тоог уншина ──
+     BE30–BE33 сайтын талыг бүрэн шалгасан ч metricValue()-д road-ийн
+     салаа БАЙХГҮЙ байсныг барьсангүй: админ "Авто зам 0 / мэдээлэл алга"
+     гэж үзүүлэх зэрэгцээ "Слотын чанар" нь "амьд утга" гэсэн ногоон badge
+     гаргаж байв. CLAUDE.md §"Тестийн мөчлөг" алхам 3 — ХОЁР талыг ХАМТ.
+     (rail-д ижил зорилгын BE16 бий, road-д нь дутуу байв.) */
+  check('BE35. Админ үзлэгийг тусад нь (feed-ээс хамааралгүй) уншина',
+    adm.includes('function loadRoadInspections()') && adm.includes('EHBackend.fetchRoadInspections()'));
+  check('BE35. INSP төлөв RAIL/FEED-ээс ТУСДАА',
+    adm.includes("var INSP={state:'idle'") && adm.includes("INSP.state='ready'"));
+  check('BE35. metricValue road.inspection_* -г INSP-ээс өгнө (FEED-ээр хаагдахгүй)',
+    adm.includes("mk.indexOf('road.inspection')===0") && adm.includes("INSP.state!=='ready'"));
+  check('BE35. metricDate road.feed_updated_at-ыг INSP.date-ээс өгнө',
+    adm.includes("mk==='road.feed_updated_at'") && adm.includes("INSP.state==='ready'&&INSP.date"));
+  /* Функцийг ГАРГАЖ АВААД бодит утган дээр ажиллуулна — regex нь зөвхөн
+     "бичигдсэн эсэх"-ийг хэлнэ, УТГА зөв эсэхийг БИШ. */
+  const mv35 = adm.match(/function metricValue\(mk\)\{([\s\S]*?)\n\}/);
+  const md35 = adm.match(/function metricDate\(mk\)\{([\s\S]*?)\n\}/);
+  if (!mv35 || !md35) { bad('BE35. metricValue/metricDate олдсонгүй'); return; }
+  const mkMV = new Function('FEED', 'RAIL', 'INSP', 'return function(mk){' + mv35[1] + '}');
+  const mkMD = new Function('FEED', 'RAIL', 'INSP', 'return function(mk){' + md35[1] + '}');
+  const FEED35 = { state: 'off' }, RAIL35 = { state: 'off' };
+  const INSP_R = { state: 'ready', date: '2026-09-21', count: 2790, failed: 202, vehicles: 2692 };
+  const mvR = mkMV(FEED35, RAIL35, INSP_R), mdR = mkMD(FEED35, RAIL35, INSP_R);
+  check('BE35. feed УНААГҮЙ ч үзлэгийн preview 2,790 гарна (0 БИШ)',
+    mvR('road.inspection_count') === 2790 && mvR('road.inspection_kpi_set') === 2790,
+    String(mvR('road.inspection_count')));
+  check('BE35. Огноо нь INSP-ээс (u07 preview "мэдээлэл алга" болохгүй)',
+    mdR('road.feed_updated_at') === '2026-09-21', String(mdR('road.feed_updated_at')));
+  const INSP_O = { state: 'off', date: null, count: null };
+  const mvO = mkMV(FEED35, RAIL35, INSP_O), mdO = mkMD(FEED35, RAIL35, INSP_O);
+  check('BE35. Backend унтарсан → null (тоо ЗОХИОХГҮЙ, 0 ч гаргахгүй)',
+    mvO('road.inspection_count') === null && mdO('road.feed_updated_at') === null);
+  check('BE35. Мэдэхгүй метрик → null', mvR('road.blah') === null && mvR('zzz') === null);
+
+  /* ── BE36. Зорчигчийн цуваа ДАТАСЭТ болж танигдана ──
+     SECTOR_SERIES.rail.dataset нь 'Зорчигчийн галт тэрэгний мэдээ'-г
+     заадаг атал DATASETS-д тийм нэртэй бичлэг БАЙХГҮЙ байсан тул
+     dsHasTrend() (_liveSeriesDs === dsel.name) хэзээ ч тэнцэхгүй —
+     амьд муруй ямар ч датасэтийн хуудсан дээр гардаггүй байв. */
+  const dsNames36 = [...dcScript().matchAll(/\{sector:'[a-z]+',name:'([^']+)'/g)].map((m) => m[1]);
+  const serDs36 = (dcScript().match(/rail:\{api:'rail',dataset:'([^']+)'/) || [])[1];
+  check('BE36. SECTOR_SERIES.rail.dataset нь DATASETS-д БОДИТООР байна',
+    !!serDs36 && dsNames36.includes(serDs36), serDs36 + ' / ' + dsNames36.length + ' датасэт');
+  check('BE36. Цувааны датасэт railPax эх сурвалжтай',
+    /name:'Зорчигчийн галт тэрэгний мэдээ'[\s\S]{0,500}?source:'railPax'/.test(dcScript()));
+  check('BE36. SOURCES-д railPax бүртгэлтэй (auditBindings сануулахгүй)',
+    dcScript().includes('railPax:{label:'));
+  check('BE36. u07-ийн зорчигчийн мөр амьд метад холбогдов',
+    /title:'Зорчигчийн галт тэрэгний мэдээ'[\s\S]{0,400}?source:'railPax', bind:\{date:'feedUpdated'\}/.test(dcScript()));
+  check('BE36. applySectorSeries нь cfg.source-д мета бичнэ (салбар БҮРД ерөнхий)',
+    dcScript().includes('if(cfg.source){') && dcScript().includes('this.setSourceMeta(cfg.source,'));
+  check('BE36. Датасэт content.json-д ТӨГСГӨЛД бүртгэгдсэн (индекс гулсахгүй)',
+    (() => {
+      const ds = readJson('content.json').site.datasets;
+      return ds[ds.length - 1].name === 'Зорчигчийн галт тэрэгний мэдээ' &&
+        ds[ds.length - 1].sector === 'rail';
+    })());
 
   /* ── BE32. Registry / админ / content — ГЭРЭЭ (хоёр талыг ХАМТ) ── */
   const reg32 = readJson('metric_registry.json');
