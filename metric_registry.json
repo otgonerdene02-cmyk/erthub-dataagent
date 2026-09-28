@@ -590,7 +590,15 @@
     "road.veritech.inspections": {
       "label": "Техникийн хяналтын үзлэгийн мэдээ",
       "sector": "road",
-      "status": "live"
+      "status": "live",
+      "table": "silver.road_inspections",
+      "completeness": {
+        "ingested": 910444,
+        "source_total": 910444,
+        "measured_on": "2026-09-26",
+        "method": "ETL run 57 · stopReason=last_page · 460 мин",
+        "blocks_publication": false
+      }
     },
     "rail.veritech.freight_ubtz": {
       "label": "Ачаа тээврийн мэдээ (УБТЗ)",
