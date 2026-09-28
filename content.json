@@ -648,7 +648,8 @@
       "compare_prev_month_end": ") харьцуулбал",
       "last_point": "сүүлийн цэг =",
       "compare_mom_mid": "· өмнөх сартай (",
-      "compare_mom_end": ") харьцуулбал"
+      "compare_mom_end": ") харьцуулбал",
+      "compare_mom": "өмнөх сартай харьцуулбал"
     },
     "compare_window": {
       "_note": "06-р хэсгийн хөл бичгийн ард код динамикаар залгадаг хэсэг.",

@@ -1096,6 +1096,10 @@
           <sc-if value="{{ trend.dataNote }}"><span style="color:var(--ink2);font-weight:600;">{{ trend.dataNote }}</span></sc-if>
         </div>
       </div>
+      <sc-if value="{{ trend.noData }}">
+        <div style="height:210px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ trend.noDataNote }}</div>
+      </sc-if>
+      <sc-if value="{{ trend.hasData }}">
       <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:210px;display:block;">
         <defs>
           <linearGradient id="trendfill" x1="0" y1="0" x2="0" y2="1">
@@ -1151,6 +1155,7 @@
           </foreignObject>
         </sc-for>
       </svg>
+      </sc-if>
     </div>
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;backdrop-filter:blur(14px);display:flex;flex-direction:column;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="d05" data-eh-field="title">{{ d05Title }}</span></div>
@@ -5382,6 +5387,15 @@ class Component extends DCLogic {
       }
     }
     const note=[asof,stale||cmp].filter(Boolean).join(' · ');
+    /* Харьцуулалтгүй мөрийн (ТЭНЦЭЭГҮЙ, ШАЛГАСАН ТХ — дельта нь "—")
+       тайлбар ӨӨР байх ЁСТОЙ: тэдгээрт өмнөх хоногтой харьцуулсан хувь
+       БАЙХГҮЙ тул мөр 0-ийн "өмнөх бүртгэлтэй хоногтой харьцуулбал
+       (2026-09-24)" гэсэн тайлбарыг давтвал "—"-ийн хажууд БАЙХГҮЙ
+       харьцуулалтыг байгаа гэж мэдэгдэнэ (browser-оор 04-р хэсгийн
+       02/03 картан дээр илрүүлэв). Огноо ("Хоногийн мэдээ: …") нь мөр
+       БҮРД хэрэгтэй тул хэвээр — ялгаа нь зөвхөн харьцуулалтын хэсэг. */
+    const noteNoCmp=[asof,stale||stxt('status.no_compare','харьцуулах өгөгдөл алга')]
+      .filter(Boolean).join(' · ');
     /* Хоногийн цуваа — KPI мөрийн spark (k[6]) ба түүний ТАЙЛБАР (k[7]).
        Тайлбарыг мөр өөрөө өгөх ёстой: виджетийн ерөнхий "12 сарын чиг
        хандлага" нь хоногийн график дээр ХУДАЛ уншигдана. */
@@ -5397,12 +5411,12 @@ class Component extends DCLogic {
          ХУДАЛ харуулна. */
       const sh=w.count>0?(w.failed/w.count*100).toFixed(1)+'%':'';
       const fSpark=days.filter(d=>Number.isFinite(Number(d.failed))).map(d=>Number(d.failed));
-      rows.push([kl('ТЭНЦЭЭГҮЙ',1),fmtNum(w.failed),sh,'—','flat',note,
+      rows.push([kl('ТЭНЦЭЭГҮЙ',1),fmtNum(w.failed),sh,'—','flat',noteNoCmp,
         fSpark.length===days.length&&fSpark.length>1?fSpark:null,sFoot]);
     }
     /* Шалгасан ТХ — үзлэгээс ЦӨӨН байж болно (дахин үзлэг). Нэгжийг
        хоосон орхино: "үзлэг" гэвэл ХУДАЛ уншигдана. */
-    if(w.vehicleCount!=null) rows.push([kl('ШАЛГАСАН ТХ',2),fmtNum(w.vehicleCount),'','—','flat',note]);
+    if(w.vehicleCount!=null) rows.push([kl('ШАЛГАСАН ТХ',2),fmtNum(w.vehicleCount),'','—','flat',noteNoCmp]);
     SECTORS.road.kpis=rows;
     SECTORS.road._liveKpis=true;
     /* u07 ("Сүүлд шинэчлэгдсэн өгөгдөл") мөр — RECENT-ийн source:'roadInspect'
@@ -9165,7 +9179,14 @@ class Component extends DCLogic {
         value:vs?vs.value:(verified?k[1]:'0'),
         unit:vs?(vs.unit||''):k[2],
         delta,dir,deltaColor,deltaGlyph,
-        compareLabel:verified?(k[5]||'өмнөх сартай харьцуулбал'):stxt('status.no_data','мэдээлэл алга'),
+        /* Мөр өөрийн тайлбаргүй үеийн НӨӨЦ шошго. Дельта "—" бол
+           харьцуулалт ОГТ байхгүй тул "өмнөх сартай харьцуулбал" гэж
+           бичвэл байхгүй зүйлийг мэдэгдэнэ. Текст нь content.json-д
+           (site.chart.compare_mom) — кодод хатуу бичихгүй. */
+        compareLabel:verified
+          ?(k[5]||(delta==='—'?stxt('status.no_compare','харьцуулах өгөгдөл алга')
+                              :stxt('chart.compare_mom','өмнөх сартай харьцуулбал')))
+          :stxt('status.no_data','мэдээлэл алга'),
         spark,sparkArea:spark+' L120,32 L0,32 Z',
         index:String(i+1).padStart(2,'0')};
     });
@@ -9216,6 +9237,17 @@ class Component extends DCLogic {
           : buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0))
       : Object.assign(buildTrendChart(new Array(12).fill(0),0),
           {showForecast:false,dataNote:stxt('status.no_data','мэдээлэл алга')});
+    /* Цуваагүй үед ГРАФИКИЙГ ОГТ зурахгүй. Өмнө нь 12 тэгийн хавтгай
+       муруй зурагдаж, Y тэнхлэг нь "-6 -3 0 3 6" гэсэн УТГАГҮЙ (сөрөг
+       "мянга"!) тоо, X тэнхлэг нь "1-р сар … 11-р сар" гэж бичигдэж,
+       хоосон гэдгийг зөвхөн жижиг badge л мэдэгдэж байв (browser-оор
+       Авто зам салбар дээр илрүүлэв). Тэг цувааны прогнозын resid=1
+       болохоор тэнхлэг ±6 болж "мянган хүн" сөрөг гарч байсан.
+       Датасэтийн дэлгэрэнгүй хуудасны detail.noTrend/hasTrend-тэй
+       ЯГ ИЖИЛ зарчим — тэнд аль хэдийн шийдэгдсэн байсан. */
+    trend.hasData=!!t05Verified;
+    trend.noData=!t05Verified;
+    trend.noDataNote=stxt('status.no_series','чиг хандлагын цуваа алга');
     if(t05Verified) trend.showForecast=true;
     const wsum=win.reduce((a,b)=>a+b,0), wavg=win.length?Math.round(wsum/win.length):0;
     const mSel={cx:0,cy:0,value:'',label:'',has:false};
@@ -9276,13 +9308,20 @@ class Component extends DCLogic {
         // Тохиргоотой бол сар тутмын БОДИТ цуваа; үгүй бол өмнөх зан төлөв.
         spark:(vs&&vs.spark)||(ownSeries?pathFor(ownSeries,120,32,3).line:flatSpark),
         /* Хөл бичиг: виджетийн ерөнхий текст ("өмнөх сартай харьцуулбал
-           · 12 сарын график") нь харьцуулалт ҮНЭХЭЭР байгаа нүдэнд л
-           үнэн. Өөрчлөлт "—" (хоногийн вагон мэдээ) эсвэл нүд
-           холбогдоогүй үед мөрийн ӨӨРИЙН тайлбарыг үзүүлнэ — эс тэгвэл
-           хавтгай шугам, "—" хоёрын доор "өмнөх сартай харьцуулбал"
-           гэж ХУДАЛ бичигдэнэ. */
+           · 12 сарын график") нь ХОЁР зүйлийг зэрэг мэдэгдэнэ — (а)
+           харьцуулалт өмнөх САРтай, (б) доорх муруй 12 САРын. Иймд
+           зөвхөн утгын тохиргоо (widgets.ls.value) МоМ дельта БА сарын
+           цуваа ХОЁУЛАА өгсөн үед л үнэн. Бусад бүх үед мөрийн ӨӨРИЙН
+           тайлбарыг (sk.kpis[0][5]) үзүүлнэ.
+           ЯАГААД: air-ийн дельта applyRealFlightsData-аас ирдэг ба YoY
+           ("8 сар · өмнөх ОНЫ мөн сартай (8 сар 2025) харьцуулбал") —
+           агаарын тээвэр улирлын хэлбэлзэлтэй тул MoM зориуд
+           хэрэглээгүй. Ерөнхий текст түүнийг "өмнөх САРтай" гэж ХУДАЛ
+           тайлбарлаж, зэрэгцээд хавтгай спарклайныг "12 сарын график"
+           гэж нэрлэж байв (browser: "НИЙТ НИСЛЭГ 2,450 +0.9% · өмнөх
+           сартай харьцуулбал · 12 сарын график"). */
         ...(()=>{
-          const hasCmp=verified&&!ownSeries&&((vs?(vs.delta||'—'):sk.kpis[0][3])!=='—');
+          const hasCmp=!!(verified&&vs&&vs.spark&&(vs.delta||'—')!=='—');
           const note=verified?(sk.kpis[0][5]||stxt('status.no_data','мэдээлэл алга'))
                              :stxt('status.no_data','мэдээлэл алга');
           return {footText:hasCmp?lsFootTxt:note,
