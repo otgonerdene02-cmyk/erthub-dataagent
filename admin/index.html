@@ -3436,6 +3436,25 @@ function metricSelect(id,path,sectorKey){
    (metric_registry.json → widgets.<id>.<slot>.label / would_need).
    Өмнө нь зөвхөн ХАРУУЛДАГ байсан тул preview-д харагдаж байгаа мөртөө
    админаас засагдахгүй байв. */
+/* Датасэтийн бүрэн байдлын мөр. Слот нь blocked_by-аар датасэтээ
+   заана; хувийг ХАДГАЛАХГҮЙ, ingested/source_total-оос ТООЦНО (ганц
+   эх сурвалж — хоёр газар зөрөх боломжгүй). */
+function completenessNote(dsId){
+  var d=dsId&&REG.datasets&&REG.datasets[dsId];
+  if(!d||!d.completeness) return '';
+  var c=d.completeness;
+  if(!(c.source_total>0)||c.ingested==null) return '';
+  var pct=c.ingested/c.source_total*100;
+  /* 1%-аас бага бол 2 аравтаар — "0.1%" гэж дугуйрвал 0.05% ба 0.14%
+     нэг адил харагдана. */
+  var txt=(pct<1?pct.toFixed(2):pct.toFixed(1))+'% ('+nf(c.ingested)+' / '+nf(c.source_total)+')';
+  return '<p class="pvnote"><b>'+esc(utxt('slot_text.completeness','Эх сурвалжийн бүрэн байдал'))+
+    ':</b> '+esc(txt)+
+    (c.blocks_publication
+      ?' — '+esc(utxt('slot_text.blocks_publication','дутуу таталт тул тоо нийтлэхгүй'))
+      :'')+
+    (c.measured_on?' <span class="dt">'+esc(c.measured_on)+'</span>':'')+'</p>';
+}
 function slotTextForm(id,path){
   var sv=slotVal(id,path), k=id+'|'+path.join(',');
   var row=function(f,lab){
@@ -3448,7 +3467,8 @@ function slotTextForm(id,path){
      (mock слотод 'түр дата' badge давуу эрхтэй) — үхмэл талбар
      үүсгэхгүйн тулд тэр үед л үзүүлнэ. */
   return (qualityOf(sv)==='none'?row('label',utxt('slot_text.label','Preview дээрх шошго')):'')+
-         row('would_need',utxt('slot_text.would_need','Шаардлагатай эх сурвалж'));
+         row('would_need',utxt('slot_text.would_need','Шаардлагатай эх сурвалж'))+
+         completenessNote(sv.blocked_by);
 }
 function bindingWarn(id){
   var out=[];
