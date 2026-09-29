@@ -4604,10 +4604,110 @@ async function groupBE() {
     /data-eh-card="k04" data-eh-field="foot" style="\{\{ k\.footBaseStyle \}\}"/.test(read('index.html')));
   check('BE31b. ls-ийн spark мөрийн өөрийн цуваанаас (хавтгай шугам биш)',
     /spark:\(vs&&vs\.spark\)\|\|\(ownSeries\?pathFor\(ownSeries,120,32,3\)\.line:flatSpark\)/.test(dcScript()));
-  check('BE31b. ls-ийн ерөнхий хөл бичиг өөрийн цуваатай мөрөнд ГАРАХГҮЙ',
-    /const hasCmp=verified&&!ownSeries&&/.test(dcScript()));
   check('BE31b. Цувааны тайлбар content.json-д бүртгэлтэй',
     readJson('content.json').site.chart.daily_trend === 'хоногийн чиг хандлага');
+
+  /* ══ BE37. ls (01-р зурвас) — ХӨЛ БИЧИГ нь ДЕЛЬТАГИЙН СУУРЬТАЙ таарна ══
+     Регресс (browser, 2026-09-28): "НИЙТ НИСЛЭГ 2,450 · +0.9% · өмнөх
+     сартай харьцуулбал · 12 сарын график" гэж гарч байв. Гэтэл +0.9% нь
+     applyRealFlightsData-ийн YoY (өмнөх ОНЫ мөн сар — агаарын тээвэр
+     улирлын хэлбэлзэлтэй тул MoM зориуд хэрэглээгүй), доорх спарклайн нь
+     хавтгай 0 шугам. Өөрөөр хэлбэл хөл бичгийн ХОЁР мэдэгдэл ХОЁУЛАА
+     худал байв. Мөр өөрийн ҮНЭН тайлбарыг (kpis[0][5]) аль хэдийн
+     хадгалдаг тул түүнийг үзүүлнэ. */
+  const lsm = dcScript().match(/\.\.\.\(\(\)=>\{\r?\n\s*const hasCmp=[\s\S]*?\}\)\(\),/);
+  if (!lsm) { bad('BE37. ls-ийн хөл бичгийн блок олдсонгүй'); return; }
+  const lsFoot = new Function('verified', 'vs', 'sk', 'lsFootTxt', 'stxt',
+    'return ' + lsm[0].slice(3).replace(/,\s*$/, ''));
+  const LSF = 'өмнөх сартай харьцуулбал · 12 сарын график';
+  const sx = (p, f) => f;
+  const airRow = ['НИЙТ НИСЛЭГ', '2,450', '', '+0.9%', 'up',
+    '8 сар · өмнөх оны мөн сартай (8 сар 2025) харьцуулбал'];
+  const fAir = lsFoot(true, null, { kpis: [airRow] }, LSF, sx);
+  check('BE37. air-ийн YoY дельтаг "өмнөх САРтай" гэж ХУДАЛ тайлбарлахгүй',
+    fAir.footText === airRow[5] && !/өмнөх сартай/.test(fAir.footText) &&
+    !/12 сарын/.test(fAir.footText), JSON.stringify(fAir.footText));
+  check('BE37. Ерөнхий текст НУУГДАНА — DOM-оос ХАСАГДАХГҮЙ (админы холбоос)',
+    fAir.footBaseStyle === 'display:none;' && fAir.footNoteStyle === '' &&
+    fAir.footNote === airRow[5], JSON.stringify(fAir));
+  /* Утгын тохиргоо (widgets.ls.value) нь EHChart.value-ээс МоМ дельта БА
+     сарын цуваа ХОЁУЛАА өгдөг — ЗӨВХӨН тэр үед ерөнхий текст үнэн. */
+  const fSpec = lsFoot(true, { delta: '+1.2%', spark: 'M0,0 L1,1' }, { kpis: [airRow] }, LSF, sx);
+  check('BE37. Тохиргоотой (MoM дельта + сарын цуваа) үед ерөнхий текст ГАРНА',
+    fSpec.footText === LSF && fSpec.footBaseStyle === '' &&
+    fSpec.footNoteStyle === 'display:none;', JSON.stringify(fSpec));
+  check('BE37. Тохиргоотой ч сарын цуваагүй бол "12 сарын график" гэж бичихгүй',
+    lsFoot(true, { delta: '+1.2%', spark: null }, { kpis: [airRow] }, LSF, sx).footText === airRow[5]);
+  check('BE37. Тохиргоотой ч дельта "—" бол "өмнөх сартай" гэж бичихгүй',
+    lsFoot(true, { delta: '—', spark: 'M0,0' }, { kpis: [airRow] }, LSF, sx).footText === airRow[5]);
+  const wagRow = ['ХОНОГИЙН АЧИЛТ', '1,069', 'вагон', '—', 'flat',
+    'Хоногийн мэдээ: 2026-09-26 · харьцуулах өгөгдөл алга (өмнөх хоногийн дүн ирээгүй)'];
+  check('BE37. Дельта "—" (вагон) → мөрийн ӨӨРИЙН тайлбар',
+    lsFoot(true, null, { kpis: [wagRow] }, LSF, sx).footText === wagRow[5]);
+  check('BE37. Холбогдоогүй салбар → "мэдээлэл алга"',
+    lsFoot(false, null, { kpis: [['УСАН ЗАМ', '612', 'км', '0.0%', 'flat']] }, LSF, sx)
+      .footText === 'мэдээлэл алга');
+
+  /* ══ BE38. k04 — "—" дельтагийн доор БАЙХГҮЙ харьцуулалт мэдэгдэхгүй ══
+     Регресс (browser, 2026-09-28): 04-р хэсгийн 02/03 карт ("ТЭНЦЭЭГҮЙ
+     170 —", "ШАЛГАСАН ТХ 2,482 —") доор "Хоногийн мэдээ: 2026-09-25 ·
+     өмнөх бүртгэлтэй хоногтой харьцуулбал (2026-09-24)" гэж бичигдэж
+     байв — тэр харьцуулалт ЗӨВХӨН мөр 0-д бодогддог. Огноо нь мөр бүрд
+     хэрэгтэй тул ЗӨВХӨН харьцуулалтын хэсэг өөрчлөгдөнө. */
+  check('BE38. Мөр 0 (дельтатай) харьцуулалтаа ЯГ хэлнэ',
+    ir[0][3] === '+7.3%' && /өмнөх бүртгэлтэй хоногтой харьцуулбал \(2026-09-20\)/.test(ir[0][5]),
+    JSON.stringify(ir[0][5]));
+  check('BE38. "—" мөрүүд БАЙХГҮЙ харьцуулалтыг мэдэгдэхгүй',
+    ir[1][3] === '—' && ir[2][3] === '—' &&
+    !/харьцуулбал/.test(ir[1][5]) && !/харьцуулбал/.test(ir[2][5]) &&
+    /харьцуулах өгөгдөл алга/.test(ir[1][5]) && /харьцуулах өгөгдөл алга/.test(ir[2][5]),
+    JSON.stringify([ir[1][5], ir[2][5]]));
+  check('BE38. Огноо ("Хоногийн мэдээ") мөр БҮРД хэвээр — 3 мөр гурвуулаа',
+    ir.every((r) => String(r[5] || '').includes('Хоногийн мэдээ: 2026-09-21')),
+    JSON.stringify(ir.map((r) => r[5])));
+  /* buildKpis-ийн НӨӨЦ шошго (мөр өөрийн k[5] огт өгөөгүй үед) */
+  const bkNo = buildKpis([['ШАЛГАСАН ТХ', '2,692', '', '—', 'flat'],
+    ['НИЙТ ЗОРЧИГЧ', '1.5M', '', '+6.6%', 'up']], '#000', true, null, '12 сарын чиг хандлага');
+  check('BE38. Нөөц шошго: дельта "—" → "харьцуулах өгөгдөл алга"',
+    bkNo[0].compareLabel === 'харьцуулах өгөгдөл алга' && bkNo[0].deltaGlyph === '',
+    JSON.stringify(bkNo[0].compareLabel));
+  check('BE38. Нөөц шошго: дельтатай → "өмнөх сартай харьцуулбал"',
+    bkNo[1].compareLabel === 'өмнөх сартай харьцуулбал' && bkNo[1].deltaGlyph === '▲',
+    JSON.stringify(bkNo[1].compareLabel));
+  check('BE38. Нөөц шошго content.json-д бүртгэлтэй (кодод хатуу БИШ)',
+    readJson('content.json').site.chart.compare_mom === 'өмнөх сартай харьцуулбал' &&
+    !/k\[5\]\|\|'өмнөх сартай харьцуулбал'/.test(dcScript()));
+
+  /* ══ BE39. 05-р хэсэг — ЦУВААГҮЙ үед ГРАФИК ОГТ зурагдахгүй ══
+     Регресс (browser, 2026-09-28): Авто зам салбар дээр "САРЫН ДУНДАЖ
+     АЧААЛАЛ (МЯНГА) · мэдээлэл алга" гэсэн гарчгийн доор ХАВТГАЙ муруй
+     зурагдаж, Y тэнхлэг "-6 -3 0 3 6" (сөрөг "мянган" ачаалал!), X
+     тэнхлэг "1-р сар … 11-р сар" гэж бичигдэж байв. */
+  const btm = dcScript().match(/\nfunction buildTrendChart\(data,off\)\{([\s\S]*?)\r?\n\}\r?\n/);
+  if (!btm) { bad('BE39. buildTrendChart() олдсонгүй'); return; }
+  const btc = new Function('MONTHS', 'stxt',
+    'return function buildTrendChart(data,off){' + btm[1] + '}')(
+    ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар',
+      '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'], sx);
+  const zeroCh = btc(new Array(12).fill(0), 0);
+  /* ГАРААР: 12 тэг → налуу 0, resid = 0||0||1 = 1, прогнозын зурвас
+     ±1.9·(1,2,3) = ±5.7 → niceStep 1 → тэнхлэг −6 … 6. Өөрөөр хэлбэл
+     тэг цуваанаас ГАРАЛТАЙ тэнхлэг нь ҮРГЭЛЖ утгагүй сөрөг тоо гаргана. */
+  check('BE39. Тэг цувааны тэнхлэг УТГАГҮЙ сөрөг тоо гаргана (иймд нуух ЗӨВ)',
+    zeroCh.yTicks.map((t) => t.label).join(',') === '-6,-3,0,3,6',
+    JSON.stringify(zeroCh.yTicks.map((t) => t.label)));
+  check('BE39. Цуваатай үед тэнхлэг хэвийн (0-ээс дээш)',
+    btc([100, 110, 120, 130], 0).yTicks.every((t) => Number(String(t.label).replace(/,/g, '')) >= 0),
+    JSON.stringify(btc([100, 110, 120, 130], 0).yTicks.map((t) => t.label)));
+  check('BE39. trend.hasData / noData нь t05Verified-ээс',
+    /trend\.hasData=!!t05Verified;/.test(dcScript()) && /trend\.noData=!t05Verified;/.test(dcScript()));
+  check('BE39. Хоосон төлөв — тэнхлэггүй тайлбар мөр',
+    /<sc-if value="\{\{ trend\.noData \}\}">[\s\S]{0,400}\{\{ trend\.noDataNote \}\}/.test(read('index.html')));
+  check('BE39. SVG нь sc-if trend.hasData ДОТОР (тэнхлэг ОГТ зурагдахгүй)',
+    /<sc-if value="\{\{ trend\.hasData \}\}">\s*<svg sc-camel-view-box="0 0 600 170" style="width:100%;height:210px;/
+      .test(read('index.html')));
+  check('BE39. Хоосон төлөвийн текст content.json-д бүртгэлтэй',
+    readJson('content.json').site.status.no_series === 'чиг хандлагын цуваа алга');
 
   check('BE31. reapplyLiveText нь үзлэгийн мөрийг ч ДАХИН барина (нийтэлсэн шошго хүрнэ)',
     /reapplyLiveText\(\)\{[\s\S]*?this\.applyRoadInspectionData\(\);[\s\S]*?this\.recomputeAirData\(\);/.test(dcScript()));
