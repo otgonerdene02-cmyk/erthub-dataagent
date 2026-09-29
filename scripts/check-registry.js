@@ -83,6 +83,78 @@ if (stale.length) {
   console.error('Виджет нэр өөрчлөгдсөн эсвэл устгагдсан байж болзошгүй — шалгана уу.');
 }
 
+/* ── datasets{} · completeness · period_coverage · blocked_by ────────
+   Эдгээр нь МАШИНААР уншигддаг мета: сайт period_coverage-ээр сарын
+   цувааны дүрмээ, админ completeness-ээр "хэдэн хувь татагдсан"-ыг
+   харуулдаг. Бичгийн алдаа гарвал хоёулаа ЧИМЭЭГҮЙ унтардаг тул энд
+   шалгана. */
+const datasets = registry.datasets || {};
+const schemaErr = [];
+
+for (const [dsId, d] of Object.entries(datasets)) {
+  if (!d.label) schemaErr.push('datasets.' + dsId + ': label алга');
+  if (!d.status) schemaErr.push('datasets.' + dsId + ': status алга');
+  const c = d.completeness;
+  if (!c) continue;
+  if (typeof c.ingested !== 'number' || typeof c.source_total !== 'number') {
+    schemaErr.push('datasets.' + dsId + '.completeness: ingested/source_total тоо байх ёстой');
+    continue;
+  }
+  if (c.source_total <= 0) schemaErr.push('datasets.' + dsId + '.completeness: source_total > 0 байх ёстой');
+  if (c.ingested > c.source_total) {
+    schemaErr.push('datasets.' + dsId + '.completeness: ingested (' + c.ingested +
+      ') > source_total (' + c.source_total + ') — 100%-иас их хувь гарна');
+  }
+  if (c.ingested < 0) schemaErr.push('datasets.' + dsId + '.completeness: ingested сөрөг');
+  /* Хэмжилтийн гарал үүсэлгүй тоо бол "зохиосон тоо"-той адил */
+  if (!c.method) schemaErr.push('datasets.' + dsId + '.completeness: method алга (хэрхэн хэмссэн бэ)');
+  if (!c.measured_on) schemaErr.push('datasets.' + dsId + '.completeness: measured_on алга');
+  if ('pct' in c) {
+    schemaErr.push('datasets.' + dsId + '.completeness: pct ХАДГАЛАХГҮЙ — ' +
+      'ingested/source_total-оос тооцно (ганц эх сурвалж)');
+  }
+}
+
+/* Слотын blocked_by нь БОДИТ датасэтийг заана */
+for (const [wid, w] of Object.entries(widgets)) {
+  const secs = (w.sectors && !Array.isArray(w.sectors)) ? w.sectors : {};
+  for (const [k, sv] of Object.entries(secs)) {
+    if (!sv || !sv.blocked_by) continue;
+    if (!datasets[sv.blocked_by]) {
+      schemaErr.push('widgets.' + wid + '.sectors.' + k + '.blocked_by: datasets{}-д "' +
+        sv.blocked_by + '" гэсэн бичлэг алга');
+    }
+    if (sv.metric) {
+      schemaErr.push('widgets.' + wid + '.sectors.' + k +
+        ': metric холбогдсон атлаа blocked_by үлдсэн — аль нэг нь хуучирсан');
+    }
+  }
+}
+
+/* period_coverage — сайт үүгээр цувааны дүрмээ уншина */
+for (const [mk, m] of Object.entries(registry.metrics || {})) {
+  const pc = m && m.period_coverage;
+  if (!pc) continue;
+  if (pc.grain !== 'month') {
+    schemaErr.push('metrics.' + mk + '.period_coverage.grain: одоогоор зөвхөн "month" дэмжигдэнэ');
+  }
+  if (typeof pc.excludes_current !== 'boolean') {
+    schemaErr.push('metrics.' + mk + '.period_coverage.excludes_current: true/false байх ёстой');
+  }
+}
+
+if (schemaErr.length) {
+  ok = false;
+  console.error('');
+  console.error('СХЕМИЙН АЛДАА ' + schemaErr.length + ':');
+  for (const e of schemaErr) console.error('  - ' + e);
+} else if (Object.keys(datasets).length) {
+  const withC = Object.values(datasets).filter((d) => d.completeness).length;
+  console.log('');
+  console.log('datasets{}: ' + Object.keys(datasets).length + ' бичлэг · ' +
+    withC + ' нь бүрэн байдлын хэмжилттэй');
+}
+
 if (ok) {
   console.log('');
   console.log('OK: ' + homeWidgets.length + ' Нүүр хуудасны виджет бүгд registry-д бүртгэлтэй.');
