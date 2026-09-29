@@ -5097,9 +5097,20 @@ async function groupVR() {
     .concat(empty.kpis.filter((k) => k.needs).map((k) => k.id))
     .concat(empty.shares.filter((s) => s.needs).map((s) => s.id))
     .concat(empty.tops.filter((t) => t.needs).map((t) => t.id));
-  check('VR10. Нэмэлт эх сурвалж шаардсан слот ЯГ 4 (owners/gender/color/wanted)',
-    needIds.sort().join(',') === 'color,gender,owners,wanted', needIds.join(','));
-  check('VR10. Шалтгааныг ЗӨВХӨН тэр 4 слот дээр бичнэ (давталт багасна)',
+  /* Өнгө (COLORNAME) ба хүйс (GENDER) нь датасэтэд БАЙГАА багана —
+     тэдгээрийг "эх сурвалж дутуу" гэж бичвэл ажилтан байхгүй ажил
+     хүлээнэ (docs/etl-scheduling.md §2.1-ийн probe). Үнэхээр дутуу нь
+     ЗӨВХӨН өмчлөгчийн танигч ба эрэн сурвалжлалтын бүртгэл. */
+  check('VR10. Нэмэлт эх сурвалж шаардсан слот ЯГ 2 (owners/wanted)',
+    needIds.sort().join(',') === 'owners,wanted', needIds.join(','));
+  check('VR10. Өнгө ба хүйс нь ДАТАСЭТИЙН багантай (худал блокер алга)',
+    empty.shares.find((s) => s.id === 'gender').field === 'GENDER' &&
+    empty.tops.find((t) => t.id === 'color').field === 'COLORNAME' &&
+    empty.shares.find((s) => s.id === 'gender').needs === false &&
+    empty.tops.find((t) => t.id === 'color').needs === false,
+    empty.shares.find((s) => s.id === 'gender').field + ' / ' +
+    empty.tops.find((t) => t.id === 'color').field);
+  check('VR10. Шалтгааныг ЗӨВХӨН тэр 2 слот дээр бичнэ (давталт багасна)',
     empty.kpis.concat(empty.shares, empty.tops).every((s) => s.showWhy === s.needs) &&
     empty.age.showWhy === false,
     empty.kpis.map((k) => k.id + ':' + k.showWhy).join(' '));
@@ -5107,7 +5118,7 @@ async function groupVR() {
     empty.shares.find((s) => s.id === 'fuel').field === 'FUELNAME' &&
     empty.tops.find((t) => t.id === 'country').field === 'COUNTRYNAME' &&
     empty.age.field === 'BUILDYEAR' &&
-    empty.shares.find((s) => s.id === 'gender').hasField === false,
+    empty.kpis.find((k) => k.id === 'owners').hasField === false,
     empty.shares.map((s) => s.field).join(','));
 
   /* ── Хүрэх зам: хуудас нь PAGES-д БАЙХ ЁСТОЙ ───────────────────────── */
