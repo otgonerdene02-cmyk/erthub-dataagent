@@ -2286,6 +2286,9 @@
         </div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:26px 0 14px;">{{ detail.t.changelog_head }}</div>
         <div style="display:flex;flex-direction:column;gap:12px;">
+          <sc-if value="{{ detail.changelogEmpty }}">
+            <div style="font-size:13px;color:var(--ink3);">{{ detail.noData }}</div>
+          </sc-if>
           <sc-for list="{{ detail.changelog }}" as="cl2" hint-placeholder-count="3">
             <div style="display:grid;grid-template-columns:104px minmax(0,1fr);gap:16px;align-items:baseline;">
               <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:{{ detail.color }};white-space:nowrap;">{{ cl2.d }}</div>
@@ -2432,6 +2435,9 @@
               </sc-if>
             </div>
           </sc-for>
+          <sc-if value="{{ detail.rankEmpty }}">
+            <div style="font-size:12.5px;color:var(--ink3);">{{ detail.noData }}</div>
+          </sc-if>
           <sc-if value="{{ detail.rankTotal.show }}">
             <div style="display:flex;justify-content:space-between;gap:10px;padding-top:10px;margin-top:2px;border-top:1px solid var(--line2);font-size:12.5px;font-weight:700;color:var(--ink);">
               <span>{{ detail.rankTotal.totalLabel }}</span><span style="font-family:'JetBrains Mono',monospace;">{{ detail.rankTotal.totalValue }}</span>
@@ -4754,6 +4760,17 @@ const WAGON_STALE_DAYS=2;
    гэж сэрэмжлүүлж, сэрэмжлүүлэг утгаа алдана. */
 const INSPECT_STALE_DAYS=8;
 
+/* Датасэтийн хуудасны "Салбарын бүтэц" жагсаалт. SECTORS[k].rank нь
+   САЛБАРЫН түвшнийх бөгөөд тухайн салбарын АЛЬ НЭГ эх сурвалж дүүргэдэг
+   (rail: вагон ачилт). Өмнө нь датасэтийн хуудас түүнийг шууд уншдаг тул
+   зорчигчийн датасэт вагоны буудлын задаргааг (Багануур 16.9% …) ӨӨРИЙНХ
+   мэт харуулж байв. Задаргааг бичсэн эх сурвалж (_rankSource) нь ЭНЭ
+   датасэтийнх (ds.source) байвал Л буцаана; тодорхойгүй бол хоосон — "аль
+   эх сурвалжийнх нь мэдэгдэхгүй" тоо ҮЗҮҮЛЭХГҮЙ. */
+function datasetRank(sec,ds){
+  if(!sec||!ds||!Array.isArray(sec.rank)) return [];
+  return (sec._rankSource&&sec._rankSource===ds.source)?sec.rank:[];
+}
 function buildTrendChart(data,off){
   /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
      хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
@@ -5469,6 +5486,7 @@ class Component extends DCLogic {
       SECTORS.road.rt=stxt('sector_rank_road_live','Тэнцээгүй шалтгааны бүтэц (хэсгээр)');
       SECTORS.road.rank=cats.slice().sort((a,b)=>b[1]-a[1])
         .map(r=>[r[0],fmtNum(r[1]),(r[1]/catTot*100).toFixed(1)+'%']);
+      SECTORS.road._rankSource='roadInspect';
     }
     /* ── Аймгийн задаргаа → багана ──────────────────────────────────── */
     const ba=w.byAimag.filter(r=>r&&r.aimag&&Number(r.count)>0);
@@ -5576,6 +5594,8 @@ class Component extends DCLogic {
       const pct=v=>tot?(v/tot*100).toFixed(1)+'%':'—';
       SECTORS.rail.rt=stxt('sector_rank_rail_live','Станц тус бүрийн ачилт');
       SECTORS.rail.rank=top.slice(0,4).map(r=>[r.station,fmtNum(ld(r)),pct(ld(r))]);
+      /* Энэ задаргаа ВАГОНЫ датасэтийнх — зорчигчийн датасэт дээр гарахгүй */
+      SECTORS.rail._rankSource='railWagon';
       if(top.length>4){
         const rest=top.slice(4).reduce((a,r)=>a+ld(r),0);
         SECTORS.rail.rank.push([stxt('sector_rank_rail_other','Бусад станц'),fmtNum(rest),pct(rest)]);
@@ -6462,6 +6482,7 @@ class Component extends DCLogic {
     SECTORS.air.rankAll=carrierRanked.all;
     SECTORS.air.rank=carrierRanked.top10;
     SECTORS.air.rankMeta=carrierRanked;
+    SECTORS.air._rankSource='flights';
 
     const countryPairs=Object.entries(byCountry).sort((a,b)=>b[1]-a[1]);
     // Багана(bar)-ийн өргөнийг ХАМГИЙН ИХ (0-р индекс, эрэмбэлсэн тул) утгад
@@ -8340,11 +8361,18 @@ class Component extends DCLogic {
           ?'color:#0E8F63;background:#0E8F6318;border:1px solid #0E8F6340;'
           :'color:#FFFFFF;background:'+NEON[dsel.sector]+';border:1px solid transparent;'),
       toggleFollow:()=>this.toggleFollowDataset(dsel),
-      changelog:[['2026-08-12','Бодит цагийн урсгалын хоцролт 20 сек болж сайжирлаа'],
-                 ['2026-07-30','Мета тайлбар, багануудын нэр стандартчлагдав'],
-                 ['2026-06-18','Түүхэн өгөгдөл 2021 он хүртэл нэмэгдэв']].map(x=>({d:x[0],t:x[1]})),
-      rank:(isAirDetail&&this.state.airRankExpanded?(SECTORS.air.rankAll||SECTORS.air.rank):SECTORS[dsel.sector].rank)
+      /* Өөрчлөлтийн түүх — эх сурвалж (backend/feed) хувилбарын түүх
+         ӨГДӨГГҮЙ. Өмнө нь энд 3 зохиомол мөр ("2026-08-12 · хоцролт 20 сек
+         болж сайжирлаа" г.м.) датасэт БҮРИЙН хуудсан дээр ижилхэн гардаг
+         байв (ТОО ЗОХИОХГҮЙ). Эх сурвалж өгөх үед энд дүүргэнэ. */
+      changelog:[],
+      changelogEmpty:true,
+      noData:stxt('status.no_data','мэдээлэл алга'),
+      rank:(isAirDetail&&this.state.airRankExpanded
+          ?datasetRank({rank:SECTORS.air.rankAll||SECTORS.air.rank,_rankSource:SECTORS.air._rankSource},dsel)
+          :datasetRank(SECTORS[dsel.sector],dsel))
         .map(r=>({name:r[0],value:r[1],pct:r[2],width:r[2],sub:r[3]||'',hasSub:!!r[3]})),
+      rankEmpty:datasetRank(SECTORS[dsel.sector],dsel).length===0,
       rankTotal:(()=>{
         if(!isAirDetail) return {show:false,totalLabel:'',totalValue:'',extraCount:0,hasExtra:false,expanded:false,collapsed:true,toggleLabel:'',toggle:()=>{}};
         const meta=SECTORS.air.rankMeta||{total10Label:'',total10Value:'',totalAllLabel:'',totalAllValue:'',extraCount:0};

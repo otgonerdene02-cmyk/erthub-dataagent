@@ -4345,6 +4345,39 @@ async function groupBE() {
   } catch (e) { btcErr = e.message; }
   check('BE42. buildTrendChart([]) нурахгүй, хавтгай шугам зурна', btcOk, btcErr);
 
+  /* ── BE43. Датасэтийн "Салбарын бүтэц" — ЗӨВХӨН тухайн датасэтийн задаргаа ──
+     SECTORS[k].rank нь салбарын түвшнийх; төмөр замд үүнийг вагоны датасэт
+     дүүргэдэг тул зорчигчийн датасэтийн хуудас вагоны буудлын задаргааг
+     (Багануур 16.9% …) ӨӨРИЙНХ мэт харуулж байв (2026-09-29 илэрсэн). */
+  const dr43 = dcScript().match(/\nfunction datasetRank\(sec,ds\)\{([\s\S]*?)\n\}\n/);
+  check('BE43. datasetRank() олдов', !!dr43);
+  if (dr43) {
+    const dr = new Function('sec', 'ds', dr43[1]);
+    const RAIL = { rank: [['Багануур', '193', '16.9%']], _rankSource: 'railWagon' };
+    check('BE43. Вагоны задаргаа ВАГОНЫ датасэт дээр харагдана',
+      dr(RAIL, { source: 'railWagon' }).length === 1);
+    check('BE43. Вагоны задаргаа ЗОРЧИГЧИЙН датасэт дээр ХАРАГДАХГҮЙ',
+      dr(RAIL, { source: 'railPax' }).length === 0);
+    check('BE43. Задаргааг хэн бичсэн нь тодорхойгүй бол харуулахгүй (зохиомол байж болзошгүй)',
+      dr({ rank: [['X', '1', '100%']] }, { source: 'railWagon' }).length === 0);
+    check('BE43. Хоосон/эвдэрсэн оролт → хоосон массив (нурахгүй)',
+      dr(null, null).length === 0 && dr({ _rankSource: 'a' }, { source: 'a' }).length === 0);
+  }
+  check('BE43. Задаргаа бичдэг 3 газар бүгд _rankSource тэмдэглэнэ',
+    /SECTORS\.road\._rankSource='roadInspect'/.test(dcScript()) &&
+    /SECTORS\.rail\._rankSource='railWagon'/.test(dcScript()) &&
+    /SECTORS\.air\._rankSource='flights'/.test(dcScript()));
+  check('BE43. Датасэтийн хуудас datasetRank()-аар уншина (SECTORS[..].rank ШУУД биш)',
+    /datasetRank\(SECTORS\[dsel\.sector\],dsel\)/.test(dcScript()) &&
+    !/:SECTORS\[dsel\.sector\]\.rank\)/.test(dcScript()));
+  check('BE43. Хоосон үед "мэдээлэл алга" гэж ил хэлнэ',
+    /detail\.rankEmpty/.test(read('index.html')));
+  /* ── BE44. "Өөрчлөлтийн түүх" — ЗОХИОМОЛ 3 мөр датасэт бүр дээр гардаг байв ── */
+  check('BE44. Зохиомол өөрчлөлтийн түүх ("хоцролт 20 сек" г.м.) кодод үлдээгүй',
+    !/Бодит цагийн урсгалын хоцролт 20 сек/.test(dcScript()) && !/Түүхэн өгөгдөл 2021 он хүртэл/.test(dcScript()));
+  check('BE44. Өөрчлөлтийн түүх хоосон бол "мэдээлэл алга"',
+    /detail\.changelogEmpty/.test(read('index.html')));
+
   check('BE26. 1 цэгтэй цуваа → зурахгүй (шугам биш)',
     !runPax({ unit: 'зорчигч', year: 2026, counts: [143220], lastMonth: 1 }).SEC.rail._liveSeries);
   const paxRow = mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: { counts: JAN_AUG.slice() } });
