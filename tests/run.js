@@ -1824,7 +1824,9 @@ async function groupL() {
   const con = readJson('content.json'), idx = read('index.html'), adm = read('admin/index.html');
 
   const ds = con.site && con.site.datasets;
-  check('L1. Каталог content.json-д бүртгэгдсэн', Array.isArray(ds) && ds.length >= 9,
+  /* Каталогт ЗӨВХӨН сервисээр ирдэг датасэт үлдсэн (2026-09-28: 12→4).
+     Босго нь "хоосон биш" — шинэ эх сурвалж холбогдох бүрд өснө. */
+  check('L1. Каталог content.json-д бүртгэгдсэн', Array.isArray(ds) && ds.length >= 4,
     'бичлэг: ' + (ds ? ds.length : 0));
   check('L1. Бичлэг бүр нэр ба салбартай',
     Array.isArray(ds) && ds.every((d) => d && typeof d.sector === 'string'),
@@ -3980,7 +3982,7 @@ async function groupBE() {
   const recBlock = (dcScript().match(/const RECENT = \[([\s\S]*?)\n\];/) || [])[1] || '';
   const recN = (recBlock.match(/\{title:/g) || []).length;
   check('BE14. RECENT мөрийн тоо = content.json site.updates-ийн урт',
-    recN === con14.site.updates.length && recN === 7, recN + ' vs ' + con14.site.updates.length);
+    recN === con14.site.updates.length && recN === 4, recN + ' vs ' + con14.site.updates.length);
   check('BE14. Вагон ачилтын мөр railWagon эх сурвалжтай, огноо ЗОХИОГҮЙ',
     /source:'railWagon'/.test(recBlock) && /date:'', sector:'rail'/.test(recBlock));
   check('BE14. SOURCES-д railWagon бүртгэлтэй (auditBindings анхааруулахгүй)',
@@ -4145,8 +4147,17 @@ async function groupBE() {
     /schema:'rail_wagon',source:'railWagon'/.test(dcScript()));
   check('BE22. DS_SCHEMA.rail_wagon анхнаасаа ХООСОН мөртэй (зохиомол дата алга)',
     /rail_wagon:\{head:\[[\s\S]*?rows:\[\]\}/.test(dcScript()));
-  check('BE22. Салбарын схем ХЭВЭЭР (schema зарлаагүй датасэт эвдрэхгүй)',
-    /rail:\{head:\['Огноо','Галт тэрэг'/.test(dcScript()));
+  /* Каталогоос хасагдсан 8 датасэтийн ЗОХИОМОЛ хүснэгтийн мөрүүд
+     (DS_SCHEMA.road/.rail/.water/.public) бүрмөсөн устсан эсэх. Өмнө нь
+     эдгээр "Excel татах" товчоор файл болж ч гардаг байв. */
+  const dsSchemaBlock = (dcScript().match(/const DS_SCHEMA=\{([\s\S]*?)\n\};/) || [])[1] || '';
+  check('BE22. Устгасан датасэтийн зохиомол схем (road/rail/water/public) БАЙХГҮЙ',
+    !/\n  (road|rail|water|public):\{head:/.test(dsSchemaBlock), dsSchemaBlock.slice(0, 80));
+  check('BE22. Схем бүр мөргүй (rows:[]) эхэлнэ — зохиомол дата кодод байхгүй',
+    (dsSchemaBlock.match(/rows:\[\]/g) || []).length === 4,
+    String((dsSchemaBlock.match(/rows:\[/g) || []).length));
+  check('BE22. Зорчигчийн датасэт ӨӨРИЙН схемтэй (rail_pax)',
+    /schema:'rail_pax'/.test(dcScript()) && /rail_pax:\{head:/.test(dsSchemaBlock));
   check('BE22. Каталогийн давтамж "Тодорхойгүй" биш бодит хуваарь',
     !/freq:'Тодорхойгүй',use:'Нийтийн API нээлттэй'/.test(dcScript()));
 
@@ -4245,7 +4256,7 @@ async function groupBE() {
   const st26 = (p, f) => (PAXTXT[p] !== undefined ? PAXTXT[p] : f);
   const fmt26 = (n) => Number(n).toLocaleString('en-US');
   const SS26 = new Function('stxt', 'return ' + ss26[1])(st26);
-  const mkPaxRaw = new Function('SECTORS', 'SECTOR_SERIES', 'k', ap26[1]);
+  const mkPaxRaw = new Function('SECTORS', 'SECTOR_SERIES', 'DS_SCHEMA', 'stxt', 'k', ap26[1]);
   const mkRowRaw = new Function('SECTOR_SERIES', 'stxt', 'fmtNum', 'MONTHS', 'k', kr26[1]);
   /* Хуучин (rail-д зориулсан) дуудлагын хэлбэрийг хадгалж, доорх тестүүд ХЭВЭЭР үлдэнэ */
   const mkRow = (st, fmt, MON) => ({ call: (c) => mkRowRaw.call({ _sectorSeries: { rail: c._railPaxSeries } }, SS26, st, fmt, MON, 'rail') });
@@ -4255,8 +4266,10 @@ async function groupBE() {
        мөр ҮҮНЭЭС уншина) тул стаб ЗААВАЛ хэрэгтэй. */
     const ctx = { _sectorSeries: { rail: series }, _st: null, _meta: null,
       setSourceMeta(id, m) { this._meta = { id, m }; }, setState(s) { this._st = s; } };
-    mkPaxRaw.call(ctx, SEC, SS26, 'rail');
-    return { SEC, ctx };
+    /* rail_pax схем — цуваанаас дүүрдэг эсэхийг шалгах стаб. */
+    const DSS = { rail_pax: { head: [], types: ['string','int','enum'], notes: [], rows: [] } };
+    mkPaxRaw.call(ctx, SEC, SS26, DSS, st26, 'rail');
+    return { SEC, ctx, DSS };
   };
   const P26 = runPax({ unit: 'зорчигч', year: 2026, counts: JAN_AUG.slice(), lastMonth: 8 });
   check('BE36. Цувааны мета railPax-д, сүүлийн БҮТЭН сараар (2026-08)',
@@ -4273,6 +4286,98 @@ async function groupBE() {
   const N26 = runPax(null);
   check('BE26. Дата ирээгүй → c1d/шошго ОГТ хөндөгдөхгүй, _liveSeries үгүй',
     JSON.stringify(N26.SEC.rail.c1d) === '[290,270,310]' && N26.SEC.rail.c1 === 'Сарын зорчигч (мянга)' && !N26.SEC.rail._liveSeries);
+  /* ── BE40. Зорчигчийн датасэтийн ХҮСНЭГТ амьд сарын цуваанаас (2026-09-28) ──
+     Өмнө нь энэ датасэт `schema` зарлаагүй тул DS_SCHEMA.rail буюу ачааны
+     галт тэрэгний ЗОХИОМОЛ мөрүүдийг өөрийн дата мэт үзүүлж, Excel-ээр ч
+     гаргадаг байв. Одоо rows ХООСОН эхэлж, цуваа ирэхэд Л дүүрнэ. */
+  const T40 = P26.DSS.rail_pax;
+  check('BE40. rail_pax мөр = бүтэн сарын тоо (8), шинэ сар эхэнд (2026-08)',
+    T40.rows.length === 8 && T40.rows[0][0] === '2026-08' && T40.rows[7][0] === '2026-01',
+    JSON.stringify(T40.rows.slice(0, 2)));
+  check('BE40. Утга нь цувааны ЯГ ТЭР тоо (8-р сар 148,470; 1-р сар 143,220 — гараар)',
+    T40.rows[0][1] === 148470 && T40.rows[7][1] === 143220);
+  check('BE40. Төлөв ok: (бүтэн сар — явагдаж буй сар цуваанд ордоггүй)',
+    T40.rows.every((r) => /^ok:/.test(r[2])));
+  check('BE40. Утгын баганын нэр ба нэгж labels()-ээс (content.json-д давхардуулаагүй)',
+    T40.head[1] === 'ЗОРЧИГЧ / САР' && /зорчигч-ийн тоо/.test(T40.notes[1]) && !/\{unit\}/.test(T40.notes[1]),
+    JSON.stringify(T40.head) + ' ' + T40.notes[1]);
+  check('BE40. Дата ирээгүй → хүснэгт ХООСОН хэвээр (зохиомол мөр алга)',
+    N26.DSS.rail_pax.rows.length === 0);
+
+  /* ── BE41. Каталогт ЗӨВХӨН сервисээр ирдэг датасэт (2026-09-28) ──
+     12 бичлэгийн 8 нь эх сурвалжгүй, бүх тоо нь зохиомол байв. */
+  const ds41 = dcScript().match(/\nconst DATASETS=\[([\s\S]*?)\n\];/);
+  const src41 = dcScript().match(/\nconst SOURCES=\{([\s\S]*?)\n\};/);
+  const dsNames41 = ds41 ? (ds41[1].match(/\{sector:'/g) || []).length : 0;
+  const dsSrc41 = ds41 ? (ds41[1].match(/source:'(\w+)'/g) || []).map((x) => x.slice(8, -1)) : [];
+  check('BE41. Каталогийн бичлэг БҮР `source`-той (эх сурвалжгүй датасэт алга)',
+    dsNames41 > 0 && dsSrc41.length === dsNames41, dsSrc41.length + ' / ' + dsNames41);
+  check('BE41. `source` бүр SOURCES-д бүртгэлтэй',
+    !!src41 && dsSrc41.every((k) => new RegExp('\\n  ' + k + ':\\{').test(src41[1])), dsSrc41.join(','));
+  check('BE41. content.json site.datasets ба DATASETS ИЖИЛ урттай (индексээр давхардана)',
+    readJson('content.json').site.datasets.length === dsNames41);
+
+  /* ── BE42. Статик демо тоо кодод ҮЛДЭЭГҮЙ — feed унавал ч зохиомол тоо гарахгүй ──
+     Өмнө нь flights feed / backend амжилтгүй болоход SECTORS-ийн статик
+     тоо (48,210 км, MIAT 681,711 …) бодит дата мэт харагддаг байв. */
+  const sec42 = dcScript().match(/\nconst SECTORS = \{([\s\S]*?)\n\};/);
+  const S42 = sec42 ? new Function('return {' + sec42[1] + '}')() : null;
+  check('BE42. SECTORS олдов (5 салбар)', !!S42 && Object.keys(S42).length === 5);
+  if (S42) {
+    const kv = Object.values(S42).flatMap((x) => x.kpis.map((k) => k[1] + '|' + k[3]));
+    check('BE42. KPI утга/өөрчлөлт бүгд "—" (статик тоо алга)',
+      kv.every((v) => v === '—|—'), kv.filter((v) => v !== '—|—').join(' '));
+    check('BE42. c1d / rank / bars бүгд ХООСОН',
+      Object.values(S42).every((x) => !x.c1d.length && !x.rank.length && !x.bars.length));
+    check('BE42. air.monthly / cargoRank ХООСОН (feed-ийн "түр орлуулга" алга)',
+      !S42.air.monthly.pax.length && !S42.air.cargoRank.length && !S42.air.rankAll.length);
+  }
+  /* Тайлбарт (түүх болж) үлдэж болно — ДАТА болох мөр утгад ('…') үлдээгүйг шалгана */
+  check('BE42. "48,210" мөр утга болж кодод ч content.json-д ч үлдээгүй',
+    !/'48,210/.test(dcScript()) && !/48,210/.test(fs.readFileSync(path.join(ROOT, 'content.json'), 'utf8')));
+  /* Хоосон цуваа график бүтээгчийг нураахгүй (Math.max([]) = -Infinity) */
+  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off\)\{([\s\S]*?)\n\}\n/);
+  let btcOk = false, btcErr = '';
+  try {
+    const f = new Function('data', 'off', 'MONTHS', 'stxt', btc42[1]);
+    const r = f([], 0, MONTHS25, (p, x) => x);
+    btcOk = !!r && /^M/.test(r.line) && !/NaN|Infinity/.test(r.line + r.peak.value);
+  } catch (e) { btcErr = e.message; }
+  check('BE42. buildTrendChart([]) нурахгүй, хавтгай шугам зурна', btcOk, btcErr);
+
+  /* ── BE43. Датасэтийн "Салбарын бүтэц" — ЗӨВХӨН тухайн датасэтийн задаргаа ──
+     SECTORS[k].rank нь салбарын түвшнийх; төмөр замд үүнийг вагоны датасэт
+     дүүргэдэг тул зорчигчийн датасэтийн хуудас вагоны буудлын задаргааг
+     (Багануур 16.9% …) ӨӨРИЙНХ мэт харуулж байв (2026-09-29 илэрсэн). */
+  const dr43 = dcScript().match(/\nfunction datasetRank\(sec,ds\)\{([\s\S]*?)\n\}\n/);
+  check('BE43. datasetRank() олдов', !!dr43);
+  if (dr43) {
+    const dr = new Function('sec', 'ds', dr43[1]);
+    const RAIL = { rank: [['Багануур', '193', '16.9%']], _rankSource: 'railWagon' };
+    check('BE43. Вагоны задаргаа ВАГОНЫ датасэт дээр харагдана',
+      dr(RAIL, { source: 'railWagon' }).length === 1);
+    check('BE43. Вагоны задаргаа ЗОРЧИГЧИЙН датасэт дээр ХАРАГДАХГҮЙ',
+      dr(RAIL, { source: 'railPax' }).length === 0);
+    check('BE43. Задаргааг хэн бичсэн нь тодорхойгүй бол харуулахгүй (зохиомол байж болзошгүй)',
+      dr({ rank: [['X', '1', '100%']] }, { source: 'railWagon' }).length === 0);
+    check('BE43. Хоосон/эвдэрсэн оролт → хоосон массив (нурахгүй)',
+      dr(null, null).length === 0 && dr({ _rankSource: 'a' }, { source: 'a' }).length === 0);
+  }
+  check('BE43. Задаргаа бичдэг 3 газар бүгд _rankSource тэмдэглэнэ',
+    /SECTORS\.road\._rankSource='roadInspect'/.test(dcScript()) &&
+    /SECTORS\.rail\._rankSource='railWagon'/.test(dcScript()) &&
+    /SECTORS\.air\._rankSource='flights'/.test(dcScript()));
+  check('BE43. Датасэтийн хуудас datasetRank()-аар уншина (SECTORS[..].rank ШУУД биш)',
+    /datasetRank\(SECTORS\[dsel\.sector\],dsel\)/.test(dcScript()) &&
+    !/:SECTORS\[dsel\.sector\]\.rank\)/.test(dcScript()));
+  check('BE43. Хоосон үед "мэдээлэл алга" гэж ил хэлнэ',
+    /detail\.rankEmpty/.test(read('index.html')));
+  /* ── BE44. "Өөрчлөлтийн түүх" — ЗОХИОМОЛ 3 мөр датасэт бүр дээр гардаг байв ── */
+  check('BE44. Зохиомол өөрчлөлтийн түүх ("хоцролт 20 сек" г.м.) кодод үлдээгүй',
+    !/Бодит цагийн урсгалын хоцролт 20 сек/.test(dcScript()) && !/Түүхэн өгөгдөл 2021 он хүртэл/.test(dcScript()));
+  check('BE44. Өөрчлөлтийн түүх хоосон бол "мэдээлэл алга"',
+    /detail\.changelogEmpty/.test(read('index.html')));
+
   check('BE26. 1 цэгтэй цуваа → зурахгүй (шугам биш)',
     !runPax({ unit: 'зорчигч', year: 2026, counts: [143220], lastMonth: 1 }).SEC.rail._liveSeries);
   const paxRow = mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: { counts: JAN_AUG.slice() } });
@@ -4323,7 +4428,7 @@ async function groupBE() {
   const ctxR = { _sectorSeries: { road: { unit: 'нэгж', year: 2026, counts: [100, 110, 99], lastMonth: 3 } },
     setState() {}, setSourceMeta() {},
     seriesKpiRow(k) { return mkRowRaw.call(this, SSR, st26, fmt26, MONTHS25, k); } };
-  mkPaxRaw.call(ctxR, SECR, SSR, 'road');
+  mkPaxRaw.call(ctxR, SECR, SSR, {}, st26, 'road');
   check('BE27b. replace: статик демо мөрүүд (48,210 км) бүрэн солигдож 1 амьд мөр',
     SECR.road.kpis.length === 1 && SECR.road.kpis[0][0] === 'Х / САР' && SECR.road.kpis[0][1] === '99' &&
     SECR.road._liveKpis === true, JSON.stringify(SECR.road.kpis));
@@ -4335,7 +4440,7 @@ async function groupBE() {
     SECR.road._liveSeries === true && SECR.road._liveSeriesDs === 'Тест датасэт' && SECR.road.c1dYear === 2026);
   const SECA = { rail: { c1: 'x', c1d: [1], kpis: [['A', '1', 'вагон', '—', 'flat']], _liveKpis: true } };
   mkPaxRaw.call({ _sectorSeries: { rail: { year: 2026, counts: JAN_AUG.slice(), lastMonth: 8 } },
-    setState() {}, setSourceMeta() {} }, SECA, SS26, 'rail');
+    setState() {}, setSourceMeta() {} }, SECA, SS26, { rail_pax: { head: [], notes: [], rows: [] } }, st26, 'rail');
   check('BE27b. append (rail): KPI мөрийг ЭНД хөндөхгүй — вагоны apply залгана',
     SECA.rail.kpis.length === 1 && SECA.rail.kpis[0][0] === 'A');
   const sv27 = dcScript().match(/\n  seriesVerified\(widgetId,sectorKey\)\{([\s\S]*?)\n  \}\n/);
