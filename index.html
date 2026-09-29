@@ -4910,7 +4910,7 @@ class Component extends DCLogic {
       }catch(e){}
       return 'light';
     })(),
-    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', tblQuery:'', tblStatus:'all', tblPage:0, fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
+    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
 
 /* ── ХАЯГ ↔ ХУУДАС ─────────────────────────────────────────────────
      Өмнө нь хуудас солигдоход хаяг ОГТ өөрчлөгддөггүй байв. Үүнээс болж:
@@ -6486,14 +6486,14 @@ class Component extends DCLogic {
       fromRef:(el)=>{ this._fromEl=el; if(el) el.value=String(mFrom); },
       toRef:(el)=>{ this._toEl=el; if(el) el.value=String(mTo); },
       monthOptions:Array.from({length:12},(_,i)=>({value:i+1,label:(i+1)+'-р сар'})),
-      onFrom:(e)=>{const v=parseInt(e.target.value,10);this.setState(s=>({mFrom:v,mTo:Math.max(v,s.mTo||12),tblPage:0}));},
-      onTo:(e)=>{const v=parseInt(e.target.value,10);this.setState(s=>({mTo:v,mFrom:Math.min(v,s.mFrom||1),tblPage:0}));},
+      onFrom:(e)=>{const v=parseInt(e.target.value,10);this.setState(s=>({mFrom:v,mTo:Math.max(v,s.mTo||12)}));},
+      onTo:(e)=>{const v=parseInt(e.target.value,10);this.setState(s=>({mTo:v,mFrom:Math.min(v,s.mFrom||1)}));},
       rangePresets:[[stxt('range.all','Бүгд'),1,12],[stxt('range.h1','1-р хагас'),1,6],
         [stxt('range.h2','2-р хагас'),7,12],[stxt('range.q1','1-р улирал'),1,3],
         [stxt('range.q2','2-р улирал'),4,6],[stxt('range.q3','3-р улирал'),7,9],
         [stxt('range.q4','4-р улирал'),10,12]].map(p=>({
         label:p[0],
-        pick:()=>this.setState({mFrom:p[1],mTo:p[2],tblPage:0}),
+        pick:()=>this.setState({mFrom:p[1],mTo:p[2]}),
         style:'cursor:pointer;font-family:inherit;border-radius:9px;padding:7px 13px;font-size:12px;white-space:nowrap;flex-shrink:0;transition:.16s var(--ease);'
           +(mFrom===p[1]&&mTo===p[2]?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);box-shadow:var(--shadow);')
       })),
@@ -8509,13 +8509,20 @@ class Component extends DCLogic {
       dsListClear,dsListEmpty,
       sDsSearchPh:this.stxt('browse.search_ph','Датасэт хайх…'),
       sDsSearchClear:this.stxt('browse.search_clear','Хайлтыг цэвэрлэх'),
-      sDsEmptyBody:this.stxt('browse.empty_body','Өөр түлхүүр үг оруулах, эсвэл салбарын шүүлтээ өөрчилж үзнэ үү.'),
+      /* Хайлтгүй мөртлөө СОНГОСОН САЛБАРТ датасэт огт байхгүй бол хайлтын
+         зөвлөгөө БИШ — эх сурвалж холбогдоогүйг ил хэлнэ. */
+      sDsEmptyBody:(!(this.state.dsListQ||'').trim()&&this.state.dataFilter!=='all'
+          &&!DATASETS.some(d=>d.sector===this.state.dataFilter))
+        ? this.stxt('browse.empty_body_sector','Эх сурвалж холбогдмогц датасэт энд автоматаар нэмэгдэнэ.')
+        : this.stxt('browse.empty_body','Өөр түлхүүр үг оруулах, эсвэл салбарын шүүлтээ өөрчилж үзнэ үү.'),
       /* Хайлтын үг өөрөө ДИНАМИК тул content.json-д бичихгүй — зөвхөн
          түүнийг хүрээлэх өгүүлбэрийг бүртгэнэ. */
       dsListEmptyHead:(this.state.dsListQ||'').trim()
         ? '«'+(this.state.dsListQ||'').trim()+'» '+
           this.stxt('browse.empty_head_q','гэсэн хайлтад тохирох датасэт олдсонгүй')
-        : this.stxt('browse.empty_head','Шүүлтэд тохирох датасэт олдсонгүй'),
+        : (this.state.dataFilter!=='all'&&!DATASETS.some(d=>d.sector===this.state.dataFilter))
+          ? this.stxt('browse.empty_head_sector','Энэ салбарт сервисээр ирдэг датасэт хараахан алга')
+          : this.stxt('browse.empty_head','Шүүлтэд тохирох датасэт олдсонгүй'),
       /* Хайлт ч go()-оор дамжина — эс тэгвэл каталог руу орох энэ замд
          хаяг шинэчлэгдэхгүй, Back товч сайтаас гаргана. */
       onHomeQueryKey:(e)=>{if(e.key==='Enter'){
@@ -9268,9 +9275,10 @@ class Component extends DCLogic {
     });
     // H5 (нэмэлт): livestrip нь 5 салбарыг үргэлж ЗЭРЭГ харуулдаг тул
     // activeSector сонголтоос үл хамааран салбар БүРИЙН verified эсэхийг
-    // бие даан шалгана — registry-ээс (кодод хатуу бүү бич). Air-аас бусад
-    // 4 нь SECTORS тогтмол статик тоо (48,210 км гэх мэт) тул үнэн шошгогүй
-    // үзүүлбэл буруу мэдээлэл болно (энэ session-ий d05/w2p-тэй ижил дүрэм).
+    // бие даан шалгана — registry-ээс (кодод хатуу бүү бич). Эх сурвалжгүй
+    // салбарын SECTORS мөр нь "—" (статик тоо байхаа больсон, 2026-09-28)
+    // тул шошгогүй үзүүлбэл "хоосон" биш "алдаа" мэт уншигдана
+    // (d05/w2p-тэй ижил дүрэм).
     const flatSpark=pathFor(new Array(10).fill(0),120,32,3).line;
     // Утгын тохиргоо ЗӨВХӨН agaar (air) салбарт хамаарна — бусад 4
     // салбарын мөр түвшний дата хараахан алга (тоо ЗОХИОХГҮЙ).

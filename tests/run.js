@@ -4283,6 +4283,65 @@ async function groupBE() {
   const N26 = runPax(null);
   check('BE26. Дата ирээгүй → c1d/шошго ОГТ хөндөгдөхгүй, _liveSeries үгүй',
     JSON.stringify(N26.SEC.rail.c1d) === '[290,270,310]' && N26.SEC.rail.c1 === 'Сарын зорчигч (мянга)' && !N26.SEC.rail._liveSeries);
+  /* ── BE40. Зорчигчийн датасэтийн ХҮСНЭГТ амьд сарын цуваанаас (2026-09-28) ──
+     Өмнө нь энэ датасэт `schema` зарлаагүй тул DS_SCHEMA.rail буюу ачааны
+     галт тэрэгний ЗОХИОМОЛ мөрүүдийг өөрийн дата мэт үзүүлж, Excel-ээр ч
+     гаргадаг байв. Одоо rows ХООСОН эхэлж, цуваа ирэхэд Л дүүрнэ. */
+  const T40 = P26.DSS.rail_pax;
+  check('BE40. rail_pax мөр = бүтэн сарын тоо (8), шинэ сар эхэнд (2026-08)',
+    T40.rows.length === 8 && T40.rows[0][0] === '2026-08' && T40.rows[7][0] === '2026-01',
+    JSON.stringify(T40.rows.slice(0, 2)));
+  check('BE40. Утга нь цувааны ЯГ ТЭР тоо (8-р сар 148,470; 1-р сар 143,220 — гараар)',
+    T40.rows[0][1] === 148470 && T40.rows[7][1] === 143220);
+  check('BE40. Төлөв ok: (бүтэн сар — явагдаж буй сар цуваанд ордоггүй)',
+    T40.rows.every((r) => /^ok:/.test(r[2])));
+  check('BE40. Утгын баганын нэр ба нэгж labels()-ээс (content.json-д давхардуулаагүй)',
+    T40.head[1] === 'ЗОРЧИГЧ / САР' && /зорчигч-ийн тоо/.test(T40.notes[1]) && !/\{unit\}/.test(T40.notes[1]),
+    JSON.stringify(T40.head) + ' ' + T40.notes[1]);
+  check('BE40. Дата ирээгүй → хүснэгт ХООСОН хэвээр (зохиомол мөр алга)',
+    N26.DSS.rail_pax.rows.length === 0);
+
+  /* ── BE41. Каталогт ЗӨВХӨН сервисээр ирдэг датасэт (2026-09-28) ──
+     12 бичлэгийн 8 нь эх сурвалжгүй, бүх тоо нь зохиомол байв. */
+  const ds41 = dcScript().match(/\nconst DATASETS=\[([\s\S]*?)\n\];/);
+  const src41 = dcScript().match(/\nconst SOURCES=\{([\s\S]*?)\n\};/);
+  const dsNames41 = ds41 ? (ds41[1].match(/\{sector:'/g) || []).length : 0;
+  const dsSrc41 = ds41 ? (ds41[1].match(/source:'(\w+)'/g) || []).map((x) => x.slice(8, -1)) : [];
+  check('BE41. Каталогийн бичлэг БҮР `source`-той (эх сурвалжгүй датасэт алга)',
+    dsNames41 > 0 && dsSrc41.length === dsNames41, dsSrc41.length + ' / ' + dsNames41);
+  check('BE41. `source` бүр SOURCES-д бүртгэлтэй',
+    !!src41 && dsSrc41.every((k) => new RegExp('\\n  ' + k + ':\\{').test(src41[1])), dsSrc41.join(','));
+  check('BE41. content.json site.datasets ба DATASETS ИЖИЛ урттай (индексээр давхардана)',
+    readJson('content.json').site.datasets.length === dsNames41);
+
+  /* ── BE42. Статик демо тоо кодод ҮЛДЭЭГҮЙ — feed унавал ч зохиомол тоо гарахгүй ──
+     Өмнө нь flights feed / backend амжилтгүй болоход SECTORS-ийн статик
+     тоо (48,210 км, MIAT 681,711 …) бодит дата мэт харагддаг байв. */
+  const sec42 = dcScript().match(/\nconst SECTORS = \{([\s\S]*?)\n\};/);
+  const S42 = sec42 ? new Function('return {' + sec42[1] + '}')() : null;
+  check('BE42. SECTORS олдов (5 салбар)', !!S42 && Object.keys(S42).length === 5);
+  if (S42) {
+    const kv = Object.values(S42).flatMap((x) => x.kpis.map((k) => k[1] + '|' + k[3]));
+    check('BE42. KPI утга/өөрчлөлт бүгд "—" (статик тоо алга)',
+      kv.every((v) => v === '—|—'), kv.filter((v) => v !== '—|—').join(' '));
+    check('BE42. c1d / rank / bars бүгд ХООСОН',
+      Object.values(S42).every((x) => !x.c1d.length && !x.rank.length && !x.bars.length));
+    check('BE42. air.monthly / cargoRank ХООСОН (feed-ийн "түр орлуулга" алга)',
+      !S42.air.monthly.pax.length && !S42.air.cargoRank.length && !S42.air.rankAll.length);
+  }
+  /* Тайлбарт (түүх болж) үлдэж болно — ДАТА болох мөр утгад ('…') үлдээгүйг шалгана */
+  check('BE42. "48,210" мөр утга болж кодод ч content.json-д ч үлдээгүй',
+    !/'48,210/.test(dcScript()) && !/48,210/.test(fs.readFileSync(path.join(ROOT, 'content.json'), 'utf8')));
+  /* Хоосон цуваа график бүтээгчийг нураахгүй (Math.max([]) = -Infinity) */
+  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off\)\{([\s\S]*?)\n\}\n/);
+  let btcOk = false, btcErr = '';
+  try {
+    const f = new Function('data', 'off', 'MONTHS', 'stxt', btc42[1]);
+    const r = f([], 0, MONTHS25, (p, x) => x);
+    btcOk = !!r && /^M/.test(r.line) && !/NaN|Infinity/.test(r.line + r.peak.value);
+  } catch (e) { btcErr = e.message; }
+  check('BE42. buildTrendChart([]) нурахгүй, хавтгай шугам зурна', btcOk, btcErr);
+
   check('BE26. 1 цэгтэй цуваа → зурахгүй (шугам биш)',
     !runPax({ unit: 'зорчигч', year: 2026, counts: [143220], lastMonth: 1 }).SEC.rail._liveSeries);
   const paxRow = mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: { counts: JAN_AUG.slice() } });
