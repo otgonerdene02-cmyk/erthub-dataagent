@@ -78,10 +78,30 @@
       });
   }
 
+
+  /* Тээврийн хэрэгслийн бүртгэл — ТУСДАА endpoint. road-ийн summary нь
+     замын хөдөлгөөний ачаалал, inspections нь техникийн ҮЗЛЭГ — гуравдугаар
+     хэмжигдэхүүн тул хольж болохгүй. Хариу:
+     {status,as_of,total,kpi{},age{},breakdowns{},top{}} эсвэл
+     {status:'no_data'}.
+     ТӨЛӨВ (2026-09-29): backend дээр энэ зам хараахан НЭЭГДЭЭГҮЙ (404) —
+     эх системийн хуудаслалт эвдэрсэн тул silver дүүрээгүй. fetchJson нь
+     404-д null буцаадаг тул сайт ЯГ өмнөх шигээ ажиллана, самбар нь
+     "мэдээлэл алга" хэвээр үлдэнэ (docs/veritech-vehicle-registry-request.md). */
+  function fetchVehicleRegistry() {
+    if (!BASE) return Promise.resolve(null);
+    return fetchJson(BASE + '/api/sectors/road/vehicle-registry')
+      .catch(function (e) {
+        console.info('[ErtHub] backend (road/vehicle-registry) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
   window.EHBackend = {
     enabled: !!BASE,
     fetchSectorSummary: fetchSectorSummary,
     fetchRailWagonLoading: fetchRailWagonLoading,
-    fetchRoadInspections: fetchRoadInspections
+    fetchRoadInspections: fetchRoadInspections,
+    fetchVehicleRegistry: fetchVehicleRegistry
   };
 })();
