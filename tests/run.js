@@ -202,6 +202,11 @@ function groupB() {
       /* `eservices` — цахим үйлчилгээний хуудасны таб ба алхмууд. Таб нь
          SVC_TABS, алхам нь SERVICE_STEPS тогтмол дээр давхарлагдана. */
       'eservices','browse','community','news','history',
+      /* `vehreg` — тээврийн хэрэгслийн бүртгэлийн самбар. Зам нь
+         слотын id-гаас нийлүүлэгддэг (L('share.'+s.id)) тул ШУУД
+         бичлэг хайх аргаар олдохгүй. Зам бүр үнэхээр уншигддагийг
+         V13-ын round-trip (content.json → самбарын гаралт) баталдаг. */
+      'vehreg',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -5153,6 +5158,316 @@ function aiEnv(ctxPatch) {
   ctx.aiLiveValues = function (kind) { return values.call(this, kind, stxt, SECTORS); };
   return { k, con, ask: (i) => resolve.call(ctx, i, AI_QA, S.ai.sources, SECTORS, stxt), ctx, stxt };
 }
+/* ── VR. ТЭЭВРИЙН ХЭРЭГСЛИЙН БҮРТГЭЛИЙН САМБАР ──────────────────────────
+   Зорилго: самбарын АРИФМЕТИКийг бодит feed дээр "нүдээр" биш, ГАРААР
+   БОДОХ БОЛОМЖТОЙ жижиг фикстур дээр батлах (CLAUDE.md — тестийн мөчлөг
+   1-р алхам). Эх сурвалж нь өнөөдөр хаалттай тул "хоосон үед юу гарах" ба
+   "дата ирэхэд юу гарах" ХОЁУЛАНГ нь шалгана — зөвхөн хоосон төлвийг
+   шалгавал таталт засагдмагц шинэ алдаа чимээгүй орж ирнэ. */
+async function groupVR() {
+  group('VR. Тээврийн хэрэгслийн бүртгэлийн самбар');
+
+  const src = dcScript();
+  const tpl = indexTemplate();
+  const con = readJson('content.json');
+
+  /* Самбарын логикийг эх кодоос ТАСЛАН авч, стабтайгаар ажиллуулна —
+     хуулбар БИШ, ЯГ нийтлэгдэх код ажиллана. */
+  const i = src.indexOf('const VEHREG_DS=');
+  const j = src.indexOf('/* ── Сайтын ерөнхий текстийн ГАНЦ эх сурвалж');
+  check('VR1. Самбарын логик эх кодоос олдов', i >= 0 && j > i,
+    'i=' + i + ' j=' + j);
+  if (i < 0 || j <= i) return;
+
+  const stxt = (p, fb) => {
+    let c = con.site;
+    for (const k of String(p).split('.')) {
+      if (c == null || typeof c !== 'object') return fb;
+      c = c[k];
+    }
+    return (c == null || c === '') ? fb : c;
+  };
+  const fmtNum = (n) => Number(n).toLocaleString('en-US');
+  const M = new Function('fmtNum', 'stxt', 'NEON',
+    src.slice(i, j) + '\nreturn {vehregNum,vehregFmt,vehregPct,vehregDonut,vehregBars,' +
+    'vehregAgeBars,vehicleRegistryToValue,buildVehRegBoard,' +
+    'VEHREG_KPI,VEHREG_SHARE,VEHREG_TOP,VEHREG_C,VEHREG_DS};'
+  )(fmtNum, stxt, { road: '#8CA9E8' });
+
+  /* ── Нэгж тест: 0 ба null-ийг ХОЛИХГҮЙ ─────────────────────────────── */
+  check('VR2. vehregNum — 0 нь БОДИТ утга, хоосон нь null',
+    M.vehregNum(0) === 0 && M.vehregNum(null) === null &&
+    M.vehregNum('') === null && M.vehregNum(undefined) === null &&
+    M.vehregNum('abc') === null && M.vehregNum('42') === 42,
+    JSON.stringify([M.vehregNum(0), M.vehregNum(null), M.vehregNum('42')]));
+  check('VR2. vehregFmt — null → "—", тоо → таслалтай',
+    M.vehregFmt(null) === '—' && M.vehregFmt(1942315) === '1,942,315' &&
+    M.vehregFmt(0) === '0',
+    M.vehregFmt(null) + ' / ' + M.vehregFmt(1942315));
+  check('VR2. vehregPct — 25/100 = 25.0%, нийт 0 эсвэл null → "—"',
+    M.vehregPct(25, 100) === '25.0%' && M.vehregPct(1, 3) === '33.3%' &&
+    M.vehregPct(5, 0) === '—' && M.vehregPct(null, 100) === '—',
+    M.vehregPct(25, 100) + ' / ' + M.vehregPct(1, 3));
+
+  /* ── Нэгж тест: бөөрөнхий график (гараар бодогдохуйц 60/40) ────────── */
+  const d2 = M.vehregDonut([{ label: 'Баруун', count: 60 }, { label: 'Зүүн', count: 40 }]);
+  const seg0 = d2.segs[0].dash.split(' ').map(Number);
+  const seg1 = d2.segs[1].dash.split(' ').map(Number);
+  check('VR3. Бөөрөнхий — 60/40 нь 60.0% / 40.0%',
+    !d2.empty && d2.legend.length === 2 &&
+    d2.legend[0].pct === '60.0%' && d2.legend[1].pct === '40.0%' && d2.total === '100',
+    JSON.stringify(d2.legend.map((l) => l.pct)) + ' нийт=' + d2.total);
+  check('VR3. Бөөрөнхий — зүсмийн урт бүтэн тойргийг ЯГ дүүргэнэ',
+    Math.abs(seg0[0] - M.VEHREG_C * 0.6) < 0.01 &&
+    Math.abs(seg1[0] - M.VEHREG_C * 0.4) < 0.01 &&
+    Math.abs(seg0[0] + seg1[0] - M.VEHREG_C) < 0.02,
+    seg0[0] + ' + ' + seg1[0] + ' vs ' + M.VEHREG_C);
+  check('VR3. Бөөрөнхий — шилжилт хуримтлагдана (зүсэм давхцахгүй)',
+    Number(d2.segs[0].offset) === 0 &&
+    Math.abs(Number(d2.segs[1].offset) + seg0[0]) < 0.01,
+    d2.segs.map((s) => s.offset).join(' / '));
+  const dEmpty = M.vehregDonut([]);
+  check('VR4. Бөөрөнхий — дата алга бол ЗҮСЭМ ОГТ гарахгүй',
+    dEmpty.empty === true && dEmpty.segs.length === 0 &&
+    dEmpty.legend.length === 0 && dEmpty.total === '—',
+    JSON.stringify(dEmpty));
+  check('VR4. Бөөрөнхий — нийт 0 бол мөн хоосон (0-д хуваахгүй)',
+    M.vehregDonut([{ label: 'А', count: 0 }]).empty === true);
+
+  /* ── Нэгж тест: TOP жагсаалт ба насжилт ────────────────────────────── */
+  const b3 = M.vehregBars([{ label: 'Б', count: 20 }, { label: 'А', count: 70 },
+    { label: 'В', count: 10 }], 8);
+  check('VR5. TOP — буурахаар эрэмбэлж, хамгийн их нь 100%',
+    !b3.empty && b3.rows.map((r) => r.label).join(',') === 'А,Б,В' &&
+    b3.rows[0].width === '100.0%' && b3.rows[0].rank === 1 &&
+    b3.rows[1].width === '28.6%' && b3.rows[2].width === '14.3%',
+    b3.rows.map((r) => r.label + ':' + r.width).join(' '));
+  check('VR5. TOP — хязгаараас илүү мөр таслагдана',
+    M.vehregBars(Array.from({ length: 12 }, (_, n) => ({ label: 'x' + n, count: n })), 8)
+      .rows.length === 8);
+  check('VR5. TOP — дата алга бол мөр ОГТ гарахгүй',
+    M.vehregBars([], 8).empty === true && M.vehregBars(null, 8).rows.length === 0);
+  const ag = M.vehregAgeBars([{ label: '0-3', count: 10 }, { label: '4-6', count: 20 },
+    { label: '13+', count: 40 }]);
+  check('VR6. Насжилт — өндөр нь ХАМГИЙН ИХ утгаас тооцогдоно',
+    !ag.empty && ag.rows.map((r) => r.height).join(',') === '25.0%,50.0%,100.0%' &&
+    ag.rows[2].value === '40',
+    ag.rows.map((r) => r.height).join(','));
+  check('VR6. Насжилт — дата алга бол багана ОГТ гарахгүй',
+    M.vehregAgeBars([]).empty === true && M.vehregAgeBars(null).rows.length === 0);
+
+  /* ── Гэрээ: backend хариу → самбарын утга ──────────────────────────── */
+  check('VR7. no_data / хоосон хариу → null (тоо ЗОХИОХГҮЙ)',
+    M.vehicleRegistryToValue(null) === null &&
+    M.vehicleRegistryToValue({ status: 'no_data' }) === null &&
+    M.vehicleRegistryToValue('') === null);
+  const FEED = {
+    status: 'ok', as_of: '2026-09-29', total: 100,
+    kpi: { ub: 60, rural: 40, owners: 80, individual: 70, wanted: 3 },
+    age: { avg_years: 13.9, buckets: [{ label: '0-3 жил', count: 10 },
+      { label: '4-6 жил', count: 20 }, { label: '13+ жил', count: 40 }] },
+    breakdowns: {
+      wheel: [{ label: 'Баруун', count: 60 }, { label: 'Зүүн', count: 40 }],
+      fuel: [{ label: 'Бензин', count: 50 }, { label: 'Дизель', count: 25 },
+        { label: 'Цахилгаан', count: 25 }]
+    },
+    top: { country: [{ label: 'Япон', count: 70 }, { label: 'БНСУ', count: 20 },
+      { label: 'Хятад', count: 10 }] }
+  };
+  const val = M.vehicleRegistryToValue(FEED);
+  check('VR7. Бүтэн хариу → бүх талбар зураглагдана',
+    val && val.total === 100 && val.kpi.ub === 60 && val.kpi.indiv === 70 &&
+    val.ageAvg === 13.9 && val.ageBuckets.length === 3 &&
+    val.share.wheel.length === 2 && val.top.country.length === 3 &&
+    Array.isArray(val.share.gender) && val.share.gender.length === 0,
+    JSON.stringify(val && val.kpi));
+
+  /* ── Хоосон төлөв: НЭГ Ч ТОО гарахгүй ──────────────────────────────── */
+  const empty = M.buildVehRegBoard(null);
+  check('VR8. Хоосон — 6 KPI бүгд "—"',
+    empty.kpis.length === 6 && empty.kpis.every((k) => k.value === '—'),
+    empty.kpis.map((k) => k.value).join(','));
+  check('VR8. Хоосон — 5 бөөрөнхий, 3 TOP, насжилт бүгд хоосон',
+    empty.shares.length === 5 && empty.shares.every((s) => s.empty) &&
+    empty.tops.length === 3 && empty.tops.every((t) => t.empty) &&
+    empty.age.empty === true && empty.age.avg === '—',
+    empty.shares.filter((s) => !s.empty).length + ' / ' + empty.tops.filter((t) => !t.empty).length);
+  check('VR8. Хоосон — блокерын шалтгаан ИЛ бичигдэнэ',
+    empty.blocked === true && empty.live === false &&
+    empty.blockHead.length > 0 && empty.blockBody.length > 0 && empty.hasAsOf === false,
+    JSON.stringify([empty.blocked, empty.hasAsOf]));
+  /* Хоосон самбарын БҮХ харагдах утга дотор цифр огт байх ёсгүй —
+     "0.05%" гэх мэт тайлбарын тоо нь content.json-ы ТЕКСТ, харин
+     KPI/легенд/мөр нь ТООН талбар тул тэдгээрийг л шалгана. */
+  const emptyNums = []
+    .concat(empty.kpis.map((k) => k.value))
+    .concat(empty.shares.map((s) => s.total))
+    .concat(empty.shares.reduce((a, s) => a.concat(s.legend.map((l) => l.value)), []))
+    .concat(empty.tops.reduce((a, t) => a.concat(t.rows.map((r) => r.value)), []))
+    .concat(empty.age.rows.map((r) => r.value))
+    .concat([empty.age.avg]);
+  check('VR8. Хоосон — тоон талбарт ЦИФР огт алга (тоо ЗОХИОХГҮЙ)',
+    emptyNums.length > 0 && emptyNums.every((x) => !/[0-9]/.test(String(x))),
+    emptyNums.filter((x) => /[0-9]/.test(String(x))).join(','));
+
+  /* ── Амьд төлөв: ЯГ ИЖИЛ builder дата ирэхэд дүүрнэ ────────────────── */
+  const live = M.buildVehRegBoard(val);
+  const kv = {};
+  live.kpis.forEach((k) => { kv[k.id] = k.value; });
+  check('VR9. Амьд — KPI мөр бүр feed-ийн утгыг харуулна',
+    kv.total === '100' && kv.ub === '60' && kv.rural === '40' &&
+    kv.owners === '80' && kv.indiv === '70' && kv.wanted === '3',
+    JSON.stringify(kv));
+  const wheel = live.shares.find((s) => s.id === 'wheel');
+  const fuel = live.shares.find((s) => s.id === 'fuel');
+  const gender = live.shares.find((s) => s.id === 'gender');
+  check('VR9. Амьд — бөөрөнхий нь feed-ийн ангиллаар дүүрнэ',
+    !wheel.empty && wheel.legend[0].pct === '60.0%' &&
+    !fuel.empty && fuel.legend.length === 3 && fuel.legend[0].pct === '50.0%',
+    wheel.legend.map((l) => l.label + ' ' + l.pct).join(', '));
+  check('VR9. Амьд — feed-д АЛГА слот хэвээр хоосон (хуурамч дүүргэхгүй)',
+    gender.empty === true && live.tops.find((t) => t.id === 'mark').empty === true &&
+    live.tops.find((t) => t.id === 'color').empty === true,
+    JSON.stringify([gender.empty, live.tops.map((t) => t.id + ':' + t.empty)]));
+  check('VR9. Амьд — TOP улс эрэмбэлэгдэж, насжилт ба огноо гарна',
+    live.tops[0].rows[0].label === 'Япон' && live.tops[0].rows[0].value === '70' &&
+    live.age.hasRows === true && live.age.avg === '~13.9 жил' &&
+    live.blocked === false && live.hasAsOf === true && live.asOf.indexOf('2026-09-29') > 0,
+    live.age.avg + ' | ' + live.asOf);
+
+  /* ── Слотын шалтгаан: хоёр өөр шалтгааныг ХОЛИХГҮЙ ─────────────────── */
+  const needIds = []
+    .concat(empty.kpis.filter((k) => k.needs).map((k) => k.id))
+    .concat(empty.shares.filter((s) => s.needs).map((s) => s.id))
+    .concat(empty.tops.filter((t) => t.needs).map((t) => t.id));
+  /* Өнгө (COLORNAME) ба хүйс (GENDER) нь датасэтэд БАЙГАА багана —
+     тэдгээрийг "эх сурвалж дутуу" гэж бичвэл ажилтан байхгүй ажил
+     хүлээнэ (docs/etl-scheduling.md §2.1-ийн probe). Үнэхээр дутуу нь
+     ЗӨВХӨН өмчлөгчийн танигч ба эрэн сурвалжлалтын бүртгэл. */
+  check('VR10. Нэмэлт эх сурвалж шаардсан слот ЯГ 2 (owners/wanted)',
+    needIds.sort().join(',') === 'owners,wanted', needIds.join(','));
+  check('VR10. Өнгө ба хүйс нь ДАТАСЭТИЙН багантай (худал блокер алга)',
+    empty.shares.find((s) => s.id === 'gender').field === 'GENDER' &&
+    empty.tops.find((t) => t.id === 'color').field === 'COLORNAME' &&
+    empty.shares.find((s) => s.id === 'gender').needs === false &&
+    empty.tops.find((t) => t.id === 'color').needs === false,
+    empty.shares.find((s) => s.id === 'gender').field + ' / ' +
+    empty.tops.find((t) => t.id === 'color').field);
+  check('VR10. Шалтгааныг ЗӨВХӨН тэр 2 слот дээр бичнэ (давталт багасна)',
+    empty.kpis.concat(empty.shares, empty.tops).every((s) => s.showWhy === s.needs) &&
+    empty.age.showWhy === false,
+    empty.kpis.map((k) => k.id + ':' + k.showWhy).join(' '));
+  check('VR10. Багана бүхий слот эх багананы нэрээ харуулна',
+    empty.shares.find((s) => s.id === 'fuel').field === 'FUELNAME' &&
+    empty.tops.find((t) => t.id === 'country').field === 'COUNTRYNAME' &&
+    empty.age.field === 'BUILDYEAR' &&
+    empty.kpis.find((k) => k.id === 'owners').hasField === false,
+    empty.shares.map((s) => s.field).join(','));
+
+  /* ── Хүрэх зам: хуудас нь PAGES-д БАЙХ ЁСТОЙ ───────────────────────── */
+  const rf = src.match(/routeFromHash\(\)\{[\s\S]*?\n  \}/);
+  check('VR11. routeFromHash эх кодоос олдов', !!rf);
+  if (rf) {
+    const PAGES = JSON.parse('[' + (src.match(/const PAGES=\[([\s\S]*?)\n\];/) || [])[1]
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/([{,])\s*(\w+):/g, '$1"$2":')
+      .replace(/'/g, '"').replace(/,\s*$/, '') + ']');
+    const route = new Function('PAGES', 'location',
+      'var o={' + rf[0] + '};return o.routeFromHash();');
+    check('VR11. #/vehreg танигдана (хуудас ХҮРЭХ ЗАМТАЙ)',
+      JSON.stringify(route(PAGES, { hash: '#/vehreg' })) === '{"page":"vehreg"}',
+      JSON.stringify(route(PAGES, { hash: '#/vehreg' })));
+    check('VR11. Танигдаагүй зам хэвээр null (бүх юм танигдахгүй)',
+      route(PAGES, { hash: '#/sector' }) === null &&
+      JSON.stringify(route(PAGES, { hash: '#/browse' })) === '{"page":"browse"}');
+  }
+  check('VR11. Темплейтэд isVehReg блок ба 15 слотын холбоос бий',
+    tpl.includes('<sc-if value="{{ isVehReg }}">') &&
+    tpl.includes('{{ vehreg.kpis }}') && tpl.includes('{{ vehreg.shares }}') &&
+    tpl.includes('{{ vehreg.tops }}') && tpl.includes('{{ vehreg.age.rows }}'),
+    'isVehReg=' + tpl.includes('<sc-if value="{{ isVehReg }}">'));
+  check('VR11. Загварт isVehReg ба vehreg зарлагдсан',
+    /isVehReg:page==='vehreg'/.test(src) && /vehreg:buildVehRegBoard\(/.test(src));
+
+  /* ── Эх сурвалжийн холболт ─────────────────────────────────────────── */
+  check('VR12. SOURCES-д roadVehReg бүртгэлтэй, ачаалагчтай',
+    /roadVehReg:\{label:'[^']+', load:app=>app\.loadRoadVehicleRegistry\(\)\}/.test(src) &&
+    /async loadRoadVehicleRegistry\(\)\{/.test(src));
+  check('VR12. Ачаалагч нь backend хаалттай үед ЧИМЭЭГҮЙ гарна',
+    /if\(typeof EHBackend==='undefined'\|\|!EHBackend\.enabled\) return;[\s\S]{0,120}?if\(!EHBackend\.fetchVehicleRegistry\) return;/
+      .test(src));
+  const be = read('js/erthub-backend.js');
+  check('VR12. erthub-backend.js-д fetchVehicleRegistry ба зөв зам',
+    be.includes("'/api/sectors/road/vehicle-registry'") &&
+    be.includes('fetchVehicleRegistry: fetchVehicleRegistry'));
+
+  /* ── Текстийн бүртгэл: content.json → site.vehreg{} ────────────────── */
+  const paths = ['title', 'sub', 'source', 'rows_word', 'unit', 'total_word', 'asof',
+    'pending', 'field_label', 'blocked.head', 'blocked.body', 'blocked.doc',
+    'age.title', 'age.avg', 'age.years']
+    .concat(M.VEHREG_KPI.reduce((a, s) => a.concat(['kpi.' + s.id + '.label', 'kpi.' + s.id + '.sub']), []))
+    .concat(M.VEHREG_SHARE.map((s) => 'share.' + s.id))
+    .concat(M.VEHREG_TOP.map((s) => 'top.' + s.id))
+    .concat(M.VEHREG_KPI.concat(M.VEHREG_SHARE, M.VEHREG_TOP)
+      .filter((s) => s.need).map((s) => 'need.' + s.need));
+  const missing = paths.filter((p) => {
+    let c = con.site.vehreg;
+    for (const k of p.split('.')) {
+      if (c == null || typeof c !== 'object') return true;
+      c = c[k];
+    }
+    return c == null || c === '';
+  });
+  check('VR13. Харагдах текст бүр content.json-д бүртгэлтэй',
+    missing.length === 0, 'дутуу: ' + missing.join(', '));
+  /* ROUND-TRIP: content.json-д бичсэн утга самбарын гаралт дээр ЯГ
+     гарч ирнэ. B бүлгийн статик хайлт динамик зам дээр ажиллахгүй тул
+     "бүртгэгдсэн ч уншигддаггүй" зам ЭНД баригдана. */
+  const probe = JSON.parse(JSON.stringify(con));
+  const stampAt = (o, ks, v) => { let c = o; for (let n = 0; n < ks.length - 1; n++) c = c[ks[n]]; c[ks[ks.length - 1]] = v; };
+  const seen = [];
+  paths.forEach((pp, n) => {
+    const marker = "ZZ" + n + "ZZ";
+    stampAt(probe.site.vehreg, pp.split("."), marker);
+    seen.push(marker);
+  });
+  const stxt2 = (pp, fb) => {
+    let c = probe.site;
+    for (const k of String(pp).split(".")) {
+      if (c == null || typeof c !== "object") return fb;
+      c = c[k];
+    }
+    return (c == null || c === "") ? fb : c;
+  };
+  const M2 = new Function("fmtNum", "stxt", "NEON",
+    src.slice(i, j) + "\nreturn {buildVehRegBoard};")(fmtNum, stxt2, { road: "#8CA9E8" });
+  /* Хоосон ба АМЬД хоёр төлвийг ХОЁУЛАНГ нь зурна: asof, age.years зэрэг
+     зөвхөн дата ирэхэд гардаг зам эс тэгвэл "уншигдаагүй" мэт харагдана. */
+  const painted = JSON.stringify(M2.buildVehRegBoard(null))
+    + JSON.stringify(M2.buildVehRegBoard(val));
+  const unread = seen.filter((mk) => painted.indexOf(mk) < 0)
+    .map((mk) => paths[Number(mk.slice(2, -2))]);
+  check('VR13. Бүртгэсэн зам бүр САМБАР дээр гарч ирнэ (round-trip)',
+    unread.length === 0, "уншигдаагүй: " + unread.join(", "));
+  check('VR13. Навигацийн шошго бүртгэлтэй (site.nav.vehreg)',
+    !!(con.site.nav && con.site.nav.vehreg), JSON.stringify(con.site.nav));
+  check('VR13. content.json-д ТОО бичигдээгүй (тоо зөвхөн feed-ээс)',
+    !/[0-9]/.test(JSON.stringify([con.site.vehreg.kpi, con.site.vehreg.share,
+      con.site.vehreg.top, con.site.vehreg.age])),
+    JSON.stringify(con.site.vehreg.kpi).slice(0, 80));
+
+  /* ── Регресс: датасэтийн хэмжээ нь БАРИМТ, зохиомол тоо биш ────────── */
+  check('VR14. Мөрийн тоо нь эх сурвалжийн totalcount-той таарна',
+    M.VEHREG_DS.rows === 1942315 &&
+    M.VEHREG_DS.dataset === 'road.veritech.vehicle_registry' &&
+    M.VEHREG_DS.indicator === '14996840',
+    JSON.stringify(M.VEHREG_DS));
+  check('VR14. Слотын тоо = дэлгэцийн үзүүлэлтийн тоо (6 + 5 + 3 + 1)',
+    M.VEHREG_KPI.length === 6 && M.VEHREG_SHARE.length === 5 &&
+    M.VEHREG_TOP.length === 3,
+    [M.VEHREG_KPI.length, M.VEHREG_SHARE.length, M.VEHREG_TOP.length].join('/'));
+}
+
 async function groupAI() {
   group('AI. 08 — AI туслахын хариулт амьд датаас');
   const k = aiKit();
@@ -5503,12 +5818,13 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
   else if (process.argv.includes('--only=G4')) { await groupG4(); }
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
+  else if (process.argv.includes('--only=VR')) { await groupVR(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); groupSP();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); groupSP();
   }
 
   console.log('\n' + '═'.repeat(62));
