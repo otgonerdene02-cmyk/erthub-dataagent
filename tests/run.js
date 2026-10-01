@@ -1829,7 +1829,9 @@ async function groupL() {
   const con = readJson('content.json'), idx = read('index.html'), adm = read('admin/index.html');
 
   const ds = con.site && con.site.datasets;
-  check('L1. Каталог content.json-д бүртгэгдсэн', Array.isArray(ds) && ds.length >= 9,
+  /* Каталогт ЗӨВХӨН сервисээр ирдэг датасэт үлдсэн (2026-09-28: 12→4).
+     Босго нь "хоосон биш" — шинэ эх сурвалж холбогдох бүрд өснө. */
+  check('L1. Каталог content.json-д бүртгэгдсэн', Array.isArray(ds) && ds.length >= 4,
     'бичлэг: ' + (ds ? ds.length : 0));
   check('L1. Бичлэг бүр нэр ба салбартай',
     Array.isArray(ds) && ds.every((d) => d && typeof d.sector === 'string'),
@@ -3985,7 +3987,7 @@ async function groupBE() {
   const recBlock = (dcScript().match(/const RECENT = \[([\s\S]*?)\n\];/) || [])[1] || '';
   const recN = (recBlock.match(/\{title:/g) || []).length;
   check('BE14. RECENT мөрийн тоо = content.json site.updates-ийн урт',
-    recN === con14.site.updates.length && recN === 7, recN + ' vs ' + con14.site.updates.length);
+    recN === con14.site.updates.length && recN === 4, recN + ' vs ' + con14.site.updates.length);
   check('BE14. Вагон ачилтын мөр railWagon эх сурвалжтай, огноо ЗОХИОГҮЙ',
     /source:'railWagon'/.test(recBlock) && /date:'', sector:'rail'/.test(recBlock));
   check('BE14. SOURCES-д railWagon бүртгэлтэй (auditBindings анхааруулахгүй)',
@@ -4150,8 +4152,17 @@ async function groupBE() {
     /schema:'rail_wagon',source:'railWagon'/.test(dcScript()));
   check('BE22. DS_SCHEMA.rail_wagon анхнаасаа ХООСОН мөртэй (зохиомол дата алга)',
     /rail_wagon:\{head:\[[\s\S]*?rows:\[\]\}/.test(dcScript()));
-  check('BE22. Салбарын схем ХЭВЭЭР (schema зарлаагүй датасэт эвдрэхгүй)',
-    /rail:\{head:\['Огноо','Галт тэрэг'/.test(dcScript()));
+  /* Каталогоос хасагдсан 8 датасэтийн ЗОХИОМОЛ хүснэгтийн мөрүүд
+     (DS_SCHEMA.road/.rail/.water/.public) бүрмөсөн устсан эсэх. Өмнө нь
+     эдгээр "Excel татах" товчоор файл болж ч гардаг байв. */
+  const dsSchemaBlock = (dcScript().match(/const DS_SCHEMA=\{([\s\S]*?)\n\};/) || [])[1] || '';
+  check('BE22. Устгасан датасэтийн зохиомол схем (road/rail/water/public) БАЙХГҮЙ',
+    !/\n  (road|rail|water|public):\{head:/.test(dsSchemaBlock), dsSchemaBlock.slice(0, 80));
+  check('BE22. Схем бүр мөргүй (rows:[]) эхэлнэ — зохиомол дата кодод байхгүй',
+    (dsSchemaBlock.match(/rows:\[\]/g) || []).length === 4,
+    String((dsSchemaBlock.match(/rows:\[/g) || []).length));
+  check('BE22. Зорчигчийн датасэт ӨӨРИЙН схемтэй (rail_pax)',
+    /schema:'rail_pax'/.test(dcScript()) && /rail_pax:\{head:/.test(dsSchemaBlock));
   check('BE22. Каталогийн давтамж "Тодорхойгүй" биш бодит хуваарь',
     !/freq:'Тодорхойгүй',use:'Нийтийн API нээлттэй'/.test(dcScript()));
 
@@ -4178,9 +4189,12 @@ async function groupBE() {
   const NOW_0930_UB_OCT = Date.UTC(2026, 8, 30, 20, 0, 0);    // UTC 09-30 20:00 = УБ 10-01 04:00
 
   /* ── BE24. sectorSummaryToSeries() — цэвэр задлагч ── */
-  const s24 = dcScript().match(/function sectorSummaryToSeries\(json,now\)\{([\s\S]*?)\n\}/);
+  const s24 = dcScript().match(/function sectorSummaryToSeries\(json,now,cov\)\{([\s\S]*?)\n\}/);
   if (!s24) { bad('BE24. sectorSummaryToSeries() олдсонгүй'); return; }
-  const toSeries = new Function('json', 'now', s24[1]);
+  /* cov-г ЗОРИУД дамжуулахгүй — өгөгдмөл дүрэм (COVERAGE_DEFAULT) үед
+     зан төлөв ӨМНӨХ шигээ байхыг доорх бүх тест шалгана. */
+  const toSeriesRaw = new Function('COVERAGE_DEFAULT', 'json', 'now', 'cov', s24[1]);
+  const toSeries = (json, now) => toSeriesRaw({ grain: 'month', excludes_current: true }, json, now);
   const a24 = toSeries(PAX, NOW_0922);
   check('BE24. Явагдаж буй 9-р сар ХАСАГДАЖ 1–8-р сар үлдэнэ',
     !!a24 && a24.lastMonth === 8 && JSON.stringify(a24.counts) === JSON.stringify(JAN_AUG), JSON.stringify(a24));
@@ -4247,7 +4261,7 @@ async function groupBE() {
   const st26 = (p, f) => (PAXTXT[p] !== undefined ? PAXTXT[p] : f);
   const fmt26 = (n) => Number(n).toLocaleString('en-US');
   const SS26 = new Function('stxt', 'return ' + ss26[1])(st26);
-  const mkPaxRaw = new Function('SECTORS', 'SECTOR_SERIES', 'k', ap26[1]);
+  const mkPaxRaw = new Function('SECTORS', 'SECTOR_SERIES', 'DS_SCHEMA', 'stxt', 'k', ap26[1]);
   const mkRowRaw = new Function('SECTOR_SERIES', 'stxt', 'fmtNum', 'MONTHS', 'k', kr26[1]);
   /* Хуучин (rail-д зориулсан) дуудлагын хэлбэрийг хадгалж, доорх тестүүд ХЭВЭЭР үлдэнэ */
   const mkRow = (st, fmt, MON) => ({ call: (c) => mkRowRaw.call({ _sectorSeries: { rail: c._railPaxSeries } }, SS26, st, fmt, MON, 'rail') });
@@ -4257,8 +4271,10 @@ async function groupBE() {
        мөр ҮҮНЭЭС уншина) тул стаб ЗААВАЛ хэрэгтэй. */
     const ctx = { _sectorSeries: { rail: series }, _st: null, _meta: null,
       setSourceMeta(id, m) { this._meta = { id, m }; }, setState(s) { this._st = s; } };
-    mkPaxRaw.call(ctx, SEC, SS26, 'rail');
-    return { SEC, ctx };
+    /* rail_pax схем — цуваанаас дүүрдэг эсэхийг шалгах стаб. */
+    const DSS = { rail_pax: { head: [], types: ['string','int','enum'], notes: [], rows: [] } };
+    mkPaxRaw.call(ctx, SEC, SS26, DSS, st26, 'rail');
+    return { SEC, ctx, DSS };
   };
   const P26 = runPax({ unit: 'зорчигч', year: 2026, counts: JAN_AUG.slice(), lastMonth: 8 });
   check('BE36. Цувааны мета railPax-д, сүүлийн БҮТЭН сараар (2026-08)',
@@ -4275,6 +4291,98 @@ async function groupBE() {
   const N26 = runPax(null);
   check('BE26. Дата ирээгүй → c1d/шошго ОГТ хөндөгдөхгүй, _liveSeries үгүй',
     JSON.stringify(N26.SEC.rail.c1d) === '[290,270,310]' && N26.SEC.rail.c1 === 'Сарын зорчигч (мянга)' && !N26.SEC.rail._liveSeries);
+  /* ── BE40. Зорчигчийн датасэтийн ХҮСНЭГТ амьд сарын цуваанаас (2026-09-28) ──
+     Өмнө нь энэ датасэт `schema` зарлаагүй тул DS_SCHEMA.rail буюу ачааны
+     галт тэрэгний ЗОХИОМОЛ мөрүүдийг өөрийн дата мэт үзүүлж, Excel-ээр ч
+     гаргадаг байв. Одоо rows ХООСОН эхэлж, цуваа ирэхэд Л дүүрнэ. */
+  const T40 = P26.DSS.rail_pax;
+  check('BE40. rail_pax мөр = бүтэн сарын тоо (8), шинэ сар эхэнд (2026-08)',
+    T40.rows.length === 8 && T40.rows[0][0] === '2026-08' && T40.rows[7][0] === '2026-01',
+    JSON.stringify(T40.rows.slice(0, 2)));
+  check('BE40. Утга нь цувааны ЯГ ТЭР тоо (8-р сар 148,470; 1-р сар 143,220 — гараар)',
+    T40.rows[0][1] === 148470 && T40.rows[7][1] === 143220);
+  check('BE40. Төлөв ok: (бүтэн сар — явагдаж буй сар цуваанд ордоггүй)',
+    T40.rows.every((r) => /^ok:/.test(r[2])));
+  check('BE40. Утгын баганын нэр ба нэгж labels()-ээс (content.json-д давхардуулаагүй)',
+    T40.head[1] === 'ЗОРЧИГЧ / САР' && /зорчигч-ийн тоо/.test(T40.notes[1]) && !/\{unit\}/.test(T40.notes[1]),
+    JSON.stringify(T40.head) + ' ' + T40.notes[1]);
+  check('BE40. Дата ирээгүй → хүснэгт ХООСОН хэвээр (зохиомол мөр алга)',
+    N26.DSS.rail_pax.rows.length === 0);
+
+  /* ── BE41. Каталогт ЗӨВХӨН сервисээр ирдэг датасэт (2026-09-28) ──
+     12 бичлэгийн 8 нь эх сурвалжгүй, бүх тоо нь зохиомол байв. */
+  const ds41 = dcScript().match(/\nconst DATASETS=\[([\s\S]*?)\n\];/);
+  const src41 = dcScript().match(/\nconst SOURCES=\{([\s\S]*?)\n\};/);
+  const dsNames41 = ds41 ? (ds41[1].match(/\{sector:'/g) || []).length : 0;
+  const dsSrc41 = ds41 ? (ds41[1].match(/source:'(\w+)'/g) || []).map((x) => x.slice(8, -1)) : [];
+  check('BE41. Каталогийн бичлэг БҮР `source`-той (эх сурвалжгүй датасэт алга)',
+    dsNames41 > 0 && dsSrc41.length === dsNames41, dsSrc41.length + ' / ' + dsNames41);
+  check('BE41. `source` бүр SOURCES-д бүртгэлтэй',
+    !!src41 && dsSrc41.every((k) => new RegExp('\\n  ' + k + ':\\{').test(src41[1])), dsSrc41.join(','));
+  check('BE41. content.json site.datasets ба DATASETS ИЖИЛ урттай (индексээр давхардана)',
+    readJson('content.json').site.datasets.length === dsNames41);
+
+  /* ── BE42. Статик демо тоо кодод ҮЛДЭЭГҮЙ — feed унавал ч зохиомол тоо гарахгүй ──
+     Өмнө нь flights feed / backend амжилтгүй болоход SECTORS-ийн статик
+     тоо (48,210 км, MIAT 681,711 …) бодит дата мэт харагддаг байв. */
+  const sec42 = dcScript().match(/\nconst SECTORS = \{([\s\S]*?)\n\};/);
+  const S42 = sec42 ? new Function('return {' + sec42[1] + '}')() : null;
+  check('BE42. SECTORS олдов (5 салбар)', !!S42 && Object.keys(S42).length === 5);
+  if (S42) {
+    const kv = Object.values(S42).flatMap((x) => x.kpis.map((k) => k[1] + '|' + k[3]));
+    check('BE42. KPI утга/өөрчлөлт бүгд "—" (статик тоо алга)',
+      kv.every((v) => v === '—|—'), kv.filter((v) => v !== '—|—').join(' '));
+    check('BE42. c1d / rank / bars бүгд ХООСОН',
+      Object.values(S42).every((x) => !x.c1d.length && !x.rank.length && !x.bars.length));
+    check('BE42. air.monthly / cargoRank ХООСОН (feed-ийн "түр орлуулга" алга)',
+      !S42.air.monthly.pax.length && !S42.air.cargoRank.length && !S42.air.rankAll.length);
+  }
+  /* Тайлбарт (түүх болж) үлдэж болно — ДАТА болох мөр утгад ('…') үлдээгүйг шалгана */
+  check('BE42. "48,210" мөр утга болж кодод ч content.json-д ч үлдээгүй',
+    !/'48,210/.test(dcScript()) && !/48,210/.test(fs.readFileSync(path.join(ROOT, 'content.json'), 'utf8')));
+  /* Хоосон цуваа график бүтээгчийг нураахгүй (Math.max([]) = -Infinity) */
+  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off\)\{([\s\S]*?)\n\}\n/);
+  let btcOk = false, btcErr = '';
+  try {
+    const f = new Function('data', 'off', 'MONTHS', 'stxt', btc42[1]);
+    const r = f([], 0, MONTHS25, (p, x) => x);
+    btcOk = !!r && /^M/.test(r.line) && !/NaN|Infinity/.test(r.line + r.peak.value);
+  } catch (e) { btcErr = e.message; }
+  check('BE42. buildTrendChart([]) нурахгүй, хавтгай шугам зурна', btcOk, btcErr);
+
+  /* ── BE43. Датасэтийн "Салбарын бүтэц" — ЗӨВХӨН тухайн датасэтийн задаргаа ──
+     SECTORS[k].rank нь салбарын түвшнийх; төмөр замд үүнийг вагоны датасэт
+     дүүргэдэг тул зорчигчийн датасэтийн хуудас вагоны буудлын задаргааг
+     (Багануур 16.9% …) ӨӨРИЙНХ мэт харуулж байв (2026-09-29 илэрсэн). */
+  const dr43 = dcScript().match(/\nfunction datasetRank\(sec,ds\)\{([\s\S]*?)\n\}\n/);
+  check('BE43. datasetRank() олдов', !!dr43);
+  if (dr43) {
+    const dr = new Function('sec', 'ds', dr43[1]);
+    const RAIL = { rank: [['Багануур', '193', '16.9%']], _rankSource: 'railWagon' };
+    check('BE43. Вагоны задаргаа ВАГОНЫ датасэт дээр харагдана',
+      dr(RAIL, { source: 'railWagon' }).length === 1);
+    check('BE43. Вагоны задаргаа ЗОРЧИГЧИЙН датасэт дээр ХАРАГДАХГҮЙ',
+      dr(RAIL, { source: 'railPax' }).length === 0);
+    check('BE43. Задаргааг хэн бичсэн нь тодорхойгүй бол харуулахгүй (зохиомол байж болзошгүй)',
+      dr({ rank: [['X', '1', '100%']] }, { source: 'railWagon' }).length === 0);
+    check('BE43. Хоосон/эвдэрсэн оролт → хоосон массив (нурахгүй)',
+      dr(null, null).length === 0 && dr({ _rankSource: 'a' }, { source: 'a' }).length === 0);
+  }
+  check('BE43. Задаргаа бичдэг 3 газар бүгд _rankSource тэмдэглэнэ',
+    /SECTORS\.road\._rankSource='roadInspect'/.test(dcScript()) &&
+    /SECTORS\.rail\._rankSource='railWagon'/.test(dcScript()) &&
+    /SECTORS\.air\._rankSource='flights'/.test(dcScript()));
+  check('BE43. Датасэтийн хуудас datasetRank()-аар уншина (SECTORS[..].rank ШУУД биш)',
+    /datasetRank\(SECTORS\[dsel\.sector\],dsel\)/.test(dcScript()) &&
+    !/:SECTORS\[dsel\.sector\]\.rank\)/.test(dcScript()));
+  check('BE43. Хоосон үед "мэдээлэл алга" гэж ил хэлнэ',
+    /detail\.rankEmpty/.test(read('index.html')));
+  /* ── BE44. "Өөрчлөлтийн түүх" — ЗОХИОМОЛ 3 мөр датасэт бүр дээр гардаг байв ── */
+  check('BE44. Зохиомол өөрчлөлтийн түүх ("хоцролт 20 сек" г.м.) кодод үлдээгүй',
+    !/Бодит цагийн урсгалын хоцролт 20 сек/.test(dcScript()) && !/Түүхэн өгөгдөл 2021 он хүртэл/.test(dcScript()));
+  check('BE44. Өөрчлөлтийн түүх хоосон бол "мэдээлэл алга"',
+    /detail\.changelogEmpty/.test(read('index.html')));
+
   check('BE26. 1 цэгтэй цуваа → зурахгүй (шугам биш)',
     !runPax({ unit: 'зорчигч', year: 2026, counts: [143220], lastMonth: 1 }).SEC.rail._liveSeries);
   const paxRow = mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: { counts: JAN_AUG.slice() } });
@@ -4310,7 +4418,7 @@ async function groupBE() {
     /reapplyLiveText\(\)\{[\s\S]*?Object\.keys\(SECTOR_SERIES\)\.forEach\(k=>this\.applySectorSeries\(k\)\);[\s\S]*?this\.applyRailWagonData\(\);[\s\S]*?this\.recomputeAirData\(\);/.test(dcScript()));
   check('BE27. loadEtransportBackend: вагон + тохиргооны БҮХ салбарыг ЗЭРЭГ, цувааг вагоноос ӨМНӨ',
     /Promise\.all\(\[EHBackend\.fetchRailWagonLoading\(\),\s*\.\.\.seriesKeys\.map\(k=>EHBackend\.fetchSectorSummary\?EHBackend\.fetchSectorSummary\(SECTOR_SERIES\[k\]\.api\):null\)\]\)/.test(dcScript()) &&
-    /seriesKeys\.forEach\(\(k,i\)=>\{ this\._sectorSeries\[k\]=sectorSummaryToSeries\(sums\[i\]\); this\.applySectorSeries\(k\); \}\);[\s\S]*?this\.applyRailWagonData\(\);/.test(dcScript()));
+    /seriesKeys\.forEach\(\(k,i\)=>\{[\s\S]*?sectorSummaryToSeries\(sums\[i\],null,this\.coverageOf\([\s\S]*?this\.applyRailWagonData\(\);/.test(dcScript()));
 
   /* ── BE27b. ЕРӨНХИЙ ГЭРЭЭ — шинэ салбар нэмэхэд код өөрчлөхгүй ── */
   check('BE27b. SECTOR_SERIES бичлэг бүр api/dataset/kpi/labels-тэй, kpi ∈ {append, replace}',
@@ -4325,7 +4433,7 @@ async function groupBE() {
   const ctxR = { _sectorSeries: { road: { unit: 'нэгж', year: 2026, counts: [100, 110, 99], lastMonth: 3 } },
     setState() {}, setSourceMeta() {},
     seriesKpiRow(k) { return mkRowRaw.call(this, SSR, st26, fmt26, MONTHS25, k); } };
-  mkPaxRaw.call(ctxR, SECR, SSR, 'road');
+  mkPaxRaw.call(ctxR, SECR, SSR, {}, st26, 'road');
   check('BE27b. replace: статик демо мөрүүд (48,210 км) бүрэн солигдож 1 амьд мөр',
     SECR.road.kpis.length === 1 && SECR.road.kpis[0][0] === 'Х / САР' && SECR.road.kpis[0][1] === '99' &&
     SECR.road._liveKpis === true, JSON.stringify(SECR.road.kpis));
@@ -4337,7 +4445,7 @@ async function groupBE() {
     SECR.road._liveSeries === true && SECR.road._liveSeriesDs === 'Тест датасэт' && SECR.road.c1dYear === 2026);
   const SECA = { rail: { c1: 'x', c1d: [1], kpis: [['A', '1', 'вагон', '—', 'flat']], _liveKpis: true } };
   mkPaxRaw.call({ _sectorSeries: { rail: { year: 2026, counts: JAN_AUG.slice(), lastMonth: 8 } },
-    setState() {}, setSourceMeta() {} }, SECA, SS26, 'rail');
+    setState() {}, setSourceMeta() {} }, SECA, SS26, { rail_pax: { head: [], notes: [], rows: [] } }, st26, 'rail');
   check('BE27b. append (rail): KPI мөрийг ЭНД хөндөхгүй — вагоны apply залгана',
     SECA.rail.kpis.length === 1 && SECA.rail.kpis[0][0] === 'A');
   const sv27 = dcScript().match(/\n  seriesVerified\(widgetId,sectorKey\)\{([\s\S]*?)\n  \}\n/);
@@ -4804,7 +4912,7 @@ async function groupBE() {
      dsHasTrend() (_liveSeriesDs === dsel.name) хэзээ ч тэнцэхгүй —
      амьд муруй ямар ч датасэтийн хуудсан дээр гардаггүй байв. */
   const dsNames36 = [...dcScript().matchAll(/\{sector:'[a-z]+',name:'([^']+)'/g)].map((m) => m[1]);
-  const serDs36 = (dcScript().match(/rail:\{api:'rail',dataset:'([^']+)'/) || [])[1];
+  const serDs36 = (dcScript().match(/rail:\{api:'rail',[\s\S]{0,120}?dataset:'([^']+)'/) || [])[1];
   check('BE36. SECTOR_SERIES.rail.dataset нь DATASETS-д БОДИТООР байна',
     !!serDs36 && dsNames36.includes(serDs36), serDs36 + ' / ' + dsNames36.length + ' датасэт');
   check('BE36. Цувааны датасэт railPax эх сурвалжтай',
@@ -4821,6 +4929,141 @@ async function groupBE() {
       return ds[ds.length - 1].name === 'Зорчигчийн галт тэрэгний мэдээ' &&
         ds[ds.length - 1].sector === 'rail';
     })());
+
+  /* ── BE37. period_coverage — САРЫН ЦУВААНЫ ГАНЦ ДҮРЭМ ──
+     Өмнө нь дүрэм ХОЁР газар ХОЁР ӨӨРӨӨР хатуу бичигдсэн байв: rail нь
+     явагдаж буй сарыг ХАСДАГ, air нь сүүлийн дата бүхий сарыг БҮТЭН мэт
+     ҮЛДЭЭДЭГ. Иймд t05 дээр air сонговол дуусаагүй 9-р сарын цэг бүтэн
+     сартай зэрэгцэж "уналт" мэт уншигдаж байв. */
+  const dpm = dcScript().match(/\nfunction dropPartialMonth\(counts,year,cov,now\)\{([\s\S]*?)\n\}\n/);
+  if (!dpm) { bad('BE37. dropPartialMonth() олдсонгүй'); return; }
+  const covDef = dcScript().match(/const COVERAGE_DEFAULT=(\{[^}]*\});/);
+  if (!covDef) { bad('BE37. COVERAGE_DEFAULT олдсонгүй'); return; }
+  const drop = new Function('COVERAGE_DEFAULT', 'counts', 'year', 'cov', 'now',
+    dpm[1]).bind(null, JSON.parse(covDef[1].replace(/([a-z_]+):/g, '"$1":').replace(/'/g, '"')));
+  /* 2026-09-24 12:00 UTC → УБ-д 2026-09-24 20:00, өөрөөр хэлбэл 9-р сар */
+  const NOW_0924 = Date.UTC(2026, 8, 24, 12, 0, 0);
+  const NINE = [10, 11, 12, 13, 14, 15, 16, 17, 18];
+  const d1 = drop(NINE.slice(), 2026, null, NOW_0924);
+  check('BE37. Явагдаж буй 9-р сар хасагдаж 8 цэг үлдэнэ',
+    d1.counts.length === 8 && d1.counts[7] === 17, JSON.stringify(d1.counts));
+  check('BE37. Хасагдсан сарыг ИЛ нэрлэнэ (хэрэглэгчид "яагаад" гэж хэлнэ)',
+    d1.partial === '2026-09', String(d1.partial));
+  const d2 = drop(NINE.slice(), 2025, null, NOW_0924);
+  check('BE37. ӨНГӨРСӨН оны цуваа ХӨНДӨГДӨХГҮЙ (2025-09 бүтэн сар)',
+    d2.counts.length === 9 && d2.partial === null, JSON.stringify(d2.counts.length));
+  const d3 = drop(NINE.slice(0, 8), 2026, null, NOW_0924);
+  check('BE37. Цуваа 8-р сараар дууссан бол юу ч хасахгүй (аль хэдийн бүтэн)',
+    d3.counts.length === 8 && d3.partial === null);
+  const d4 = drop(NINE.slice(), 2026, { grain: 'month', excludes_current: false }, NOW_0924);
+  check('BE37. excludes_current:false → цуваа ХЭВЭЭР (дүрэм registry-гээс)',
+    d4.counts.length === 9 && d4.partial === null, JSON.stringify(d4.counts.length));
+  check('BE37. Хоосон цуваа → унахгүй', drop([], 2026, null, NOW_0924).counts.length === 0);
+  /* УБ цагийн хил: UTC 09-30 20:00 нь УБ-д аль хэдийн 10-р сарын 1 */
+  const d5 = drop([1, 2, 3, 4, 5, 6, 7, 8, 9], 2026, null, Date.UTC(2026, 8, 30, 20, 0, 0));
+  check('BE37. УБ цагаар (UTC+8) сар солигдоно — 9-р сар БҮТЭН болж үлдэнэ',
+    d5.counts.length === 9 && d5.partial === null, JSON.stringify(d5.partial));
+
+  /* sectorSummaryToSeries ч ижил дүрмийг registry-гээс авна */
+  const ss37 = dcScript().match(/function sectorSummaryToSeries\(json,now,cov\)\{([\s\S]*?)\n\}\n/);
+  if (!ss37) { bad('BE37. sectorSummaryToSeries(json,now,cov) олдсонгүй'); return; }
+  const toSer37 = new Function('COVERAGE_DEFAULT', 'json', 'now', 'cov',
+    ss37[1]).bind(null, { grain: 'month', excludes_current: true });
+  /* 2026 оны БОДИТ зорчигчийн тоо (/api/sectors/rail/summary, 2026-09-24).
+     1–9-р сарын нийлбэр = 1,167,735. 9-р сар нь ДУУСААГҮЙ (77,735 нь
+     22 хоногийнх) тул 8-р сарын 148,470-тай зэрэгцвэл −47.6% "уналт"
+     мэт уншигдана — яг энэ ХУДАЛ уншилтаас хамгаална.
+     sectorSummaryToSeries нь 1-р сараас ЗАВСАРГҮЙ цуваа шаарддаг. */
+  const PAX37 = [143220, 95798, 115010, 134414, 134068, 160319, 158701, 148470, 77735];
+  const SUM37 = {
+    status: 'ok', unit: 'зорчигч',
+    data: PAX37.map((v, i) => ({
+      month: '2026-' + String(i + 1).padStart(2, '0') + '-01T00:00:00.000Z',
+      total_volume: String(v)
+    })).reverse()
+  };
+  const keep = toSer37(SUM37, NOW_0924, { grain: 'month', excludes_current: false });
+  check('BE37. excludes_current:false → 9-р сар цуваанд ОРНО (гэрээ хоёр тийш)',
+    !!keep && keep.counts.length === 9 && keep.counts[8] === 77735,
+    JSON.stringify(keep && keep.counts));
+  const cut = toSer37(SUM37, NOW_0924, null);
+  check('BE37. Өгөгдмөл дүрэм → 9-р сар ХАСАГДАНА, partial тэмдэглэгдэнэ',
+    !!cut && cut.counts.length === 8 && cut.partial === '2026-09',
+    JSON.stringify(cut && [cut.counts.length, cut.partial]));
+  check('BE37. Сүүлийн цэг нь 8-р сарын 148,470 (дутуу 77,735 БИШ)',
+    !!cut && cut.counts[7] === 148470, JSON.stringify(cut && cut.counts[7]));
+  /* 1,167,735 − 77,735 = 1,090,000 (ГАРААР) */
+  check('BE37. Хасагдсан сар НИЙЛБЭРТ ч орохгүй: 1,090,000',
+    !!cut && cut.counts.reduce((a, b) => a + b, 0) === 1090000,
+    JSON.stringify(cut && cut.counts.reduce((a, b) => a + b, 0)));
+
+  /* Сайт талын утсан холбоос */
+  check('BE37. coverageOf() registry-гээс уншиж, байхгүй бол өгөгдмөл рүү',
+    dcScript().includes('coverageOf(mk){') &&
+    dcScript().includes('(m&&m.period_coverage)||COVERAGE_DEFAULT'));
+  check('BE37. rail цуваа coverageOf-оор дамжина (хатуу дүрэм үлдээгүй)',
+    dcScript().includes('this.coverageOf(SECTOR_SERIES[k].metric)') &&
+    dcScript().includes("metric:'rail.monthly_passenger_series'"));
+  check('BE37. air ч ИЖИЛ функцээр (хоёр өөр дүрэм үлдээгүй)',
+    dcScript().includes("dropPartialMonth(lastRealIdx>=0?c1dFull.slice(0,lastRealIdx+1):[]") &&
+    dcScript().includes("this.coverageOf('air.monthly_flight_series')"));
+  check('BE37. t05-ийн толгойд тэмдэглэгээ гарна, текст content.json-д',
+    read('index.html').includes('{{ t05CovNote }}') &&
+    dcScript().includes("stxt('status.partial_month'") &&
+    readJson('content.json').site.status.partial_month === '* дуусаагүй сар цуваанд ороогүй');
+
+  /* ── BE38. datasets{} — БҮРЭН БАЙДАЛ машинаар уншигдана ──
+     Өмнө нь "эх сурвалжийн 0.1% нь татагдсан" гэсэн баримт ЗӨВХӨН
+     t05.road.would_need-ийн зохиолын дотор амьдарч байсан тул
+     (а) хэрэглэгчид хэзээ ч харагдахгүй, (б) бусад слот мэдэхгүй,
+     (в) машинаар уншигдахгүй байв. */
+  const reg38 = readJson('metric_registry.json');
+  const ds38 = reg38.datasets || {};
+  check('BE38. datasets{} блок бий, backend-ийн dataset_id-гаар түлхүүрлэсэн',
+    !!ds38['road.veritech.vehicle_registry'] && !!ds38['rail.veritech.freight_ubtz'],
+    Object.keys(ds38).join(', '));
+  const vr38 = (ds38['road.veritech.vehicle_registry'] || {}).completeness || {};
+  check('BE38. vehicle_registry-ийн бүрэн байдал тоогоор бүртгэгдсэн',
+    vr38.ingested === 2000 && vr38.source_total === 1941092,
+    JSON.stringify([vr38.ingested, vr38.source_total]));
+  /* 2000 / 1941092 × 100 = 0.10303… → 2 аравтаар "0.10%" (ГАРААР) */
+  check('BE38. Хувь нь ТООЦООЛОГДОНО — registry-д pct ХАДГАЛАГДААГҮЙ (ганц эх сурвалж)',
+    !('pct' in vr38) && (vr38.ingested / vr38.source_total * 100).toFixed(2) === '0.10');
+  check('BE38. Хэмжилтийн гарал үүсэл бүртгэлтэй (тоо зохиогоогүйн баталгаа)',
+    !!vr38.method && vr38.measured_on === '2026-09-24' && vr38.blocks_publication === true);
+  const blocked38 = [];
+  for (const [wid, w] of Object.entries(reg38.widgets)) {
+    const secs = (w.sectors && !Array.isArray(w.sectors)) ? w.sectors : {};
+    for (const [k, sv] of Object.entries(secs)) if (sv && sv.blocked_by) blocked38.push([wid, k, sv.blocked_by]);
+  }
+  check('BE38. Блоклогдсон слотууд датасэтээ ЗААНА (t05.road орсон)',
+    blocked38.length >= 6 && blocked38.some((b) => b[0] === 't05' && b[1] === 'road'),
+    blocked38.length + ' слот');
+  check('BE38. blocked_by бүр БОДИТ датасэтийг заана (бичгийн алдаагүй)',
+    blocked38.every((b) => !!ds38[b[2]]),
+    blocked38.filter((b) => !ds38[b[2]]).map((b) => b.join('.')).join(', '));
+  check('BE38. Метрик холбогдсон слотод blocked_by ҮЛДЭЭГҮЙ (хуучирсан мета)',
+    blocked38.every((b) => !reg38.widgets[b[0]].sectors[b[1]].metric));
+
+  /* Админ тал — функцийг ГАРГАЖ АВААД бодит registry дээр ажиллуулна */
+  const cn38 = adm.match(/function completenessNote\(dsId\)\{([\s\S]*?)\n\}/);
+  if (!cn38) { bad('BE38. completenessNote() олдсонгүй'); return; }
+  const mkCN = new Function('REG', 'esc', 'utxt', 'nf',
+    'return function(dsId){' + cn38[1] + '}');
+  const cnFn = mkCN(reg38, (x) => String(x), (p, f) => f,
+    (n) => Number(n).toLocaleString('en-US'));
+  const cnOut = cnFn('road.veritech.vehicle_registry');
+  check('BE38. Админ 0.10% (2,000 / 1,941,092) гэж ИЛ харуулна',
+    cnOut.includes('0.10%') && cnOut.includes('2,000') && cnOut.includes('1,941,092'), cnOut);
+  check('BE38. "тоо нийтлэхгүй" сануулга ба хэмжсэн огноо мөрөнд',
+    cnOut.includes('тоо нийтлэхгүй') && cnOut.includes('2026-09-24'));
+  check('BE38. Хэмжилтгүй датасэт → мөр ОГТ гарахгүй (хоосон талбар үүсгэхгүй)',
+    cnFn('rail.veritech.freight_ubtz') === '' && cnFn('') === '' && cnFn('байхгүй.id') === '');
+  check('BE38. Админы шошго content.json ui{}-д бүртгэлтэй',
+    readJson('content.json').ui.slot_text.completeness === 'Эх сурвалжийн бүрэн байдал' &&
+    !!readJson('content.json').ui.slot_text.blocks_publication);
+  check('BE38. Слотын маягт бүрэн байдлын мөрийг залгана',
+    adm.includes('completenessNote(sv.blocked_by)'));
 
   /* ── BE32. Registry / админ / content — ГЭРЭЭ (хоёр талыг ХАМТ) ── */
   const reg32 = readJson('metric_registry.json');
