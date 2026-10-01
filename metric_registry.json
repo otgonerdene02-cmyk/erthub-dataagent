@@ -2,7 +2,7 @@
   "$schema": "erthub-metrics/v1",
   "version": "0.1.0",
   "updated": "2026-09-24",
-  "note": "H3 шатны хамгийн анхны хэрэгжилт байсан. 2026-09-18: rail-ийн вагон ачилт (k04/ls/u07) амьд холбогдов. 2026-09-19: холбогдоогүй слот бүрийн would_need-ийг backend-ийн БОДИТ төлөвөөр (API тандалт + docs/etl-scheduling.md) шинэчлэв — \"эх сурвалж тодорхойгүй\" гэсэн ерөнхий үгийн оронд ЯГ ЮУ дутууг (датасэт, indicator, толь, transform, нэгж) нэрлэв. Гол хэв маяг (2026-09-24-нд шинэчлэв): rail passengers ба road inspections silver-т буусан (АМЬД); rail freight зөвхөн bronze-д (толь + silver + endpoint дутуу); road vehicle_registry-д толь ШААРДЛАГАГҮЙ нь батлагдсан ч таталт эвдэрсэн; sea/transit салбарт эх систем ОГТ холбогдоогүй. 2026-09-23: road-ийн техникийн хяналтын үзлэг (k04/ls/u07) амьд холбогдов — толь + эх системийн xlsx экспортоор (2,790 мөр) баталсан silver.road_inspections (backend migration 012). Үлдсэн road слотууд (t05/d05/w2*) нь ӨӨР хэмжигдэхүүн шаарддаг тул would_need-д ЯГ ЮУ дутууг нэрлэв. 2026-09-24: vehicle_registry-г bronze дээр probe хийлээ — түүний блокер нь ТОЛЬ БИШ (багана нэрээрээ уншигдана), харин ТАТАЛТ: 1,941,092 мөрийн 2,000 нь л ирдэг (эх сервэр ижил хуудсыг давтана). Иймд энэ датасэтийн төлөв: толь хүлээхээ больсон, таталтын засвар хүлээж байна. 2026-09-24: w2p/w2px/w2c/w2cx/d05-ийн rail слотуудын would_need-ийг бодит төлөвөөр солив — зорчигчийн ӨДРИЙН silver аль хэдийн байгаа тул тэдгээрийн блокер нь \"толь\" БИШ, ГАНЦ endpoint.",
+  "note": "H3 шатны хамгийн анхны хэрэгжилт байсан. 2026-09-18: rail-ийн вагон ачилт (k04/ls/u07) амьд холбогдов. 2026-09-19: холбогдоогүй слот бүрийн would_need-ийг backend-ийн БОДИТ төлөвөөр (API тандалт + docs/etl-scheduling.md) шинэчлэв — \"эх сурвалж тодорхойгүй\" гэсэн ерөнхий үгийн оронд ЯГ ЮУ дутууг (датасэт, indicator, толь, transform, нэгж) нэрлэв. Гол хэв маяг (2026-09-24-нд шинэчлэв): rail passengers ба road inspections silver-т буусан (АМЬД); rail freight зөвхөн bronze-д (толь + silver + endpoint дутуу); road vehicle_registry-д толь ШААРДЛАГАГҮЙ нь батлагдсан ч таталт эвдэрсэн; sea/transit салбарт эх систем ОГТ холбогдоогүй. 2026-09-23: road-ийн техникийн хяналтын үзлэг (k04/ls/u07) амьд холбогдов — толь + эх системийн xlsx экспортоор (2,790 мөр) баталсан silver.road_inspections (backend migration 012). Үлдсэн road слотууд (t05/d05/w2*) нь ӨӨР хэмжигдэхүүн шаарддаг тул would_need-д ЯГ ЮУ дутууг нэрлэв. 2026-09-24: vehicle_registry-г bronze дээр probe хийлээ — түүний блокер нь ТОЛЬ БИШ (багана нэрээрээ уншигдана), харин ТАТАЛТ: 1,941,092 мөрийн 2,000 нь л ирдэг (эх сервэр ижил хуудсыг давтана). Иймд энэ датасэтийн төлөв: толь хүлээхээ больсон, таталтын засвар хүлээж байна. 2026-09-24: w2p/w2px/w2c/w2cx/d05-ийн rail слотуудын would_need-ийг бодит төлөвөөр солив — зорчигчийн ӨДРИЙН silver аль хэдийн байгаа тул тэдгээрийн блокер нь \"толь\" БИШ, ГАНЦ endpoint. 2026-09-24 (2): datasets{} блок нэмэгдэв — датасэтийн БҮРЭН БАЙДАЛ (completeness) ба слотын blocked_by холбоос машинаар уншигдана; метрикийн period_coverage нь сарын цувааны дүрмийг НЭГ газар зарлаж, rail/air-ийн хоёр өөр зан төлөвийг нэгтгэв.",
   "widgets": {
     "hero_fl": {
       "metric": "air.flight_count_last_month",
@@ -117,7 +117,8 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "Авто замын САРЫН цуваа. 2026-09-23-нд road.veritech.inspections silver-т буув (migration 012) — гэхдээ тэр нь ХОНОГИЙН үзлэг: t05 нь 12 сарын цуваа зурдаг тул хоногийн 30 утгыг сарын тэнхлэгт тавибал хуудас ХУДАЛ уншигдана. Дутуу нь: (а) silver.road_inspections-д хоёроос дээш БҮТЭН сарын дата хуримтлагдах, (б) сарын нэгтгэлийг gold-д нэмэх (эсвэл /api/sectors/road/inspections-д by_month нэмэх). Хоёр дахь нэр дэвшигч нь тээврийн хэрэгслийн бүртгэл (road.veritech.vehicle_registry): түүний CREATEDDATE нь системд бүртгэсэн огноо тул сараар ШИНЭЭР бүртгэгдсэн ТХ-ийн цуваа гарна. 2026-09-24-ний probe нь талбарын ТОЛЬ ШААРДЛАГАГҮЙ гэдгийг баталлаа — багана нь нэрээрээ уншигдана (AIMAG, SOUM, PLATENO, MARKNAME, MODELNAME, BUILDYEAR, ENGINECAPACITY, FUELNAME, CLASSNAME, WHEELNAME, COUNTRYNAME, PURPOSENAME, OWNERTYPENAME, VEHICLETYPENAME, IMPORTDATE, CREATEDDATE; grain = ID, PLATENO бараг өвөрмөц). Дутуу нь ЗӨВХӨН БҮТЭН ТАТАЛТ: таталт бүр 1,941,092 мөрийн ердөө 2,000-ыг авч чаддаг — эх сервэр хуудаслалтыг үл тоож ижил хуудсыг давтан буцаана (stopReason=repeated_page). 0.1% дата дээр тоо нийтлэх нь зохиосон тоотой адил тул таталт засагдтал энэ слот хэвээр хоосон."
+          "would_need": "Авто замын САРЫН цуваа. 2026-09-23-нд road.veritech.inspections silver-т буув (migration 012) — гэхдээ тэр нь ХОНОГИЙН үзлэг: t05 нь 12 сарын цуваа зурдаг тул хоногийн 30 утгыг сарын тэнхлэгт тавибал хуудас ХУДАЛ уншигдана. Дутуу нь: (а) silver.road_inspections-д хоёроос дээш БҮТЭН сарын дата хуримтлагдах, (б) сарын нэгтгэлийг gold-д нэмэх (эсвэл /api/sectors/road/inspections-д by_month нэмэх). Хоёр дахь нэр дэвшигч нь тээврийн хэрэгслийн бүртгэл (road.veritech.vehicle_registry): түүний CREATEDDATE нь системд бүртгэсэн огноо тул сараар ШИНЭЭР бүртгэгдсэн ТХ-ийн цуваа гарна. 2026-09-24-ний probe нь талбарын ТОЛЬ ШААРДЛАГАГҮЙ гэдгийг баталлаа — багана нь нэрээрээ уншигдана (AIMAG, SOUM, PLATENO, MARKNAME, MODELNAME, BUILDYEAR, ENGINECAPACITY, FUELNAME, CLASSNAME, WHEELNAME, COUNTRYNAME, PURPOSENAME, OWNERTYPENAME, VEHICLETYPENAME, IMPORTDATE, CREATEDDATE; grain = ID, PLATENO бараг өвөрмөц). Дутуу нь ЗӨВХӨН БҮТЭН ТАТАЛТ: таталт бүр 1,941,092 мөрийн ердөө 2,000-ыг авч чаддаг — эх сервэр хуудаслалтыг үл тоож ижил хуудсыг давтан буцаана (stopReason=repeated_page). 0.1% дата дээр тоо нийтлэх нь зохиосон тоотой адил тул таталт засагдтал энэ слот хэвээр хоосон.",
+          "blocked_by": "road.veritech.vehicle_registry"
         },
         "water": {
           "metric": null,
@@ -166,7 +167,8 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "Авто замын 7 ХОНОГИЙН зорчигчийн дата эх сурвалжид алга. Амьд болсон road.veritech.inspections нь техникийн ҮЗЛЭГ — зорчигчийн тоо БИШ; vehicle_registry нь тээврийн хэрэгслийн бүртгэл. Хоёулаа энэ слотыг хангахгүй."
+          "would_need": "Авто замын 7 ХОНОГИЙН зорчигчийн дата эх сурвалжид алга. Амьд болсон road.veritech.inspections нь техникийн ҮЗЛЭГ — зорчигчийн тоо БИШ; vehicle_registry нь тээврийн хэрэгслийн бүртгэл. Хоёулаа энэ слотыг хангахгүй.",
+          "blocked_by": "road.veritech.vehicle_registry"
         },
         "rail": {
           "metric": null,
@@ -220,7 +222,8 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "w2p.road-той ижил блокер: үзлэг ч, vehicle_registry ч зорчигчийн тоо БИШ."
+          "would_need": "w2p.road-той ижил блокер: үзлэг ч, vehicle_registry ч зорчигчийн тоо БИШ.",
+          "blocked_by": "road.veritech.vehicle_registry"
         },
         "rail": {
           "metric": null,
@@ -253,13 +256,15 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "Авто замын 7 хоногийн ачааны дата эх сурвалжид алга (Veritech-ийн road датасэтүүд нь техникийн үзлэг ба тээврийн хэрэгслийн бүртгэл — ачааны хэмжээ БИШ)."
+          "would_need": "Авто замын 7 хоногийн ачааны дата эх сурвалжид алга (Veritech-ийн road датасэтүүд нь техникийн үзлэг ба тээврийн хэрэгслийн бүртгэл — ачааны хэмжээ БИШ).",
+          "blocked_by": "road.veritech.vehicle_registry"
         },
         "rail": {
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.freight_ubtz (indicator 15399738) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-23), гэвч ямар ч endpoint-оор ГАРАХГҮЙ: src/etl/silver/specs/-д freight-ийн spec бичигдээгүй, src/routes/sectors.js-д маршрут алга. Дутуу нь дарааллаараа: (1) талбарын толь, (2) silver хүснэгт + migration, (3) ӨДРИЙН задаргаатай endpoint — gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй. Вагон ачилт (амьд) нь ВАГОНЫ ТОО — тонн БИШ тул энэ слотод тавьж болохгүй."
+          "would_need": "rail.veritech.freight_ubtz (indicator 15399738) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-23), гэвч ямар ч endpoint-оор ГАРАХГҮЙ: src/etl/silver/specs/-д freight-ийн spec бичигдээгүй, src/routes/sectors.js-д маршрут алга. Дутуу нь дарааллаараа: (1) талбарын толь, (2) silver хүснэгт + migration, (3) ӨДРИЙН задаргаатай endpoint — gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй. Вагон ачилт (амьд) нь ВАГОНЫ ТОО — тонн БИШ тул энэ слотод тавьж болохгүй.",
+          "blocked_by": "rail.veritech.freight_ubtz"
         },
         "water": {
           "metric": null,
@@ -307,13 +312,15 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "w2c.road-той ижил блокер."
+          "would_need": "w2c.road-той ижил блокер.",
+          "blocked_by": "road.veritech.vehicle_registry"
         },
         "rail": {
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.freight_ubtz (indicator 15399738) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-23), гэвч ямар ч endpoint-оор ГАРАХГҮЙ: src/etl/silver/specs/-д freight-ийн spec бичигдээгүй, src/routes/sectors.js-д маршрут алга. Дутуу нь дарааллаараа: (1) талбарын толь, (2) silver хүснэгт + migration, (3) ӨДРИЙН задаргаатай endpoint — gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй. Вагон ачилт (амьд) нь ВАГОНЫ ТОО — тонн БИШ тул энэ слотод тавьж болохгүй."
+          "would_need": "rail.veritech.freight_ubtz (indicator 15399738) bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-23), гэвч ямар ч endpoint-оор ГАРАХГҮЙ: src/etl/silver/specs/-д freight-ийн spec бичигдээгүй, src/routes/sectors.js-д маршрут алга. Дутуу нь дарааллаараа: (1) талбарын толь, (2) silver хүснэгт + migration, (3) ӨДРИЙН задаргаатай endpoint — gold.monthly_summary_by_sector нь САРЫН нэгтгэл тул энэ 7 ХОНОГИЙН слотод хүрэлцэхгүй. Вагон ачилт (амьд) нь ВАГОНЫ ТОО — тонн БИШ тул энэ слотод тавьж болохгүй.",
+          "blocked_by": "rail.veritech.freight_ubtz"
         },
         "water": {
           "metric": null,
@@ -346,7 +353,8 @@
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "Донут нь БҮХ салбарыг НЭГ нэгжээр нийлүүлдэг тул үзлэгийн тоо (road.inspection_count, нэгж 'үзлэг') энд шууд нэмэгдэхгүй — эхлээд донутын нийтлэг хэмжүүрийг (жиш. 'сарын тээвэрлэлт') тодорхойлно. Үзлэг нь тээвэрлэлтийн хэмжээ БИШ, хяналтын үйл явдлын тоо."
+          "would_need": "Донут нь БҮХ салбарыг НЭГ нэгжээр нийлүүлдэг тул үзлэгийн тоо (road.inspection_count, нэгж 'үзлэг') энд шууд нэмэгдэхгүй — эхлээд донутын нийтлэг хэмжүүрийг (жиш. 'сарын тээвэрлэлт') тодорхойлно. Үзлэг нь тээвэрлэлтийн хэмжээ БИШ, хяналтын үйл явдлын тоо.",
+          "blocked_by": "road.veritech.vehicle_registry"
         },
         "rail": {
           "metric": null,
@@ -421,7 +429,11 @@
       "unit": "нислэг/сар",
       "additive": false,
       "quality": "verified",
-      "period_note": "Ирээгүй сарыг 0-ээр биш, огт оруулахгүй (массивын урт хувьсна)."
+      "period_note": "Ирээгүй сарыг 0-ээр биш, огт оруулахгүй (массивын урт хувьсна).",
+      "period_coverage": {
+        "grain": "month",
+        "excludes_current": true
+      }
     },
     "air.monthly_growth_index": {
       "name": "Сарын өсөлтийн индекс (1-р сар=100)",
@@ -512,7 +524,11 @@
       "unit": "зорчигч/сар",
       "additive": true,
       "quality": "verified",
-      "period_note": "БАТАЛГААЖУУЛАЛТ (2026-09-21) — талбарын толь ирээгүй тул АРИФМЕТИКААР: bronze-ийн бодит 500 мөр дээр KASS+KIOSK+WEB+SMS+PHONE+TAPA = TOTAL (100%) ба ORON+OLON = TOTAL (100%); бүх 12,392 мөр дээр channelMismatch 0. Grain = өдөр+дугаар+чиглэл (3,116 түлхүүр = 3,116 өвөрмөц эх ID; №33/34 нэг дугаартай хоёр чиглэлтэй). 1–9-р сарын нийлбэр 1,161,261 — probe-ийн тооцоотой яг тэнцсэн. Гадны албан ёсны тайлантай ХАРААХАН тулгаагүй (вагон ачилтын xlsx шиг) — эх тайлан ирвэл нэмж тулгана. Backend: etransport-backend migrations/007, 008, src/etl/rail/passengersMap.js."
+      "period_note": "БАТАЛГААЖУУЛАЛТ (2026-09-21) — талбарын толь ирээгүй тул АРИФМЕТИКААР: bronze-ийн бодит 500 мөр дээр KASS+KIOSK+WEB+SMS+PHONE+TAPA = TOTAL (100%) ба ORON+OLON = TOTAL (100%); бүх 12,392 мөр дээр channelMismatch 0. Grain = өдөр+дугаар+чиглэл (3,116 түлхүүр = 3,116 өвөрмөц эх ID; №33/34 нэг дугаартай хоёр чиглэлтэй). 1–9-р сарын нийлбэр 1,161,261 — probe-ийн тооцоотой яг тэнцсэн. Гадны албан ёсны тайлантай ХАРААХАН тулгаагүй (вагон ачилтын xlsx шиг) — эх тайлан ирвэл нэмж тулгана. Backend: etransport-backend migrations/007, 008, src/etl/rail/passengersMap.js.",
+      "period_coverage": {
+        "grain": "month",
+        "excludes_current": true
+      }
     },
     "road.inspection_count": {
       "name": "Техникийн хяналтын үзлэгийн хоногийн тоо",
@@ -552,6 +568,57 @@
       "additive": false,
       "quality": "verified",
       "period_note": "Энэ нь татсан цаг БИШ, ӨГӨГДЛИЙН сүүлийн хоног (CREATEDDATE = системд бүртгэсэн цаг нь тусдаа талбар, silver-т registered_date). rail.feed_updated_at-тай ижил зарчим."
+    }
+  },
+  "datasets": {
+    "air.veritech.flights": {
+      "label": "Агаарын тээврийн статистик",
+      "sector": "air",
+      "status": "live",
+      "note": "Порталын нислэгийн тоо нь backend-ийн silver.air_flights БИШ, ИНЕГ-ийн нийтийн feed-ээс ирдэг. Хоёр нь ЗӨРДӨГ — backend-ийн /api/sectors/air/summary нь дутуу боловсруулалттай (2026-09-24-ний байдлаар 2026-01..07 сар алга)."
+    },
+    "rail.veritech.wagon_loading_ubtz": {
+      "label": "Ачилт буулгалтын хоногийн мэдээ (вагон)",
+      "sector": "rail",
+      "status": "live"
+    },
+    "rail.veritech.passengers": {
+      "label": "Зорчигчийн галт тэрэгний мэдээ",
+      "sector": "rail",
+      "status": "live"
+    },
+    "road.veritech.inspections": {
+      "label": "Техникийн хяналтын үзлэгийн мэдээ",
+      "sector": "road",
+      "status": "live"
+    },
+    "rail.veritech.freight_ubtz": {
+      "label": "Ачаа тээврийн мэдээ (УБТЗ)",
+      "sector": "rail",
+      "status": "bronze_only",
+      "note": "bronze-д ХОНОГ БҮР татагдаж байна (сүүлд 2026-09-23) ч silver spec ба endpoint байхгүй тул ямар ч слотод хүрэхгүй."
+    },
+    "road.veritech.vehicle_registry": {
+      "label": "Тээврийн хэрэгслийн бүртгэлийн мэдээ",
+      "sector": "road",
+      "status": "partial_ingest",
+      "completeness": {
+        "ingested": 2000,
+        "source_total": 1941092,
+        "measured_on": "2026-09-24",
+        "method": "probe (--max-pages=2) · stopReason=repeated_page — эх сервэр хуудаслалтыг үл тоож ижил хуудсыг давтан буцаана. Хуваарьт таталт бүр үүнээс ч цөөн мөр авч магадгүй.",
+        "blocks_publication": true
+      }
+    },
+    "sea.none": {
+      "label": "Далайн тээвэр — эх систем алга",
+      "sector": "water",
+      "status": "no_source"
+    },
+    "transit.none": {
+      "label": "Нийтийн тээвэр — эх систем алга",
+      "sector": "public",
+      "status": "no_source"
     }
   },
   "removed": {
