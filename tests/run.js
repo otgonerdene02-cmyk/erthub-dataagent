@@ -5699,6 +5699,116 @@ async function groupAI() {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   SP. «Салбарын дэлгэрэнгүй» хуудас — ХҮРЭХ ЗАМГҮЙ үхмэл код
+
+   Хуудас нь эхний коммитуудад (2026-08-20) темплейт болж бичигдсэн ч
+   `page`-ийг 'sector' болгодог газар ХЭЗЭЭ Ч бичигдээгүй: PAGES-д ч
+   'sector' алга, routeFromHash ч түүнийг танихгүй. 150 коммитын турш
+   хэрэглэгч ТҮҮН РҮҮ ОРЖ ЧАДААГҮЙ.
+
+   Бүр аюултай нь: зурагдвал `trend:buildTrendChart(as.c1d)` нь verified
+   эсэхийг ШАЛГАХГҮЙ. Авто зам/ус/нийтийн тээвэрт `c1d` нь SECTORS
+   тогтмолын СТАТИК ДЕМО тоо тул "Тоо ЗОХИОХГҮЙ" дүрэм зөрчсөн зохиомол
+   муруй зурагдана. Нүүрийн 05-р хэсэг (t05) ба датасэтийн дэлгэрэнгүй
+   хуудас ХОЁУЛАА үүнийг hasData/noData, hasTrend/noTrend-ээр аль хэдийн
+   шийдсэн — зөвхөн энэ хуудас хоцорсон.
+
+   Шийдэл: темплейт + builder + админы текст бүлэг + content.json-ы
+   site.sector-ыг БҮРМӨСӨН устгав. Доорх тестүүд (а) хуудас үнэхээр
+   хүрэхгүй байсныг, (б) үхмэл код буцаж ОРЖ ИРЭХГҮЙ байхыг, (в)
+   ҮЛДСЭН buildTrendChart дуудлага бүр хамгаалалттай байхыг барина.
+   ═══════════════════════════════════════════════════════════════════ */
+function groupSP() {
+  group('SP. Салбарын дэлгэрэнгүй — үхмэл хуудас устсан, муруй хамгаалалттай');
+  const dc = dcScript(), tpl = indexTemplate(), adm = adminScript();
+  const con = readJson('content.json');
+
+  /* ── SP1. ХАРИУЦЛАГАТАЙ БАТАЛГАА: routeFromHash нь 'sector'-ыг танихгүй.
+        PAGES ба функцийн БИЕИЙГ эх кодоос гаргаж, гараар бодох боломжтой
+        хаягууд дээр ГҮЙЛГЭНЭ (нүдээр биш). ── */
+  const pagesSrc = (dc.match(/const PAGES=(\[[\s\S]*?\]);/) || [])[1];
+  const rfhBody = (dc.match(/\n  routeFromHash\(\)\{\n([\s\S]*?)\n  \}\n/) || [])[1];
+  if (!pagesSrc || !rfhBody) {
+    bad('SP1. PAGES / routeFromHash() эх кодоос олдсонгүй',
+      'pages=' + !!pagesSrc + ' rfh=' + !!rfhBody);
+  } else {
+    const PAGES = new Function('return ' + pagesSrc)();
+    /* DATASETS-гүйгээр ажиллана — 'sector' нь detach салаанд ОРДОГГҮЙ */
+    const route = (hash) => new Function('PAGES', 'location',
+      rfhBody)(PAGES, { hash });
+    check('SP1. PAGES-д \'sector\' гэсэн хуудас АЛГА',
+      !PAGES.some((p) => p.id === 'sector'), PAGES.map((p) => p.id).join(','));
+    check('SP1. #/sector → маршрут АЛГА (null) — хуудас хүрэхгүй',
+      route('#/sector') === null, JSON.stringify(route('#/sector')));
+    check('SP1. #/sector/road → маршрут АЛГА (null)',
+      route('#/sector/road') === null, JSON.stringify(route('#/sector/road')));
+    /* Харнессийн эсрэг шалгуур — бодитой хаяг ТАНИГДАХ ёстой, эс тэгвэл
+       дээрх хоёр тест "бүх юм null" гэсэн ХУДАЛ ногоон болно. */
+    const rb = route('#/browse');
+    check('SP1. Харнесс үнэн: #/browse → {page:browse} (бүх юм null БИШ)',
+      rb && rb.page === 'browse', JSON.stringify(rb));
+    const rh = route('#/history');
+    check('SP1. Харнесс үнэн: #/history → {page:history}',
+      rh && rh.page === 'history', JSON.stringify(rh));
+  }
+
+  /* ── SP2. Кодод page-ийг 'sector' болгодог газар АЛГА ── */
+  check('SP2. page:\'sector\' гэсэн оноолт кодод АЛГА',
+    !/page:\s*'sector'/.test(dc), (dc.match(/page:\s*'sector'/g) || []).join(','));
+  check('SP2. go(\'sector\') гэсэн дуудлага АЛГА',
+    !/go\(\s*'sector'\s*\)/.test(dc));
+
+  /* ── SP3. Үхмэл темплейт + builder БҮРМӨСӨН устсан ── */
+  check('SP3. Темплейтэд sectorPage.* холбоос АЛГА',
+    !/sectorPage/.test(tpl), String((tpl.match(/sectorPage/g) || []).length) + ' холбоос');
+  check('SP3. Темплейтэд isSector нөхцөл АЛГА', !/isSector/.test(tpl));
+  check('SP3. Кодод sectorPage builder АЛГА',
+    !/sectorPage/.test(dc), String((dc.match(/sectorPage/g) || []).length) + ' холбоос');
+  check('SP3. Кодод isSector тугийн оноолт АЛГА', !/isSector/.test(dc));
+  check('SP3. Зөвхөн энэ хуудсанд хэрэглэгддэг backToBrowse ч АЛГА',
+    !/backToBrowse/.test(dc) && !/backToBrowse/.test(tpl));
+
+  /* ── SP4. Админ ба content.json-оос текст бүлэг устсан (админд
+        "Байршил тодорхойгүй" гэсэн үхмэл 3 талбар үлдэхгүй) ── */
+  check('SP4. content.json → site.sector блок АЛГА',
+    con.site.sector === undefined, JSON.stringify(con.site.sector));
+  check('SP4. Админы SITE_GROUPS-д \'sector\' бүлэг АЛГА',
+    !/\{key:'sector',\s*title:/.test(adm));
+  check('SP4. Кодод sector.kicker / data_head / svc_head уншилт АЛГА',
+    !/'sector\.(kicker|data_head|svc_head)'/.test(dc));
+  /* Админы бусад 'sector' хэрэглээ (каталогийн "Салбар" талбар,
+     facet_sector) нь ӨӨР зүйл — тэдгээр ХЭВЭЭР байх ёстой. */
+  check('SP4. Каталогийн "Салбар" талбар (ds_cat.f_sector) ХЭВЭЭР',
+    /ds_cat\.f_sector/.test(adm));
+  check('SP4. Шүүлтийн facet_sector ХЭВЭЭР', /cat\.facet_sector/.test(adm));
+
+  /* ── SP5. ҮНДСЭН ШАЛТГААН: buildTrendChart-ийн дуудлага бүр
+        "дата үнэхээр ирсэн үү" гэдгээр хамгаалагдсан байх. Хамгаалалтгүй
+        дуудлага = статик демо c1d-г амьд муруй болгон зурна. ── */
+  const defCount = (dc.match(/function buildTrendChart\(/g) || []).length;
+  check('SP5. buildTrendChart нэг л газар тодорхойлогдсон', defCount === 1, String(defCount));
+  const lines = dc.split('\n');
+  const callSites = [];
+  lines.forEach((ln, i) => {
+    if (!/buildTrendChart\(/.test(ln)) return;
+    if (/function buildTrendChart\(/.test(ln)) return;
+    callSites.push({ n: i + 1, line: ln.trim(), ctx: lines.slice(Math.max(0, i - 4), i + 1).join('\n') });
+  });
+  /* Датасэтийн дэлгэрэнгүй 1 + t05-ийн 3 салаа (spec-ийн цуваа /
+     сарын цонх / хоосон 12 тэг) = 4. Салбарын хуудсыг устгаснаар
+     5-аас 4 болов — 5 дахь нь ЯГ тэр хамгаалалтгүй as.c1d байв. */
+  check('SP5. Дуудлагын газар 4 — датасэтийн дэлгэрэнгүй 1 + t05-ийн 3 салаа',
+    callSites.length === 4, callSites.map((c) => c.n).join(','));
+  /* Хамгаалалтын тэмдэг: verified тугийг уншсан, эсвэл ЗОРИУД хоосон
+     (12 тэг) цуваа — хоёулаа "зохиомол демо тоо орохгүй" гэсэн утга. */
+  const GUARD = /Verified|hasTrend|HasTrend|new Array\(12\)\.fill\(0\)/;
+  const unguarded = callSites.filter((c) => !GUARD.test(c.ctx));
+  check('SP5. Хамгаалалтгүй buildTrendChart дуудлага АЛГА',
+    unguarded.length === 0,
+    unguarded.map((c) => 'мөр ' + c.n + ': ' + c.line).join(' | '));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -5710,10 +5820,11 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
   else if (process.argv.includes('--only=VR')) { await groupVR(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
+  else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); groupSP();
   }
 
   console.log('\n' + '═'.repeat(62));
