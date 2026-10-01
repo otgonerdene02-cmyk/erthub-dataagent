@@ -4378,6 +4378,43 @@ async function groupBE() {
   check('BE44. Өөрчлөлтийн түүх хоосон бол "мэдээлэл алга"',
     /detail\.changelogEmpty/.test(read('index.html')));
 
+  /* ── BE45. Коммунитийн төсөл каталогт БАЙХГҮЙ датасэт нэрлэвэл ИЛ хэлнэ ──
+     Регресс (browser, 2026-10-01): каталог 12 → 4 болоход (эх сурвалжгүй 8
+     датасэт хасагдсан) коммунитийн 6 картын "эх өгөгдөл" мөр бүгд хоосон
+     лавлагаа болов — жишээ нь "CityBus Live … Автобусны GPS байршил" гэж
+     бичигдсэн атал тэр нэртэй датасэт порталд БАЙХГҮЙ, иргэн каталогаас
+     хайвал олдохгүй. Нэрийг НУУХГҮЙ, харин нийтлэгдээгүйг ил хэлнэ. */
+  const cmSrc = dcScript().match(/const inCatalog=\(nm\)=>([\s\S]*?);\r?\n\s*const projDsLabel=\(nm\)=>([\s\S]*?);\r?\n/);
+  if (!cmSrc) { bad('BE45. projDsLabel() олдсонгүй'); return; }
+  const mkLabel = new Function('DATASETS', 'stxt',
+    'const inCatalog=(nm)=>' + cmSrc[1] + ';' +
+    'const projDsLabel=(nm)=>' + cmSrc[2] + ';' +
+    'return projDsLabel;');
+  const CAT = [{ name: 'Агаарын тээврийн статистик' }, { name: 'Техникийн хяналтын үзлэгийн мэдээ' }];
+  const lab = mkLabel(CAT, (p, f) => f);
+  check('BE45. Каталогт БАЙГАА датасэтийг хэвээр нэрлэнэ (нэмэлт тэмдэглэгээгүй)',
+    lab('Агаарын тээврийн статистик') === 'Агаарын тээврийн статистик',
+    lab('Агаарын тээврийн статистик'));
+  check('BE45. Каталогт БАЙХГҮЙ датасэтийг ил хэлнэ (нэр нь ХЭВЭЭР үлдэнэ)',
+    lab('Автобусны GPS байршил') === 'Автобусны GPS байршил · каталогт алга',
+    lab('Автобусны GPS байршил'));
+  check('BE45. Датасэт зарлаагүй төсөл хоосон мөр үзүүлнэ (тэмдэглэгээ ЗОХИОХГҮЙ)',
+    lab('') === '' && lab(undefined) === '' && lab(null) === '');
+  /* Хэсэгчилсэн таарал нь ТААРАЛ БИШ — "Агаарын тээвэр" гэсэн нэр
+     "Агаарын тээврийн статистик"-тай андуурагдах ёсгүй. */
+  check('BE45. Таарал нь ЯГ нэрээр (хэсэгчилсэн таарлыг хүлээж авахгүй)',
+    lab('Агаарын тээвэр') === 'Агаарын тээвэр · каталогт алга');
+  check('BE45. Тэмдэглэгээний текст content.json-д бүртгэлтэй',
+    readJson('content.json').site.community_data.dataset_unlisted === 'каталогт алга');
+  /* Өмнө нь dataset ЗӨВХӨН кодод байсан тул админаас засагдахгүй, каталог
+     өөрчлөгдөхөд хоцрох цорын ганц харагдах текст байв. */
+  check('BE45. dataset нь content.json-оос давхарлагдана (админаас засагдана)',
+    /\['name','by','kind','desc','dataset'\]\.forEach/.test(dcScript()));
+  const cdp = readJson('content.json').site.community_data.projects;
+  check('BE45. Төсөл бүрийн dataset content.json-д бүртгэгдсэн (6/6)',
+    Array.isArray(cdp) && cdp.length === 6 && cdp.every((p) => typeof p.dataset === 'string' && p.dataset),
+    JSON.stringify((cdp || []).map((p) => p.dataset)));
+
   check('BE26. 1 цэгтэй цуваа → зурахгүй (шугам биш)',
     !runPax({ unit: 'зорчигч', year: 2026, counts: [143220], lastMonth: 1 }).SEC.rail._liveSeries);
   const paxRow = mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: { counts: JAN_AUG.slice() } });
