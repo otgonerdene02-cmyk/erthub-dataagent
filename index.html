@@ -4763,7 +4763,10 @@ function applySiteContent(){
   const cd=S.community_data;
   if(cd&&Array.isArray(cd.projects)) cd.projects.forEach((p,i)=>{
     if(!PROJECTS[i]||!p) return;
-    ['name','by','kind','desc'].forEach(f=>{ if(p[f]) PROJECTS[i][f]=p[f]; });
+    /* dataset — төсөл ЯМАР нээлттэй өгөгдөл дээр бүтсэнийг хэлнэ. Өмнө нь
+       ЗӨВХӨН кодод байсан тул админаас засагдахгүй, каталог өөрчлөгдөхөд
+       хоцрох цорын ганц харагдах текст байв. */
+    ['name','by','kind','desc','dataset'].forEach(f=>{ if(p[f]) PROJECTS[i][f]=p[f]; });
   });
   if(cd&&Array.isArray(cd.policies)) cd.policies.forEach((p,i)=>{
     if(!POLICIES[i]||!p) return;
@@ -7503,8 +7506,18 @@ class Component extends DCLogic {
   buildCommunity(){
     const keys=Object.keys(SECTORS);
     const votes=this.state.cVotes||{}, against=this.state.cAgainst||{}, comments=this.state.cComments||{};
+    /* Төслийн "эх өгөгдөл" мөр нь каталогт БАЙГАА датасэтийг л нэрлэж
+       чадна. Каталог 12 → 4 болоход (эх сурвалжгүй 8 датасэт хасагдсан)
+       эдгээр нэр бүгд хоосон лавлагаа болж, иргэн "энэ дашбоард тэр
+       датасэт дээр бүтсэн" гэж уншаад каталогаас хайвал олдохгүй байв.
+       Нэрийг НУУХГҮЙ — төсөл үнэхээр тэр датаг ашигласан байж болно —
+       харин порталд нийтлэгдээгүйг ИЛ хэлнэ (ижил зарчмыг "мэдээлэл
+       алга", "харьцуулах өгөгдөл алга" хоёрт барьсан). */
+    const inCatalog=(nm)=>DATASETS.some(d=>d.name===nm);
+    const projDsLabel=(nm)=>!nm?'':(inCatalog(nm)?nm
+      :nm+' · '+stxt('community_data.dataset_unlisted','каталогт алга'));
     const dash=PROJECTS.map((p,i)=>({kind:'dash',kindLabel:'Дашбоард',idx:i,sector:p.sector,title:p.name,by:p.by,
-      body:p.desc,meta:p.dataset,support:parseInt(String(p.likes).replace(/\D/g,''))||0,goal:3000,
+      body:p.desc,meta:projDsLabel(p.dataset),support:parseInt(String(p.likes).replace(/\D/g,''))||0,goal:3000,
       stage:'Хэрэгжсэн',extra:p.kind,viz:p.viz,views:p.views,forks:p.forks}));
     const pol=POLICIES.map((p,i)=>({kind:'policy',kindLabel:'Бодлогын санал',idx:i,sector:p.sector,title:p.title,by:p.by,
       body:p.body,meta:p.basis,support:p.support,goal:p.goal,
