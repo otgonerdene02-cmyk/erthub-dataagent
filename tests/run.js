@@ -5384,12 +5384,116 @@ async function groupAI() {
   }
 }
 
+/* ─────────── OD. gov.opendata.mn-тэй жишсэн датасэтийн хуудас ───────────
+   Үндэсний портал манай сервисийг датасэт бүрийн "API харах" цонхонд
+   БОДИТ URL + JS/Python жишээгээр, "Бүрэн байдал / Давхцал"-ыг мөрөөс
+   тооцож үзүүлдэг. Манайх зохиомол хост (api.erthub.gov.mn), хязгаар,
+   түлхүүр, файлын хэмжээ үзүүлдэг байв.
+   OD1 — datasetEndpoint: source → бодит URL
+   OD2 — rowProfile: 3 мөрийн фикстур дээр бүрэн байдал / давхцал (гараар бодно)
+   OD3 — зохиомол хост/түлхүүр/хэмжээ кодонд үлдээгүй
+   OD4 — DOM: API цонх бодит URL, хэлний таб код солино, профайл гарна */
+async function groupOD() {
+  group('OD. Датасэтийн хуудас — gov.opendata.mn жишиг');
+  const sc = dcScript();
+  const grab = (re) => { const m = sc.match(re); return m ? m[0] : ''; };
+  const apiSrc = grab(/\nconst API_ENDPOINTS=\[[\s\S]*?\n\];/);
+  const epSrc = grab(/\nfunction datasetEndpoint\(dsel\)\{[\s\S]*?\n\}/);
+  const snSrc = grab(/\nfunction apiSnippets\(url\)\{[\s\S]*?\n\}/);
+  const rpSrc = grab(/\nfunction rowProfile\(head,rows\)\{[\s\S]*?\n\}/);
+  check('OD0. Туслах функцууд олдов', !!(apiSrc && epSrc && snSrc && rpSrc));
+  let F = null;
+  try {
+    F = new Function('ETRANSPORT_BACKEND_BASE',
+      apiSrc + epSrc + snSrc + rpSrc + '\nreturn {datasetEndpoint,apiSnippets,rowProfile};')('https://portal.mrt.gov.mn');
+  } catch (e) { bad('OD0. Функцууд үнэлэгдэв', e.message); }
+  if (F) {
+    const ep = (src) => F.datasetEndpoint({ source: src });
+    check('OD1. railPax → portal.mrt.gov.mn/api/sectors/rail/summary (нэр нь зөрдөг ч source-оор олдоно)',
+      (ep('railPax') || {}).url === 'https://portal.mrt.gov.mn/api/sectors/rail/summary', JSON.stringify(ep('railPax')));
+    check('OD1. flights → бүтэн хаягаараа (backend-ийн BASE залгахгүй)',
+      /^https:\/\/otgonerdene02-cmyk\.github\.io\/.*flights-index\.json$/.test((ep('flights') || {}).url || ''));
+    check('OD1. Хост нь URL-аас гарна', (ep('roadInspect') || {}).host === 'portal.mrt.gov.mn');
+    check('OD1. Бүртгэлгүй source → null (зохиомол URL үүсгэхгүй)', ep('nope') == null && F.datasetEndpoint({}) == null);
+    const ds41 = sc.match(/\nconst DATASETS=\[([\s\S]*?)\n\];/);
+    const srcs = ds41 ? (ds41[1].match(/source:'(\w+)'/g) || []).map((x) => x.slice(8, -1)) : [];
+    check('OD1. Каталогийн датасэт бүр бодит endpoint-той', srcs.length > 0 && srcs.every((k) => !!ep(k)), srcs.join(','));
+    const sn = F.apiSnippets('https://x.test/a');
+    check('OD1. Жишээ код 3 хэлээр, бүгд ЯГ тэр URL-тай, түлхүүргүй',
+      ['curl', 'js', 'py'].every((k) => sn[k].includes('https://x.test/a') && !/Api-Key|ERTHUB_KEY/.test(sn[k])));
+    /* 3 мөр × 3 багана = 9 нүд; хоосон 3 ('' ×2, '—' ×1) → 6/9 = 66.7%;
+       1-р ба 3-р мөр ижил → давхцал 1 */
+    const P = F.rowProfile(['a', 'b', 'c'], [['1', '', 'ok:x'], ['2', '—', 'ok:x'], ['1', '', 'ok:x']]);
+    check('OD2. rowProfile: мөр 3, багана 3', P && P.rows === 3 && P.cols === 3, JSON.stringify(P));
+    check('OD2. Бүрэн байдал 66.7% (6/9 нүд)', P && P.completeness === 66.7, P && P.completeness);
+    check('OD2. Давхардсан мөр 1', P && P.dupRows === 1, P && P.dupRows);
+    check('OD2. Хоосон дата → null (0% гэж зохиохгүй)', F.rowProfile(['a'], []) === null);
+  }
+  const idx = read('index.html'), con = readJson('content.json');
+  check('OD3. "api.erthub.gov.mn" хост мөр утга болж үлдээгүй',
+    !/'[^'\n]*api\.erthub\.gov\.mn/.test(sc) && !/>api\.erthub\.gov\.mn</.test(idx));
+  check('OD3. Хуурамч түлхүүр eh_live_ алга', !idx.includes('eh_live_'));
+  check('OD3. Зохиомол файлын хэмжээ (≈240 KB …) алга', !/≈\d[\d.]* ?(KB|MB)/.test(idx));
+  check('OD3. Лиценз dq.license:false-тэй НИЙЦНЭ (CC-BY гэж зарлахгүй)',
+    !/CC-BY/.test(con.site.detail.license) && !sc.includes("['Түүх','2021 оноос']"));
+  check('OD3. Шинэ текст content.json-д', ['copy_btn', 'profile_head', 'prof_complete', 'spec_access_v', 'file_api']
+    .every((k) => typeof con.site.detail[k] === 'string'));
+
+  if (!CHROME) { skipped('OD4 (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const slugOf = (d) => d.sector + '__' + String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+    const runFor = async (d) => {
+      PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slugOf(d));
+      return runProbe(`async function(d,w){
+        const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+        for(let t=0;t<40&&!d.querySelector('[data-ds-profile]');t++) await sleep(250);
+        await sleep(3500);
+        const btn=[...d.querySelectorAll('button')].find(b=>/API холбогдох/.test(b.textContent));
+        if(!btn) return {__err:'API товч алга'};
+        btn.click(); await sleep(500);
+        const R={};
+        const ep=d.querySelector('[data-ds-endpoint]'); R.ep=ep?ep.textContent.trim():'';
+        const code=()=>{const c=d.querySelector('[data-ds-code]');return c?c.textContent:'';};
+        R.curl=code();
+        const py=[...d.querySelectorAll('button')].find(b=>b.textContent.trim()==='Python');
+        if(py){ py.click(); await sleep(400); }
+        R.py=code();
+        const pf=d.querySelector('[data-ds-profile]'); R.prof=pf?pf.innerText:'';
+        R.text=d.body.innerText;
+        return R;
+      }`, 120000);
+    };
+    const dsl = con.site.datasets || [];
+    const air = dsl.find((d) => d.sector === 'air'), pax = dsl.find((d) => /Зорчигч/.test(d.name));
+    const A = await runFor(air);
+    if (A.__err) bad('OD4. Агаарын датасэтийн API цонх', A.__err);
+    else {
+      check('OD4. Агаар: endpoint = бодит feed URL', /flights-index\.json$/.test(A.ep), A.ep);
+      check('OD4. Агаар: cURL код ЯГ тэр URL-тай', A.curl.includes(A.ep) && /^curl /.test(A.curl), A.curl);
+      check('OD4. Python таб дарахад код СОЛИГДОНО', A.py !== A.curl && /requests\.get/.test(A.py), A.py);
+      check('OD4. Хуудсанд api.erthub.gov.mn / "10 дуудлага/сек" алга',
+        A.text.indexOf('api.erthub.gov.mn') < 0 && A.text.indexOf('10 дуудлага/сек') < 0);
+      check('OD4. Профайл блок: хэмжилт ЭСВЭЛ "мэдээлэл алга"',
+        /Бүрэн байдал[\s\S]*%/i.test(A.prof) || /мэдээлэл алга/.test(A.prof), A.prof.slice(0, 160));
+    }
+    const B = await runFor(pax);
+    if (B.__err) bad('OD4. Зорчигчийн датасэтийн API цонх', B.__err);
+    else check('OD4. Зорчигч: /api/sectors/rail/summary (өөр датасэтийн URL биш)',
+      /portal\.mrt\.gov\.mn\/api\/sectors\/rail\/summary$/.test(B.ep), B.ep);
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
+  else if (process.argv.includes('--only=OD')) { await groupOD(); }
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
   else if (process.argv.includes('--only=G4')) { await groupG4(); }
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
@@ -5397,7 +5501,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupOD();
   }
 
   console.log('\n' + '═'.repeat(62));
