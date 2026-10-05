@@ -1669,6 +1669,72 @@ function groupI() {
   check('I4. Admin-ы слот сонголтод "датаны талбараас шууд" бүлэг нэмэгдсэн',
     read('admin/index.html').includes("'field:'+c[0]") &&
     read('admin/index.html').includes('metric.from_field'), 'optgroup олдсонгүй');
+
+  /* ── I8. ИНДЕКСИЙН ШАЛГУУР — ДУГУЙРУУЛСАН ШОШГО НАЙДВАРГҮЙ ──────────
+     2026-10-05-нд `main` дээр W5-ийн "i06 — агаарын шугамын индекс
+     өөрчлөгдөнө" тест улаан байв: {"before":"114","after":"114"}.
+     Шалтгаан нь БҮТЭЭГДЭХҮҮН БИШ — i06-ийн индексийг нислэгийн ТОО-гоос
+     зорчигчийн НИЙЛБЭР рүү сольход цуваа ҮНЭХЭЭР өөрчлөгддөг, зүгээр л
+     төгсгөлийн шошго нь Math.round-тай учраас 114.37 ба 114.00 хоёулаа
+     "114" болж, өөрчлөлтийг НУУЖ байв.
+
+     Бодит feed-ийн тоо өдөр бүр хөдөлдөг тул тэр давхцал нь СААЛЬ —
+     өнөөдөр унагаана, маргааш санамсаргүй өнгөрнө. Иймд шалгуурын
+     эрүүл эсэхийг ГАРААР БОДОХ БОЛОМЖТОЙ фикстур дээр, сүлжээнээс
+     ХАМААРАЛГҮЙГЭЭР барина (CLAUDE.md "Unit тест ЭХЛЭЭД").
+
+     Фикстур (3 сар, нислэг тус бүр нэг мөр):
+       1 сар — 50 нислэг · зорчигч нийт 50×20   = 1000
+       2 сар — 25 нислэг · зорчигч нийт 25×16   =  400
+       3 сар — 57 нислэг · зорчигч нийт 56×20+19 = 1139 */
+  const ix = [];
+  const addM = (m, n, pax) => { for (let i = 0; i < n; i++) ix.push({ carr: 'A', pax, year: 2026, month: m, day: 1 }); };
+  addM(1, 50, 20);
+  addM(2, 25, 16);
+  addM(3, 56, 20); ix.push({ carr: 'A', pax: 19, year: 2026, month: 3, day: 1 });
+
+  const monthSeries = (spec) => {
+    const r = E.agg(ix, Object.assign({ dataset: 'air_flights', dim: 'Сар', topN: 0 }, spec));
+    return r && r.n ? r.values : null;
+  };
+  const cnt3 = monthSeries({ agg: 'COUNT' });
+  const pax3 = monthSeries({ measure: 'Зорчигч', agg: 'SUM' });
+  check('I8. Фикстурын нислэгийн ТОО гараар бодсонтой таарна (50·25·57)',
+    cnt3 && cnt3.join(',') === '50,25,57', JSON.stringify(cnt3));
+  check('I8. Фикстурын зорчигчийн НИЙЛБЭР гараар бодсонтой таарна (1000·400·1139)',
+    pax3 && pax3.join(',') === '1000,400,1139', JSON.stringify(pax3));
+
+  /* Сайтын агаарын индекс (index.html → trendFor): 1-р сар = 100 */
+  const indexOf100 = (s) => { const b = s[0] || 1; return s.map((v) => v / b * 100); };
+  const tCnt = indexOf100(cnt3), tPax = indexOf100(pax3);
+  check('I8. Индекс нь сонгосон хэмжигдэхүүнээ ДАГАНА (100·50·114 ↔ 100·40·113.9)',
+    tCnt.map((v) => v.toFixed(1)).join(',') === '100.0,50.0,114.0' &&
+    tPax.map((v) => v.toFixed(1)).join(',') === '100.0,40.0,113.9',
+    JSON.stringify({ cnt: tCnt, pax: tPax }));
+
+  /* ЭНЭ бол саалийн цөм: төгсгөлийн ХОЁР шошго давхцана. */
+  const last = (t) => Math.round(t[t.length - 1]);
+  check('I8. Дугуйруулсан ТӨГСГӨЛИЙН шошго давхцаж, өөрчлөлтийг НУУНА (114 = 114)',
+    last(tCnt) === 114 && last(tPax) === 114,
+    JSON.stringify({ cnt: last(tCnt), pax: last(tPax) }));
+  check('I8. Харин ЦУВАА (шугамын зам) нь ялгаатай — найдвартай шалгуур',
+    tCnt.map((v) => v.toFixed(1)).join(',') !== tPax.map((v) => v.toFixed(1)).join(','),
+    'цуваа давхцав');
+
+  /* (3)-ын үндэслэл БОДИТ кодод хүчинтэй эсэх — хоёулаа index.html-д
+     байхаа болиод ирвэл дээрх фикстур юу ч барихаа болино. */
+  check('I8. Сайт агаарын индексийг 1-р сараар хэвийшүүлдэг (src[0] суурь)',
+    /const b=src\[0\]\|\|1; return src\.slice\(0,months\)\.map\(v=>v\/b\*100\)/.test(idx),
+    'хэвийшүүлэх мөр олдсонгүй');
+  check('I8. Төгсгөлийн шошго Math.round-той (иймд шошгоор харьцуулж БОЛОХГҮЙ)',
+    idx.includes('endLabel:Math.round(t[lastIdx])'), 'endLabel мөр олдсонгүй');
+
+  /* Регресс: W5 шалгуур дугуйруулсан шошго руу БУЦАЖ болохгүй. */
+  const selfSrc = read('tests/run.js');
+  check('I8. W5-ийн i06 шалгуур ЗАМААР харьцуулна (шошгоор БИШ)',
+    /i06Path && r1\.i06Path !== r0\.i06Path/.test(selfSrc) &&
+    !/r1\.i06End !== r0\.i06End/.test(selfSrc),
+    'W5 шалгуур шошго руу буцсан байна');
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2731,6 +2797,11 @@ const PROBE_W = `async function(d,w){
   while(i6&&!(i6.querySelector&&i6.querySelector('svg foreignObject'))) i6=i6.parentElement;
   const airFO=i6?[...i6.querySelectorAll('foreignObject div')].filter(x=>cs(x).color==='rgb(47, 224, 196)'):[];
   R.i06End=airFO.length?airFO[0].textContent.trim():null;
+  /* Төгсгөлийн шошго нь Math.round-той тул МЕТРИК солигдсоныг найдвартай
+     илрүүлэхгүй (114.4 ба 114.0 хоёулаа "114"). Шугамын ЗАМ нь индексийн
+     12 цэг бүрийг агуулна — метрик солигдмогц өөрчлөгдөнө. */
+  const airLine=i6?[...i6.querySelectorAll('svg path')].find(x=>x.getAttribute('stroke')==='#2FE0C4'):null;
+  R.i06Path=airLine?airLine.getAttribute('d'):null;
   const isRow=(x)=>cs(x).display==='grid'&&/^22px 20px /.test(cs(x).gridTemplateColumns);
   let r6=d.querySelector('[data-eh-card="r06"][data-eh-field="title"]');
   while(r6&&![...r6.querySelectorAll('div')].some(isRow)) r6=r6.parentElement;
@@ -2786,17 +2857,24 @@ async function groupW() {
     const err = r0.__err || r1.__err || r2.__err;
     if (err) { bad('W5. Сайтын DOM шалгалт', err); return; }
     check('W5. Анхны утгууд уншигдав',
-      !!r0.k04Value && !!r0.i06End && !!r0.r06Ch, JSON.stringify(r0));
+      !!r0.k04Value && !!r0.i06End && !!r0.i06Path && !!r0.r06Ch, JSON.stringify(r0));
     check('W5. k04 — тоо өөрчлөгдөж, нэгж "хүн", шошго ЗОРЧИГЧ',
       r1.k04Value !== r0.k04Value && r1.k04Unit === 'хүн' && /ЗОРЧИГЧ/i.test(r1.k04Label || ''),
       JSON.stringify({ before: [r0.k04Value, r0.k04Unit, r0.k04Label], after: [r1.k04Value, r1.k04Unit, r1.k04Label] }));
-    check('W5. i06 — агаарын шугамын индекс өөрчлөгдөнө',
-      r1.i06End !== r0.i06End, JSON.stringify({ before: r0.i06End, after: r1.i06End }));
+    /* ЗАМААР шалгана, төгсгөлийн ШОШГООР биш. Шошго нь Math.round-той тул
+       хоёр хэмжигдэхүүний өсөлтийн харьцаа ойролцоо гарвал (бодит feed дээр
+       нислэгийн тоо +14.4%, зорчигчийн нийлбэр +14.0% — хоёулаа "114")
+       өөрчлөлтийг нуудаг. 2026-10-05-нд яг энэ шалтгаанаар main дээр улаан
+       байсан: шугам өөрчлөгдсөн атал тест "өөрчлөгдөөгүй" гэж уншиж байв. */
+    check('W5. i06 — агаарын шугам сонгосон хэмжигдэхүүнээ дагана',
+      !!r1.i06Path && r1.i06Path !== r0.i06Path,
+      JSON.stringify({ before: (r0.i06Path || '').slice(0, 60), after: (r1.i06Path || '').slice(0, 60),
+        endLabel: [r0.i06End, r1.i06End] }));
     check('W5. r06 — агаарын өсөлтийн хувь өөрчлөгдөнө',
       r1.r06Ch !== r0.r06Ch, JSON.stringify({ before: [r0.r06Ch, r0.r06SE], after: [r1.r06Ch, r1.r06SE] }));
     check('W5. Зөвхөн i06-г солиход r06 ХӨНДӨГДӨХГҮЙ (тусдаа тохиргоо)',
-      r2.i06End === r1.i06End && r2.r06Ch === r0.r06Ch && r2.k04Value === r0.k04Value,
-      JSON.stringify({ i06: r2.i06End, r06: r2.r06Ch, k04: r2.k04Value }));
+      r2.i06Path === r1.i06Path && r2.r06Ch === r0.r06Ch && r2.k04Value === r0.k04Value,
+      JSON.stringify({ i06same: r2.i06Path === r1.i06Path, r06: r2.r06Ch, k04: r2.k04Value }));
   } finally {
     SERVE_OVERRIDE = null;
     PROBE_SRC = '/admin/index.html';
@@ -4383,6 +4461,113 @@ async function groupBE() {
   check('BE44. Өөрчлөлтийн түүх хоосон бол "мэдээлэл алга"',
     /detail\.changelogEmpty/.test(read('index.html')));
 
+  /* ── BE45. Коммунитийн төсөл каталогт БАЙХГҮЙ датасэт нэрлэвэл ИЛ хэлнэ ──
+     Регресс (browser, 2026-10-01): каталог 12 → 4 болоход (эх сурвалжгүй 8
+     датасэт хасагдсан) коммунитийн 6 картын "эх өгөгдөл" мөр бүгд хоосон
+     лавлагаа болов — жишээ нь "CityBus Live … Автобусны GPS байршил" гэж
+     бичигдсэн атал тэр нэртэй датасэт порталд БАЙХГҮЙ, иргэн каталогаас
+     хайвал олдохгүй. Нэрийг НУУХГҮЙ, харин нийтлэгдээгүйг ил хэлнэ. */
+  const cmSrc = dcScript().match(/const inCatalog=\(nm\)=>([\s\S]*?);\r?\n\s*const dsLabel=\(nm\)=>([\s\S]*?);\r?\n/);
+  if (!cmSrc) { bad('BE45. dsLabel() олдсонгүй'); return; }
+  const mkLabel = new Function('DATASETS', 'stxt',
+    'const inCatalog=(nm)=>' + cmSrc[1] + ';' +
+    'const dsLabel=(nm)=>' + cmSrc[2] + ';' +
+    'return dsLabel;');
+  const CAT = [{ name: 'Агаарын тээврийн статистик' }, { name: 'Техникийн хяналтын үзлэгийн мэдээ' }];
+  const lab = mkLabel(CAT, (p, f) => f);
+  check('BE45. Каталогт БАЙГАА датасэтийг хэвээр нэрлэнэ (нэмэлт тэмдэглэгээгүй)',
+    lab('Агаарын тээврийн статистик') === 'Агаарын тээврийн статистик',
+    lab('Агаарын тээврийн статистик'));
+  check('BE45. Каталогт БАЙХГҮЙ датасэтийг ил хэлнэ (нэр нь ХЭВЭЭР үлдэнэ)',
+    lab('Автобусны GPS байршил') === 'Автобусны GPS байршил · каталогт алга',
+    lab('Автобусны GPS байршил'));
+  check('BE45. Датасэт зарлаагүй төсөл хоосон мөр үзүүлнэ (тэмдэглэгээ ЗОХИОХГҮЙ)',
+    lab('') === '' && lab(undefined) === '' && lab(null) === '');
+  /* Хэсэгчилсэн таарал нь ТААРАЛ БИШ — "Агаарын тээвэр" гэсэн нэр
+     "Агаарын тээврийн статистик"-тай андуурагдах ёсгүй. */
+  check('BE45. Таарал нь ЯГ нэрээр (хэсэгчилсэн таарлыг хүлээж авахгүй)',
+    lab('Агаарын тээвэр') === 'Агаарын тээвэр · каталогт алга');
+  check('BE45. Тэмдэглэгээний текст content.json-д бүртгэлтэй',
+    readJson('content.json').site.community_data.dataset_unlisted === 'каталогт алга');
+  /* Өмнө нь dataset ЗӨВХӨН кодод байсан тул админаас засагдахгүй, каталог
+     өөрчлөгдөхөд хоцрох цорын ганц харагдах текст байв. */
+  check('BE45. dataset нь content.json-оос давхарлагдана (админаас засагдана)',
+    /\['name','by','kind','desc','dataset'\]\.forEach/.test(dcScript()));
+  const cdp = readJson('content.json').site.community_data.projects;
+  check('BE45. Төсөл бүрийн dataset content.json-д бүртгэгдсэн (6/6)',
+    Array.isArray(cdp) && cdp.length === 6 && cdp.every((p) => typeof p.dataset === 'string' && p.dataset),
+    JSON.stringify((cdp || []).map((p) => p.dataset)));
+
+  /* ── BE46. Бодлогын саналын "үндэслэл" (basis) — ИЖИЛ шалгуур ──
+     Регресс (2026-10-05): basis нь датасэтийн нэрийн ард ЗОХИОМОЛ хэмжүүр
+     залгадаг байв — "Автобусны GPS сан · 620,000 дуудлага/сар",
+     "Замын ослын бүртгэл · 12,400 мөр", "Агаарын тээврийн статистик ·
+     14,200 дуудлага/сар". Эдгээр тоо ЭХ СУРВАЛЖГҮЙ бөгөөд порталын өөрийн
+     "ДУУДЛАГА/САР" KPI нь "—" гэж хэлдэг — өөрөөр хэлбэл хуудас өөртэйгөө
+     зөрчилдөж байв. Одоо basis нь ЦЭВЭР датасэтийн нэр, төслийн "эх
+     өгөгдөл"-тэй ижил dsLabel()-ээр каталогтой тулгагдана. */
+  const polBlock = (dcScript().match(/\nconst POLICIES=\[([\s\S]*?)\n\];/) || [])[1] || '';
+  const basisVals = (polBlock.match(/basis:'([^']*)'/g) || []).map((m) => m.slice(7, -1));
+  check('BE46. 4 бодлого бүгд basis-тай', basisVals.length === 4, JSON.stringify(basisVals));
+  check('BE46. basis-д ЗОХИОМОЛ хэмжүүр үлдээгүй (тоо, "мөр", "дуудлага", "SLA")',
+    basisVals.every((b) => !/\d/.test(b) && !/мөр|дуудлага|SLA/i.test(b)), JSON.stringify(basisVals));
+  check('BE46. basis нь · тэмдэгтээр залгаагүй ЦЭВЭР нэр',
+    basisVals.every((b) => b.indexOf('·') < 0), JSON.stringify(basisVals));
+  check('BE46. Бодлогын үндэслэл ч dsLabel()-ээр каталогтой тулгагдана',
+    /body:p\.body,meta:dsLabel\(p\.basis\),support:/.test(dcScript()));
+  check('BE46. basis content.json-оос давхарлагдана (админаас засагдана)',
+    /\['title','by','stage','basis'\]\.forEach/.test(dcScript()));
+  const cdl = readJson('content.json').site.community_data.policies;
+  check('BE46. Бодлого бүрийн basis content.json-д бүртгэгдсэн (4/4)',
+    Array.isArray(cdl) && cdl.length === 4 && cdl.every((p) => typeof p.basis === 'string' && p.basis),
+    JSON.stringify((cdl || []).map((p) => p.basis)));
+  /* Каталогт БАЙГАА анхны бодит тохиолдол — өмнө нь зөвхөн "байхгүй"
+     салаа л амьдаар ажиллаж байсан тул энэ нь эерэг замыг барина. */
+  const dsNames = (dcScript().match(/\nconst DATASETS=\[([\s\S]*?)\n\];/) || [])[1] || '';
+  check('BE46. Агаарын бодлогын үндэслэл каталогт БАЙНА → тэмдэглэгээгүй гарна',
+    basisVals.indexOf('Агаарын тээврийн статистик') >= 0 &&
+    dsNames.includes("name:'Агаарын тээврийн статистик'"),
+    JSON.stringify(basisVals));
+
+  /* ── BE47. 7 хоногийн баганын Y тэнхлэг УТГЫН МАСШТАБААС ──────────────
+     Регресс (browser, 02-р хэсэг): ачааны график (13–44 тонн) дээр
+     тэнхлэг "-50 / 0 / 50" болж, хөл бичигт "тэнхлэг -50-с эхэлнэ" гэж
+     СӨРӨГ тонн зарлаж, бүх багана дээд гуравны нэгд шахагдаж байв.
+     Шалтгаан нь алхам `/50` гэж ХАТУУ бичигдсэн — зорчигчийн мянгад
+     тохирно ч тоннд хэтэрхий бүдүүн. Доорх тоонууд ГАРААР бодогдсон. */
+  const waSrc = dcScript().match(/function weekAxis\(vals\)\{([\s\S]*?)\n\}/);
+  if (!waSrc) { bad('BE47. weekAxis() олдсонгүй'); return; }
+  const weekAxis = new Function('return function weekAxis(vals){' + waSrc[1] + '}')();
+  /* Ачаа (тонн): mx 44.212, mn 13.253 → span 30.959, span/2 = 15.48 →
+     алхам 10^floor(log10 15.48) = 10. Шал floor((13.253−18.575)/10)×10
+     = −10 ч бүх утга ≥ 0 тул 0 болно. Тааз ceil((44.212+4.644)/10)×10 = 50. */
+  const cargo = [44.212, 34.683, 35.118, 18.824, 13.253, 27.532, 28.873];
+  const wcargo = weekAxis(cargo);
+  check('BE47. Ачааны тонн — тэнхлэг 0…50, алхам 10 (СӨРӨГ тонн БАЙХГҮЙ)',
+    wcargo.base === 0 && wcargo.top === 50 && wcargo.step === 10, JSON.stringify(wcargo));
+  /* Зорчигч: mx 8239, mn 6242 → span 1997, span/2 = 998.5 → алхам 100.
+     Шал floor((6242−1198.2)/100)×100 = 5000, тааз ceil(8538.55/100)×100 = 8600.
+     ХУУЧИН кодтой (алхам 50) шал ИЖИЛ 5000 — энэ график эвдрээгүй. */
+  const wpax = weekAxis([6931, 7663, 8239, 7752, 6242, 7224, 8166]);
+  check('BE47. Зорчигчийн график эвдрээгүй — шал 5,000 хэвээр',
+    wpax.base === 5000 && wpax.top === 8600 && wpax.step === 100, JSON.stringify(wpax));
+  /* Сөрөг утгатай цуваа бол шалыг 0-д БАРИХГҮЙ — тэр нь жинхэнэ утга. */
+  const wneg = weekAxis([-20, -5, 10]);
+  check('BE47. Үнэхээр сөрөг утгатай бол шал 0-д баригдахгүй',
+    wneg.base < 0, JSON.stringify(wneg));
+  /* Бүх утга 0: ХУУЧИН код top===base өгч багануудыг 50% өндөрт зурдаг
+     байсан (дата байгаа мэт). Одоо тааз > шал тул багана 0% дээр суух
+     ба "дата алга" гэдэг нь харагдацаараа ҮНЭН болно. */
+  const wzero = weekAxis([0, 0, 0]);
+  check('BE47. Бүх утга 0 — тааз > шал (багана 50% биш, 0% дээр)',
+    wzero.base === 0 && wzero.top > 0, JSON.stringify(wzero));
+  check('BE47. Хоосон цуваа → 0/0 (өмнөх хамгаалалт хэвээр)',
+    JSON.stringify(weekAxis([])) === JSON.stringify({ base: 0, top: 0, step: 1 }) &&
+    JSON.stringify(weekAxis(null)) === JSON.stringify({ base: 0, top: 0, step: 1 }));
+  check('BE47. Тэнхлэгийг /50 гэж ХАТУУ бичсэн хуучин мөр үлдээгүй',
+    !/\(bmax-bmin\)\*0\.6\)\/50\)\*50/.test(dcScript()) &&
+    /const wax=weekAxis\(hasBars\?barVals:\[\]\);/.test(dcScript()));
+
   check('BE26. 1 цэгтэй цуваа → зурахгүй (шугам биш)',
     !runPax({ unit: 'зорчигч', year: 2026, counts: [143220], lastMonth: 1 }).SEC.rail._liveSeries);
   const paxRow = mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: { counts: JAN_AUG.slice() } });
@@ -5809,22 +5994,132 @@ function groupSP() {
     unguarded.map((c) => 'мөр ' + c.n + ': ' + c.line).join(' | '));
 }
 
+/* ─────────── OD. gov.opendata.mn-тэй жишсэн датасэтийн хуудас ───────────
+   Үндэсний портал манай сервисийг датасэт бүрийн "API харах" цонхонд
+   БОДИТ URL + JS/Python жишээгээр, "Бүрэн байдал / Давхцал"-ыг мөрөөс
+   тооцож үзүүлдэг. Манайх зохиомол хост (api.erthub.gov.mn), хязгаар,
+   түлхүүр, файлын хэмжээ үзүүлдэг байв.
+   OD1 — datasetEndpoint: source → бодит URL
+   OD2 — rowProfile: 3 мөрийн фикстур дээр бүрэн байдал / давхцал (гараар бодно)
+   OD3 — зохиомол хост/түлхүүр/хэмжээ кодонд үлдээгүй
+   OD4 — DOM: API цонх бодит URL, хэлний таб код солино, профайл гарна */
+async function groupOD() {
+  group('OD. Датасэтийн хуудас — gov.opendata.mn жишиг');
+  const sc = dcScript();
+  const grab = (re) => { const m = sc.match(re); return m ? m[0] : ''; };
+  const apiSrc = grab(/\nconst API_ENDPOINTS=\[[\s\S]*?\n\];/);
+  const epSrc = grab(/\nfunction datasetEndpoint\(dsel\)\{[\s\S]*?\n\}/);
+  const snSrc = grab(/\nfunction apiSnippets\(url\)\{[\s\S]*?\n\}/);
+  const rpSrc = grab(/\nfunction rowProfile\(head,rows\)\{[\s\S]*?\n\}/);
+  check('OD0. Туслах функцууд олдов', !!(apiSrc && epSrc && snSrc && rpSrc));
+  let F = null;
+  try {
+    F = new Function('ETRANSPORT_BACKEND_BASE',
+      apiSrc + epSrc + snSrc + rpSrc + '\nreturn {datasetEndpoint,apiSnippets,rowProfile};')('https://portal.mrt.gov.mn');
+  } catch (e) { bad('OD0. Функцууд үнэлэгдэв', e.message); }
+  if (F) {
+    const ep = (src) => F.datasetEndpoint({ source: src });
+    check('OD1. railPax → portal.mrt.gov.mn/api/sectors/rail/summary (нэр нь зөрдөг ч source-оор олдоно)',
+      (ep('railPax') || {}).url === 'https://portal.mrt.gov.mn/api/sectors/rail/summary', JSON.stringify(ep('railPax')));
+    check('OD1. flights → бүтэн хаягаараа (backend-ийн BASE залгахгүй)',
+      /^https:\/\/otgonerdene02-cmyk\.github\.io\/.*flights-index\.json$/.test((ep('flights') || {}).url || ''));
+    check('OD1. Хост нь URL-аас гарна', (ep('roadInspect') || {}).host === 'portal.mrt.gov.mn');
+    check('OD1. Бүртгэлгүй source → null (зохиомол URL үүсгэхгүй)', ep('nope') == null && F.datasetEndpoint({}) == null);
+    const ds41 = sc.match(/\nconst DATASETS=\[([\s\S]*?)\n\];/);
+    const srcs = ds41 ? (ds41[1].match(/source:'(\w+)'/g) || []).map((x) => x.slice(8, -1)) : [];
+    check('OD1. Каталогийн датасэт бүр бодит endpoint-той', srcs.length > 0 && srcs.every((k) => !!ep(k)), srcs.join(','));
+    const sn = F.apiSnippets('https://x.test/a');
+    check('OD1. Жишээ код 3 хэлээр, бүгд ЯГ тэр URL-тай, түлхүүргүй',
+      ['curl', 'js', 'py'].every((k) => sn[k].includes('https://x.test/a') && !/Api-Key|ERTHUB_KEY/.test(sn[k])));
+    /* 3 мөр × 3 багана = 9 нүд; хоосон 3 ('' ×2, '—' ×1) → 6/9 = 66.7%;
+       1-р ба 3-р мөр ижил → давхцал 1 */
+    const P = F.rowProfile(['a', 'b', 'c'], [['1', '', 'ok:x'], ['2', '—', 'ok:x'], ['1', '', 'ok:x']]);
+    check('OD2. rowProfile: мөр 3, багана 3', P && P.rows === 3 && P.cols === 3, JSON.stringify(P));
+    check('OD2. Бүрэн байдал 66.7% (6/9 нүд)', P && P.completeness === 66.7, P && P.completeness);
+    check('OD2. Давхардсан мөр 1', P && P.dupRows === 1, P && P.dupRows);
+    check('OD2. Хоосон дата → null (0% гэж зохиохгүй)', F.rowProfile(['a'], []) === null);
+  }
+  const idx = read('index.html'), con = readJson('content.json');
+  check('OD3. "api.erthub.gov.mn" хост мөр утга болж үлдээгүй',
+    !/'[^'\n]*api\.erthub\.gov\.mn/.test(sc) && !/>api\.erthub\.gov\.mn</.test(idx));
+  check('OD3. Хуурамч түлхүүр eh_live_ алга', !idx.includes('eh_live_'));
+  check('OD3. Зохиомол файлын хэмжээ (≈240 KB …) алга', !/≈\d[\d.]* ?(KB|MB)/.test(idx));
+  check('OD3. Лиценз dq.license:false-тэй НИЙЦНЭ (CC-BY гэж зарлахгүй)',
+    !/CC-BY/.test(con.site.detail.license) && !sc.includes("['Түүх','2021 оноос']"));
+  /* Регресс: профайл render БҮРТ (датасэтийн хуудас хаалттай үед ч) 16мянга+
+     мөрийг тоолж байсан → админы preview удааширч "0" харуулав (F1/I5/I7/J4). */
+  const pg = sc.match(/if\(this\.state\.page==='detail'\)\{\s*if\(!this\._dsProfCache[\s\S]{0,200}?rowProfile\(/);
+  check('OD3. rowProfile зөвхөн датасэтийн хуудас нээлттэй үед тооцогдоно',
+    !!pg && (sc.match(/rowProfile\(dsSc/g) || []).length === 1);
+  check('OD3. Шинэ текст content.json-д', ['copy_btn', 'profile_head', 'prof_complete', 'spec_access_v', 'file_api']
+    .every((k) => typeof con.site.detail[k] === 'string'));
+
+  if (!CHROME) { skipped('OD4 (DOM)', 'Chrome олдсонгүй'); return; }
+  const srv = serve();
+  try {
+    const slugOf = (d) => d.sector + '__' + String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+    const runFor = async (d) => {
+      PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slugOf(d));
+      return runProbe(`async function(d,w){
+        const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+        for(let t=0;t<40&&!d.querySelector('[data-ds-profile]');t++) await sleep(250);
+        await sleep(3500);
+        const btn=[...d.querySelectorAll('button')].find(b=>/API холбогдох/.test(b.textContent));
+        if(!btn) return {__err:'API товч алга'};
+        btn.click(); await sleep(500);
+        const R={};
+        const ep=d.querySelector('[data-ds-endpoint]'); R.ep=ep?ep.textContent.trim():'';
+        const code=()=>{const c=d.querySelector('[data-ds-code]');return c?c.textContent:'';};
+        R.curl=code();
+        const py=[...d.querySelectorAll('button')].find(b=>b.textContent.trim()==='Python');
+        if(py){ py.click(); await sleep(400); }
+        R.py=code();
+        const pf=d.querySelector('[data-ds-profile]'); R.prof=pf?pf.innerText:'';
+        R.text=d.body.innerText;
+        return R;
+      }`, 120000);
+    };
+    const dsl = con.site.datasets || [];
+    const air = dsl.find((d) => d.sector === 'air'), pax = dsl.find((d) => /Зорчигч/.test(d.name));
+    const A = await runFor(air);
+    if (A.__err) bad('OD4. Агаарын датасэтийн API цонх', A.__err);
+    else {
+      check('OD4. Агаар: endpoint = бодит feed URL', /flights-index\.json$/.test(A.ep), A.ep);
+      check('OD4. Агаар: cURL код ЯГ тэр URL-тай', A.curl.includes(A.ep) && /^curl /.test(A.curl), A.curl);
+      check('OD4. Python таб дарахад код СОЛИГДОНО', A.py !== A.curl && /requests\.get/.test(A.py), A.py);
+      check('OD4. Хуудсанд api.erthub.gov.mn / "10 дуудлага/сек" алга',
+        A.text.indexOf('api.erthub.gov.mn') < 0 && A.text.indexOf('10 дуудлага/сек') < 0);
+      check('OD4. Профайл блок: хэмжилт ЭСВЭЛ "мэдээлэл алга"',
+        /Бүрэн байдал[\s\S]*%/i.test(A.prof) || /мэдээлэл алга/.test(A.prof), A.prof.slice(0, 160));
+    }
+    const B = await runFor(pax);
+    if (B.__err) bad('OD4. Зорчигчийн датасэтийн API цонх', B.__err);
+    else check('OD4. Зорчигч: /api/sectors/rail/summary (өөр датасэтийн URL биш)',
+      /portal\.mrt\.gov\.mn\/api\/sectors\/rail\/summary$/.test(B.ep), B.ep);
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
+  else if (process.argv.includes('--only=OD')) { await groupOD(); }
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
   else if (process.argv.includes('--only=G4')) { await groupG4(); }
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
   else if (process.argv.includes('--only=VR')) { await groupVR(); }
+  else if (process.argv.includes('--only=I')) { groupI(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); groupSP();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); groupSP();
   }
 
   console.log('\n' + '═'.repeat(62));
