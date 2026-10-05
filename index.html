@@ -8538,11 +8538,18 @@ class Component extends DCLogic {
     const dsCoverage=dsMeta&&dsMeta.yearFrom
       ? (dsMeta.yearFrom===dsMeta.yearTo?String(dsMeta.yearFrom):dsMeta.yearFrom+'–'+dsMeta.yearTo)
       : '—';
-    // Профайлыг мөрийн массивын адилтгалаар кэшлэнэ (агаарын feed 80мянга+ мөр).
+    /* Профайл нь бүх нүдийг тоолж мөр бүрийг stringify хийдэг (агаарын feed
+       16мянга+ мөр) — `detail` объект render БҮРТ баригддаг тул ЗӨВХӨН
+       датасэтийн хуудас нээлттэй үед тооцно. Эс тэгвэл нүүр/админы preview
+       шүүлт солих бүрд удааширч, админы preview "0" харуулдаг байв
+       (F1/I5/I7/J4 унасан). Мөрийн массивын адилтгалаар кэшлэнэ. */
     const dsSc=DS_SCHEMA[dsel.schema||dsel.sector]||{head:[],rows:[]};
-    if(!this._dsProfCache||this._dsProfCache.src!==dsSc.rows)
-      this._dsProfCache={src:dsSc.rows,prof:rowProfile(dsSc.head,dsSc.rows)};
-    const dsProfile=this._dsProfCache.prof;
+    let dsProfile=null;
+    if(this.state.page==='detail'){
+      if(!this._dsProfCache||this._dsProfCache.src!==dsSc.rows)
+        this._dsProfCache={src:dsSc.rows,prof:rowProfile(dsSc.head,dsSc.rows)};
+      dsProfile=this._dsProfCache.prof;
+    }
     const dsSample=(()=>{
       const r=dsSc.rows[0];
       if(!r) return stxt('status.no_data','мэдээлэл алга');
