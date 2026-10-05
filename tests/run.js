@@ -1669,6 +1669,72 @@ function groupI() {
   check('I4. Admin-ы слот сонголтод "датаны талбараас шууд" бүлэг нэмэгдсэн',
     read('admin/index.html').includes("'field:'+c[0]") &&
     read('admin/index.html').includes('metric.from_field'), 'optgroup олдсонгүй');
+
+  /* ── I8. ИНДЕКСИЙН ШАЛГУУР — ДУГУЙРУУЛСАН ШОШГО НАЙДВАРГҮЙ ──────────
+     2026-10-05-нд `main` дээр W5-ийн "i06 — агаарын шугамын индекс
+     өөрчлөгдөнө" тест улаан байв: {"before":"114","after":"114"}.
+     Шалтгаан нь БҮТЭЭГДЭХҮҮН БИШ — i06-ийн индексийг нислэгийн ТОО-гоос
+     зорчигчийн НИЙЛБЭР рүү сольход цуваа ҮНЭХЭЭР өөрчлөгддөг, зүгээр л
+     төгсгөлийн шошго нь Math.round-тай учраас 114.37 ба 114.00 хоёулаа
+     "114" болж, өөрчлөлтийг НУУЖ байв.
+
+     Бодит feed-ийн тоо өдөр бүр хөдөлдөг тул тэр давхцал нь СААЛЬ —
+     өнөөдөр унагаана, маргааш санамсаргүй өнгөрнө. Иймд шалгуурын
+     эрүүл эсэхийг ГАРААР БОДОХ БОЛОМЖТОЙ фикстур дээр, сүлжээнээс
+     ХАМААРАЛГҮЙГЭЭР барина (CLAUDE.md "Unit тест ЭХЛЭЭД").
+
+     Фикстур (3 сар, нислэг тус бүр нэг мөр):
+       1 сар — 50 нислэг · зорчигч нийт 50×20   = 1000
+       2 сар — 25 нислэг · зорчигч нийт 25×16   =  400
+       3 сар — 57 нислэг · зорчигч нийт 56×20+19 = 1139 */
+  const ix = [];
+  const addM = (m, n, pax) => { for (let i = 0; i < n; i++) ix.push({ carr: 'A', pax, year: 2026, month: m, day: 1 }); };
+  addM(1, 50, 20);
+  addM(2, 25, 16);
+  addM(3, 56, 20); ix.push({ carr: 'A', pax: 19, year: 2026, month: 3, day: 1 });
+
+  const monthSeries = (spec) => {
+    const r = E.agg(ix, Object.assign({ dataset: 'air_flights', dim: 'Сар', topN: 0 }, spec));
+    return r && r.n ? r.values : null;
+  };
+  const cnt3 = monthSeries({ agg: 'COUNT' });
+  const pax3 = monthSeries({ measure: 'Зорчигч', agg: 'SUM' });
+  check('I8. Фикстурын нислэгийн ТОО гараар бодсонтой таарна (50·25·57)',
+    cnt3 && cnt3.join(',') === '50,25,57', JSON.stringify(cnt3));
+  check('I8. Фикстурын зорчигчийн НИЙЛБЭР гараар бодсонтой таарна (1000·400·1139)',
+    pax3 && pax3.join(',') === '1000,400,1139', JSON.stringify(pax3));
+
+  /* Сайтын агаарын индекс (index.html → trendFor): 1-р сар = 100 */
+  const indexOf100 = (s) => { const b = s[0] || 1; return s.map((v) => v / b * 100); };
+  const tCnt = indexOf100(cnt3), tPax = indexOf100(pax3);
+  check('I8. Индекс нь сонгосон хэмжигдэхүүнээ ДАГАНА (100·50·114 ↔ 100·40·113.9)',
+    tCnt.map((v) => v.toFixed(1)).join(',') === '100.0,50.0,114.0' &&
+    tPax.map((v) => v.toFixed(1)).join(',') === '100.0,40.0,113.9',
+    JSON.stringify({ cnt: tCnt, pax: tPax }));
+
+  /* ЭНЭ бол саалийн цөм: төгсгөлийн ХОЁР шошго давхцана. */
+  const last = (t) => Math.round(t[t.length - 1]);
+  check('I8. Дугуйруулсан ТӨГСГӨЛИЙН шошго давхцаж, өөрчлөлтийг НУУНА (114 = 114)',
+    last(tCnt) === 114 && last(tPax) === 114,
+    JSON.stringify({ cnt: last(tCnt), pax: last(tPax) }));
+  check('I8. Харин ЦУВАА (шугамын зам) нь ялгаатай — найдвартай шалгуур',
+    tCnt.map((v) => v.toFixed(1)).join(',') !== tPax.map((v) => v.toFixed(1)).join(','),
+    'цуваа давхцав');
+
+  /* (3)-ын үндэслэл БОДИТ кодод хүчинтэй эсэх — хоёулаа index.html-д
+     байхаа болиод ирвэл дээрх фикстур юу ч барихаа болино. */
+  check('I8. Сайт агаарын индексийг 1-р сараар хэвийшүүлдэг (src[0] суурь)',
+    /const b=src\[0\]\|\|1; return src\.slice\(0,months\)\.map\(v=>v\/b\*100\)/.test(idx),
+    'хэвийшүүлэх мөр олдсонгүй');
+  check('I8. Төгсгөлийн шошго Math.round-той (иймд шошгоор харьцуулж БОЛОХГҮЙ)',
+    idx.includes('endLabel:Math.round(t[lastIdx])'), 'endLabel мөр олдсонгүй');
+
+  /* Регресс: W5 шалгуур дугуйруулсан шошго руу БУЦАЖ болохгүй. */
+  const selfSrc = read('tests/run.js');
+  check('I8. W5-ийн i06 шалгуур ЗАМААР харьцуулна (шошгоор БИШ)',
+    /i06Path && r1\.i06Path !== r0\.i06Path/.test(selfSrc) &&
+    !/r1\.i06End !== r0\.i06End/.test(selfSrc),
+    'W5 шалгуур шошго руу буцсан байна');
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -5898,6 +5964,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=G4')) { await groupG4(); }
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
   else if (process.argv.includes('--only=VR')) { await groupVR(); }
+  else if (process.argv.includes('--only=I')) { groupI(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
