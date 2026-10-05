@@ -2731,6 +2731,11 @@ const PROBE_W = `async function(d,w){
   while(i6&&!(i6.querySelector&&i6.querySelector('svg foreignObject'))) i6=i6.parentElement;
   const airFO=i6?[...i6.querySelectorAll('foreignObject div')].filter(x=>cs(x).color==='rgb(47, 224, 196)'):[];
   R.i06End=airFO.length?airFO[0].textContent.trim():null;
+  /* Төгсгөлийн шошго нь Math.round-той тул МЕТРИК солигдсоныг найдвартай
+     илрүүлэхгүй (114.4 ба 114.0 хоёулаа "114"). Шугамын ЗАМ нь индексийн
+     12 цэг бүрийг агуулна — метрик солигдмогц өөрчлөгдөнө. */
+  const airLine=i6?[...i6.querySelectorAll('svg path')].find(x=>x.getAttribute('stroke')==='#2FE0C4'):null;
+  R.i06Path=airLine?airLine.getAttribute('d'):null;
   const isRow=(x)=>cs(x).display==='grid'&&/^22px 20px /.test(cs(x).gridTemplateColumns);
   let r6=d.querySelector('[data-eh-card="r06"][data-eh-field="title"]');
   while(r6&&![...r6.querySelectorAll('div')].some(isRow)) r6=r6.parentElement;
@@ -2786,17 +2791,24 @@ async function groupW() {
     const err = r0.__err || r1.__err || r2.__err;
     if (err) { bad('W5. Сайтын DOM шалгалт', err); return; }
     check('W5. Анхны утгууд уншигдав',
-      !!r0.k04Value && !!r0.i06End && !!r0.r06Ch, JSON.stringify(r0));
+      !!r0.k04Value && !!r0.i06End && !!r0.i06Path && !!r0.r06Ch, JSON.stringify(r0));
     check('W5. k04 — тоо өөрчлөгдөж, нэгж "хүн", шошго ЗОРЧИГЧ',
       r1.k04Value !== r0.k04Value && r1.k04Unit === 'хүн' && /ЗОРЧИГЧ/i.test(r1.k04Label || ''),
       JSON.stringify({ before: [r0.k04Value, r0.k04Unit, r0.k04Label], after: [r1.k04Value, r1.k04Unit, r1.k04Label] }));
-    check('W5. i06 — агаарын шугамын индекс өөрчлөгдөнө',
-      r1.i06End !== r0.i06End, JSON.stringify({ before: r0.i06End, after: r1.i06End }));
+    /* ЗАМААР шалгана, төгсгөлийн ШОШГООР биш. Шошго нь Math.round-той тул
+       хоёр хэмжигдэхүүний өсөлтийн харьцаа ойролцоо гарвал (бодит feed дээр
+       нислэгийн тоо +14.4%, зорчигчийн нийлбэр +14.0% — хоёулаа "114")
+       өөрчлөлтийг нуудаг. 2026-10-05-нд яг энэ шалтгаанаар main дээр улаан
+       байсан: шугам өөрчлөгдсөн атал тест "өөрчлөгдөөгүй" гэж уншиж байв. */
+    check('W5. i06 — агаарын шугам сонгосон хэмжигдэхүүнээ дагана',
+      !!r1.i06Path && r1.i06Path !== r0.i06Path,
+      JSON.stringify({ before: (r0.i06Path || '').slice(0, 60), after: (r1.i06Path || '').slice(0, 60),
+        endLabel: [r0.i06End, r1.i06End] }));
     check('W5. r06 — агаарын өсөлтийн хувь өөрчлөгдөнө',
       r1.r06Ch !== r0.r06Ch, JSON.stringify({ before: [r0.r06Ch, r0.r06SE], after: [r1.r06Ch, r1.r06SE] }));
     check('W5. Зөвхөн i06-г солиход r06 ХӨНДӨГДӨХГҮЙ (тусдаа тохиргоо)',
-      r2.i06End === r1.i06End && r2.r06Ch === r0.r06Ch && r2.k04Value === r0.k04Value,
-      JSON.stringify({ i06: r2.i06End, r06: r2.r06Ch, k04: r2.k04Value }));
+      r2.i06Path === r1.i06Path && r2.r06Ch === r0.r06Ch && r2.k04Value === r0.k04Value,
+      JSON.stringify({ i06same: r2.i06Path === r1.i06Path, r06: r2.r06Ch, k04: r2.k04Value }));
   } finally {
     SERVE_OVERRIDE = null;
     PROBE_SRC = '/admin/index.html';
