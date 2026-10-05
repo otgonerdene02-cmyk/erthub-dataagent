@@ -4376,19 +4376,19 @@ KPI_UNIFIED[0][1]=String(DATASETS.length);
 KPI_UNIFIED[1][1]=String(SERVICES.length);
 const POLICIES=[
   {sector:'public',title:'Оргил цагийн автобусны эгнээг 4 гол чиглэлд байнгын болгох',by:'Х.Мөнхзул · хот судлаач',
-   basis:'Автобусны GPS сан · 620,000 дуудлага/сар',
+   basis:'Автобусны GPS сан',
    body:'GPS өгөгдлийн 6 сарын шинжилгээгээр оргил цагт автобус зогсолтод дунджаар 41% цаг зарцуулж байна. Тусгай эгнээ байнгын болгосон 4 чиглэлд аяллын хугацаа 18–24% багасахаар тооцоологдож байна.',
    support:1284,goal:1500,stage:'Яаманд хүргэгдсэн',resp:'ЗТЯ · 14 хоногийн дотор хариу'},
   {sector:'road',title:'Ослын халуун цэгүүдэд хурд хязгаарлах автомат хяналт нэвтрүүлэх',by:'Замын аюулгүй байдлын форум',
-   basis:'Замын ослын бүртгэл · 12,400 мөр',
+   basis:'Замын ослын бүртгэл',
    body:'Ослын нээлттэй бүртгэлийн кластер шинжилгээгээр хотын 11 уулзвар нийт ослын 34%-ийг эзэлж байна. Автомат хурдны хяналт эдгээр цэгт үхлийн осол 40% хүртэл буурах олон улсын туршлагатай.',
    support:962,goal:1000,stage:'Хэлэлцэгдэж байна',resp:'ЗТЯ · ЦБГ хамтарсан ажлын хэсэг'},
   {sector:'rail',title:'Ачааны галт тэрэгний хуваарийг нээлттэй API-аар бодит цагаар гаргах',by:'Уул уурхайн логистикийн групп',
-   basis:'Ачаа тээврийн байршил · SLA',
+   basis:'Ачаа тээврийн байршил',
    body:'Экспортын ачаа хил дээр хүлээх хугацаа урьдчилан таамаглах боломжгүйгээс жилд 2.4 сая тонн хүчин чадал сул зогсож байна. Бодит цагийн хуваарь нээлттэй болбол логистикийн төлөвлөлт сайжирна.',
    support:648,goal:1000,stage:'Судлагдаж байна',resp:'УБТЗ · техникийн үнэлгээ'},
   {sector:'air',title:'Нислэгийн хойшлолтын шалтгааныг компани тус бүрээр нийтлэх',by:'Зорчигчийн эрхийн нэгдэл',
-   basis:'Агаарын тээврийн статистик · 14,200 дуудлага/сар',
+   basis:'Агаарын тээврийн статистик',
    body:'Одоогийн тайлан хойшлолтыг зөвхөн нийт дүнгээр харуулдаг. Шалтгааныг задалж нийтэлбэл зорчигч мэдээлэлтэй сонголт хийж, тээвэрлэгчид өрсөлдөөнт шахалт үүснэ.',
    support:412,goal:750,stage:'Санал хураалт',resp:'ИНЗА · хүлээгдэж буй'}
 ];
@@ -4827,7 +4827,7 @@ function applySiteContent(){
   });
   if(cd&&Array.isArray(cd.policies)) cd.policies.forEach((p,i)=>{
     if(!POLICIES[i]||!p) return;
-    ['title','by','stage'].forEach(f=>{ if(p[f]) POLICIES[i][f]=p[f]; });
+    ['title','by','stage','basis'].forEach(f=>{ if(p[f]) POLICIES[i][f]=p[f]; });
   });
   /* 08 — AI туслахын асуулт/хариулт, эх сурвалж, алхмууд */
   const ai=S.ai;
@@ -7571,13 +7571,19 @@ class Component extends DCLogic {
        харин порталд нийтлэгдээгүйг ИЛ хэлнэ (ижил зарчмыг "мэдээлэл
        алга", "харьцуулах өгөгдөл алга" хоёрт барьсан). */
     const inCatalog=(nm)=>DATASETS.some(d=>d.name===nm);
-    const projDsLabel=(nm)=>!nm?'':(inCatalog(nm)?nm
+    const dsLabel=(nm)=>!nm?'':(inCatalog(nm)?nm
       :nm+' · '+stxt('community_data.dataset_unlisted','каталогт алга'));
     const dash=PROJECTS.map((p,i)=>({kind:'dash',kindLabel:'Дашбоард',idx:i,sector:p.sector,title:p.name,by:p.by,
-      body:p.desc,meta:projDsLabel(p.dataset),support:parseInt(String(p.likes).replace(/\D/g,''))||0,goal:3000,
+      body:p.desc,meta:dsLabel(p.dataset),support:parseInt(String(p.likes).replace(/\D/g,''))||0,goal:3000,
       stage:'Хэрэгжсэн',extra:p.kind,viz:p.viz,views:p.views,forks:p.forks}));
     const pol=POLICIES.map((p,i)=>({kind:'policy',kindLabel:'Бодлогын санал',idx:i,sector:p.sector,title:p.title,by:p.by,
-      body:p.body,meta:p.basis,support:p.support,goal:p.goal,
+      /* Бодлогын "үндэслэл" нь төслийн "эх өгөгдөл"-тэй ЯГ ИЖИЛ
+         шалгуурт орно: каталогт байгаа датасэтийг хэвээр, байхгүйг нь
+         ил хэлнэ. Өмнө нь энд зохиомол хэмжүүр залгагддаг байв
+         ("620,000 дуудлага/сар" г.м.) — порталын өөрийн "ДУУДЛАГА/САР"
+         KPI нь "—" гэж хэлдэг атал бодлогын карт нарийн тоо иш татаж
+         өөртэйгөө зөрчилдөж байв. */
+      body:p.body,meta:dsLabel(p.basis),support:p.support,goal:p.goal,
       stage:p.stage==='Яаманд хүргэгдсэн'?'Санал хураалт':(p.stage==='Хэлэлцэгдэж байна'?'Сурталчилгаа':(p.stage==='Судлагдаж байна'?'Боловсронгуй болгох':'Техник шалгалт')),
       extra:p.resp,viz:'line'}));
     const req=REQUESTS.map((r,i)=>({kind:'request',kindLabel:'Өгөгдлийн хүсэлт',idx:i,sector:keys[i%keys.length],title:r.title,by:'Иргэдийн хүсэлт',
