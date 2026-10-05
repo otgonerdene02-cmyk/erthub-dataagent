@@ -2217,28 +2217,28 @@
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:34px;">
       <sc-if value="{{ detail.isApiAct }}">
         <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-bottom:18px;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#0E8F63;background:#0E8F6318;border-radius:5px;padding:4px 8px;">GET</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:600;color:var(--ink);">{{ detail.endpoint }}</div>
-          <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);white-space:nowrap;">api.erthub.gov.mn</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#0E8F63;background:#0E8F6318;border-radius:5px;padding:4px 8px;">{{ detail.method }}</div>
+          <div data-ds-endpoint="1" style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--ink);min-width:0;overflow-wrap:anywhere;">{{ detail.endpoint }}</div>
+          <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);white-space:nowrap;">{{ detail.apiHost }}</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:16px;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.t.apikey_head }}</div>
-          <sc-if value="{{ isAuthed }}">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--ink);letter-spacing:.02em;">eh_live_••••••••••••4f2a</div>
-            <div style="margin-left:auto;font-size:12px;font-weight:600;color:#0E8F63;background:#0E8F6318;border-radius:8px;padding:6px 12px;white-space:nowrap;">Активтай</div>
-          </sc-if>
-          <sc-if value="{{ notAuthed }}" hint-placeholder-val="{{ true }}">
-            <div style="font-size:12.5px;color:var(--ink2);">{{ detail.t.key_note }}</div>
-            <button sc-camel-on-click="{{ goSignup }}" style="cursor:pointer;font-family:inherit;margin-left:auto;font-size:12px;font-weight:600;color:#FFFFFF;background:linear-gradient(135deg,var(--ink),#22345C);border:none;border-radius:9px;padding:8px 15px;white-space:nowrap;flex-shrink:0;">{{ detail.t.apikey_btn }}</button>
-          </sc-if>
+          <div style="font-size:12.5px;color:var(--ink2);">{{ detail.t.key_note }}</div>
         </div>
-        <div style="background:var(--ink);border-radius:14px;padding:20px 22px;margin-bottom:14px;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(238,243,250,.5);margin-bottom:12px;">Дуудлага</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.85;color:#C7D5E8;white-space:pre;overflow-x:auto;">{{ detail.curl }}</div>
+        <sc-if value="{{ detail.hasEndpoint }}">
+        <div style="background:var(--ink);border-radius:14px;padding:14px 18px 20px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:12px;">
+            <sc-for list="{{ detail.apiLangs }}" as="al" hint-placeholder-count="3">
+              <button sc-camel-on-click="{{ al.pick }}" style="{{ al.style }}">{{ al.label }}</button>
+            </sc-for>
+            <button data-ds-copy="1" sc-camel-on-click="{{ detail.copyCode }}" style="margin-left:auto;cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:600;color:#EEF3FA;background:rgba(238,243,250,.1);border:1px solid rgba(238,243,250,.18);border-radius:8px;padding:6px 12px;white-space:nowrap;">{{ detail.t.copy_btn }}</button>
+          </div>
+          <div data-ds-code="1" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.85;color:#C7D5E8;white-space:pre;overflow-x:auto;">{{ detail.curl }}</div>
         </div>
+        </sc-if>
         <div style="background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:20px;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px;">{{ detail.t.response_head }}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.8;color:var(--ink2);white-space:pre;overflow-x:auto;">{{ detail.sample }}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.8;color:var(--ink2);white-space:pre;overflow:auto;max-height:260px;">{{ detail.sample }}</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0;border-top:1px solid var(--line);">
           <sc-for list="{{ detail.apiSpecs }}" as="sp2" hint-placeholder-count="6">
@@ -2804,6 +2804,23 @@
             </sc-for>
           </div>
         </sc-for>
+      </div>
+      <div data-ds-profile="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);font-weight:600;">{{ detail.t.profile_head }}</div>
+          <div style="font-size:11.5px;color:var(--ink3);text-wrap:pretty;">{{ detail.t.profile_note }}</div>
+        </div>
+        <sc-if value="{{ detail.noProfile }}"><div style="font-size:12.5px;color:var(--ink3);">{{ detail.noData }}</div></sc-if>
+        <sc-if value="{{ detail.hasProfile }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+            <sc-for list="{{ detail.profile }}" as="pf" hint-placeholder-count="4">
+              <div style="background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;">
+                <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ pf.l }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--ink);">{{ pf.v }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
       </div>
       <div data-eh-card="ddq" data-eh-field="foot" style="font-size:11px;color:var(--ink3);margin-top:20px;padding-top:16px;border-top:1px solid var(--line);line-height:1.5;text-wrap:pretty;">{{ detail.ddqFoot }}</div>
     </div>
@@ -3972,10 +3989,10 @@ const BROWSE_TABS=[
    Дөрөв дэх нь ИНЕГ-ийн нислэгийн нээлттэй JSON feed — өөр хост тул
    бүтэн хаягаар нь бичив. */
 const API_ENDPOINTS=[
-  ['road','GET','/api/sectors/road/inspections','Техникийн хяналтын үзлэгийн мэдээ','Хоног','—'],
-  ['rail','GET','/api/sectors/rail/wagon-loading','Ачилт буулгалтын хоногийн мэдээ (вагон)','Хоног','—'],
-  ['rail','GET','/api/sectors/rail/summary','Зорчигчийн галт тэрэгний сарын мэдээ','Сар','—'],
-  ['air','GET','https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/flights-index.json','Агаарын тээврийн статистик (нислэгийн feed)','Өдөр','—']
+  ['road','GET','/api/sectors/road/inspections','Техникийн хяналтын үзлэгийн мэдээ','Хоног','—','roadInspect'],
+  ['rail','GET','/api/sectors/rail/wagon-loading','Ачилт буулгалтын хоногийн мэдээ (вагон)','Хоног','—','railWagon'],
+  ['rail','GET','/api/sectors/rail/summary','Зорчигчийн галт тэрэгний сарын мэдээ','Сар','—','railPax'],
+  ['air','GET','https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/flights-index.json','Агаарын тээврийн статистик (нислэгийн feed)','Өдөр','—','flights']
 ];
 const DEV_GUIDE=[
   ['Бүртгүүлэх','ErtHub-д үнэгүй бүртгэл үүсгэнэ — и-мэйл баталгаажуулахад 1 минут.'],
@@ -3989,11 +4006,51 @@ const DEV_TIERS=[
   {name:'Premium',price:'Байгууллагын гэрээгээр',sub:'Өндөр ачаалал, бодит цагийн урсгал шаардсан системд',
     items:['100 дуудлага/секунд','Хязгааргүй сарын дуудлага','SLA 99.9% баталгаа','Бодит цагийн WebSocket урсгал','Хувийн техникийн дэмжлэг'],cta:'Холбоо барих',highlight:true}
 ];
-const DEV_CODE={
-  curl:'curl -H "X-Api-Key: $ERTHUB_KEY" \\\n  https://api.erthub.gov.mn/v1/rail/wagon-loading',
-  js:'const res = await fetch("https://api.erthub.gov.mn/v1/rail/wagon-loading", {\n  headers: { "X-Api-Key": process.env.ERTHUB_KEY }\n});\nconst data = await res.json();',
-  py:'import requests\n\nr = requests.get(\n  "https://api.erthub.gov.mn/v1/rail/wagon-loading",\n  headers={"X-Api-Key": ERTHUB_KEY}\n)\nprint(r.json())'
-};
+/* ── Датасэт → ЖИНХЭНЭ endpoint ─────────────────────────────────────
+   gov.opendata.mn (CKAN маягийн үндэсний портал) нь манай сервисийг
+   датасэт бүрийн "API харах" цонхонд бодит URL + JS/Python/REST
+   жишээгээр нийтэлдэг. Манайх өмнө нь api.erthub.gov.mn/v1/... гэсэн
+   ОГТ БАЙХГҮЙ хост, "10 дуудлага/сек" гэх мэт зохиомол хязгаар, хуурамч
+   API түлхүүр үзүүлдэг байв. Одоо API_ENDPOINTS-ийн (каталогийг
+   бодитоор тэжээдэг) мөрөөс датасэтийн `source` түлхүүрээр (7 дахь нүд)
+   олно — нэрээр биш: харагдах нэр админаас засагддаг.
+   Харьцангуй зам нь etransport-backend-ийн нийтийн хаяг дээр суурилна. */
+function datasetEndpoint(dsel){
+  const e=dsel&&dsel.source&&API_ENDPOINTS.find(r=>r[6]===dsel.source);
+  if(!e) return null;
+  const base=(typeof ETRANSPORT_BACKEND_BASE!=='undefined'&&ETRANSPORT_BACKEND_BASE)||'';
+  const url=/^https?:\/\//.test(e[2])?e[2]:(base?base+e[2]:'');
+  if(!url) return null;
+  return {method:e[1],url,host:url.replace(/^https?:\/\//,'').split('/')[0],freq:e[4]};
+}
+// Нийтийн endpoint-ууд түлхүүр шаарддаггүй — жишээ кодонд header ОРУУЛАХГҮЙ.
+function apiSnippets(url){
+  return {
+    curl:'curl "'+url+'"',
+    js:'const res = await fetch("'+url+'");\nif (!res.ok) throw new Error("HTTP " + res.status);\nconst data = await res.json();',
+    py:'import requests\n\nr = requests.get("'+url+'", timeout=30)\nr.raise_for_status()\ndata = r.json()'
+  };
+}
+/* Ачаалагдсан мөрөөс ШУУД тооцсон чанар (gov.opendata.mn-ий "Бүрэн байдал
+   / Давхцал" загвар). Зарласан нотолгоонд суурилсан DQS-ээс ТУСДАА —
+   энэ нь өгөгдлийн өөрийнх нь хэмжилт. rows нь DS_SCHEMA мөр: сүүлийн
+   нүд нь 'ok:Төлөв' хэлбэрийн төлөв. Хоосон = '', null, '—'. */
+function rowProfile(head,rows){
+  const n=(rows||[]).length, cols=(head||[]).length;
+  if(!n||!cols) return null;
+  let filled=0, cells=0;
+  const seen=new Set();
+  for(const r of rows){
+    for(let i=0;i<cols;i++){
+      cells++;
+      const v=r[i];
+      if(v!=null&&String(v).trim()!==''&&String(v).trim()!=='—') filled++;
+    }
+    seen.add(JSON.stringify(r));
+  }
+  return {rows:n,cols,completeness:Math.round(filled/cells*1000)/10,dupRows:n-seen.size};
+}
+const DEV_CODE=apiSnippets((datasetEndpoint({source:'railWagon'})||{url:'/api/sectors/rail/wagon-loading'}).url);
 const COMM_TABS=[
   ['projects','Бүтээлүүд','Дата дээр бүтсэн чарт, дашбоард'],
   ['policy','Бодлогын санал','Өгөгдөлд үндэслэсэн санал'],
@@ -8488,6 +8545,34 @@ class Component extends DCLogic {
     /* Мөрийн тоо датасэт тус бүрээр ИРДЭГГҮЙ — өмнө нь нэрийн уртаас
        зохиодог байв ("Тоо ЗОХИОХГҮЙ" дүрэм). Эх сурвалж өгөх хүртэл null. */
     const dsRows=null;
+    const dsEp=datasetEndpoint(dsel);
+    const dsLang=this.state.dsApiLang||'curl';
+    const dsMeta=this.sourceData(dsel.source).meta||null;
+    const dsCoverage=dsMeta&&dsMeta.yearFrom
+      ? (dsMeta.yearFrom===dsMeta.yearTo?String(dsMeta.yearFrom):dsMeta.yearFrom+'–'+dsMeta.yearTo)
+      : '—';
+    /* Профайл нь бүх нүдийг тоолж мөр бүрийг stringify хийдэг (агаарын feed
+       16мянга+ мөр) — `detail` объект render БҮРТ баригддаг тул ЗӨВХӨН
+       датасэтийн хуудас нээлттэй үед тооцно. Эс тэгвэл нүүр/админы preview
+       шүүлт солих бүрд удааширч, админы preview "0" харуулдаг байв
+       (F1/I5/I7/J4 унасан). Мөрийн массивын адилтгалаар кэшлэнэ. */
+    const dsSc=DS_SCHEMA[dsel.schema||dsel.sector]||{head:[],rows:[]};
+    let dsProfile=null;
+    if(this.state.page==='detail'){
+      if(!this._dsProfCache||this._dsProfCache.src!==dsSc.rows)
+        this._dsProfCache={src:dsSc.rows,prof:rowProfile(dsSc.head,dsSc.rows)};
+      dsProfile=this._dsProfCache.prof;
+    }
+    const dsSample=(()=>{
+      const r=dsSc.rows[0];
+      if(!r) return stxt('status.no_data','мэдээлэл алга');
+      const o={};
+      dsSc.head.forEach((h,i)=>{
+        const v=String(r[i]==null?'':r[i]);
+        o[h]=i===dsSc.head.length-1&&v.indexOf(':')>0?v.split(':')[1]:v;
+      });
+      return JSON.stringify(o,null,2);
+    })();
     const dqTier=!dq.known?{l:'Тодорхойгүй',c:'var(--ink3)'}
       :(dq.total>=85?{l:'Маш сайн',c:'#2FA37B'}:(dq.total>=65?{l:'Сайн',c:'#3F6FD8'}:{l:'Дундаж',c:'#B9903A'}));
     /* Чиг хандлагын муруй — бодит цуваатай үед Л зурна. SECTORS[k].c1d нь
@@ -8635,9 +8720,9 @@ class Component extends DCLogic {
       h_format:stxt('detail.h_format','Формат'), h_variant:stxt('detail.h_variant','Хувилбар'),
       h_size:stxt('detail.h_size','Хэмжээ'), h_col:stxt('detail.h_col','Багана'),
       h_type:stxt('detail.h_type','Төрөл'), h_note:stxt('detail.h_note','Тайлбар'),
-      license:stxt('detail.license','Лиценз: CC-BY 4.0 — эх сурвалжийг дурдана.'),
+      license:stxt('detail.license','Лиценз: эх сурвалж лицензийн нөхцөл зарлаагүй — ашиглахдаа эх байгууллагыг дурдана уу.'),
       member_note:stxt('detail.member_note','Мэдэгдэл, хадгалсан сан, API түлхүүр зэрэг нь бүртгэлтэй хэрэглэгчид зориулсан.'),
-      key_note:stxt('detail.key_note','Түлхүүр авахын тулд бүртгэлтэй байх шаардлагатай.'),
+      key_note:stxt('detail.key_note','Шаардлагагүй — нийтийн endpoint-ийг шууд дуудна.'),
       follow_note:stxt('detail.follow_note','Дагахын тулд нэвтэрнэ үү'),
       dq_missing:stxt('detail.dq_missing','Энэ датасэтийн үнэлгээнд шаардлагатай эх мэдээлэл бүртгэгдээгүй байна. Дутуу нотолгоон дээр оноо гаргахгүй.'),
       no_rows:stxt('detail.no_rows','Хайлтад тохирох мөр олдсонгүй.'),
@@ -8650,7 +8735,10 @@ class Component extends DCLogic {
       notify_head:stxt('detail.notify_head','Мэдэгдлийн төрөл'),
       apikey_head:stxt('detail.apikey_head','API түлхүүр'),
       apikey_btn:stxt('detail.apikey_btn','Түлхүүр авах'),
-      response_head:stxt('detail.response_head','Хариу (200 OK)'),
+      response_head:stxt('detail.response_head','Жишээ мөр — энэ хуудсанд ачаалагдсан өгөгдлөөс'),
+      copy_btn:stxt('detail.copy_btn','Хуулах'),
+      profile_head:stxt('detail.profile_head','Өгөгдлөөс шууд тооцсон'),
+      profile_note:stxt('detail.profile_note','Ачаалагдсан мөр бүрийг тоолж гаргасан хэмжилт — дээрх оноонд ороогүй.'),
       excel_btn:stxt('detail.excel_btn','⇩ Excel татах'),
       ask_btn:stxt('detail.ask_btn','Асуух ↵')
     };
@@ -8713,16 +8801,47 @@ class Component extends DCLogic {
       isDownload:this.state.dsAction==='download',isApiAct:this.state.dsAction==='api',isFollow:this.state.dsAction==='follow',
       pvSettingsOpen:!!this.state.pvSettingsOpen,
       togglePvSettings:()=>this.setState(s=>({pvSettingsOpen:!s.pvSettingsOpen})),
-      files:[[dsel.fmt,'Бүрэн өгөгдөл',dsRows!=null?dsRows+' мөр':'—',(/api|вэбсервис/i.test(dsel.fmt)?'JSON урсгал':'—')],
-             ['CSV','Хураангуй хүснэгт','сүүлийн 12 сар','≈240 KB'],
-             ['XLSX','Тайлбартай хувилбар','мета хуудастай','≈310 KB'],
-             ['GeoJSON','Байршилтай хувилбар','WGS-84','≈1.2 MB']].map(x=>({fmt:x[0],name:x[1],scope:x[2],size:x[3]})),
-      endpoint:'/v1/'+dsel.sector+'/'+(dsel.badges.includes('Шууд')?'live':'series'),
-      curl:'curl -H "X-Api-Key: $ERTHUB_KEY" \\\n  https://api.erthub.gov.mn/v1/'+dsel.sector+'/'+(dsel.badges.includes('Шууд')?'live':'series')+'?from=2026-01-01',
-      sample:'{\n  "sector": "'+dsel.sector+'",\n  "updated_at": "2026-08-12T09:40:00+08:00",\n  "unit": "'+dsel.fmt+'",\n  "rows": '+(dsRows!=null?dsRows:'null')+',\n  "data": [\n    { "ts": "2026-08-12T09:39:00+08:00", "value": 214300 }\n  ]\n}',
-      apiSpecs:[['Хандалтын хязгаар',dsel.badges.includes('Premium')?'100 дуудлага/сек · SLA 99.9%':'10 дуудлага/сек · 10,000/сар'],
-                ['Түлхүүр','X-Api-Key header'],['Хариу','JSON · UTF-8 · ISO-8601'],
-                ['Шинэчлэлт',dsel.freq],['Түүх','2021 оноос'],['Лиценз','CC-BY 4.0']].map(x=>({l:x[0],v:x[1]})),
+      /* Татах хувилбар — ЗӨВХӨН бодитоор байгаа хоёр зам: эх endpoint (JSON)
+         ба энэ хуудасны Excel экспорт. Өмнө нь CSV/XLSX/GeoJSON гэсэн
+         байхгүй файлуудыг зохиомол хэмжээтэй (KB, MB) жагсаадаг
+         байв (ТОО ЗОХИОХГҮЙ). */
+      files:[dsEp?['JSON',stxt('detail.file_api','Эх endpoint — бүрэн өгөгдөл'),dsEp.host,'—']:null,
+             ['XLSX',stxt('detail.file_xlsx','Урьдчилан харах хүснэгт (шүүлттэй)'),
+              dsProfile?fmtNum(dsProfile.rows)+' '+stxt('detail.rows_word','мөр'):stxt('status.no_data','мэдээлэл алга'),'—']]
+        .filter(Boolean).map(x=>({fmt:x[0],name:x[1],scope:x[2],size:x[3]})),
+      hasEndpoint:!!dsEp, noEndpoint:!dsEp,
+      endpoint:dsEp?dsEp.url:stxt('detail.no_endpoint','Энэ датасэтийн нийтийн endpoint бүртгэгдээгүй'),
+      method:dsEp?dsEp.method:'—',
+      apiHost:dsEp?dsEp.host:'—',
+      apiLangs:[['curl','cURL'],['js','JavaScript'],['py','Python']].map(t=>({id:t[0],label:t[1],
+        pick:()=>this.setState({dsApiLang:t[0]}),
+        style:'cursor:pointer;font-family:inherit;font-size:12px;padding:7px 14px;border-radius:8px;border:none;white-space:nowrap;'
+          +(t[0]===dsLang?'background:rgba(238,243,250,.14);color:#EEF3FA;font-weight:600;':'background:none;color:rgba(199,213,232,.6);')})),
+      curl:dsEp?apiSnippets(dsEp.url)[dsLang]:'—',
+      copyCode:()=>{
+        if(!dsEp) return;
+        const code=apiSnippets(dsEp.url)[dsLang];
+        try{ navigator.clipboard.writeText(code); this.setState({toast:stxt('detail.copied','Хуулагдлаа')}); this.fadeToast&&this.fadeToast(); }catch(e){}
+      },
+      /* Жишээ — зохиомол JSON БИШ, энэ хуудсанд ачаалагдсан ЭХНИЙ бодит
+         мөрийг баганын нэрээр нь харуулна. Endpoint-ийн түүхий хариу биш
+         (баганыг монгол нэрээр цэгцэлсэн) гэдгийг гарчиг нь ил хэлнэ. */
+      sample:dsSample,
+      apiSpecs:[[stxt('detail.spec_access','Хандалт'),stxt('detail.spec_access_v','Нийтийн — түлхүүр шаардлагагүй')],
+                [stxt('detail.spec_format','Хариу'),'JSON · UTF-8'],
+                [stxt('detail.spec_freq','Шинэчлэлт'),dsel.freq],
+                [stxt('detail.spec_coverage','Хамрах хугацаа'),dsCoverage],
+                [stxt('detail.spec_updated','Сүүлд шинэчлэгдсэн'),(dsMeta&&dsMeta.updatedAt)||'—'],
+                [stxt('detail.spec_license','Лиценз'),stxt('detail.spec_license_v','Эх сурвалж зарлаагүй')]].map(x=>({l:x[0],v:x[1]})),
+      /* Өгөгдлөөс шууд тооцсон чанар — rowProfile(). Зарласан нотолгоон
+         дээрх DQS-ийг ОРЛОХГҮЙ, хажууд нь бодит хэмжилт болж зогсоно. */
+      hasProfile:!!dsProfile, noProfile:!dsProfile,
+      profile:dsProfile?[
+        [stxt('detail.prof_rows','Мөр'),fmtNum(dsProfile.rows)],
+        [stxt('detail.prof_cols','Багана'),String(dsProfile.cols)],
+        [stxt('detail.prof_complete','Бүрэн байдал'),dsProfile.completeness+'%'],
+        [stxt('detail.prof_dup','Давхардсан мөр'),fmtNum(dsProfile.dupRows)]
+      ].map(x=>({l:x[0],v:x[1]})):[],
       followOpts:[['Шинэчлэгдэх үед','Өгөгдөл '+dsel.freq.toLowerCase()+' шинэчлэгдэхэд и-мэйл мэдэгдэл',true],
                   ['Схем өөрчлөгдөх үед','Багана, төрөл, нэр өөрчлөгдвөл заавал мэдэгдэнэ',true],
                   ['Аномали илрэх үед','AI модель хэвийн бус хэлбэлзэл олбол сэрэмжлүүлнэ',false],
