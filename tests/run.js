@@ -4401,12 +4401,12 @@ async function groupBE() {
      лавлагаа болов — жишээ нь "CityBus Live … Автобусны GPS байршил" гэж
      бичигдсэн атал тэр нэртэй датасэт порталд БАЙХГҮЙ, иргэн каталогаас
      хайвал олдохгүй. Нэрийг НУУХГҮЙ, харин нийтлэгдээгүйг ил хэлнэ. */
-  const cmSrc = dcScript().match(/const inCatalog=\(nm\)=>([\s\S]*?);\r?\n\s*const projDsLabel=\(nm\)=>([\s\S]*?);\r?\n/);
-  if (!cmSrc) { bad('BE45. projDsLabel() олдсонгүй'); return; }
+  const cmSrc = dcScript().match(/const inCatalog=\(nm\)=>([\s\S]*?);\r?\n\s*const dsLabel=\(nm\)=>([\s\S]*?);\r?\n/);
+  if (!cmSrc) { bad('BE45. dsLabel() олдсонгүй'); return; }
   const mkLabel = new Function('DATASETS', 'stxt',
     'const inCatalog=(nm)=>' + cmSrc[1] + ';' +
-    'const projDsLabel=(nm)=>' + cmSrc[2] + ';' +
-    'return projDsLabel;');
+    'const dsLabel=(nm)=>' + cmSrc[2] + ';' +
+    'return dsLabel;');
   const CAT = [{ name: 'Агаарын тээврийн статистик' }, { name: 'Техникийн хяналтын үзлэгийн мэдээ' }];
   const lab = mkLabel(CAT, (p, f) => f);
   check('BE45. Каталогт БАЙГАА датасэтийг хэвээр нэрлэнэ (нэмэлт тэмдэглэгээгүй)',
@@ -4431,6 +4431,37 @@ async function groupBE() {
   check('BE45. Төсөл бүрийн dataset content.json-д бүртгэгдсэн (6/6)',
     Array.isArray(cdp) && cdp.length === 6 && cdp.every((p) => typeof p.dataset === 'string' && p.dataset),
     JSON.stringify((cdp || []).map((p) => p.dataset)));
+
+  /* ── BE46. Бодлогын саналын "үндэслэл" (basis) — ИЖИЛ шалгуур ──
+     Регресс (2026-10-05): basis нь датасэтийн нэрийн ард ЗОХИОМОЛ хэмжүүр
+     залгадаг байв — "Автобусны GPS сан · 620,000 дуудлага/сар",
+     "Замын ослын бүртгэл · 12,400 мөр", "Агаарын тээврийн статистик ·
+     14,200 дуудлага/сар". Эдгээр тоо ЭХ СУРВАЛЖГҮЙ бөгөөд порталын өөрийн
+     "ДУУДЛАГА/САР" KPI нь "—" гэж хэлдэг — өөрөөр хэлбэл хуудас өөртэйгөө
+     зөрчилдөж байв. Одоо basis нь ЦЭВЭР датасэтийн нэр, төслийн "эх
+     өгөгдөл"-тэй ижил dsLabel()-ээр каталогтой тулгагдана. */
+  const polBlock = (dcScript().match(/\nconst POLICIES=\[([\s\S]*?)\n\];/) || [])[1] || '';
+  const basisVals = (polBlock.match(/basis:'([^']*)'/g) || []).map((m) => m.slice(7, -1));
+  check('BE46. 4 бодлого бүгд basis-тай', basisVals.length === 4, JSON.stringify(basisVals));
+  check('BE46. basis-д ЗОХИОМОЛ хэмжүүр үлдээгүй (тоо, "мөр", "дуудлага", "SLA")',
+    basisVals.every((b) => !/\d/.test(b) && !/мөр|дуудлага|SLA/i.test(b)), JSON.stringify(basisVals));
+  check('BE46. basis нь · тэмдэгтээр залгаагүй ЦЭВЭР нэр',
+    basisVals.every((b) => b.indexOf('·') < 0), JSON.stringify(basisVals));
+  check('BE46. Бодлогын үндэслэл ч dsLabel()-ээр каталогтой тулгагдана',
+    /body:p\.body,meta:dsLabel\(p\.basis\),support:/.test(dcScript()));
+  check('BE46. basis content.json-оос давхарлагдана (админаас засагдана)',
+    /\['title','by','stage','basis'\]\.forEach/.test(dcScript()));
+  const cdl = readJson('content.json').site.community_data.policies;
+  check('BE46. Бодлого бүрийн basis content.json-д бүртгэгдсэн (4/4)',
+    Array.isArray(cdl) && cdl.length === 4 && cdl.every((p) => typeof p.basis === 'string' && p.basis),
+    JSON.stringify((cdl || []).map((p) => p.basis)));
+  /* Каталогт БАЙГАА анхны бодит тохиолдол — өмнө нь зөвхөн "байхгүй"
+     салаа л амьдаар ажиллаж байсан тул энэ нь эерэг замыг барина. */
+  const dsNames = (dcScript().match(/\nconst DATASETS=\[([\s\S]*?)\n\];/) || [])[1] || '';
+  check('BE46. Агаарын бодлогын үндэслэл каталогт БАЙНА → тэмдэглэгээгүй гарна',
+    basisVals.indexOf('Агаарын тээврийн статистик') >= 0 &&
+    dsNames.includes("name:'Агаарын тээврийн статистик'"),
+    JSON.stringify(basisVals));
 
   check('BE26. 1 цэгтэй цуваа → зурахгүй (шугам биш)',
     !runPax({ unit: 'зорчигч', year: 2026, counts: [143220], lastMonth: 1 }).SEC.rail._liveSeries);
