@@ -5181,6 +5181,29 @@ function datasetRank(sec,ds){
   if(!sec||!ds||!Array.isArray(sec.rank)) return [];
   return (sec._rankSource&&sec._rankSource===ds.source)?sec.rank:[];
 }
+/* 7 хоногийн баганын Y тэнхлэгийн хүрээ — ЦЭВЭР функц (tests/run.js
+   гараар бодсон фикстураар шалгана).
+   ЯАГААД ТУСДАА: алхам нь урьд `/50` гэж ХАТУУ бичигдсэн байв. Зорчигчийн
+   мянгад тохирно ч ачааны тонн (13–44) дээр хэтэрхий бүдүүн: тэнхлэг
+   -50…50 болж бүх багана дээд гуравны нэгд шахагдаж, хөл бичигт
+   "тэнхлэг -50-с эхэлнэ" гэж СӨРӨГ тонн зарладаг байв (browser, 02-р
+   хэсэг). Одоо алхам нь УТГЫН МАСШТАБААС гарна — buildTrendChart-ийн
+   niceStep-тэй ижил зарчим. */
+function weekAxis(vals){
+  if(!vals||!vals.length) return {base:0,top:0,step:1};
+  const mx=Math.max.apply(null,vals), mn=Math.min.apply(null,vals);
+  /* Бүх утга тэнцүү бол хүрээг утгын ӨӨРИЙНХ нь хэмжээнээс гаргана
+     (0 бол 1) — эс тэгвэл span=0 болж алхам тодорхойгүй болно. */
+  const span=(mx-mn)||Math.abs(mx)||1;
+  const step=Math.pow(10,Math.floor(Math.log10(span/2)))||1;
+  let base=Math.floor((mn-span*0.6)/step)*step;
+  const top=Math.ceil((mx+span*0.15)/step)*step;
+  /* Хүн, тонн зэрэг СӨРӨГ БАЙЖ ЧАДАХГҮЙ хэмжигдэхүүнд 0-ээс доош
+     тэнхлэг утгагүй — шалыг 0-д барина. */
+  if(mn>=0&&base<0) base=0;
+  return {base,top,step};
+}
+
 function buildTrendChart(data,off){
   /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
      хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
@@ -8027,7 +8050,8 @@ class Component extends DCLogic {
          багана байхаа больсон тул Math.max([]) = -Infinity-ээс хамгаална. */
       const hasBars=barVals.length>0;
       const bmax=hasBars?Math.max.apply(null,barVals):0, bmin=hasBars?Math.min.apply(null,barVals):0;
-      const base=Math.floor((bmin-(bmax-bmin)*0.6)/50)*50, top=Math.ceil((bmax+(bmax-bmin)*0.15)/50)*50;
+      const wax=weekAxis(hasBars?barVals:[]);
+      const base=wax.base, top=wax.top;
       // Огнооны шошго (WEEK_LABELS: "11.17" гэх мэт) жил заагаагүй, өдөр
       // бүр статик тул mock үед харагдацаараа сааруулж "жишиг" гэдгийг
       // үзэгдэл дээрээ илэрхийлнэ (тайлбар мөрөнд текстээр ч давхар

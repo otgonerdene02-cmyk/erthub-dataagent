@@ -4529,6 +4529,45 @@ async function groupBE() {
     dsNames.includes("name:'Агаарын тээврийн статистик'"),
     JSON.stringify(basisVals));
 
+  /* ── BE47. 7 хоногийн баганын Y тэнхлэг УТГЫН МАСШТАБААС ──────────────
+     Регресс (browser, 02-р хэсэг): ачааны график (13–44 тонн) дээр
+     тэнхлэг "-50 / 0 / 50" болж, хөл бичигт "тэнхлэг -50-с эхэлнэ" гэж
+     СӨРӨГ тонн зарлаж, бүх багана дээд гуравны нэгд шахагдаж байв.
+     Шалтгаан нь алхам `/50` гэж ХАТУУ бичигдсэн — зорчигчийн мянгад
+     тохирно ч тоннд хэтэрхий бүдүүн. Доорх тоонууд ГАРААР бодогдсон. */
+  const waSrc = dcScript().match(/function weekAxis\(vals\)\{([\s\S]*?)\n\}/);
+  if (!waSrc) { bad('BE47. weekAxis() олдсонгүй'); return; }
+  const weekAxis = new Function('return function weekAxis(vals){' + waSrc[1] + '}')();
+  /* Ачаа (тонн): mx 44.212, mn 13.253 → span 30.959, span/2 = 15.48 →
+     алхам 10^floor(log10 15.48) = 10. Шал floor((13.253−18.575)/10)×10
+     = −10 ч бүх утга ≥ 0 тул 0 болно. Тааз ceil((44.212+4.644)/10)×10 = 50. */
+  const cargo = [44.212, 34.683, 35.118, 18.824, 13.253, 27.532, 28.873];
+  const wcargo = weekAxis(cargo);
+  check('BE47. Ачааны тонн — тэнхлэг 0…50, алхам 10 (СӨРӨГ тонн БАЙХГҮЙ)',
+    wcargo.base === 0 && wcargo.top === 50 && wcargo.step === 10, JSON.stringify(wcargo));
+  /* Зорчигч: mx 8239, mn 6242 → span 1997, span/2 = 998.5 → алхам 100.
+     Шал floor((6242−1198.2)/100)×100 = 5000, тааз ceil(8538.55/100)×100 = 8600.
+     ХУУЧИН кодтой (алхам 50) шал ИЖИЛ 5000 — энэ график эвдрээгүй. */
+  const wpax = weekAxis([6931, 7663, 8239, 7752, 6242, 7224, 8166]);
+  check('BE47. Зорчигчийн график эвдрээгүй — шал 5,000 хэвээр',
+    wpax.base === 5000 && wpax.top === 8600 && wpax.step === 100, JSON.stringify(wpax));
+  /* Сөрөг утгатай цуваа бол шалыг 0-д БАРИХГҮЙ — тэр нь жинхэнэ утга. */
+  const wneg = weekAxis([-20, -5, 10]);
+  check('BE47. Үнэхээр сөрөг утгатай бол шал 0-д баригдахгүй',
+    wneg.base < 0, JSON.stringify(wneg));
+  /* Бүх утга 0: ХУУЧИН код top===base өгч багануудыг 50% өндөрт зурдаг
+     байсан (дата байгаа мэт). Одоо тааз > шал тул багана 0% дээр суух
+     ба "дата алга" гэдэг нь харагдацаараа ҮНЭН болно. */
+  const wzero = weekAxis([0, 0, 0]);
+  check('BE47. Бүх утга 0 — тааз > шал (багана 50% биш, 0% дээр)',
+    wzero.base === 0 && wzero.top > 0, JSON.stringify(wzero));
+  check('BE47. Хоосон цуваа → 0/0 (өмнөх хамгаалалт хэвээр)',
+    JSON.stringify(weekAxis([])) === JSON.stringify({ base: 0, top: 0, step: 1 }) &&
+    JSON.stringify(weekAxis(null)) === JSON.stringify({ base: 0, top: 0, step: 1 }));
+  check('BE47. Тэнхлэгийг /50 гэж ХАТУУ бичсэн хуучин мөр үлдээгүй',
+    !/\(bmax-bmin\)\*0\.6\)\/50\)\*50/.test(dcScript()) &&
+    /const wax=weekAxis\(hasBars\?barVals:\[\]\);/.test(dcScript()));
+
   check('BE26. 1 цэгтэй цуваа → зурахгүй (шугам биш)',
     !runPax({ unit: 'зорчигч', year: 2026, counts: [143220], lastMonth: 1 }).SEC.rail._liveSeries);
   const paxRow = mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: { counts: JAN_AUG.slice() } });
