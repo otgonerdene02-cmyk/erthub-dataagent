@@ -2838,7 +2838,28 @@
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;">{{ vehreg.rows }}<sc-if value="{{ vehreg.hasAsOf }}"> · {{ vehreg.asOf }}</sc-if></div>
       </div>
       <div style="font-size:13.5px;color:var(--ink2);line-height:1.55;max-width:760px;text-wrap:pretty;">{{ vehreg.sub }}</div>
-      <div style="width:60px;height:4px;border-radius:3px;background:{{ vehreg.color }};margin:14px 0 26px;"></div>
+      <div style="width:60px;height:4px;border-radius:3px;background:{{ vehreg.color }};margin:14px 0 18px;"></div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;">
+        <sc-for list="{{ vehreg.tabs }}" as="vtab" hint-placeholder-count="4">
+          <button sc-camel-on-click="{{ vtab.go }}" style="{{ vtab.style }}">{{ vtab.label }}</button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ vehreg.hasSubTitle }}">
+        <div style="font-size:12.5px;color:var(--ink3);margin:-10px 0 20px;text-wrap:pretty;">{{ vehreg.subTitle }}</div>
+      </sc-if>
+
+      <sc-if value="{{ vehreg.isPending }}">
+        <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:18px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:30px 32px;display:flex;gap:15px;align-items:flex-start;">
+          <div style="font-size:19px;line-height:1.2;flex-shrink:0;">🧭</div>
+          <div style="min-width:0;">
+            <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:8px;text-wrap:pretty;">{{ vehreg.pendingHead }}</div>
+            <div style="font-size:13px;color:var(--ink2);line-height:1.65;max-width:680px;text-wrap:pretty;">{{ vehreg.pendingBody }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ vehreg.isStructure }}">
 
       <sc-if value="{{ vehreg.blocked }}">
         <div style="display:flex;gap:13px;align-items:flex-start;background:linear-gradient(140deg,#F2A93B18 0%,rgba(var(--surface-rgb),.92) 44%,rgba(var(--surface-rgb),.74) 100%);border:1px solid var(--line);border-left:3px solid #F2A93B;border-radius:16px;box-shadow:var(--shadow);backdrop-filter:blur(16px) saturate(1.3);padding:16px 20px;margin-bottom:18px;">
@@ -2984,6 +3005,150 @@
           </div>
         </sc-for>
       </div>
+      </sc-if>
+
+      <sc-if value="{{ vehreg.isFuel }}">
+        <sc-if value="{{ vehreg.blocked }}">
+          <div style="display:flex;gap:13px;align-items:flex-start;background:linear-gradient(140deg,#F2A93B18 0%,rgba(var(--surface-rgb),.92) 44%,rgba(var(--surface-rgb),.74) 100%);border:1px solid var(--line);border-left:3px solid #F2A93B;border-radius:16px;box-shadow:var(--shadow);backdrop-filter:blur(16px) saturate(1.3);padding:16px 20px;margin-bottom:18px;">
+            <div style="font-size:16px;line-height:1.3;flex-shrink:0;">⚠️</div>
+            <div style="min-width:0;">
+              <div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:5px;text-wrap:pretty;">{{ vehreg.blockHead }}</div>
+              <div style="font-size:12.5px;color:var(--ink2);line-height:1.6;text-wrap:pretty;">{{ vehreg.blockBody }}</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(252px,1fr));gap:13px;margin-bottom:16px;">
+          <sc-for list="{{ vehreg.fuel.kpis }}" as="fk" hint-placeholder-count="4">
+            <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:18px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:17px 18px;display:flex;flex-direction:column;">
+              <div style="font-size:10px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;line-height:1.4;text-wrap:pretty;">{{ fk.label }}</div>
+              <div style="display:flex;align-items:baseline;gap:6px;">
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.02em;color:{{ fk.valueColor }};">{{ fk.value }}</div>
+                <div style="font-size:11.5px;color:var(--ink3);">{{ fk.unit }}</div>
+              </div>
+              <sc-if value="{{ fk.hasSub }}">
+                <div style="font-size:11.5px;color:var(--ink2);margin-top:6px;line-height:1.45;text-wrap:pretty;">{{ fk.sub }}</div>
+              </sc-if>
+              <div style="margin-top:auto;padding-top:12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3);">
+                <sc-if value="{{ fk.hasField }}">
+                  <span style="white-space:nowrap;">{{ fk.fieldLabel }}</span>
+                  <span style="background:var(--surface2);border-radius:5px;padding:2px 6px;white-space:nowrap;color:var(--ink2);">{{ fk.field }}</span>
+                </sc-if>
+                <sc-if value="{{ fk.showWhy }}">
+                  <span style="line-height:1.45;text-wrap:pretty;">{{ fk.why }}</span>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(316px,1fr));gap:13px;margin-bottom:16px;">
+          <sc-for list="{{ vehreg.fuel.shares }}" as="fs" hint-placeholder-count="1">
+            <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:18px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:18px 20px;display:flex;flex-direction:column;">
+              <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;line-height:1.4;text-wrap:pretty;margin-bottom:14px;">{{ fs.title }}</div>
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+                <div style="position:relative;width:118px;height:118px;flex-shrink:0;">
+                  <svg sc-camel-view-box="0 0 120 120" style="width:118px;height:118px;display:block;">
+                    <circle cx="60" cy="60" r="46" fill="none" stroke="var(--surface2)" stroke-width="15"></circle>
+                    <sc-for list="{{ fs.segs }}" as="fg" hint-placeholder-count="0">
+                      <circle cx="60" cy="60" r="46" fill="none" stroke="{{ fg.color }}" stroke-width="15" stroke-dasharray="{{ fg.dash }}" stroke-dashoffset="{{ fg.offset }}" transform="rotate(-90 60 60)" stroke-linecap="butt"></circle>
+                    </sc-for>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+                    <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.1;">{{ fs.total }}</div>
+                    <div style="font-size:9px;color:var(--ink3);margin-top:2px;">{{ fs.totalLabel }}</div>
+                  </div>
+                </div>
+                <div style="flex:1;min-width:104px;display:flex;flex-direction:column;gap:6px;">
+                  <sc-for list="{{ fs.legend }}" as="fl" hint-placeholder-count="0">
+                    <div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink2);">
+                      <span style="width:8px;height:8px;border-radius:2px;background:{{ fl.color }};flex-shrink:0;"></span>
+                      <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ fl.label }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);white-space:nowrap;flex-shrink:0;">{{ fl.pct }}</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ fs.empty }}">
+                    <div style="font-size:11.5px;color:var(--ink3);line-height:1.6;text-wrap:pretty;">{{ fs.noData }}</div>
+                  </sc-if>
+                </div>
+              </div>
+              <div style="margin-top:auto;padding-top:12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3);">
+                <sc-if value="{{ fs.hasField }}">
+                  <span style="white-space:nowrap;">{{ fs.fieldLabel }}</span>
+                  <span style="background:var(--surface2);border-radius:5px;padding:2px 6px;white-space:nowrap;color:var(--ink2);">{{ fs.field }}</span>
+                </sc-if>
+                <sc-if value="{{ fs.showWhy }}">
+                  <span style="line-height:1.45;text-wrap:pretty;">{{ fs.why }}</span>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:18px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:18px 20px;display:flex;flex-direction:column;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;line-height:1.4;text-wrap:pretty;margin-bottom:15px;">{{ vehreg.fuel.year.title }}</div>
+            <sc-if value="{{ vehreg.fuel.year.empty }}">
+              <div style="flex:1;min-height:116px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--ink3);font-size:12px;line-height:1.6;text-wrap:pretty;">{{ vehreg.fuel.year.noData }}</div>
+            </sc-if>
+            <sc-if value="{{ vehreg.fuel.year.hasRows }}">
+              <div style="display:flex;align-items:flex-end;gap:8px;height:116px;">
+                <sc-for list="{{ vehreg.fuel.year.rows }}" as="fy" hint-placeholder-count="5">
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:5px;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink2);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ fy.value }}</div>
+                    <div style="height:{{ fy.height }};min-height:3px;border-radius:5px 5px 2px 2px;background:{{ fy.color }};"></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:7px;">
+                <sc-for list="{{ vehreg.fuel.year.rows }}" as="fz" hint-placeholder-count="5">
+                  <div style="flex:1;min-width:0;font-size:9.5px;color:var(--ink3);text-align:center;line-height:1.3;text-wrap:pretty;">{{ fz.label }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div style="margin-top:auto;padding-top:12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3);">
+              <sc-if value="{{ vehreg.fuel.year.hasField }}">
+                <span style="white-space:nowrap;">{{ vehreg.fuel.year.fieldLabel }}</span>
+                <span style="background:var(--surface2);border-radius:5px;padding:2px 6px;white-space:nowrap;color:var(--ink2);">{{ vehreg.fuel.year.field }}</span>
+              </sc-if>
+              <sc-if value="{{ vehreg.fuel.year.showWhy }}">
+                <span style="line-height:1.45;text-wrap:pretty;">{{ vehreg.fuel.year.why }}</span>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(316px,1fr));gap:13px;">
+          <sc-for list="{{ vehreg.fuel.tops }}" as="ft" hint-placeholder-count="2">
+            <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:18px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:18px 20px;display:flex;flex-direction:column;">
+              <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;line-height:1.4;text-wrap:pretty;margin-bottom:14px;">{{ ft.title }}</div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <sc-for list="{{ ft.rows }}" as="fr" hint-placeholder-count="0">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2);margin-bottom:5px;">
+                      <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);margin-right:7px;">{{ fr.rank }}</span>{{ fr.label }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);white-space:nowrap;flex-shrink:0;">{{ fr.value }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;">
+                      <div style="height:100%;border-radius:4px;background:{{ fr.color }};width:{{ fr.width }};"></div>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ ft.empty }}">
+                  <div style="min-height:72px;display:flex;align-items:center;color:var(--ink3);font-size:12px;line-height:1.6;text-wrap:pretty;">{{ ft.noData }}</div>
+                </sc-if>
+              </div>
+              <div style="margin-top:auto;padding-top:12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3);">
+                <sc-if value="{{ ft.hasField }}">
+                  <span style="white-space:nowrap;">{{ ft.fieldLabel }}</span>
+                  <span style="background:var(--surface2);border-radius:5px;padding:2px 6px;white-space:nowrap;color:var(--ink2);">{{ ft.field }}</span>
+                </sc-if>
+                <sc-if value="{{ ft.showWhy }}">
+                  <span style="line-height:1.45;text-wrap:pretty;">{{ ft.why }}</span>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
     </div>
   </div>
   </sc-if>
@@ -4414,6 +4579,79 @@ const VEHREG_TOP=[
   {id:'color',   field:'COLORNAME',  need:''}
 ];
 const VEHREG_AGE={id:'age',field:'BUILDYEAR',need:''};
+/* ── САМБАРЫН ТАБ ──────────────────────────────────────────────────────
+   Дөрвөн табын НЭРИЙГ эх дэлгэцээс АВСАН (таамаг БИШ). Агуулга нь
+   зөвхөн "structure" табынх харагдсан тул бусад гурвын слотыг ЗОХИОХГҮЙ:
+
+     ops       — байгууллагын үйлчилгээний гүйлгээ. vehicle_registry нь
+                 ТХ-ийн БҮРТГЭЛ (нэг мөр = нэг ТХ) тул өдрийн үйлчилгээний
+                 тоог агуулдаггүй → ӨӨР эх сурвалж.
+     structure — энэ хуудсанд аль хэдийн хэрэгжсэн 15 слот.
+     fuel      — сэдэв нь FUELNAME тул ЭНЭ датасэтээр хангагдана. Слотыг
+                 баталгаажсан багананаас (FUELNAME · BUILDYEAR · MARKNAME ·
+                 AIMAG · CREATEDDATE) гаргав. Эх дэлгэцийн ЯГ тэр
+                 байрлалыг хуулсан БИШ — өгөгдлөөс үндэслэн зохиосон.
+     plate     — дугаар хадгалуулах нь ҮЙЛЧИЛГЭЭНИЙ бүртгэл. PLATENO нь
+                 дугаар өөрөө, хадгалалтын төлөв биш → ӨӨР эх сурвалж.
+
+   need_source бүхий таб нь слот зарлахгүй — ЯГ ямар эх сурвалж дутууг
+   нэрлэсэн нэг самбар харуулна (хуурамч хоосон карт өрөхгүй). */
+const VEHREG_TABS=[
+  {id:'ops',       need:'ops'},
+  {id:'structure', need:''},
+  {id:'fuel',      need:''},
+  {id:'plate',     need:'plate'}
+];
+const VEHREG_TAB_DEFAULT='structure';
+function vehregTabId(x){
+  return VEHREG_TABS.some(t=>t.id===x)?x:VEHREG_TAB_DEFAULT;
+}
+
+/* Түлшний табын слот. structure табын "Түлшний ангилал" бөөрөнхийг
+   ДАВТАХГҮЙ — энэ таб нь цэвэр түлшинд (цахилгаан, хайбрид) төвлөрнө. */
+const VEHREG_FUEL_KPI=[
+  {id:'ev',     field:'FUELNAME',    need:''},
+  {id:'hybrid', field:'FUELNAME',    need:''},
+  {id:'share',  field:'FUELNAME',    need:''},
+  {id:'new12',  field:'CREATEDDATE', need:''}
+];
+const VEHREG_FUEL_SHARE=[{id:'mix', field:'FUELNAME', need:''}];
+const VEHREG_FUEL_TOP=[
+  {id:'mark',  field:'MARKNAME', need:''},
+  {id:'aimag', field:'AIMAG',    need:''}
+];
+const VEHREG_FUEL_YEAR={id:'year', field:'BUILDYEAR', need:''};
+
+/* Түлшний самбар. `v` нь vehicleRegistryToValue()-ийн үр дүн эсвэл null.
+   structure табтай ИЖИЛ анхдагчуудыг (vehregDonut/vehregBars/…) ашиглана
+   — хоёр таб өөр дүрмээр "мэдээлэл алга" болох нь эвдрэлийн эх үүсвэр. */
+function buildVehRegFuel(v,meta,L,nd,unit){
+  const f=(v&&v.fuel)||null;
+  const kpis=VEHREG_FUEL_KPI.map(s=>{
+    /* share нь ХУВЬ тул ширхэгийн нэгжгүй, бусад нь ТХ-ийн тоо. */
+    const raw=f?f[s.id]:null;
+    const val=(s.id==='share')
+      ? (vehregNum(raw)==null?'—':vehregNum(raw).toFixed(1)+'%')
+      : vehregFmt(raw);
+    return {id:s.id,label:L('fuel.kpi.'+s.id+'.label',s.id),
+      sub:L('fuel.kpi.'+s.id+'.sub',''),hasSub:!!L('fuel.kpi.'+s.id+'.sub',''),
+      value:val,unit:(s.id==='share')?'':unit,empty:val==='—',
+      valueColor:(val==='—')?'var(--ink3)':'var(--ink)',...meta(s)};
+  });
+  const shares=VEHREG_FUEL_SHARE.map(s=>({
+    id:s.id,title:L('fuel.share.'+s.id,s.id),totalLabel:L('total_word','нийт'),
+    ...vehregDonut(f?f.mix:null),noData:nd,...meta(s)}));
+  const tops=VEHREG_FUEL_TOP.map(s=>({
+    id:s.id,title:L('fuel.top.'+s.id,s.id)+' — TOP '+VEHREG_TOP_N,
+    ...vehregBars(f&&f.top?f.top[s.id]:null,VEHREG_TOP_N),noData:nd,...meta(s)}));
+  const year=(()=>{
+    const b=vehregAgeBars(f&&f.by_year);
+    return {title:L('fuel.year.title','Үйлдвэрлэсэн оноор'),
+      noData:nd,hasRows:!b.empty,...b,...meta(VEHREG_FUEL_YEAR)};
+  })();
+  return {kpis,shares,tops,year};
+}
+
 /* Ангиллын өнгө. Ангиуд хоорондоо ЗЭРЭГЦҮҮЛЭГДЭХИЙН тулд л өнгөтэй тул
    график бүр ижил дарааллыг давтана — өнгө нь утга ЗААХГҮЙ. */
 const VEHREG_COLORS=['#4C7DF0','#2FA37B','#F2A93B','#D2564A','#9B6BE8','#2FB7C4','#E0725F','#7D8CA8'];
@@ -4486,16 +4724,29 @@ function vehicleRegistryToValue(d){
     ageBuckets:Array.isArray(a.buckets)?a.buckets:[],
     share:{wheel:b.wheel||[],fuel:b.fuel||[],owntype:b.owner_type||[],
       gender:b.gender||[],purpose:b.purpose||[]},
-    top:{country:t.country||[],mark:t.mark||[],color:t.color||[]}};
+    top:{country:t.country||[],mark:t.mark||[],color:t.color||[]},
+    /* Түлшний таб. Хариунд энэ блок БАЙХГҮЙ бол тэр таб хоосон
+       хэвээр — бусад таб хөндөгдөхгүй. */
+    fuel:(function(){
+      const g=d.fuel||{};
+      return {ev:vehregNum(g.ev),hybrid:vehregNum(g.hybrid),
+        share:vehregNum(g.share_pct),new12:vehregNum(g.new_12m),
+        mix:g.mix||[],top:{mark:(g.top&&g.top.mark)||[],aimag:(g.top&&g.top.aimag)||[]},
+        by_year:g.by_year||[]};
+    })()};
 }
 
 /* Самбарын харагдах загвар. `v` нь vehicleRegistryToValue()-ийн үр дүн
    эсвэл null. Текст бүр stxt()-ээр уншигддаг тул content.json ирэхэд
    ДАХИН барихад шинэ утга шууд гарна (reapplyLiveText-ийн гэрээ). */
-function buildVehRegBoard(v){
+/* `tab` нь идэвхтэй табын id. Текст бүр stxt()-ээр уншигддаг тул
+   content.json ирэхэд ДАХИН барихад шинэ утга шууд гарна. */
+function buildVehRegBoard(v,tab){
   const L=(p,fb)=>stxt('vehreg.'+p,fb);
   const nd=stxt('status.no_data','мэдээлэл алга');
   const unit=L('unit','ТХ');
+  const active=vehregTabId(tab);
+  const activeDef=VEHREG_TABS.find(t=>t.id===active)||VEHREG_TABS[0];
   /* Хоосон слотын тайлбар: багана нь БАЙГАА бол таталт хүлээж байна,
      байхгүй бол ЯГ юу дутууг нэрлэнэ. Хоёр өөр шалтгааныг нэг үгээр
      нуувал ажилтан буруу зүйл хүлээнэ. */
@@ -4550,7 +4801,26 @@ function buildVehRegBoard(v){
     blockHead:L('blocked.head','Энэ самбарын тоо хараахан нийтлэгдээгүй'),
     blockBody:L('blocked.body','Эх системийн хуудаслалт эвдэрсэн тул датасэтийн 0.05% нь л татагдаж байна. Дутуу түүврээс тоо тооцохгүй — засагдмагц бүх үзүүлэлт автоматаар дүүрнэ.'),
     blockDoc:L('blocked.doc','Хэмжилт ба эх сурвалж руу илгээсэн хүсэлт: veritech-vehicle-registry-request.md (2026-09-28)'),
-    kpis,shares,tops,age,noData:nd
+    kpis,shares,tops,age,noData:nd,
+    /* ── Таб ── */
+    tab:active,
+    isStructure:active==='structure', isFuel:active==='fuel',
+    isPending:!!activeDef.need,
+    subTitle:L('tab_sub.'+active,''),
+    hasSubTitle:!!L('tab_sub.'+active,''),
+    tabs:VEHREG_TABS.map(t=>({id:t.id,label:L('tabs.'+t.id,t.id),
+      active:t.id===active, ready:!t.need,
+      go:()=>{ if(typeof location!=='undefined') location.hash='#/vehreg/'+t.id; },
+      style:'background:none;border:1px solid '+(t.id===active?'transparent':'var(--line)')
+        +';cursor:pointer;font-family:inherit;font-size:12.5px;padding:8px 15px;border-radius:999px;'
+        +'white-space:nowrap;transition:.16s var(--ease);'
+        +(t.id===active?'color:#FFFFFF;background:'+NEON.road+';font-weight:600;'
+                       :'color:var(--ink2);background:rgba(var(--surface-rgb),.7);font-weight:500;')})),
+    /* Эх сурвалж нь ОГТ холбогдоогүй таб — хуурамч хоосон карт
+       өрөхийн оронд ЯГ юу дутууг нэг самбараар хэлнэ. */
+    pendingHead:L('pending_tab.head','Энэ хэсэг хараахан бэлэн биш'),
+    pendingBody:activeDef.need?L('need_source.'+activeDef.need,''):'',
+    fuel:buildVehRegFuel(v,meta,L,nd,unit)
   };
 }
 
@@ -5258,7 +5528,7 @@ class Component extends DCLogic {
       }catch(e){}
       return 'light';
     })(),
-    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
+    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', vehTab:VEHREG_TAB_DEFAULT, globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
 
 /* ── ХАЯГ ↔ ХУУДАС ─────────────────────────────────────────────────
      Өмнө нь хуудас солигдоход хаяг ОГТ өөрчлөгддөггүй байв. Үүнээс болж:
@@ -5287,6 +5557,11 @@ class Component extends DCLogic {
       try{ slug=decodeURIComponent(raw) }catch(e){ slug=raw }
       return {page:'detail',slug:slug};
     }
+    /* Самбарын таб нь ХУВААЛЦАХ боломжтой хаягтай байх ёстой —
+       эс тэгвэл хэрэглэгч 'Түлш' табыг илгээхэд хүлээн авагч нь
+       анхны таб дээр бууна. */
+    if(parts[0]==='vehreg'&&parts.length>1&&parts[1])
+      return {page:'vehreg',vehTab:parts[1]};
     return PAGES.some(function(p){return p.id===parts[0]})?{page:parts[0]}:null;
   }
   pageFromHash(){ var r=this.routeFromHash(); return r?r.page:null }
@@ -5303,6 +5578,8 @@ class Component extends DCLogic {
       if(d) this.pushRoute('browse/'+encodeURIComponent(datasetSlug(d)),replace);
       return;
     }
+    /* Таб нь хаягийн нэг хэсэг — цэснээс ороход ч анхны таб бичигдэнэ. */
+    if(id==='vehreg'){ this.pushRoute('vehreg/'+vehregTabId(this.state.vehTab),replace); return }
     this.pushRoute(id==='home'?'':id,replace);
   }
   /* Датасэт нээх ГАНЦ зам — жагсаалтаас ч, хаягаас ч. Хаяг, үзэлтийн
@@ -5325,6 +5602,12 @@ class Component extends DCLogic {
       if(!d) return false;              /* контент хараахан ирээгүй байж болно */
       if(!(this.state.page==='detail'&&DATASETS[this.state.dsIndex]===d))
         this.openDataset(d,{fromUrl:true,prev:'browse'});
+      return true;
+    }
+    if(r.page==='vehreg'){
+      var tab=vehregTabId(r.vehTab);
+      if(this.state.page!=='vehreg'||this.state.vehTab!==tab)
+        this.setState({page:'vehreg',vehTab:tab,prevPage:'home'});
       return true;
     }
     if(r.page!==this.state.page) this.setState({page:r.page,prevPage:'home'});
@@ -8854,7 +9137,7 @@ class Component extends DCLogic {
       peopleNext:()=>this.setState({peoplePage:Math.min(pPages-1,pPage+1)}),
       /* Тээврийн хэрэгслийн бүртгэлийн самбар. Эх сурвалж ирээгүй бол
          null дамжина — слот бүр "мэдээлэл алга" болно (тоо ЗОХИОХГҮЙ). */
-      isVehReg:page==='vehreg', vehreg:buildVehRegBoard(this._vehReg||null),
+      isVehReg:page==='vehreg', vehreg:buildVehRegBoard(this._vehReg||null,this.state.vehTab),
       /* Нийтлэг үг — хуудас харгалзахгүй ижил утгатай товч/шошго.
          Нэг удаа зарлаж, темплейтийн аль ч хэсгээс уншина. */
       t:{send:stxt('common.send','Илгээх')},

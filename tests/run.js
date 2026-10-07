@@ -5459,7 +5459,9 @@ async function groupVR() {
   const M = new Function('fmtNum', 'stxt', 'NEON',
     src.slice(i, j) + '\nreturn {vehregNum,vehregFmt,vehregPct,vehregDonut,vehregBars,' +
     'vehregAgeBars,vehicleRegistryToValue,buildVehRegBoard,' +
-    'VEHREG_KPI,VEHREG_SHARE,VEHREG_TOP,VEHREG_C,VEHREG_DS};'
+    'VEHREG_KPI,VEHREG_SHARE,VEHREG_TOP,VEHREG_C,VEHREG_DS,' +
+    'VEHREG_TABS,VEHREG_TAB_DEFAULT,vehregTabId,VEHREG_FUEL_KPI,' +
+    'VEHREG_FUEL_TOP,buildVehRegFuel};'
   )(fmtNum, stxt, { road: '#8CA9E8' });
 
   /* ── Нэгж тест: 0 ба null-ийг ХОЛИХГҮЙ ─────────────────────────────── */
@@ -5635,12 +5637,14 @@ async function groupVR() {
   /* ── Хүрэх зам: хуудас нь PAGES-д БАЙХ ЁСТОЙ ───────────────────────── */
   const rf = src.match(/routeFromHash\(\)\{[\s\S]*?\n  \}/);
   check('VR11. routeFromHash эх кодоос олдов', !!rf);
+  /* PAGES/route нь доорх VR16-д ч хэрэгтэй тул функцийн хүрээнд. */
+  let PAGES = null, route = null;
   if (rf) {
-    const PAGES = JSON.parse('[' + (src.match(/const PAGES=\[([\s\S]*?)\n\];/) || [])[1]
+    PAGES = JSON.parse('[' + (src.match(/const PAGES=\[([\s\S]*?)\n\];/) || [])[1]
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/([{,])\s*(\w+):/g, '$1"$2":')
       .replace(/'/g, '"').replace(/,\s*$/, '') + ']');
-    const route = new Function('PAGES', 'location',
+    route = new Function('PAGES', 'location',
       'var o={' + rf[0] + '};return o.routeFromHash();');
     check('VR11. #/vehreg танигдана (хуудас ХҮРЭХ ЗАМТАЙ)',
       JSON.stringify(route(PAGES, { hash: '#/vehreg' })) === '{"page":"vehreg"}',
@@ -5734,6 +5738,112 @@ async function groupVR() {
     M.VEHREG_KPI.length === 6 && M.VEHREG_SHARE.length === 5 &&
     M.VEHREG_TOP.length === 3,
     [M.VEHREG_KPI.length, M.VEHREG_SHARE.length, M.VEHREG_TOP.length].join('/'));
+
+  /* ── Таб ───────────────────────────────────────────────────────────
+     Табын НЭР нь эх дэлгэцээс авсан баримт; агуулга нь зөвхөн
+     structure дээр харагдсан. Иймд ops/plate нь слот ЗОХИОХГҮЙ, харин
+     ЯГ юу дутууг нэрлэх ёстой — үүнийг энд хамгаална. */
+  check('VR15. Дөрвөн таб, анхдагч нь structure',
+    M.VEHREG_TABS.map((t) => t.id).join(',') === 'ops,structure,fuel,plate' &&
+    M.VEHREG_TAB_DEFAULT === 'structure',
+    M.VEHREG_TABS.map((t) => t.id).join(','));
+  check('VR15. Танихгүй/хоосон таб анхдагч руу унана (хуудас цагаан болохгүй)',
+    M.vehregTabId('fuel') === 'fuel' && M.vehregTabId('zzz') === 'structure' &&
+    M.vehregTabId('') === 'structure' && M.vehregTabId(undefined) === 'structure',
+    [M.vehregTabId('zzz'), M.vehregTabId(undefined)].join('/'));
+  check('VR15. Табын нэр content.json-д бүртгэлтэй (админаас засварлагдана)',
+    M.VEHREG_TABS.every((t) => con.site.vehreg.tabs && con.site.vehreg.tabs[t.id]),
+    JSON.stringify(con.site.vehreg.tabs));
+
+  check('VR16. #/vehreg/<таб> хуваалцах боломжтой хаягтай',
+    !!route && JSON.stringify(route(PAGES, { hash: '#/vehreg/fuel' })) ===
+      '{"page":"vehreg","vehTab":"fuel"}' &&
+    JSON.stringify(route(PAGES, { hash: '#/vehreg' })) === '{"page":"vehreg"}',
+    route ? JSON.stringify(route(PAGES, { hash: '#/vehreg/fuel' })) : '(route алга)');
+  check('VR16. applyRoute ба syncHash таб мэднэ',
+    src.indexOf("if(r.page==='vehreg'){") >= 0 &&
+    src.indexOf("vehregTabId(r.vehTab)") >= 0 &&
+    src.indexOf("this.pushRoute('vehreg/'+vehregTabId(this.state.vehTab)") >= 0);
+
+  /* Түлшний таб — ГАРААР бодогдохуйц фикстур: 20 цахилгаан, 30 хайбрид
+     → mix 40.0%/60.0%; TOP 40/10 → 100.0%/25.0%; он 5/10 → 50/100%. */
+  const FUEL = Object.assign({}, FEED, {
+    fuel: {
+      ev: 20, hybrid: 30, share_pct: 25, new_12m: 7,
+      mix: [{ label: 'Цахилгаан', count: 20 }, { label: 'Хайбрид', count: 30 }],
+      top: { mark: [{ label: 'Toyota', count: 40 }, { label: 'Nissan', count: 10 }], aimag: [] },
+      by_year: [{ label: '2020', count: 5 }, { label: '2021', count: 10 }]
+    }
+  });
+  const fLive = M.buildVehRegBoard(M.vehicleRegistryToValue(FUEL), 'fuel');
+  const fkv = {};
+  fLive.fuel.kpis.forEach((k) => { fkv[k.id] = k.value; });
+  check('VR17. Түлш — KPI feed-ийн утгыг харуулна, хувь нь % тэмдэгтэй',
+    fkv.ev === '20' && fkv.hybrid === '30' && fkv.share === '25.0%' && fkv.new12 === '7',
+    JSON.stringify(fkv));
+  check('VR17. Түлш — бөөрөнхий 20/30 нь 40.0%/60.0%',
+    !fLive.fuel.shares[0].empty &&
+    fLive.fuel.shares[0].legend.map((l) => l.pct).join(',') === '40.0%,60.0%',
+    fLive.fuel.shares[0].legend.map((l) => l.pct).join(','));
+  check('VR17. Түлш — TOP 40/10 нь 100.0%/25.0%, оны багана 5/10 нь 50/100%',
+    fLive.fuel.tops[0].rows.map((r) => r.width).join(',') === '100.0%,25.0%' &&
+    fLive.fuel.year.rows.map((r) => r.height).join(',') === '50.0%,100.0%',
+    fLive.fuel.tops[0].rows.map((r) => r.width).join(',') + ' | ' +
+    fLive.fuel.year.rows.map((r) => r.height).join(','));
+  check('VR17. Түлш — feed-д алга жагсаалт хэвээр хоосон (aimag)',
+    fLive.fuel.tops[1].empty === true && fLive.fuel.tops[1].id === 'aimag');
+
+  const fEmpty = M.buildVehRegBoard(null, 'fuel');
+  check('VR18. Түлш — дата алга бол тоон талбарт ЦИФР огт байхгүй',
+    fEmpty.fuel.kpis.every((k) => !/[0-9]/.test(k.value)) &&
+    fEmpty.fuel.shares.every((x) => x.empty) &&
+    fEmpty.fuel.tops.every((x) => x.empty) && fEmpty.fuel.year.empty === true,
+    fEmpty.fuel.kpis.map((k) => k.value).join(','));
+  check('VR18. Түлшний слот бүр ДАТАСЭТИЙН багантай (худал блокер алга)',
+    fEmpty.fuel.kpis.every((k) => k.hasField && !k.needs) &&
+    fEmpty.fuel.tops.every((t) => t.hasField && !t.needs) &&
+    fEmpty.fuel.year.field === 'BUILDYEAR',
+    fEmpty.fuel.kpis.map((k) => k.field).join(','));
+
+  const ops = M.buildVehRegBoard(null, 'ops');
+  const plate = M.buildVehRegBoard(null, 'plate');
+  check('VR19. ops/plate нь "бэлэн биш" төлөвтэй, structure/fuel нь БИШ',
+    ops.isPending === true && plate.isPending === true &&
+    empty.isPending === false && fEmpty.isPending === false,
+    [ops.isPending, plate.isPending, empty.isPending, fEmpty.isPending].join('/'));
+  check('VR19. ops/plate нь ЯГ ямар эх сурвалж дутууг нэрлэнэ (ерөнхий үг БИШ)',
+    ops.pendingBody.length > 60 && plate.pendingBody.length > 60 &&
+    ops.pendingBody.indexOf('үйлчилгээ') >= 0 &&
+    plate.pendingBody.indexOf('PLATENO') >= 0,
+    ops.pendingBody.slice(0, 50));
+  check('VR19. Таб солиход structure-ийн слот ХЭВЭЭР (хөндлөн бохирдол алга)',
+    ops.kpis.length === 6 && ops.shares.length === 5 && ops.tops.length === 3 &&
+    ops.kpis.every((k) => k.value === '—'),
+    ops.kpis.map((k) => k.value).join(','));
+
+  const tabPaths = []
+    .concat(M.VEHREG_TABS.map((t) => 'tabs.' + t.id))
+    .concat(M.VEHREG_TABS.map((t) => 'tab_sub.' + t.id))
+    .concat(M.VEHREG_TABS.filter((t) => t.need).map((t) => 'need_source.' + t.need))
+    .concat(['pending_tab.head', 'fuel.share.mix', 'fuel.year.title'])
+    .concat(M.VEHREG_FUEL_KPI.reduce((a, x) =>
+      a.concat(['fuel.kpi.' + x.id + '.label', 'fuel.kpi.' + x.id + '.sub']), []))
+    .concat(M.VEHREG_FUEL_TOP.map((x) => 'fuel.top.' + x.id));
+  const tabMissing = tabPaths.filter((pp) => {
+    let c = con.site.vehreg;
+    for (const k of pp.split('.')) {
+      if (c == null || typeof c !== 'object') return true;
+      c = c[k];
+    }
+    return c == null || c === '';
+  });
+  check('VR20. Табын харагдах текст бүр content.json-д бүртгэлтэй',
+    tabMissing.length === 0, 'дутуу: ' + tabMissing.join(', '));
+  check('VR20. Темплейтэд таб тууз ба түлшний таб холбогдсон',
+    tpl.includes('{{ vehreg.tabs }}') && tpl.includes('{{ vehreg.isFuel }}') &&
+    tpl.includes('{{ vehreg.isPending }}') && tpl.includes('{{ vehreg.fuel.kpis }}') &&
+    tpl.includes('{{ vehreg.fuel.year.rows }}'),
+    'tabs=' + tpl.includes('{{ vehreg.tabs }}'));
 }
 
 async function groupAI() {
