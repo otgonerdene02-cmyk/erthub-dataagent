@@ -5317,14 +5317,21 @@ async function groupBE() {
     read('scripts/check-registry.js').includes('c.blocks_publication && c.ingested >= c.source_total') &&
     read('scripts/check-registry.js').includes(".table: "));
 
-  /* Сайт тал — index.html нь datasets{}/completeness-ийг ОГТ уншихгүй,
-     тул нийтийн хуудсанд бүрэн байдлын (тэр дундаа "дутуу") текст
-     гарах ЗАМ байхгүй. Хэрэв хожим нэмэгдвэл ЭНЭ тест унаж, 100%-ийн
-     салааг тэндээ бас нэмэхийг сануулна. */
+  /* Сайт тал — index.html нь datasets{}-ийн ТАТАЛТЫН бүрэн байдлыг ОГТ
+     уншихгүй, тул нийтийн хуудсанд "дутуу татагдсан" гэсэн текст гарах
+     ЗАМ байхгүй. Хэрэв хожим нэмэгдвэл ЭНЭ тест унаж, 100%-ийн салааг
+     тэндээ бас нэмэхийг сануулна.
+     ⚠️ Шалгуур нь REGISTRY-ийн ӨВӨРМӨЦ талбаруудаар явна, ерөнхий
+     "completeness" ҮГЭЭР БИШ: 2026-10-05-наас хойш index.html-д огт
+     ӨӨР утгатай completeness бий — rowProfile()-ийн "Бүрэн байдал N%"
+     нь ачаалагдсан мөрүүдийн НҮДНИЙ дүүргэлт (gov.opendata.mn жишиг),
+     ETL-ийн таталттай ямар ч хамаагүй. Үгээр шалгавал тэр онцлог энэ
+     тестийг ХУУРАМЧААР унагана (яг ингэж унасан). */
   const site39 = read('index.html');
-  check('BE48. Сайт дээр бүрэн байдлын текст гарах зам БАЙХГҮЙ (хуурамч сануулга үгүй)',
-    !site39.includes('completeness') && !site39.includes('blocks_publication') &&
-    !site39.includes('дутуу таталт'));
+  const etlMarks = ['source_total', 'blocks_publication', 'дутуу таталт', 'measured_on'];
+  const leaked = etlMarks.filter((t) => site39.includes(t));
+  check('BE48. Сайт дээр ТАТАЛТЫН бүрэн байдлын текст гарах зам БАЙХГҮЙ (хуурамч сануулга үгүй)',
+    leaked.length === 0, 'сайтад гарсан: ' + leaked.join(', '));
 
   /* ── BE32. Registry / админ / content — ГЭРЭЭ (хоёр талыг ХАМТ) ── */
   const reg32 = readJson('metric_registry.json');
