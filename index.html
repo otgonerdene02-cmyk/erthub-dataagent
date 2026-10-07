@@ -8353,7 +8353,7 @@ class Component extends DCLogic {
       viz:vizPath(p.viz,i*1.7),
       isBar:p.viz==='bar',isArea:p.viz==='area',isLine:p.viz==='line',
       vizStroke:p.viz==='bar'?'6':'2.2'}));
-    /* Нийт дэмжлэг тоологддоггүй (support устсан, BE48) — хувь тооцохгүй. */
+    /* Нийт дэмжлэг тоологддоггүй (support устсан, BE50) — хувь тооцохгүй. */
     const policies=POLICIES.map(p=>{
       const stageColor=p.stage==='Яаманд хүргэгдсэн'?'#0E8F63':(p.stage==='Хэлэлцэгдэж байна'?'#2E7CF6':(p.stage==='Судлагдаж байна'?'#7C5CF0':'#B9903A'));
       return {...p,color:NEON[p.sector],glyph:GLYPH[p.sector],sectorLabel:SECTORS[p.sector].label,
