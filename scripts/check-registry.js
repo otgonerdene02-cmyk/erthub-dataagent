@@ -113,6 +113,33 @@ for (const [dsId, d] of Object.entries(datasets)) {
     schemaErr.push('datasets.' + dsId + '.completeness: pct ХАДГАЛАХГҮЙ — ' +
       'ingested/source_total-оос тооцно (ганц эх сурвалж)');
   }
+  /* blocks_publication нь админ дээр "дутуу таталт тул тоо нийтлэхгүй"
+     гэсэн мөр гаргадаг тул үлдэгдэл/буруу төрөл бол ХУДАЛ текст. */
+  if (typeof c.blocks_publication !== 'boolean') {
+    schemaErr.push('datasets.' + dsId + '.completeness: blocks_publication true/false байх ёстой');
+  } else if (c.blocks_publication && c.ingested >= c.source_total) {
+    schemaErr.push('datasets.' + dsId + '.completeness: бүрэн татагдсан (' + c.ingested +
+      ' / ' + c.source_total + ') атлаа blocks_publication=true — зөрчилтэй мета');
+  }
+}
+
+/* datasets{}.table ↔ metrics{}.dataset — админ ХОЛБОГДСОН слотод бүрэн
+   байдлыг үүгээр олдог. Давхардвал буруу датасэтийн хувь гарна, бичгийн
+   алдаатай бол мөр чимээгүй үхнэ. */
+const tableSeen = {};
+const metricTables = new Set(
+  Object.values(registry.metrics || {}).map((m) => m && m.dataset).filter(Boolean));
+for (const [dsId, d] of Object.entries(datasets)) {
+  if (!d.table) continue;
+  if (tableSeen[d.table]) {
+    schemaErr.push('datasets.' + dsId + '.table: "' + d.table + '" нь ' + tableSeen[d.table] +
+      '-тай давхардаж байна — метрикээс датасэт нь тодорхойгүй болно');
+  }
+  tableSeen[d.table] = dsId;
+  if (!metricTables.has(d.table)) {
+    schemaErr.push('datasets.' + dsId + '.table: "' + d.table +
+      '" гэсэн dataset-тай метрик байхгүй — бичгийн алдаа эсвэл хуучирсан');
+  }
 }
 
 /* Слотын blocked_by нь БОДИТ датасэтийг заана */

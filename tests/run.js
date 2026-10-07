@@ -5250,6 +5250,89 @@ async function groupBE() {
   check('BE38. Слотын маягт бүрэн байдлын мөрийг залгана',
     adm.includes('completenessNote(sv.blocked_by)'));
 
+  /* ── BE48. БҮРЭН татагдсан датасэт — ХУДАЛ "дутуу" текст ГАРАХГҮЙ ──
+     2026-09-26-ны ETL таталт (silver.etl_runs id=57, 460.5 мин,
+     rows_fetched=rows_inserted=rows_transformed=910 444, error_text
+     хоосон) эх сурвалжийг БҮТНЭЭР авсан. completenessNote() эхлээд
+     ЗӨВХӨН дутуу таталтад зориулагдсан байсан тул 100% үед ч "дутуу
+     таталт тул тоо нийтлэхгүй" гэж бичих эрсдэлтэй байв — тэр нь
+     хуудсыг ХУДАЛ тайлбарлана. */
+  const in39 = (ds38['road.veritech.inspections'] || {});
+  const c39 = in39.completeness || {};
+  check('BE48. inspections-ийн бүрэн байдал тоогоор бүртгэгдсэн (ETL run 57)',
+    c39.ingested === 910444 && c39.source_total === 910444,
+    JSON.stringify([c39.ingested, c39.source_total]));
+  /* 910444 / 910444 × 100 = 100 → 1%-аас их тул 1 аравтаар "100.0" (ГАРААР) */
+  check('BE48. Хувь нь ТООЦООЛОГДОНО — pct ХАДГАЛАГДААГҮЙ',
+    !('pct' in c39) && (c39.ingested / c39.source_total * 100).toFixed(1) === '100.0');
+  check('BE48. Хэмжилтийн гарал үүсэл ба огноо бүртгэлтэй, нийтлэлийг БЛОКЛООГҮЙ',
+    c39.measured_on === '2026-09-26' && /run 57/.test(c39.method || '') &&
+    c39.blocks_publication === false,
+    JSON.stringify([c39.measured_on, c39.blocks_publication]));
+
+  /* Админ тал — completenessNote() ба datasetOfMetric()-ийг ГАРГАЖ АВНА */
+  const cnB39 = adm.match(/function completenessNote\(dsId\)\{([\s\S]*?)\n\}/);
+  const dmB39 = adm.match(/function datasetOfMetric\(mk\)\{([\s\S]*?)\n\}/);
+  if (!cnB39 || !dmB39) { bad('BE48. completenessNote/datasetOfMetric олдсонгүй'); return; }
+  const con39 = readJson('content.json');
+  const utxt39 = (path, fb) => {
+    let v = con39.ui; for (const k of path.split('.')) v = v && v[k];
+    return v == null ? fb : v;
+  };
+  const mk39 = (reg) => new Function('REG', 'esc', 'utxt', 'nf',
+    'return {cn:function(dsId){' + cnB39[1] + '},dm:function(mk){' + dmB39[1] + '}}')(
+    reg, (x) => String(x), utxt39, (n) => Number(n).toLocaleString('en-US'));
+  const F39 = mk39(reg38);
+  const full39 = F39.cn('road.veritech.inspections');
+  check('BE48. 100% үед "дутуу таталт тул тоо нийтлэхгүй" ГАРАХГҮЙ',
+    !/дутуу таталт/.test(full39), full39);
+  check('BE48. 100% үед "бүрэн татагдсан" гэж ИЛ бичнэ (хувь нь дуугүй үлдэхгүй)',
+    full39.includes('100.0%') && full39.includes('910,444') &&
+    full39.includes(con39.ui.slot_text.complete_ingest), full39);
+  check('BE48. Блоклогдсон датасэт дээр сануулга ХЭВЭЭР (эсрэг талд регресс үгүй)',
+    /дутуу таталт/.test(F39.cn('road.veritech.vehicle_registry')) &&
+    !F39.cn('road.veritech.vehicle_registry').includes(con39.ui.slot_text.complete_ingest));
+  /* ГАРААР бодогдох фикстур: 5/10 = 50.0%, блоклоогүй → ХОЁУЛАА дуугүй */
+  const fx39 = mk39({ datasets: { 'x.y': { completeness: {
+    ingested: 5, source_total: 10, measured_on: '2026-01-01',
+    method: 'фикстур', blocks_publication: false } } }, metrics: {} });
+  const part39 = fx39.cn('x.y');
+  check('BE48. Дутуу ч блоклоогүй бол ХОЁР шошго аль нь ч гарахгүй, хувь нь 50.0%',
+    part39.includes('50.0%') && !/дутуу таталт/.test(part39) &&
+    !part39.includes(con39.ui.slot_text.complete_ingest), part39);
+  check('BE48. Шинэ шошго content.json ui{}-д бүртгэлтэй',
+    con39.ui.slot_text.complete_ingest === 'бүрэн татагдсан');
+
+  /* Мөр ХҮРЭХ ЭСЭХ — амьд (холбогдсон) слотод ч харагдана. Өмнө нь
+     completenessNote() зөвхөн sv.blocked_by-аар дуудагддаг тул амьд
+     датасэтийн 100% нь хаана ч харагдахгүй ҮХМЭЛ бичлэг байв. */
+  check('BE48. datasets{}.table ↔ metrics{}.dataset холбоос ажиллана',
+    F39.dm('road.inspection_count') === 'road.veritech.inspections' &&
+    F39.dm('') === '' && F39.dm('байхгүй.метрик') === '',
+    F39.dm('road.inspection_count'));
+  check('BE48. Холбогдсон слотын маягт бүрэн байдлын мөрийг залгана',
+    adm.includes('calcLine(sv.metric)+completenessNote(datasetOfMetric(sv.metric))'));
+  check('BE48. check-registry нь blocks_publication-ийг төрөл ба зөрчлөөр шалгана',
+    read('scripts/check-registry.js').includes("typeof c.blocks_publication !== 'boolean'") &&
+    read('scripts/check-registry.js').includes('c.blocks_publication && c.ingested >= c.source_total') &&
+    read('scripts/check-registry.js').includes(".table: "));
+
+  /* Сайт тал — index.html нь datasets{}-ийн ТАТАЛТЫН бүрэн байдлыг ОГТ
+     уншихгүй, тул нийтийн хуудсанд "дутуу татагдсан" гэсэн текст гарах
+     ЗАМ байхгүй. Хэрэв хожим нэмэгдвэл ЭНЭ тест унаж, 100%-ийн салааг
+     тэндээ бас нэмэхийг сануулна.
+     ⚠️ Шалгуур нь REGISTRY-ийн ӨВӨРМӨЦ талбаруудаар явна, ерөнхий
+     "completeness" ҮГЭЭР БИШ: 2026-10-05-наас хойш index.html-д огт
+     ӨӨР утгатай completeness бий — rowProfile()-ийн "Бүрэн байдал N%"
+     нь ачаалагдсан мөрүүдийн НҮДНИЙ дүүргэлт (gov.opendata.mn жишиг),
+     ETL-ийн таталттай ямар ч хамаагүй. Үгээр шалгавал тэр онцлог энэ
+     тестийг ХУУРАМЧААР унагана (яг ингэж унасан). */
+  const site39 = read('index.html');
+  const etlMarks = ['source_total', 'blocks_publication', 'дутуу таталт', 'measured_on'];
+  const leaked = etlMarks.filter((t) => site39.includes(t));
+  check('BE48. Сайт дээр ТАТАЛТЫН бүрэн байдлын текст гарах зам БАЙХГҮЙ (хуурамч сануулга үгүй)',
+    leaked.length === 0, 'сайтад гарсан: ' + leaked.join(', '));
+
   /* ── BE32. Registry / админ / content — ГЭРЭЭ (хоёр талыг ХАМТ) ── */
   const reg32 = readJson('metric_registry.json');
   const sl32 = (id, k) => ((reg32.widgets[id] || {}).sectors || {})[k] || {};

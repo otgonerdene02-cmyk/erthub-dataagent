@@ -1632,7 +1632,8 @@
       "label": "Preview дээрх шошго",
       "would_need": "Шаардлагатай эх сурвалж",
       "completeness": "Эх сурвалжийн бүрэн байдал",
-      "blocks_publication": "дутуу таталт тул тоо нийтлэхгүй"
+      "blocks_publication": "дутуу таталт тул тоо нийтлэхгүй",
+      "complete_ingest": "бүрэн татагдсан"
     },
     "publish": {
       "login": "Нэвтрэх (Google)",
