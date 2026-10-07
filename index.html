@@ -4771,6 +4771,18 @@ function datasetRank(sec,ds){
   if(!sec||!ds||!Array.isArray(sec.rank)) return [];
   return (sec._rankSource&&sec._rankSource===ds.source)?sec.rank:[];
 }
+/* 7 хоногийн баганын y-тэнхлэгийн хил. Багана нь доороосоо ТАСДАЖ эхэлдэг
+   (тайлбарт "-с эхэлнэ" гэж ил хэлсэн) боловч сөрөг-гүй дата (хүн, тонн) дээр
+   тэнхлэг 0-оос доош орж "-50" гэсэн утгагүй шошго гаргаж байв. Дата сөрөг-гүй
+   бол base ХЭЗЭЭ Ч 0-ээс доош орохгүй. */
+function weekAxisBounds(vals){
+  const has=vals.length>0;
+  const bmax=has?Math.max.apply(null,vals):0, bmin=has?Math.min.apply(null,vals):0;
+  let base=Math.floor((bmin-(bmax-bmin)*0.6)/50)*50;
+  if(bmin>=0&&base<0) base=0;
+  const top=Math.ceil((bmax+(bmax-bmin)*0.15)/50)*50;
+  return {bmax,bmin,base,top};
+}
 function buildTrendChart(data,off){
   /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
      хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
@@ -7583,8 +7595,7 @@ class Component extends DCLogic {
       /* barVals ХООСОН байж болно (feed ирээгүй): WEEK_DATA-д зохиомол
          багана байхаа больсон тул Math.max([]) = -Infinity-ээс хамгаална. */
       const hasBars=barVals.length>0;
-      const bmax=hasBars?Math.max.apply(null,barVals):0, bmin=hasBars?Math.min.apply(null,barVals):0;
-      const base=Math.floor((bmin-(bmax-bmin)*0.6)/50)*50, top=Math.ceil((bmax+(bmax-bmin)*0.15)/50)*50;
+      const {bmax,bmin,base,top}=weekAxisBounds(barVals);
       // Огнооны шошго (WEEK_LABELS: "11.17" гэх мэт) жил заагаагүй, өдөр
       // бүр статик тул mock үед харагдацаараа сааруулж "жишиг" гэдгийг
       // үзэгдэл дээрээ илэрхийлнэ (тайлбар мөрөнд текстээр ч давхар

@@ -4814,6 +4814,25 @@ async function groupBE() {
   check('BE39. Хоосон төлөвийн текст content.json-д бүртгэлтэй',
     readJson('content.json').site.status.no_series === 'чиг хандлагын цуваа алга');
 
+  /* ── BE45. 7 хоногийн баганын тэнхлэг — сөрөг-гүй датад ХЭЗЭЭ Ч сөрөг БАЙХГҮЙ ──
+     Регресс (дэлгэцийн шалгалт): ачааны багана 20,697…126,408 дээр
+     base = floor((20697−105711·0.6)/50)·50 = −50 → тэнхлэг "150 / 50 / −50"
+     гэж гарч, тонн сөрөг байх боломжгүй мөртөө шошго нь сөрөг гэж худлаа хэлж байв.
+     Гараар бодсон: [100,110,120] → base floor(88/50)·50=50, top ceil(123/50)·50=150. */
+  const wab = dcScript().match(/\nfunction weekAxisBounds\(vals\)\{[\s\S]*?\n\}\n/);
+  const wabF = wab ? new Function(wab[0] + '\nreturn weekAxisBounds;')() : null;
+  check('BE45. weekAxisBounds() олдоно', !!wabF);
+  if (wabF) {
+    const cargo = wabF([44158, 126408, 50553, 24766, 29156, 35571, 20697]);
+    check('BE45. Ачааны (20k…126k) тэнхлэг 0-оос доош ОРОХГҮЙ', cargo.base === 0 && cargo.top >= 126408, JSON.stringify(cargo));
+    const small = wabF([100, 110, 120]);
+    check('BE45. [100,110,120] → base 50, top 150 (гараар бодсон)', small.base === 50 && small.top === 150, JSON.stringify(small));
+    const neg = wabF([-30, -10]);
+    check('BE45. Сөрөг датад тэнхлэг сөрөг байж БОЛНО', neg.base === -50, JSON.stringify(neg));
+    const none = wabF([]);
+    check('BE45. Хоосон дата → Infinity/NaN гарахгүй', Number.isFinite(none.base) && Number.isFinite(none.top), JSON.stringify(none));
+  }
+
   check('BE31. reapplyLiveText нь үзлэгийн мөрийг ч ДАХИН барина (нийтэлсэн шошго хүрнэ)',
     /reapplyLiveText\(\)\{[\s\S]*?this\.applyRoadInspectionData\(\);[\s\S]*?this\.recomputeAirData\(\);/.test(dcScript()));
 
