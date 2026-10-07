@@ -5250,6 +5250,89 @@ async function groupBE() {
   check('BE38. Слотын маягт бүрэн байдлын мөрийг залгана',
     adm.includes('completenessNote(sv.blocked_by)'));
 
+  /* ── BE48. БҮРЭН татагдсан датасэт — ХУДАЛ "дутуу" текст ГАРАХГҮЙ ──
+     2026-09-26-ны ETL таталт (silver.etl_runs id=57, 460.5 мин,
+     rows_fetched=rows_inserted=rows_transformed=910 444, error_text
+     хоосон) эх сурвалжийг БҮТНЭЭР авсан. completenessNote() эхлээд
+     ЗӨВХӨН дутуу таталтад зориулагдсан байсан тул 100% үед ч "дутуу
+     таталт тул тоо нийтлэхгүй" гэж бичих эрсдэлтэй байв — тэр нь
+     хуудсыг ХУДАЛ тайлбарлана. */
+  const in39 = (ds38['road.veritech.inspections'] || {});
+  const c39 = in39.completeness || {};
+  check('BE48. inspections-ийн бүрэн байдал тоогоор бүртгэгдсэн (ETL run 57)',
+    c39.ingested === 910444 && c39.source_total === 910444,
+    JSON.stringify([c39.ingested, c39.source_total]));
+  /* 910444 / 910444 × 100 = 100 → 1%-аас их тул 1 аравтаар "100.0" (ГАРААР) */
+  check('BE48. Хувь нь ТООЦООЛОГДОНО — pct ХАДГАЛАГДААГҮЙ',
+    !('pct' in c39) && (c39.ingested / c39.source_total * 100).toFixed(1) === '100.0');
+  check('BE48. Хэмжилтийн гарал үүсэл ба огноо бүртгэлтэй, нийтлэлийг БЛОКЛООГҮЙ',
+    c39.measured_on === '2026-09-26' && /run 57/.test(c39.method || '') &&
+    c39.blocks_publication === false,
+    JSON.stringify([c39.measured_on, c39.blocks_publication]));
+
+  /* Админ тал — completenessNote() ба datasetOfMetric()-ийг ГАРГАЖ АВНА */
+  const cnB39 = adm.match(/function completenessNote\(dsId\)\{([\s\S]*?)\n\}/);
+  const dmB39 = adm.match(/function datasetOfMetric\(mk\)\{([\s\S]*?)\n\}/);
+  if (!cnB39 || !dmB39) { bad('BE48. completenessNote/datasetOfMetric олдсонгүй'); return; }
+  const con39 = readJson('content.json');
+  const utxt39 = (path, fb) => {
+    let v = con39.ui; for (const k of path.split('.')) v = v && v[k];
+    return v == null ? fb : v;
+  };
+  const mk39 = (reg) => new Function('REG', 'esc', 'utxt', 'nf',
+    'return {cn:function(dsId){' + cnB39[1] + '},dm:function(mk){' + dmB39[1] + '}}')(
+    reg, (x) => String(x), utxt39, (n) => Number(n).toLocaleString('en-US'));
+  const F39 = mk39(reg38);
+  const full39 = F39.cn('road.veritech.inspections');
+  check('BE48. 100% үед "дутуу таталт тул тоо нийтлэхгүй" ГАРАХГҮЙ',
+    !/дутуу таталт/.test(full39), full39);
+  check('BE48. 100% үед "бүрэн татагдсан" гэж ИЛ бичнэ (хувь нь дуугүй үлдэхгүй)',
+    full39.includes('100.0%') && full39.includes('910,444') &&
+    full39.includes(con39.ui.slot_text.complete_ingest), full39);
+  check('BE48. Блоклогдсон датасэт дээр сануулга ХЭВЭЭР (эсрэг талд регресс үгүй)',
+    /дутуу таталт/.test(F39.cn('road.veritech.vehicle_registry')) &&
+    !F39.cn('road.veritech.vehicle_registry').includes(con39.ui.slot_text.complete_ingest));
+  /* ГАРААР бодогдох фикстур: 5/10 = 50.0%, блоклоогүй → ХОЁУЛАА дуугүй */
+  const fx39 = mk39({ datasets: { 'x.y': { completeness: {
+    ingested: 5, source_total: 10, measured_on: '2026-01-01',
+    method: 'фикстур', blocks_publication: false } } }, metrics: {} });
+  const part39 = fx39.cn('x.y');
+  check('BE48. Дутуу ч блоклоогүй бол ХОЁР шошго аль нь ч гарахгүй, хувь нь 50.0%',
+    part39.includes('50.0%') && !/дутуу таталт/.test(part39) &&
+    !part39.includes(con39.ui.slot_text.complete_ingest), part39);
+  check('BE48. Шинэ шошго content.json ui{}-д бүртгэлтэй',
+    con39.ui.slot_text.complete_ingest === 'бүрэн татагдсан');
+
+  /* Мөр ХҮРЭХ ЭСЭХ — амьд (холбогдсон) слотод ч харагдана. Өмнө нь
+     completenessNote() зөвхөн sv.blocked_by-аар дуудагддаг тул амьд
+     датасэтийн 100% нь хаана ч харагдахгүй ҮХМЭЛ бичлэг байв. */
+  check('BE48. datasets{}.table ↔ metrics{}.dataset холбоос ажиллана',
+    F39.dm('road.inspection_count') === 'road.veritech.inspections' &&
+    F39.dm('') === '' && F39.dm('байхгүй.метрик') === '',
+    F39.dm('road.inspection_count'));
+  check('BE48. Холбогдсон слотын маягт бүрэн байдлын мөрийг залгана',
+    adm.includes('calcLine(sv.metric)+completenessNote(datasetOfMetric(sv.metric))'));
+  check('BE48. check-registry нь blocks_publication-ийг төрөл ба зөрчлөөр шалгана',
+    read('scripts/check-registry.js').includes("typeof c.blocks_publication !== 'boolean'") &&
+    read('scripts/check-registry.js').includes('c.blocks_publication && c.ingested >= c.source_total') &&
+    read('scripts/check-registry.js').includes(".table: "));
+
+  /* Сайт тал — index.html нь datasets{}-ийн ТАТАЛТЫН бүрэн байдлыг ОГТ
+     уншихгүй, тул нийтийн хуудсанд "дутуу татагдсан" гэсэн текст гарах
+     ЗАМ байхгүй. Хэрэв хожим нэмэгдвэл ЭНЭ тест унаж, 100%-ийн салааг
+     тэндээ бас нэмэхийг сануулна.
+     ⚠️ Шалгуур нь REGISTRY-ийн ӨВӨРМӨЦ талбаруудаар явна, ерөнхий
+     "completeness" ҮГЭЭР БИШ: 2026-10-05-наас хойш index.html-д огт
+     ӨӨР утгатай completeness бий — rowProfile()-ийн "Бүрэн байдал N%"
+     нь ачаалагдсан мөрүүдийн НҮДНИЙ дүүргэлт (gov.opendata.mn жишиг),
+     ETL-ийн таталттай ямар ч хамаагүй. Үгээр шалгавал тэр онцлог энэ
+     тестийг ХУУРАМЧААР унагана (яг ингэж унасан). */
+  const site39 = read('index.html');
+  const etlMarks = ['source_total', 'blocks_publication', 'дутуу таталт', 'measured_on'];
+  const leaked = etlMarks.filter((t) => site39.includes(t));
+  check('BE48. Сайт дээр ТАТАЛТЫН бүрэн байдлын текст гарах зам БАЙХГҮЙ (хуурамч сануулга үгүй)',
+    leaked.length === 0, 'сайтад гарсан: ' + leaked.join(', '));
+
   /* ── BE32. Registry / админ / content — ГЭРЭЭ (хоёр талыг ХАМТ) ── */
   const reg32 = readJson('metric_registry.json');
   const sl32 = (id, k) => ((reg32.widgets[id] || {}).sectors || {})[k] || {};
@@ -5994,6 +6077,116 @@ async function groupAI() {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   SP. «Салбарын дэлгэрэнгүй» хуудас — ХҮРЭХ ЗАМГҮЙ үхмэл код
+
+   Хуудас нь эхний коммитуудад (2026-08-20) темплейт болж бичигдсэн ч
+   `page`-ийг 'sector' болгодог газар ХЭЗЭЭ Ч бичигдээгүй: PAGES-д ч
+   'sector' алга, routeFromHash ч түүнийг танихгүй. 150 коммитын турш
+   хэрэглэгч ТҮҮН РҮҮ ОРЖ ЧАДААГҮЙ.
+
+   Бүр аюултай нь: зурагдвал `trend:buildTrendChart(as.c1d)` нь verified
+   эсэхийг ШАЛГАХГҮЙ. Авто зам/ус/нийтийн тээвэрт `c1d` нь SECTORS
+   тогтмолын СТАТИК ДЕМО тоо тул "Тоо ЗОХИОХГҮЙ" дүрэм зөрчсөн зохиомол
+   муруй зурагдана. Нүүрийн 05-р хэсэг (t05) ба датасэтийн дэлгэрэнгүй
+   хуудас ХОЁУЛАА үүнийг hasData/noData, hasTrend/noTrend-ээр аль хэдийн
+   шийдсэн — зөвхөн энэ хуудас хоцорсон.
+
+   Шийдэл: темплейт + builder + админы текст бүлэг + content.json-ы
+   site.sector-ыг БҮРМӨСӨН устгав. Доорх тестүүд (а) хуудас үнэхээр
+   хүрэхгүй байсныг, (б) үхмэл код буцаж ОРЖ ИРЭХГҮЙ байхыг, (в)
+   ҮЛДСЭН buildTrendChart дуудлага бүр хамгаалалттай байхыг барина.
+   ═══════════════════════════════════════════════════════════════════ */
+function groupSP() {
+  group('SP. Салбарын дэлгэрэнгүй — үхмэл хуудас устсан, муруй хамгаалалттай');
+  const dc = dcScript(), tpl = indexTemplate(), adm = adminScript();
+  const con = readJson('content.json');
+
+  /* ── SP1. ХАРИУЦЛАГАТАЙ БАТАЛГАА: routeFromHash нь 'sector'-ыг танихгүй.
+        PAGES ба функцийн БИЕИЙГ эх кодоос гаргаж, гараар бодох боломжтой
+        хаягууд дээр ГҮЙЛГЭНЭ (нүдээр биш). ── */
+  const pagesSrc = (dc.match(/const PAGES=(\[[\s\S]*?\]);/) || [])[1];
+  const rfhBody = (dc.match(/\n  routeFromHash\(\)\{\n([\s\S]*?)\n  \}\n/) || [])[1];
+  if (!pagesSrc || !rfhBody) {
+    bad('SP1. PAGES / routeFromHash() эх кодоос олдсонгүй',
+      'pages=' + !!pagesSrc + ' rfh=' + !!rfhBody);
+  } else {
+    const PAGES = new Function('return ' + pagesSrc)();
+    /* DATASETS-гүйгээр ажиллана — 'sector' нь detach салаанд ОРДОГГҮЙ */
+    const route = (hash) => new Function('PAGES', 'location',
+      rfhBody)(PAGES, { hash });
+    check('SP1. PAGES-д \'sector\' гэсэн хуудас АЛГА',
+      !PAGES.some((p) => p.id === 'sector'), PAGES.map((p) => p.id).join(','));
+    check('SP1. #/sector → маршрут АЛГА (null) — хуудас хүрэхгүй',
+      route('#/sector') === null, JSON.stringify(route('#/sector')));
+    check('SP1. #/sector/road → маршрут АЛГА (null)',
+      route('#/sector/road') === null, JSON.stringify(route('#/sector/road')));
+    /* Харнессийн эсрэг шалгуур — бодитой хаяг ТАНИГДАХ ёстой, эс тэгвэл
+       дээрх хоёр тест "бүх юм null" гэсэн ХУДАЛ ногоон болно. */
+    const rb = route('#/browse');
+    check('SP1. Харнесс үнэн: #/browse → {page:browse} (бүх юм null БИШ)',
+      rb && rb.page === 'browse', JSON.stringify(rb));
+    const rh = route('#/history');
+    check('SP1. Харнесс үнэн: #/history → {page:history}',
+      rh && rh.page === 'history', JSON.stringify(rh));
+  }
+
+  /* ── SP2. Кодод page-ийг 'sector' болгодог газар АЛГА ── */
+  check('SP2. page:\'sector\' гэсэн оноолт кодод АЛГА',
+    !/page:\s*'sector'/.test(dc), (dc.match(/page:\s*'sector'/g) || []).join(','));
+  check('SP2. go(\'sector\') гэсэн дуудлага АЛГА',
+    !/go\(\s*'sector'\s*\)/.test(dc));
+
+  /* ── SP3. Үхмэл темплейт + builder БҮРМӨСӨН устсан ── */
+  check('SP3. Темплейтэд sectorPage.* холбоос АЛГА',
+    !/sectorPage/.test(tpl), String((tpl.match(/sectorPage/g) || []).length) + ' холбоос');
+  check('SP3. Темплейтэд isSector нөхцөл АЛГА', !/isSector/.test(tpl));
+  check('SP3. Кодод sectorPage builder АЛГА',
+    !/sectorPage/.test(dc), String((dc.match(/sectorPage/g) || []).length) + ' холбоос');
+  check('SP3. Кодод isSector тугийн оноолт АЛГА', !/isSector/.test(dc));
+  check('SP3. Зөвхөн энэ хуудсанд хэрэглэгддэг backToBrowse ч АЛГА',
+    !/backToBrowse/.test(dc) && !/backToBrowse/.test(tpl));
+
+  /* ── SP4. Админ ба content.json-оос текст бүлэг устсан (админд
+        "Байршил тодорхойгүй" гэсэн үхмэл 3 талбар үлдэхгүй) ── */
+  check('SP4. content.json → site.sector блок АЛГА',
+    con.site.sector === undefined, JSON.stringify(con.site.sector));
+  check('SP4. Админы SITE_GROUPS-д \'sector\' бүлэг АЛГА',
+    !/\{key:'sector',\s*title:/.test(adm));
+  check('SP4. Кодод sector.kicker / data_head / svc_head уншилт АЛГА',
+    !/'sector\.(kicker|data_head|svc_head)'/.test(dc));
+  /* Админы бусад 'sector' хэрэглээ (каталогийн "Салбар" талбар,
+     facet_sector) нь ӨӨР зүйл — тэдгээр ХЭВЭЭР байх ёстой. */
+  check('SP4. Каталогийн "Салбар" талбар (ds_cat.f_sector) ХЭВЭЭР',
+    /ds_cat\.f_sector/.test(adm));
+  check('SP4. Шүүлтийн facet_sector ХЭВЭЭР', /cat\.facet_sector/.test(adm));
+
+  /* ── SP5. ҮНДСЭН ШАЛТГААН: buildTrendChart-ийн дуудлага бүр
+        "дата үнэхээр ирсэн үү" гэдгээр хамгаалагдсан байх. Хамгаалалтгүй
+        дуудлага = статик демо c1d-г амьд муруй болгон зурна. ── */
+  const defCount = (dc.match(/function buildTrendChart\(/g) || []).length;
+  check('SP5. buildTrendChart нэг л газар тодорхойлогдсон', defCount === 1, String(defCount));
+  const lines = dc.split('\n');
+  const callSites = [];
+  lines.forEach((ln, i) => {
+    if (!/buildTrendChart\(/.test(ln)) return;
+    if (/function buildTrendChart\(/.test(ln)) return;
+    callSites.push({ n: i + 1, line: ln.trim(), ctx: lines.slice(Math.max(0, i - 4), i + 1).join('\n') });
+  });
+  /* Датасэтийн дэлгэрэнгүй 1 + t05-ийн 3 салаа (spec-ийн цуваа /
+     сарын цонх / хоосон 12 тэг) = 4. Салбарын хуудсыг устгаснаар
+     5-аас 4 болов — 5 дахь нь ЯГ тэр хамгаалалтгүй as.c1d байв. */
+  check('SP5. Дуудлагын газар 4 — датасэтийн дэлгэрэнгүй 1 + t05-ийн 3 салаа',
+    callSites.length === 4, callSites.map((c) => c.n).join(','));
+  /* Хамгаалалтын тэмдэг: verified тугийг уншсан, эсвэл ЗОРИУД хоосон
+     (12 тэг) цуваа — хоёулаа "зохиомол демо тоо орохгүй" гэсэн утга. */
+  const GUARD = /Verified|hasTrend|HasTrend|new Array\(12\)\.fill\(0\)/;
+  const unguarded = callSites.filter((c) => !GUARD.test(c.ctx));
+  check('SP5. Хамгаалалтгүй buildTrendChart дуудлага АЛГА',
+    unguarded.length === 0,
+    unguarded.map((c) => 'мөр ' + c.n + ': ' + c.line).join(' | '));
+}
+
 /* ─────────── OD. gov.opendata.mn-тэй жишсэн датасэтийн хуудас ───────────
    Үндэсний портал манай сервисийг датасэт бүрийн "API харах" цонхонд
    БОДИТ URL + JS/Python жишээгээр, "Бүрэн байдал / Давхцал"-ыг мөрөөс
@@ -6115,10 +6308,11 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=VR')) { await groupVR(); }
   else if (process.argv.includes('--only=I')) { groupI(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
+  else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); groupSP();
   }
 
   console.log('\n' + '═'.repeat(62));

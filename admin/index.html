@@ -1317,8 +1317,6 @@ var SITE_GROUPS=[
            freq_head:'Давтамжийн гарчиг',notify_head:'Мэдэгдлийн гарчиг',apikey_head:'API түлхүүрийн гарчиг',
            apikey_btn:'Түлхүүр авах товч',response_head:'Хариуны гарчиг',excel_btn:'Excel татах товч',
            ask_btn:'Асуух товч'}},
-  {key:'sector', title:'Салбарын хуудас', where:'Салбар бүрийн дэлгэрэнгүй хуудас',
-   labels:{kicker:'Дээд шошго',data_head:'Өгөгдлийн хэсгийн гарчиг',svc_head:'Үйлчилгээний хэсгийн гарчиг'}},
   {key:'brand',   title:'Брэнд',           where:'Толгой хэсэг · зүүн дээд булан',
    labels:{mark:'Лого товчлол',name:'Брэнд нэр',tagline:'Лого доод тайлбар'}},
   {key:'nav',     title:'Үндсэн цэс',      where:'Толгой хэсэг · дээд мөр',
@@ -3498,12 +3496,31 @@ function completenessNote(dsId){
   /* 1%-аас бага бол 2 аравтаар — "0.1%" гэж дугуйрвал 0.05% ба 0.14%
      нэг адил харагдана. */
   var txt=(pct<1?pct.toFixed(2):pct.toFixed(1))+'% ('+nf(c.ingested)+' / '+nf(c.source_total)+')';
+  /* ГУРВАН салаа. "дутуу таталт тул тоо нийтлэхгүй" гэдэг нь ЗӨВХӨН
+     blocks_publication үед үнэн — бүрэн татагдсан (ingested ==
+     source_total) датасэт дээр гарвал хуудас ХУДАЛ тайлбарлана. Иймд
+     100% үед эсрэг салаагаар "бүрэн татагдсан" гэж ил бичнэ, дутуу ч
+     нийтлэлийг блоклоогүй бол зөвхөн хувь. */
+  var flag=c.blocks_publication
+    ?' — '+esc(utxt('slot_text.blocks_publication','дутуу таталт тул тоо нийтлэхгүй'))
+    :(c.ingested>=c.source_total
+      ?' — '+esc(utxt('slot_text.complete_ingest','бүрэн татагдсан'))
+      :'');
   return '<p class="pvnote"><b>'+esc(utxt('slot_text.completeness','Эх сурвалжийн бүрэн байдал'))+
-    ':</b> '+esc(txt)+
-    (c.blocks_publication
-      ?' — '+esc(utxt('slot_text.blocks_publication','дутуу таталт тул тоо нийтлэхгүй'))
-      :'')+
+    ':</b> '+esc(txt)+flag+
     (c.measured_on?' <span class="dt">'+esc(c.measured_on)+'</span>':'')+'</p>';
+}
+/* Метрик ХОЛБОГДСОН слот ч датасэтийнхээ бүрэн байдлыг харуулна.
+   Холбоос нь datasets{}.table ↔ metrics{}.dataset (ЯГ ижил silver
+   хүснэгтийн нэр) — тусдаа толь бичиг хөтлөхгүй, check-registry нь
+   table давхардвал унана. Эс тэгвэл 100% татагдсан гэсэн баримт
+   зөвхөн блоклогдсон слотод л харагдаж, амьд слотод ҮХМЭЛ үлдэнэ. */
+function datasetOfMetric(mk){
+  var m=mk&&REG.metrics&&REG.metrics[mk];
+  if(!m||!m.dataset) return '';
+  var ds=REG.datasets||{};
+  for(var k in ds) if(ds[k]&&ds[k].table===m.dataset) return k;
+  return '';
 }
 function slotTextForm(id,path){
   var sv=slotVal(id,path), k=id+'|'+path.join(',');
@@ -3908,7 +3925,7 @@ function lvEdit(){
          гэж ХУДАЛ шошголсон мэт харагдана. */
       '<div class="f" style="margin-bottom:8px"><label>'+esc(utxt('metric.unit_label','Метрик · шаардах нэгж:'))+' '+
         esc(unitLabel(slotUnitNow(id,s.key))||utxt('metric.unit_unknown','тодорхойгүй'))+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
-      (sv.metric?calcLine(sv.metric)
+      (sv.metric?calcLine(sv.metric)+completenessNote(datasetOfMetric(sv.metric))
         :'<div class="acc" data-wn="1"'+(sv.would_need?'':' style="display:none"')+'><b>'+
            esc(utxt('metric.required','Шаардлагатай:'))+'</b> <span>'+esc(sv.would_need||'')+'</span></div>')+
       (sv.metric?'':slotTextForm(id,s.path))+
