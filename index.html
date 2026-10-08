@@ -178,7 +178,7 @@
                 <div style="height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-top:8px;">
                   <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,{{ cDetail.color }}aa,{{ cDetail.color }});width:{{ cDetail.pctW }};transition:width .4s var(--ease);"></div>
                 </div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:{{ cDetail.color }};margin-top:6px;">{{ cDetail.pctLabel }} дэмжигдсэн</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:{{ cDetail.color }};margin-top:6px;">{{ cDetail.supportNote }}</div>
                 <div style="display:flex;align-items:center;gap:8px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);">
                   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">{{ cDetail.shareLabel }}</div>
                   <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:#C8443A;white-space:nowrap;">▼ {{ cDetail.opposeCount }}</div>
@@ -1012,8 +1012,6 @@
         </div>
         <div style="font-size:12.5px;color:var(--ink2);line-height:1.55;margin-bottom:14px;text-wrap:pretty;">{{ spotlightProject.desc }}</div>
         <div style="display:flex;gap:16px;padding-top:12px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);">
-          <div>👁 {{ spotlightProject.views }}</div>
-          <div>♥ {{ spotlightProject.likes }}</div>
           <div style="margin-left:auto;color:var(--ink);font-weight:600;">{{ sCommOpen }}</div>
         </div>
       </button>
@@ -1844,8 +1842,13 @@
     </sc-if>
 
     <sc-if value="{{ isDev }}">
+      <div role="note" style="display:flex;align-items:flex-start;gap:12px;border:1px solid #B9903A40;background:#B9903A12;border-radius:14px;padding:14px 18px;margin-bottom:22px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#B9903A;background:#B9903A1c;border:1px solid #B9903A40;border-radius:999px;padding:3px 9px;white-space:nowrap;flex-shrink:0;">{{ browseHero.t.devSoonBadge }}</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.55;text-wrap:pretty;">{{ browseHero.t.devSoonNote }}</div>
+      </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);white-space:nowrap;">{{ browseHero.t.startHead }}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#B9903A;background:#B9903A1c;border:1px solid #B9903A40;border-radius:999px;padding:3px 9px;white-space:nowrap;flex-shrink:0;">{{ browseHero.t.devSoonBadge }}</div>
         <div style="flex:1;min-width:12px;height:1px;background:var(--line);"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-bottom:30px;">
@@ -1863,6 +1866,7 @@
 
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
         <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);white-space:nowrap;">{{ browseHero.t.tierHead }}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#B9903A;background:#B9903A1c;border:1px solid #B9903A40;border-radius:999px;padding:3px 9px;white-space:nowrap;flex-shrink:0;">{{ browseHero.t.devSoonBadge }}</div>
         <div style="flex:1;min-width:12px;height:1px;background:var(--line);"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:30px;">
@@ -1887,6 +1891,7 @@
 
       <div style="background:linear-gradient(155deg,#141B33 0%,#1B1E42 60%,#221A46 100%);border-radius:20px;padding:0;box-shadow:var(--shadow-lg);overflow:hidden;">
         <div style="display:flex;align-items:center;gap:6px;padding:14px 20px 0;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#3ee6a8;margin-right:8px;white-space:nowrap;">● {{ browseHero.t.devCodeLive }}</div>
           <sc-for list="{{ devCodeTabs }}" as="ct" hint-placeholder-count="3">
             <button sc-camel-on-click="{{ ct.pick }}" style="{{ ct.style }}">{{ ct.label }}</button>
           </sc-for>
@@ -3316,7 +3321,7 @@
             <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;flex-shrink:0;">{{ it.shareLabel }}</div>
           </div>
           <div style="padding:0 22px 16px;display:flex;gap:8px;">
-            <button sc-camel-on-click="{{ it.vote }}" style="{{ it.voteStyle }}flex:1;justify-content:center;">{{ it.voteGlyph }} {{ it.supportLabel }} Дэмжих</button>
+            <button sc-camel-on-click="{{ it.vote }}" style="{{ it.voteStyle }}flex:1;justify-content:center;">{{ it.voteGlyph }} {{ it.voteBtnLabel }}</button>
             <button sc-camel-on-click="{{ it.oppose }}" style="{{ it.opposeStyle }}flex:1;justify-content:center;">{{ it.opposeGlyph }} {{ it.opposeLabel }} Дэмжихгүй</button>
           </div>
           <sc-if value="{{ it.anon }}">
@@ -4010,7 +4015,7 @@ const SERVICE_STEPS=[
 const BROWSE_TABS=[
   ['catalog','Каталог','Бүх нээлттэй датасет'],
   ['api','API лавлах','Endpoint, эрхийн хязгаар'],
-  ['dev','Хөгжүүлэгчид','Эхлэх заавар, лиценз']
+  ['dev','Хөгжүүлэгчид','Удахгүй · API түлхүүр, багц']
 ];
 /* Каталогийн 4 датасэтийг ЖИНХЭНЭ тэжээдэг endpoint-ууд. Өмнө нь
    api.erthub.gov.mn/v1/... гэсэн 9 ЗОХИОМОЛ мөр (дуудлагын тоо нь ч
@@ -4406,49 +4411,58 @@ const DATASETS=[
 // тул түр дата хэвээр (status.uk_mock тайлбартай хамт).
 KPI_UNIFIED[0][1]=String(DATASETS.length);
 KPI_UNIFIED[1][1]=String(SERVICES.length);
+/* Бодлогын санал — иргэн/байгууллагын САНАЛ (контент). 2026-10-05:
+   `support` (1,284 / 962 …) нь ямар ч тоолуургүй ЗОХИОМОЛ тоо байсныг
+   хаслаа — санал нь зөвхөн тухайн хэрэглэгчийн session-д хадгалагддаг.
+   `goal` нь санал хураалтын БОСГО (хэмжсэн тоо биш) тул үлдэнэ. Тайлбар
+   доторх "41%", "2.4 сая тонн" г.м. статистикийг ч хассан: эдгээр нь
+   каталогт байхгүй датасэтийн "шинжилгээ"-нд иш татдаг байв. */
 const POLICIES=[
   {sector:'public',title:'Оргил цагийн автобусны эгнээг 4 гол чиглэлд байнгын болгох',by:'Х.Мөнхзул · хот судлаач',
    basis:'Автобусны GPS сан',
-   body:'GPS өгөгдлийн 6 сарын шинжилгээгээр оргил цагт автобус зогсолтод дунджаар 41% цаг зарцуулж байна. Тусгай эгнээ байнгын болгосон 4 чиглэлд аяллын хугацаа 18–24% багасахаар тооцоологдож байна.',
-   support:1284,goal:1500,stage:'Яаманд хүргэгдсэн',resp:'ЗТЯ · 14 хоногийн дотор хариу'},
+   body:'Оргил цагт автобус түгжрэл, зогсолтод их цаг зарцуулдаг гэж санал гаргагч үзэж байна. Тусгай эгнээг 4 гол чиглэлд байнгын болговол аяллын хугацаа богиносно гэж санал болгож байна.',
+   goal:1500,stage:'Яаманд хүргэгдсэн',resp:'ЗТЯ · 14 хоногийн дотор хариу'},
   {sector:'road',title:'Ослын халуун цэгүүдэд хурд хязгаарлах автомат хяналт нэвтрүүлэх',by:'Замын аюулгүй байдлын форум',
    basis:'Замын ослын бүртгэл',
-   body:'Ослын нээлттэй бүртгэлийн кластер шинжилгээгээр хотын 11 уулзвар нийт ослын 34%-ийг эзэлж байна. Автомат хурдны хяналт эдгээр цэгт үхлийн осол 40% хүртэл буурах олон улсын туршлагатай.',
-   support:962,goal:1000,stage:'Хэлэлцэгдэж байна',resp:'ЗТЯ · ЦБГ хамтарсан ажлын хэсэг'},
+   body:'Хотын цөөн хэдэн уулзварт осол төвлөрдөг гэж санал гаргагч үзэж байна. Эдгээр халуун цэгт автомат хурдны хяналт нэвтрүүлэхийг санал болгож байна.',
+   goal:1000,stage:'Хэлэлцэгдэж байна',resp:'ЗТЯ · ЦБГ хамтарсан ажлын хэсэг'},
   {sector:'rail',title:'Ачааны галт тэрэгний хуваарийг нээлттэй API-аар бодит цагаар гаргах',by:'Уул уурхайн логистикийн групп',
    basis:'Ачаа тээврийн байршил',
-   body:'Экспортын ачаа хил дээр хүлээх хугацаа урьдчилан таамаглах боломжгүйгээс жилд 2.4 сая тонн хүчин чадал сул зогсож байна. Бодит цагийн хуваарь нээлттэй болбол логистикийн төлөвлөлт сайжирна.',
-   support:648,goal:1000,stage:'Судлагдаж байна',resp:'УБТЗ · техникийн үнэлгээ'},
+   body:'Экспортын ачаа хил дээр хүлээх хугацааг урьдчилан таамаглах боломжгүйгээс хүчин чадал сул зогсдог гэж санал гаргагч үзэж байна. Бодит цагийн хуваарь нээлттэй болбол логистикийн төлөвлөлт сайжирна.',
+   goal:1000,stage:'Судлагдаж байна',resp:'УБТЗ · техникийн үнэлгээ'},
   {sector:'air',title:'Нислэгийн хойшлолтын шалтгааныг компани тус бүрээр нийтлэх',by:'Зорчигчийн эрхийн нэгдэл',
    basis:'Агаарын тээврийн статистик',
    body:'Одоогийн тайлан хойшлолтыг зөвхөн нийт дүнгээр харуулдаг. Шалтгааныг задалж нийтэлбэл зорчигч мэдээлэлтэй сонголт хийж, тээвэрлэгчид өрсөлдөөнт шахалт үүснэ.',
-   support:412,goal:750,stage:'Санал хураалт',resp:'ИНЗА · хүлээгдэж буй'}
+   goal:750,stage:'Санал хураалт',resp:'ИНЗА · хүлээгдэж буй'}
 ];
+/* Иргэдийн бүтээл — контент. 2026-10-05: views/likes/forks ("88.4K",
+   "2,610" …) нь ямар ч тоолуургүй ЗОХИОМОЛ тоо байсныг хаслаа. */
 const PROJECTS=[
   {sector:'road',name:'Замын хөдөлгөөний AI зөвлөгч',by:'TechMongolia LLC',kind:'Гар утасны апп',
-   dataset:'Замын хөдөлгөөний бодит ачаалал',views:'42.8K',likes:'1,204',forks:18,
+   dataset:'Замын хөдөлгөөний бодит ачаалал',
    desc:'Бодит цагийн ачааллын API ашиглан жолоочдод хамгийн хурдан замыг санал болгодог апп.',viz:'line'},
   {sector:'air',name:'НисэхMN',by:'Б.Отгонбаяр · хувь хөгжүүлэгч',kind:'Веб самбар',
-   dataset:'Нислэгийн бодит байршил',views:'31.5K',likes:'886',forks:24,
+   dataset:'Нислэгийн бодит байршил',
    desc:'Дотоодын бүх нислэгийн бодит байршил, хойшлолтыг нэг дороос харуулдаг самбар.',viz:'area'},
   {sector:'water',name:'Ачаа Аналитик Самбар',by:'ШУТИС · судалгааны баг',kind:'Дашбоард',
-   dataset:'Боомтын ачаа эргэлт',views:'12.1K',likes:'402',forks:9,
+   dataset:'Боомтын ачаа эргэлт',
    desc:'Боомтын ачаа эргэлтийн өгөгдөл дээр суурилсан логистикийн шинжилгээний хэрэгсэл.',viz:'bar'},
   {sector:'public',name:'CityBus Live',by:'Иргэний технологийн санаачилга',kind:'Нээлттэй код',
-   dataset:'Автобусны GPS байршил',views:'88.4K',likes:'2,610',forks:46,
+   dataset:'Автобусны GPS байршил',
    desc:'Зогсоол бүрт автобус хэдэн минутын дараа ирэхийг бодит цагаар харуулна.',viz:'bar'},
   {sector:'rail',name:'Rail Watch Mongolia',by:'Уул уурхайн логистикийн групп',kind:'Дашбоард',
-   dataset:'Ачаа тээврийн байршил',views:'9.7K',likes:'318',forks:6,
+   dataset:'Ачаа тээврийн байршил',
    desc:'Ачааны галт тэрэгний хөдөлгөөгөөр уурхайн тээвэрлэлтийг хянадаг самбар.',viz:'line'},
   {sector:'road',name:'Осол Харта',by:'Замын аюулгүй байдлын форум',kind:'Интерактив зураглал',
-   dataset:'Замын ослын бүртгэл',views:'26.3K',likes:'974',forks:15,
+   dataset:'Замын ослын бүртгэл',
    desc:'Ослын нээлттэй бүртгэл дээр суурилсан халуун цэгийн интерактив газрын зураг.',viz:'area'}
 ];
+/* Дата хүсэлт — `votes` (142 / 98 …) зохиомол байсныг хаслаа (2026-10-05). */
 const REQUESTS=[
-  {title:'Такси үйлчилгээний нэгдсэн дата',desc:'Такси дуудлагын дундаж хугацаа, үнийн мэдээлэл',votes:142,status:'Хүлээгдэж буй'},
-  {title:'Нислэгийн хойшлолтын дэлгэрэнгүй статистик',desc:'Компани, чиглэл тус бүрээр задалсан хойшлолтын шалтгаан',votes:98,status:'Хэрэгжсэн'},
-  {title:'Дугуйн замын сүлжээний зураглал',desc:'Улаанбаатар хотын дугуйн замын бодит уртраг, төлөв байдал',votes:76,status:'Судлагдаж байна'},
-  {title:'Car-sharing үйлчилгээний байршлын дата',desc:'Хувийн паркийн car-sharing үйлчилгээний бодит цагийн байршил',votes:41,status:'Хүлээгдэж буй'}
+  {title:'Такси үйлчилгээний нэгдсэн дата',desc:'Такси дуудлагын дундаж хугацаа, үнийн мэдээлэл',status:'Хүлээгдэж буй'},
+  {title:'Нислэгийн хойшлолтын дэлгэрэнгүй статистик',desc:'Компани, чиглэл тус бүрээр задалсан хойшлолтын шалтгаан',status:'Хэрэгжсэн'},
+  {title:'Дугуйн замын сүлжээний зураглал',desc:'Улаанбаатар хотын дугуйн замын бодит уртраг, төлөв байдал',status:'Судлагдаж байна'},
+  {title:'Car-sharing үйлчилгээний байршлын дата',desc:'Хувийн паркийн car-sharing үйлчилгээний бодит цагийн байршил',status:'Хүлээгдэж буй'}
 ];
 const HISTORY=[
   ['1925.07.15','Тээврийн анхны байгууллага байгуулагдав','"Тээх нэвтрүүлэх газар" 7 ачааны машинаар үйл ажиллагаагаа эхэлж, Монголын анхны албан ёсны тээврийн байгууллага болов.','road'],
@@ -5528,7 +5542,7 @@ class Component extends DCLogic {
       }catch(e){}
       return 'light';
     })(),
-    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', vehTab:VEHREG_TAB_DEFAULT, globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'top', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
+    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', vehTab:VEHREG_TAB_DEFAULT, globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', weekTab:'pax', aiIndex:0, compareOff:'', fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'stage', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
 
 /* ── ХАЯГ ↔ ХУУДАС ─────────────────────────────────────────────────
      Өмнө нь хуудас солигдоход хаяг ОГТ өөрчлөгддөггүй байв. Үүнээс болж:
@@ -7747,8 +7761,8 @@ class Component extends DCLogic {
     const dsLabel=(nm)=>!nm?'':(inCatalog(nm)?nm
       :nm+' · '+stxt('community_data.dataset_unlisted','каталогт алга'));
     const dash=PROJECTS.map((p,i)=>({kind:'dash',kindLabel:'Дашбоард',idx:i,sector:p.sector,title:p.name,by:p.by,
-      body:p.desc,meta:dsLabel(p.dataset),support:parseInt(String(p.likes).replace(/\D/g,''))||0,goal:3000,
-      stage:'Хэрэгжсэн',extra:p.kind,viz:p.viz,views:p.views,forks:p.forks}));
+      body:p.desc,meta:dsLabel(p.dataset),goal:3000,
+      stage:'Хэрэгжсэн',extra:p.kind,viz:p.viz}));
     const pol=POLICIES.map((p,i)=>({kind:'policy',kindLabel:'Бодлогын санал',idx:i,sector:p.sector,title:p.title,by:p.by,
       /* Бодлогын "үндэслэл" нь төслийн "эх өгөгдөл"-тэй ЯГ ИЖИЛ
          шалгуурт орно: каталогт байгаа датасэтийг хэвээр, байхгүйг нь
@@ -7756,20 +7770,21 @@ class Component extends DCLogic {
          ("620,000 дуудлага/сар" г.м.) — порталын өөрийн "ДУУДЛАГА/САР"
          KPI нь "—" гэж хэлдэг атал бодлогын карт нарийн тоо иш татаж
          өөртэйгөө зөрчилдөж байв. */
-      body:p.body,meta:dsLabel(p.basis),support:p.support,goal:p.goal,
+      body:p.body,meta:dsLabel(p.basis),goal:p.goal,
       stage:p.stage==='Яаманд хүргэгдсэн'?'Санал хураалт':(p.stage==='Хэлэлцэгдэж байна'?'Сурталчилгаа':(p.stage==='Судлагдаж байна'?'Боловсронгуй болгох':'Техник шалгалт')),
       extra:p.resp,viz:'line'}));
     const req=REQUESTS.map((r,i)=>({kind:'request',kindLabel:'Өгөгдлийн хүсэлт',idx:i,sector:keys[i%keys.length],title:r.title,by:'Иргэдийн хүсэлт',
-      body:r.desc,meta:'Нээлттэй санд байхгүй өгөгдөл',support:parseInt(String(r.votes).replace(/\D/g,''))||0,goal:300,
+      body:r.desc,meta:'Нээлттэй санд байхгүй өгөгдөл',goal:300,
       stage:r.status==='Хэрэгжсэн'?'Хэрэгжсэн':(r.status==='Судлагдаж байна'?'Техник шалгалт':'Ирүүлсэн'),
       extra:r.status,viz:'bar'}));
     let feed=dash.concat(pol,req).map(it=>{
       const k=this.cKey(it), voted=!!votes[k], opposed=!!against[k];
       /* Эсрэг саналын НИЙТ тоо хаана ч хадгалагддаггүй — өмнө нь
          дэмжлэгийн 14% гэж зохиодог тул бүх бичлэг "88% дэмжсэн" гардаг
-         байв. Зөвхөн энэ хэрэглэгчийн өөрийн санал л бодит. */
-      const sup=it.support+(voted?1:0);
-      const pct=Math.min(100,Math.round(sup/it.goal*100));
+         байв. Зөвхөн энэ хэрэглэгчийн өөрийн санал л бодит.
+         Дэмжлэгийн НИЙТ тоо ч мөн адил хадгалагддаггүй (2026-10-05):
+         өмнө нь кодод бичсэн зохиомол тоо + энэ хэрэглэгчийн 1 санал
+         гэж харуулдаг байв. Нийт тоо "—", хувь тооцохгүй. */
       const st=this.STAGES().indexOf(it.stage);
       const col=NEON[it.sector];
       const kindColor=it.kind==='dash'?'#0FA37F':(it.kind==='policy'?'#7C5CF0':'#B9903A');
@@ -7777,10 +7792,11 @@ class Component extends DCLogic {
       const pill=(on,c)=>'display:flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;transition:.16s var(--ease);'
         +(on?'border:1px solid '+c+';background:'+c+'1f;color:'+c+';':(anon?'border:1px dashed var(--line2);background:var(--surface);color:var(--ink3);':'border:1px solid var(--line2);background:var(--surface);color:var(--ink3);'));
       return {...it,voted,opposed,color:col,glyph:GLYPH[it.sector],sectorLabel:SECTORS[it.sector].label,
-        kindColor,stageIdx:st,sortVal:sup,
+        kindColor,stageIdx:st,
         anon,voteGlyph:anon?'🔒':'▲',opposeGlyph:anon?'🔒':'▼',
-        supportLabel:sup.toLocaleString(),opposeLabel:opposed?'1':'',
-        goalLabel:it.goal.toLocaleString(),pctW:pct+'%',pctLabel:pct+'%',
+        supportLabel:'—',opposeLabel:opposed?'1':'',
+        voteBtnLabel:voted?'✓ Дэмжсэн':'Дэмжих',
+        goalLabel:it.goal.toLocaleString(),pctW:'0%',pctLabel:'—',
         shareLabel:stxt('community_data.share_unknown','эсрэг санал: мэдээлэл алга'),
         commentCount:(comments[k]||[]).length,
         initials:it.by.replace(/[^A-Za-zА-ЯӨҮа-яөү]/g,' ').trim()[0]||'E',
@@ -7791,7 +7807,8 @@ class Component extends DCLogic {
     });
     const fl=this.state.cFilter;
     if(fl!=='all') feed=feed.filter(x=>x.kind===fl);
-    feed=feed.slice().sort((a,b)=> this.state.cSort==='top' ? (b.sortVal-a.sortVal) : (b.stageIdx-a.stageIdx));
+    /* "Дэмжлэгээр" эрэмбэ хасагдсан — нийт дэмжлэг тоологддоггүй. */
+    feed=feed.slice().sort((a,b)=>b.stageIdx-a.stageIdx);
     const counts={all:dash.length+pol.length+req.length,dash:dash.length,policy:pol.length,request:req.length};
     const groupDefs=[
       ['dash','Бүтээлүүд','#0FA37F','Нээлттэй өгөгдөл дээр бүтсэн дашбоард, чарт, апп'],
@@ -7812,7 +7829,7 @@ class Component extends DCLogic {
     const showAll=fl==='all';
     const clearFilter=()=>this.setState({cFilter:'all'});
     const activeGroupLabel=showAll?('Бүх бичлэг · '+counts.all):((groupDefs.find(g=>g[0]===fl)||[])[1]+' · '+counts[fl]);
-    const cSorts=[['top','Дэмжлэгээр'],['stage','Шатаар']].map(x=>({label:x[1],
+    const cSorts=[['stage','Шатаар']].map(x=>({label:x[1],
       pick:()=>this.setState({cSort:x[0]}),
       style:'cursor:pointer;font-family:inherit;border-radius:9px;padding:8px 14px;font-size:12px;white-space:nowrap;flex-shrink:0;transition:.16s var(--ease);'
         +(this.state.cSort===x[0]?'border:1px solid var(--ink2);background:var(--surface2);color:var(--ink);font-weight:600;':'border:1px solid var(--line);background:transparent;color:var(--ink3);')}));
@@ -7823,15 +7840,15 @@ class Component extends DCLogic {
     let detail=null;
     if(sel){
       const k=this.cKey(sel), voted=!!votes[k], opposed=!!against[k];
-      const sup=sel.support+(voted?1:0);
-      const pct=Math.min(100,Math.round(sup/sel.goal*100));
       const si=this.STAGES().indexOf(sel.stage);
       const col=NEON[sel.sector];
       detail={title:sel.title,by:sel.by,body:sel.body,meta:sel.meta,extra:sel.extra,
         kindLabel:sel.kindLabel,kindColor:sel.kind==='dash'?'#0FA37F':(sel.kind==='policy'?'#7C5CF0':'#B9903A'),
         color:col,glyph:GLYPH[sel.sector],sectorLabel:SECTORS[sel.sector].label,
         initials:sel.by.replace(/[^A-Za-zА-ЯӨҮа-яөү]/g,' ').trim()[0]||'E',
-        supportLabel:sup.toLocaleString(),goalLabel:sel.goal.toLocaleString(),pctW:pct+'%',pctLabel:pct+'%',
+        /* Нийт дэмжлэг тоологддоггүй — "—" (зохиомол тоо биш) */
+        supportLabel:'—',goalLabel:sel.goal.toLocaleString(),pctW:'0%',pctLabel:'—',
+        supportNote:stxt('community_data.support_unknown','нийт дэмжлэг: мэдээлэл алга'),
         voted,opposed,anon:!this.state.authed,
         voteGlyph:this.state.authed?'▲':'🔒',opposeGlyph:this.state.authed?'▼':'🔒',
         voteLabel:voted?'✓ Дэмжсэн':'Дэмжих',
@@ -8024,22 +8041,32 @@ class Component extends DCLogic {
          h_freq:stxt('browse.h_freq','Давтамж'), h_use:stxt('browse.h_use','Ашиглалт'),
          startHead:stxt('browse.start_head','Эхлэх дараалал'),
          tierHead:stxt('browse.tier_head','Төлбөртэй эсэх'),
+         devSoonBadge:stxt('browse.dev_soon_badge','Удахгүй'),
+         devSoonNote:stxt('browse.dev_soon_note','API түлхүүр ба үйлчилгээний багц хараахан нээгдээгүй — доорх алхам, багц нь ТӨЛӨВЛӨГӨӨ. Одоогийн нийтийн endpoint-ууд түлхүүргүй, шууд дуудагдана (API лавлах таб).'),
+         devCodeLive:stxt('browse.dev_code_live','Одоо ажиллах жишээ — түлхүүр шаардлагагүй'),
          more:stxt('browse.more','Дэлгэрэнгүй →')}
     };
     const apiRows=API_ENDPOINTS.map(a=>({sector:a[0],method:a[1],path:a[2],desc:a[3],freq:a[4],use:a[5],
       color:NEON[a[0]],glyph:GLYPH[a[0]],sectorLabel:SECTORS[a[0]].label}));
     const devGuide=DEV_GUIDE.map((d,i)=>({num:String(i+1).padStart(2,'0'),title:d[0],body:d[1],isLast:i===DEV_GUIDE.length-1}));
+    /* Хөгжүүлэгчийн хөтөлбөр (API түлхүүр, Үнэгүй/Premium багц) ХАРААХАН
+       НЭЭГДЭЭГҮЙ — 2026-10-05 "Удахгүй" гэж тэмдэглэв. Өмнө нь "Үнэгүй
+       эхлэх" нь хөгжүүлэгчийн бүртгэл рүү, "Холбоо барих" нь маягт руу
+       хөтөлдөг байсан ч түлхүүр олгох систем, багцын хязгаар (10
+       дуудлага/сек, SLA 99.9%) БАЙХГҮЙ. Одоогийн нийтийн endpoint-ууд
+       түлхүүргүй, шууд дуудагдана — доорх жишээ код БОДИТ. */
+    const devSoonCta=stxt('browse.dev_soon_cta','Удахгүй');
     const devTiers=DEV_TIERS.map(t=>({...t,
-      cta:t.highlight?t.cta:t.cta,
-      onCta:t.highlight?(()=>this.setState({devContactOpen:true})):(()=>{ this.setState({authTab:'signup',authRole:'dev',authErr:''}); this.go('auth'); }),
+      cta:devSoonCta,
+      onCta:()=>{},
       cardStyle:'border-radius:20px;padding:26px 28px;position:relative;overflow:hidden;'
         +(t.highlight?'border:1.5px solid var(--ink);background:linear-gradient(155deg,#141B33,#1B1E42);color:#EEF3FA;box-shadow:0 24px 50px -20px rgba(15,23,46,.55);'
                      :'border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow);'),
       subColor:t.highlight?'rgba(199,213,232,.7)':'var(--ink3)',
       lineColor:t.highlight?'rgba(238,243,250,.12)':'var(--line)',
       itemColor:t.highlight?'#EEF3FA':'var(--ink2)',
-      ctaStyle:'cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:700;border-radius:11px;padding:12px;text-align:center;margin-top:18px;'
-        +(t.highlight?'background:#2E7CF6;color:#fff;border:none;box-shadow:0 12px 26px -10px #2E7CF6cc;':'background:transparent;color:var(--ink);border:1.5px solid var(--ink);')}));
+      ctaStyle:'cursor:not-allowed;font-family:inherit;font-size:13.5px;font-weight:700;border-radius:11px;padding:12px;text-align:center;margin-top:18px;opacity:.55;'
+        +(t.highlight?'background:rgba(238,243,250,.12);color:#EEF3FA;border:1px dashed rgba(238,243,250,.4);':'background:transparent;color:var(--ink3);border:1.5px dashed var(--line2);')}));
     const dt=this.state.devCodeTab||'curl';
     const devCodeTabs=[['curl','cURL'],['js','JavaScript'],['py','Python']].map(t=>({
       id:t[0],label:t[1],pick:()=>this.setState({devCodeTab:t[0]}),
@@ -8515,17 +8542,22 @@ class Component extends DCLogic {
         btnStyle:'cursor:pointer;font-family:inherit;width:24px;height:24px;border-radius:7px;flex-shrink:0;font-size:11px;line-height:1;'+(this.state.f07Open?'border:1px solid #7C5CF0;background:#7C5CF01a;color:#7C5CF0;':'border:1px solid var(--line);background:var(--surface);color:var(--ink3);')},
       cLeadLabel:cLead.label,cLeadCh:cLead.ch==null?'—':((cLead.ch>0?'+':'')+cLead.ch.toFixed(1)+'%'),cLeadColor:cLead.color,
       goCommunity:()=>this.setState({page:'community',commTab:'projects'}),
+      /* 03 — онцлох бүтээл/санал. Өмнө нь шошго нь "хамгийн их үзсэн" /
+         "дэмжлэг нь хамгийн хурдан өссөн" гэж ЗОХИОМОЛ үзэлт/дэмжлэгээр
+         эрэмбэлдэг байв — тэр тоо тоологддоггүй. Одоо жагсаалтын эхний
+         бичлэг (редакцын дараалал). Мөн өмнө нь projOpen-д ИНДЕКС
+         бичдэг тул cKey()-тэй ('dash:'+нэр) таарахгүй, карт дарахад
+         дэлгэрэнгүй НЭЭГДДЭГГҮЙ байв. */
       spotlightProject:(()=>{
-        const p=PROJECTS.reduce((a,b)=>parseFloat(b.views)>parseFloat(a.views)?b:a);
-        return {name:p.name,by:p.by,kind:p.kind,desc:p.desc,views:p.views,likes:p.likes,
+        const p=PROJECTS[0];
+        return {name:p.name,by:p.by,kind:p.kind,desc:p.desc,
           color:NEON[p.sector],glyph:GLYPH[p.sector],
-          open:()=>{ this.setState({page:'community',commTab:'projects',projOpen:PROJECTS.indexOf(p)}); }};
+          open:()=>{ this.setState({page:'community',commTab:'projects',cFilter:'all',projOpen:'dash:'+p.name,cCommentsOpen:true}); }};
       })(),
       spotlightPolicy:(()=>{
-        const q=POLICIES.reduce((a,b)=>(b.support/b.goal)>(a.support/a.goal)?b:a);
-        const pct=Math.min(100,Math.round(q.support/q.goal*100));
-        return {title:q.title,by:q.by,stage:q.stage,support:q.support.toLocaleString(),goal:q.goal.toLocaleString(),pctWidth:pct+'%',
-          open:()=>{ this.setState({page:'community',commTab:'policy',projOpen:'p'+POLICIES.indexOf(q)}); }};
+        const q=POLICIES[0];
+        return {title:q.title,by:q.by,stage:q.stage,support:'—',goal:q.goal.toLocaleString(),pctWidth:'0%',
+          open:()=>{ this.setState({page:'community',commTab:'policy',cFilter:'all',projOpen:'policy:'+q.title,cCommentsOpen:true}); }};
       })(),
       cLagLabel:cLag.label,cLagCh:cLag.ch==null?'—':((cLag.ch>0?'+':'')+cLag.ch.toFixed(1)+'%'),cLagColor:cLag.color,
       aiChips,
@@ -8604,12 +8636,12 @@ class Component extends DCLogic {
       viz:vizPath(p.viz,i*1.7),
       isBar:p.viz==='bar',isArea:p.viz==='area',isLine:p.viz==='line',
       vizStroke:p.viz==='bar'?'6':'2.2'}));
+    /* Нийт дэмжлэг тоологддоггүй (support устсан, BE50) — хувь тооцохгүй. */
     const policies=POLICIES.map(p=>{
-      const pct=Math.min(100,Math.round(p.support/p.goal*100));
       const stageColor=p.stage==='Яаманд хүргэгдсэн'?'#0E8F63':(p.stage==='Хэлэлцэгдэж байна'?'#2E7CF6':(p.stage==='Судлагдаж байна'?'#7C5CF0':'#B9903A'));
       return {...p,color:NEON[p.sector],glyph:GLYPH[p.sector],sectorLabel:SECTORS[p.sector].label,
-        pct:pct+'%',pctLabel:pct+'%',supportLabel:p.support.toLocaleString(),goalLabel:p.goal.toLocaleString(),
-        stageColor,reached:pct>=100};
+        pct:'0%',pctLabel:'—',supportLabel:'—',goalLabel:p.goal.toLocaleString(),
+        stageColor,reached:false};
     });
 
     const requests=REQUESTS.map(r=>({...r,color:r.status==='Хэрэгжсэн'?'#2FA37B':(r.status==='Судлагдаж байна'?'#4FA8FF':'#B9903A')}));
@@ -9110,8 +9142,8 @@ class Component extends DCLogic {
       sFilterSector:this.stxt('filter.sector','Салбар'),
       sFilterInterval:this.stxt('filter.interval','Хугацааны интервал'),
       sCommSeeAll:this.stxt('community.see_all','Бүгдийг үзэх →'),
-      sCommTopSeen:this.stxt('community.top_seen','🔥 ЭНЭ ДОЛОО ХОНОГТ ХАМГИЙН ИХ ХАРАГДСАН'),
-      sCommTopProp:this.stxt('community.top_prop','📣 ДЭМЖЛЭГ ХАМГИЙН ХУРДАН ӨСӨЖ БУЙ САНАЛ'),
+      sCommTopSeen:this.stxt('community.top_seen','ОНЦЛОХ БҮТЭЭЛ'),
+      sCommTopProp:this.stxt('community.top_prop','ОНЦЛОХ БОДЛОГЫН САНАЛ'),
       sCommOpen:this.stxt('community.open','Нээх →'),
       sCommSupporters:this.stxt('community_data.supporters','дэмжигч'),
       sChartLastPoint:this.stxt('chart.last_point','сүүлийн цэг ='),
