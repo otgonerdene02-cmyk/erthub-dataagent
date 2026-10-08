@@ -5047,7 +5047,7 @@ async function groupBE() {
   check('BE39. Хоосон төлөв — тэнхлэггүй тайлбар мөр',
     /<sc-if value="\{\{ trend\.noData \}\}">[\s\S]{0,400}\{\{ trend\.noDataNote \}\}/.test(read('index.html')));
   check('BE39. SVG нь sc-if trend.hasData ДОТОР (тэнхлэг ОГТ зурагдахгүй)',
-    /<sc-if value="\{\{ trend\.hasData \}\}">\s*<svg sc-camel-view-box="0 0 600 170" style="width:100%;height:210px;/
+    /<sc-if value="\{\{ trend\.hasData \}\}">\s*<svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;/
       .test(read('index.html')));
   check('BE39. Хоосон төлөвийн текст content.json-д бүртгэлтэй',
     readJson('content.json').site.status.no_series === 'чиг хандлагын цуваа алга');
@@ -6125,6 +6125,38 @@ async function groupAI() {
   }
 }
 
+/* ───────────────── VIS. ДЭЛГЭЦИЙН ХАРАГДАЦЫН АУДИТ ─────────────────
+   Тоо, текст зөв байлаа ч ХАРАГДАЦ эвдэрч болно: график карт 2/3-аараа хоосон,
+   текст виджетийн хүрээнээс гарсан, тэнхлэгийн шошго давхцсан/clip-д орсон.
+   Эдгээр нь хэрэглэгч дээр л илэрдэг байсан тул хуудас бүрийг ЖИНХЭНЭ
+   браузер дээр 1440/1024 өргөнөөр зурж DOM хэмжээгээр шалгана
+   (tests/layout-audit.js, дүрмүүд tests/lib/layout-audit-probe.js).
+   Шалгагчийн selftest фикстурууд эхэлж ажиллана — тэр унавал хуудасны
+   үр дүнд итгэхгүй. Дэлгэрэнгүй: node tests/layout-audit.js --html */
+async function groupVIS() {
+  group('VIS. Дэлгэцийн харагдацын аудит (хуудас × өргөн)');
+  if (!CHROME) { skipped('VIS. харагдацын аудит', 'Chrome олдсонгүй'); return; }
+  const out = await new Promise((resolve) => {
+    let buf = '';
+    const ch = spawn(process.execPath, [path.join(ROOT, 'tests', 'layout-audit.js')], { stdio: ['ignore', 'pipe', 'pipe'] });
+    ch.stdout.on('data', (d) => { buf += d; });
+    ch.stderr.on('data', (d) => { buf += d; });
+    ch.on('close', () => resolve(buf));
+  });
+  const lines = out.split(String.fromCharCode(10));
+  let cur = null, detail = [], n = 0, section = '';
+  const flush = () => { if (cur) { cur.ok ? ok(cur.name) : bad(cur.name, detail.join(' | ').slice(0, 900)); } cur = null; detail = []; };
+  lines.forEach((ln) => {
+    const m = ln.match(/^ {2}(PASS|FAIL) {2}(.+?)(?: {2}\(\d+\))?$/);
+    if (/^══ Шалгагчийн selftest/.test(ln)) { flush(); section = 'selftest'; return; }
+    if (/^══ Хуудас/.test(ln)) { flush(); section = 'page'; return; }
+    if (m) { flush(); n++; cur = { ok: m[1] === 'PASS', name: 'VIS. ' + (section === 'selftest' ? 'шалгагч: ' : 'харагдац ') + m[2] }; return; }
+    if (cur && /^ {8}\S/.test(ln)) detail.push(ln.trim());
+  });
+  flush();
+  check('VIS. аудит дуустал ажиллав (' + n + ' кейс)', n > 20 && /Харагдацын аудит:/.test(out), out.slice(-300));
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    SP. «Салбарын дэлгэрэнгүй» хуудас — ХҮРЭХ ЗАМГҮЙ үхмэл код
 
@@ -6349,6 +6381,7 @@ console.log('ErtHub — систем тест');
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
+  else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
   else if (process.argv.includes('--only=G4')) { await groupG4(); }
@@ -6360,7 +6393,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); groupSP();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); groupSP(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));

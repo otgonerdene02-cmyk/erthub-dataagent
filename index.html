@@ -407,7 +407,7 @@
       <div style="position:absolute;right:-70px;bottom:-100px;width:340px;height:340px;border-radius:50%;filter:blur(78px);opacity:.24;background:radial-gradient(circle,#0FA37F,transparent 70%);animation:driftB 30s ease-in-out infinite alternate;pointer-events:none;"></div>
       <div style="position:relative;z-index:1;min-width:0;padding:44px 8px 44px 44px;">
         <div style="position:relative;overflow:hidden;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);box-shadow:var(--shadow);margin-bottom:26px;max-width:520px;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);">
-          <div style="position:absolute;top:0;bottom:0;display:flex;align-items:center;gap:34px;white-space:nowrap;padding-left:14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--ink2);animation:tickerScroll 20s linear infinite;">
+          <div data-audit-ignore="marquee" style="position:absolute;top:0;bottom:0;display:flex;align-items:center;gap:34px;white-space:nowrap;padding-left:14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--ink2);animation:tickerScroll 20s linear infinite;">
             <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>{{ sTickAi }}</span>
             <span>{{ sTickRoad }}</span><span data-eh-fallback="{{ heroFlFallback }}">{{ heroFlValue }} <span data-eh-card="hero_fl" data-eh-field="title">{{ heroFlTitle }}</span>{{ heroFlMonthSuffix }}</span><span>{{ heroPxValue }} <span data-eh-card="hero_px" data-eh-field="title">{{ heroPxTitle }}</span>{{ heroPxNote }}</span><span>{{ sTickLive }}</span>
             <span style="display:flex;align-items:center;gap:7px;"><i style="width:6px;height:6px;border-radius:50%;background:#3ee6a8;display:inline-block;animation:pulseGlow 2.2s infinite;"></i>{{ sTickAi }}</span>
@@ -1085,7 +1085,7 @@
       </div>
     </sc-if>
     <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:18px;margin-bottom:50px;align-items:stretch;">
-    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;position:relative;overflow:hidden;">
+    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;position:relative;overflow:hidden;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">{{ sector.c1 }}</div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);border:1px solid var(--line2);border-radius:999px;padding:4px 11px;white-space:nowrap;">
@@ -1098,7 +1098,7 @@
         <div style="height:210px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ trend.noDataNote }}</div>
       </sc-if>
       <sc-if value="{{ trend.hasData }}">
-      <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:210px;display:block;">
+      <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;display:block;margin:auto 0;">
         <defs>
           <linearGradient id="trendfill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="{{ activeColor }}" stop-opacity="0.34"></stop>
@@ -1123,8 +1123,8 @@
         <line x1="{{ trend.axisX1 }}" y1="{{ trend.axisY }}" x2="{{ trend.axisX2 }}" y2="{{ trend.axisY }}" stroke="var(--line2)" stroke-width="1"></line>
         <sc-if value="{{ f05.avgOn }}">
           <line x1="{{ trend.axisX1 }}" y1="{{ trend.avgY }}" x2="{{ trend.axisX2 }}" y2="{{ trend.avgY }}" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="3 4"></line>
-          <foreignObject x="{{ trend.axisX1 }}" y="{{ trend.avgY }}" width="140" height="16">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);transform:translateY(-14px);">{{ trend.avgLabel }}</div>
+          <foreignObject x="{{ trend.axisX1 }}" y="{{ trend.avgYLabel }}" width="140" height="16">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ trend.avgLabel }}</div>
           </foreignObject>
         </sc-if>
         <sc-if value="{{ trend.showForecast }}">
@@ -1148,8 +1148,8 @@
         </foreignObject>
         </sc-if>
         <sc-for list="{{ trend.xTicks }}" as="xt" hint-placeholder-count="6">
-          <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;">{{ xt.label }}</div>
+          <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
           </foreignObject>
         </sc-for>
       </svg>
@@ -1195,7 +1195,7 @@
         </sc-for>
       </div>
       </sc-if>
-      <svg sc-camel-view-box="0 0 620 200" style="width:100%;height:210px;display:block;">
+      <svg sc-camel-view-box="0 0 620 200" style="width:100%;height:auto;display:block;">
         <sc-for list="{{ compareY }}" as="cy" hint-placeholder-count="3">
           <line x1="{{ compareGeom.axisX1 }}" y1="{{ cy.y }}" x2="{{ compareGeom.axisX2 }}" y2="{{ cy.y }}" stroke="var(--line)" stroke-width="1"></line>
           <foreignObject x="0" y="{{ cy.fy }}" width="36" height="14">
@@ -1206,8 +1206,8 @@
         <line x1="{{ compareGeom.axisX1 }}" y1="{{ compareGeom.axisY }}" x2="{{ compareGeom.axisX2 }}" y2="{{ compareGeom.axisY }}" stroke="var(--line2)" stroke-width="1"></line>
         <sc-if value="{{ compareBaseShow }}">
           <line x1="{{ compareGeom.axisX1 }}" y1="{{ compareBaseY }}" x2="{{ compareGeom.axisX2 }}" y2="{{ compareBaseY }}" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="3 4"></line>
-          <foreignObject x="{{ compareGeom.axisX1 }}" y="{{ compareBaseY }}" width="150" height="14">
-            <div xmlns="http://www.w3.org/1999/xhtml" data-eh-card="i06" data-eh-field="sub" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);white-space:nowrap;padding-left:6px;transform:translateY(-15px);">{{ i06Sub }}</div>
+          <foreignObject x="{{ compareGeom.axisX1 }}" y="{{ compareBaseYLabel }}" width="150" height="14">
+            <div xmlns="http://www.w3.org/1999/xhtml" data-eh-card="i06" data-eh-field="sub" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);white-space:nowrap;padding-left:6px;">{{ i06Sub }}</div>
           </foreignObject>
         </sc-if>
         <sc-for list="{{ compareLines }}" as="cl" hint-placeholder-count="5">
@@ -1218,8 +1218,8 @@
           </foreignObject>
         </sc-for>
         <sc-for list="{{ compareX }}" as="cx" hint-placeholder-count="5">
-          <foreignObject x="{{ cx.fx }}" y="{{ cx.fy }}" width="40" height="14">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;">{{ cx.label }}</div>
+          <foreignObject x="{{ cx.fx }}" y="{{ cx.fy }}" width="40" height="14" style="overflow:visible;">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ cx.label }}</div>
           </foreignObject>
         </sc-for>
       </svg>
@@ -2389,14 +2389,14 @@
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
       <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>{{ detail.c1 }}</div>
         <sc-if value="{{ detail.noTrend }}">
           <div style="height:180px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ detail.noTrendNote }}</div>
         </sc-if>
         <sc-if value="{{ detail.hasTrend }}">
-        <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:180px;display:block;">
+        <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;display:block;">
           <defs>
             <linearGradient id="dtlfill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="{{ detail.color }}" stop-opacity="0.4"></stop>
@@ -2416,8 +2416,8 @@
           <path d="{{ detail.trend.line }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
           <path d="{{ detail.trend.fline }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.1" stroke-linecap="round" stroke-dasharray="6 5" style="animation:dashFlow 1.6s linear infinite;"></path>
           <sc-for list="{{ detail.trend.xTicks }}" as="xt" hint-placeholder-count="6">
-            <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14">
-              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;">{{ xt.label }}</div>
+            <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
             </foreignObject>
           </sc-for>
         </svg>
@@ -2456,7 +2456,7 @@
     </div>
 
     <sc-if value="{{ detail.isAirDetail }}">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
       <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dint" data-eh-field="title">{{ detail.dintTitle }}</span></div>
         <div style="display:flex;align-items:center;gap:20px;">
@@ -2525,10 +2525,10 @@
       </svg>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
       <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dmth" data-eh-field="title">{{ detail.dmthTitle }}</span></div>
-        <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:180px;display:block;">
+        <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;display:block;">
           <sc-for list="{{ detail.airMonthly.yTicksLeft }}" as="yt" hint-placeholder-count="5">
             <line x1="{{ detail.airMonthly.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.airMonthly.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
             <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
@@ -2548,15 +2548,15 @@
             <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ activeColor }}"><title>{{ dp.tip }}</title></circle>
           </sc-for>
           <sc-for list="{{ detail.airMonthly.xTicks }}" as="xt" hint-placeholder-count="6">
-            <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14">
-              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;">{{ xt.label }}</div>
+            <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
             </foreignObject>
           </sc-for>
         </svg>
       </div>
       <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dcgm" data-eh-field="title">{{ detail.dcgmTitle }}</span></div>
-        <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:180px;display:block;">
+        <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;display:block;">
           <sc-for list="{{ detail.airCargoMonthly.yTicksLeft }}" as="cyt" hint-placeholder-count="5">
             <line x1="{{ detail.airCargoMonthly.axisX1 }}" y1="{{ cyt.y }}" x2="{{ detail.airCargoMonthly.axisX2 }}" y2="{{ cyt.y }}" stroke="var(--line)" stroke-width="1"></line>
             <foreignObject x="0" y="{{ cyt.fy }}" width="42" height="14">
@@ -2576,8 +2576,8 @@
             <circle cx="{{ cdp.cx }}" cy="{{ cdp.cy }}" r="2.6" fill="{{ activeColor }}"><title>{{ cdp.tip }}</title></circle>
           </sc-for>
           <sc-for list="{{ detail.airCargoMonthly.xTicks }}" as="cxt" hint-placeholder-count="6">
-            <foreignObject x="{{ cxt.fx }}" y="{{ cxt.fy }}" width="40" height="14">
-              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;">{{ cxt.label }}</div>
+            <foreignObject x="{{ cxt.fx }}" y="{{ cxt.fy }}" width="40" height="14" style="overflow:visible;">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ cxt.label }}</div>
             </foreignObject>
           </sc-for>
         </svg>
@@ -5419,7 +5419,7 @@ function buildTrendChart(data,off){
   return {line,area,fline,band,yTicks,xTicks,dotPts,peak,fcLabel,
     fcSplitX:X(n-1).toFixed(1),fcEndX:X(n+FC-1).toFixed(1),
     fcDeltaLabel:(fcLabel.delta>0?'+':'')+fcLabel.delta.toFixed(1)+'%',
-    avgY,avgLabel:stxt('range.average','дундаж')+' '+Math.round(avgVal).toLocaleString(),
+    avgY,avgYLabel:Math.max(0,avgY-15).toFixed(1),avgLabel:stxt('range.average','дундаж')+' '+Math.round(avgVal).toLocaleString(),
     w,h,padL,padR,padT,padB,axisX1:padL,axisX2:w-padR,axisY:(h-padB).toFixed(1)};
 }
 
@@ -8451,7 +8451,7 @@ class Component extends DCLogic {
       // тайлбарлана — template-д аль хэдийн бэлэн байсан боловч энд хоосон
       // байсан слот.
       mockTag:liveI06(r.key)?'':stxt('status.no_data','мэдээлэл алга'),
-      rowStyle:'display:grid;grid-template-columns:22px 20px minmax(0,1fr) 62px;gap:9px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);opacity:'+(r.muted?'.42':'1')+';transition:.2s var(--ease);'
+      rowStyle:'display:grid;grid-template-columns:22px 20px minmax(0,1fr) minmax(62px,max-content);gap:9px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);opacity:'+(r.muted?'.42':'1')+';transition:.2s var(--ease);'
     }));
     // "Тэргүүлэгч"/"Хоцрогдож байгаа" шошгыг ЗӨВХӨН verified салбараас
     // сонгоно (H4b) — mock дата дээр "тэргүүлж байна" гэх нь худал
@@ -8468,6 +8468,9 @@ class Component extends DCLogic {
     const compareY=[0,0.5,1].map(fr=>({label:Math.round(vmin+rng*fr),y:(pT+(Hh-pT-pB)*(1-fr)).toFixed(1),fy:(pT+(Hh-pT-pB)*(1-fr)-7).toFixed(1)}));
     const compareBaseShow=(100>=vmin&&100<=vmax);
     const compareBaseY=Y(100).toFixed(1);
+    /* Шошгийг шугамын ДЭЭР байрлуулна — foreignObject өөрөө clip хийдэг тул
+       transform-оор өргөвөл шошго нуугдана (харагдацын аудит: text-overflow). */
+    const compareBaseYLabel=Math.max(0,Y(100)-15).toFixed(1);
     // 5 тэмдэглэгээ хүртэл жигд тараана, сүүлийн цэгийг үргэлж оруулна.
     const tickN=Math.min(5,months);
     const tickStep=tickN>1?lastIdx/(tickN-1):0;
@@ -8528,7 +8531,7 @@ class Component extends DCLogic {
       w2pMark:section02Marks.w2p,w2pbMark:section02Marks.w2pb,w2pxMark:section02Marks.w2px,
       w2cMark:section02Marks.w2c,w2cbMark:section02Marks.w2cb,w2cxMark:section02Marks.w2cx,
       weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,weekCargoDeltaCols:String(Math.max(1,wCargo.delta.length)),weekCargoAirOnlyNote:wCargo.airOnlyNote,
-      compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareLastLabel,
+      compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareBaseYLabel,compareLastLabel,
       showLeadLag,
       f04:{open:!!this.state.f04Open,toggle:()=>this.setState(s=>({f04Open:!s.f04Open})),
         btnStyle:'cursor:pointer;font-family:inherit;width:26px;height:26px;border-radius:8px;flex-shrink:0;font-size:12px;line-height:1;'+(this.state.f04Open?'border:1px solid #7C5CF0;background:#7C5CF01a;color:#7C5CF0;':'border:1px solid var(--line);background:var(--surface);color:var(--ink3);'),

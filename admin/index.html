@@ -1751,7 +1751,7 @@ function svgLine(pts,color,w,h,asBar){
   var Y=function(v){return h-pad-((v-mn)/rng)*(h-pad*2)};
   if(asBar){
     var bw=Math.max(2,(w-pad*2)/pts.length-2);
-    return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:'+h+'px;display:block">'+
+    return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;display:block">'+
       pts.map(function(p,i){
         var bh=Math.max(1,h-pad-Y(p.v));
         /* Багана дээр очиход ЯГ ТЭР тоо — сайт дээрхтэй ижил зарчим. */
@@ -1762,7 +1762,7 @@ function svgLine(pts,color,w,h,asBar){
   }
   var d='M'+pts.map(function(p,i){return X(i).toFixed(1)+','+Y(p.v).toFixed(1)}).join(' L');
   var area=d+' L'+X(pts.length-1).toFixed(1)+','+(h-pad)+' L'+X(0).toFixed(1)+','+(h-pad)+' Z';
-  return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:'+h+'px;display:block">'+
+  return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;display:block">'+
     '<path d="'+area+'" fill="'+color+'" opacity=".14"></path>'+
     '<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="1.8" '+
       'stroke-linecap="round" stroke-linejoin="round"></path>'+
