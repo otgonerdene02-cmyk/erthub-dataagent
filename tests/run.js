@@ -4514,7 +4514,8 @@ async function groupBE() {
   check('BE46. basis нь · тэмдэгтээр залгаагүй ЦЭВЭР нэр',
     basisVals.every((b) => b.indexOf('·') < 0), JSON.stringify(basisVals));
   check('BE46. Бодлогын үндэслэл ч dsLabel()-ээр каталогтой тулгагдана',
-    /body:p\.body,meta:dsLabel\(p\.basis\),support:/.test(dcScript()));
+    /* support: (зохиомол дэмжлэгийн тоо) 2026-10-05-нд устсан — BE50 */
+    /body:p\.body,meta:dsLabel\(p\.basis\),goal:/.test(dcScript()));
   check('BE46. basis content.json-оос давхарлагдана (админаас засагдана)',
     /\['title','by','stage','basis'\]\.forEach/.test(dcScript()));
   const cdl = readJson('content.json').site.community_data.policies;
@@ -4567,6 +4568,53 @@ async function groupBE() {
   check('BE47. Тэнхлэгийг /50 гэж ХАТУУ бичсэн хуучин мөр үлдээгүй',
     !/\(bmax-bmin\)\*0\.6\)\/50\)\*50/.test(dcScript()) &&
     /const wax=weekAxis\(hasBars\?barVals:\[\]\);/.test(dcScript()));
+
+  /* ── BE50. Коммунитийн НИЙТ тоо зохиомол байсан (2026-10-05) ──
+     Санал/лайк нь зөвхөн тухайн хэрэглэгчийн session-д (this.state.cVotes)
+     хадгалагддаг — нийт тоо хаана ч ТООЛОГДДОГГҮЙ. Иймд "👁 88.4K ♥ 2,610",
+     "962 / 1,000 дэмжигч", "142 санал" бүгд зохиомол байв. */
+  const blk45 = (name, open, close) => (dcScript().match(new RegExp('\\nconst ' + name + '=\\' + open + '([\\s\\S]*?)\\n\\' + close + ';')) || [])[1] || '';
+  const pol45 = blk45('POLICIES', '[', ']'), prj45 = blk45('PROJECTS', '[', ']'), req45 = blk45('REQUESTS', '[', ']');
+  check('BE50. POLICIES/PROJECTS/REQUESTS олдов', !!pol45 && !!prj45 && !!req45);
+  check('BE50. Төсөлд views/likes/forks тоо АЛГА', !/\b(views|likes|forks):/.test(prj45), (prj45.match(/(views|likes|forks):[^,]+/g) || []).join(' '));
+  check('BE50. Бодлогын саналд support тоо АЛГА (зорилт goal нь босго тул үлдэнэ)',
+    !/\bsupport:\d/.test(pol45) && /\bgoal:\d/.test(pol45));
+  check('BE50. Дата хүсэлтэд votes тоо АЛГА', !/\bvotes:\d/.test(req45));
+  /* Регресс: support-ийг хассаны дараа buildPageVals() дахь ҮХМЭЛ
+     `policies` жагсаалт p.support.toLocaleString()-ийг дуудсаар үлдэж,
+     НҮҮР ХУУДАС бүхэлдээ нурсан (Root.renderVals). Устсан талбарыг
+     кодын аль ч газар унших ёсгүй. */
+  check('BE50. Устсан support/likes/views/votes-ийг код ХААНА Ч уншихгүй',
+    !/\b(p|q|it|sel|r)\.(support|views|forks|votes)\b/.test(dcScript()) && !/\bp\.likes\b/.test(dcScript()),
+    (dcScript().match(/\b(p|q|it|sel|r)\.(support|views|forks|votes|likes)\b/g) || []).join(' '));
+  check('BE50. Саналын тайлбарт зохиомол статистик (41%, 18–24%, 34%, 2.4 сая тонн) АЛГА',
+    !/41%|18–24%|34%-ийг|40% хүртэл|2\.4 сая тонн/.test(pol45));
+  check('BE50. "Дэмжлэгээр" эрэмбэ хасагдсан (тоолоогүй тоогоор эрэмбэлэхгүй)',
+    !/\['top','Дэмжлэгээр'\]/.test(dcScript()) && !/cSort:'top'/.test(dcScript()));
+  check('BE50. Нүүрний онцлох карт зохиомол үзэлт/дэмжлэгээр СОНГОГДОХГҮЙ',
+    !/parseFloat\(b\.views\)/.test(dcScript()) && !/b\.support\/b\.goal/.test(dcScript()));
+  check('BE50. Онцлох карт дарахад дэлгэрэнгүй НЭЭГДЭНЭ (cKey-тэй ижил түлхүүр)',
+    /projOpen:'dash:'\+p\.name/.test(dcScript()) && /projOpen:'policy:'\+q\.title/.test(dcScript()));
+  const ct45 = readJson('content.json').site.community;
+  check('BE50. "ХАМГИЙН ИХ ХАРАГДСАН" / "ХАМГИЙН ХУРДАН ӨСӨЖ БУЙ" шошго АЛГА',
+    !/ХАМГИЙН ИХ ХАРАГДСАН|ХАМГИЙН ХУРДАН/.test(JSON.stringify(ct45) + dcScript()));
+  /* buildCommunity — нийт тоо "—", хэрэглэгчийн өөрийн санал л харагдана */
+  const bc45 = dcScript().match(/\n  buildCommunity\(\)\{([\s\S]*?)\n  \}\n/);
+  check('BE50. buildCommunity: нийт дэмжлэг "—", хувь тооцохгүй',
+    !!bc45 && /supportLabel:'—'/.test(bc45[1]) && !/sup\.toLocaleString\(\)/.test(bc45[1]));
+  check('BE50. Дэмжих товч тоогүй ("✓ Дэмжсэн" / "Дэмжих")',
+    /it\.voteBtnLabel/.test(read('index.html')) && !/\{\{ it\.supportLabel \}\} Дэмжих/.test(read('index.html')));
+
+  /* ── BE51. Хөгжүүлэгчийн таб "Удахгүй" ──
+     API түлхүүр, багц (10 дуудлага/сек, SLA 99.9%) БАЙХГҮЙ хөтөлбөр байв. */
+  const br46 = readJson('content.json').site.browse;
+  check('BE51. content.json-д "удахгүй" бичиг бүртгэлтэй',
+    !!br46.dev_soon_badge && !!br46.dev_soon_note && !!br46.dev_soon_cta && !!br46.dev_code_live);
+  check('BE51. Табын тайлбарт "Удахгүй"', /Удахгүй/.test(br46.tabs[2].sub));
+  check('BE51. Темплейтэд мэдэгдэл + тэмдэг харагдана',
+    /browseHero\.t\.devSoonNote/.test(read('index.html')) && /browseHero\.t\.devSoonBadge/.test(read('index.html')));
+  check('BE51. Багцын CTA ажиллахгүй (бүртгэл/холбоо барих руу ХӨТЛӨХГҮЙ)',
+    !/authRole:'dev'/.test(dcScript()) && !/setState\(\{devContactOpen:true\}\)/.test(dcScript()));
 
   check('BE26. 1 цэгтэй цуваа → зурахгүй (шугам биш)',
     !runPax({ unit: 'зорчигч', year: 2026, counts: [143220], lastMonth: 1 }).SEC.rail._liveSeries);

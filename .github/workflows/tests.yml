@@ -1,0 +1,160 @@
+# ErtHub — CI. CLAUDE.md-ийн "Тестийн мөчлөг"-ийн 4 шалгуурыг тус бүрд
+# ажиллуулна: check-cyrillic → check-registry → tests/run.js → text-coverage.js
+#
+# ЯАГААД ЭНЭ ХЭРЭГТЭЙ: репод зэрэгцээ олон сешн ажиллаж, өдөрт хэд хэдэн PR
+# мержигддэг. Локал шалгуур мартагдвал main тест унасан төлөвт оров (бодитоор
+# тохиолдсон: W5 i06 нь PR #16-ийн дараа main дээр унаж, 3 өөр ажиллуулалтаар
+# л илэрсэн). Энэ workflow тэр цоорхойг хаана.
+#
+# ХАМГИЙН ЧУХАЛ ДЭЛГЭРЭНГҮЙ — ХУУРАМЧ НОГООН:
+# tests/run.js ба text-coverage.js нь Chrome-ийг ХАТУУ ЗАМААР хайдаг
+# (/usr/bin/google-chrome, /usr/bin/chromium). Олдохгүй бол run.js нь DOM
+# бүлгүүдийг (C, F, G, H, I6/I7, J4, K3/K4, L6, O6, W5, Y, Z …) чимээгүй
+# SKIP болгоод exit 0 буцаана — өөрөөр хэлбэл ЮУ Ч ШАЛГААГҮЙ ногоон CI.
+# Тиймээс доор (а) Chrome байгааг урьдчилж хатуу шалгана, (б) гаралтад
+# "Chrome олдсонгүй" гарвал job-ыг ЗОРИУД унагана.
+
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Нэг салбар дээр дараалсан push гарвал хуучин ажиллуулалтыг цуцална
+# (өдөрт 6 PR мержигддэг — минут хэмнэнэ). main дээрх ажиллуулалтыг
+# цуцалдаггүй: main-ийн эрүүл мэндийн бүртгэл бүрэн байх ёстой.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Хурдан шалгуур (секундын) — тусдаа job болгосноор DOM suite-ийг
+  # хүлээлгүй шууд хариу өгнө.
+  checks:
+    name: Кирилл · registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # Монгол текстийн `ү` → `v` мэт латин хольц (CLAUDE.md-ийн дүрэм)
+      - name: check-cyrillic
+        run: node scripts/check-cyrillic.js
+
+      # Виджет бүр metric_registry.json-д бүртгэлтэй эсэх
+      - name: check-registry
+        run: node scripts/check-registry.js
+
+  suites:
+    name: run.js · text-coverage (DOM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # ── Chrome-ийн ХАТУУ ХАМГААЛАЛТ ──
+      # Тестүүд зөвхөн эдгээр замыг хайдаг тул ЯГ тэднийг шалгана.
+      # Олдохгүй бол job-ыг ЭНД унагана — DOM тестүүд чимээгүй SKIP болж
+      # "ногоон" гарахаас сэргийлнэ. ubuntu-latest дээр Chrome нь
+      # урьдчилан суулгагдсан байдаг; хэрэв GitHub-ийн образ өөрчлөгдвөл
+      # энэ алхам тодорхой мессежээр унана.
+      - name: Chrome байгааг батлах
+        shell: bash
+        run: |
+          set -eo pipefail
+          FOUND=""
+          for p in /usr/bin/google-chrome /usr/bin/chromium; do
+            if [ -x "$p" ]; then FOUND="$p"; break; fi
+          done
+          if [ -z "$FOUND" ]; then
+            echo "::error title=Chrome олдсонгүй::tests/run.js ба text-coverage.js нь /usr/bin/google-chrome эсвэл /usr/bin/chromium-ийг хайдаг. Аль нь ч байхгүй тул DOM тестүүд чимээгүй SKIP болох байсан — job-ыг зориуд унагав. Runner-ийн образт Chrome суулгах эсвэл тестийн CHROME жагсаалтад шинэ замыг нэмнэ."
+            ls -la /usr/bin | grep -i -E 'chrom' || echo "(/usr/bin-д chrom* нэртэй файл алга)"
+            exit 1
+          fi
+          echo "Chrome: $FOUND"
+          "$FOUND" --version
+
+      # ── Системийн тест (A–Z, BE, AI, VR, OD, SP бүлгүүд) ──
+      # Гаралтыг log болгон хадгалж, дараа нь "Chrome олдсонгүй" хайна.
+      # pipefail — tee-гээр дамжуулахад node-ийн exit код алдагдахгүй.
+      - name: tests/run.js
+        id: run
+        shell: bash
+        run: |
+          set -eo pipefail
+          node tests/run.js 2>&1 | tee run.log
+
+      # SKIP-ийн шалтгааныг ИЛ харуулна. "Chrome олдсонгүй" гарвал дээрх
+      # хамгаалалт алдсан гэсэн үг — унагана. J4 нь гадаад feed
+      # (github.io) уншигдахгүй бол SKIP болдог — тэр нь ХҮЛЭЭГДСЭН,
+      # унагахгүй, зөвхөн анхааруулна.
+      - name: SKIP-ийг шалгах (хуурамч ногооноос хамгаалах)
+        if: ${{ !cancelled() && steps.run.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          set -eo pipefail
+          if grep -q 'Chrome олдсонгүй' run.log; then
+            echo "::error title=DOM тестүүд SKIP болсон::Chrome байхгүйгээс DOM бүлгүүд ажиллаагүй — ногоон үр дүн ЮУ Ч БАТАЛАХГҮЙ."
+            grep -n 'Chrome олдсонгүй' run.log | head -20
+            exit 1
+          fi
+          SKIPPED=$(grep -c '^  SKIP' run.log || true)
+          if [ "${SKIPPED:-0}" -gt 0 ]; then
+            echo "::warning title=SKIP $SKIPPED::Доорх тестүүд ажиллаагүй (J4 нь feed уншигдаагүй бол хүлээгдсэн)."
+            grep -n '^  SKIP' run.log | head -20
+          else
+            echo "SKIP алга — бүх бүлэг ажиллав."
+          fi
+
+      # Харагдах текстийн хамрах хүрээ (100% байх ёстой) + round-trip.
+      # run.js унасан ч ЭНИЙГ ажиллуулна — хоёр тайланг нэг ажиллуулалтад
+      # харах нь зэрэгцээ сешнтэй орчинд цаг хэмнэнэ.
+      - name: tests/text-coverage.js
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -eo pipefail
+          node tests/text-coverage.js 2>&1 | tee coverage.log
+
+      # Харагдацын аудит (VIS) — ТУСДАА файл, өөр сешн хөгжүүлж байгаа тул
+      # main дээр хараахан БАЙХГҮЙ. Хатуу бичвэл PR бүр унах тул: файл
+      # байвал ажиллуулна, байхгүй бол ШАЛТГААНЫГ ил хэвлээд үргэлжилнэ.
+      # Ингэснээр нэгэнт мержигдэхэд хэн ч санах шаардлагагүй, өөрөө орно.
+      - name: tests/layout-audit.js (файл байвал)
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -eo pipefail
+          if [ ! -f tests/layout-audit.js ]; then
+            echo "tests/layout-audit.js репод алга — алхам алгаслаа (мержигдэхэд өөрөө ажиллана)."
+            exit 0
+          fi
+          echo "--- өөрийн шалгалт (--selftest) ---"
+          node tests/layout-audit.js --selftest 2>&1 | tee audit-selftest.log
+          echo "--- бүтэн аудит ---"
+          node tests/layout-audit.js 2>&1 | tee audit.log
+
+      - name: Унасан үед log-ийг хавсаргах
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: |
+            run.log
+            coverage.log
+            audit-selftest.log
+            audit.log
+          if-no-files-found: ignore
+          retention-days: 7

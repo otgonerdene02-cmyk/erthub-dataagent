@@ -32,7 +32,12 @@ function defaultFiles() {
     ? fs.readdirSync(jsDir).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f)
     : [];
   const mdFiles = fs.readdirSync(repoRoot).filter((f) => f.toLowerCase().endsWith('.md'));
-  return [...fixed, ...jsFiles, ...mdFiles].map((f) => path.join(repoRoot, f));
+  // CI workflow — урт монгол тайлбартай ч скан хийгдэхгүй байв.
+  const wfDir = path.join(repoRoot, '.github', 'workflows');
+  const wfFiles = fs.existsSync(wfDir)
+    ? fs.readdirSync(wfDir).filter((f) => /\.ya?ml$/i.test(f)).map((f) => '.github/workflows/' + f)
+    : [];
+  return [...fixed, ...jsFiles, ...mdFiles, ...wfFiles].map((f) => path.join(repoRoot, f));
 }
 
 const allowlistPath = path.join(__dirname, 'check-cyrillic-allowlist.txt');
