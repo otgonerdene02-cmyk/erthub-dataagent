@@ -1317,8 +1317,6 @@ var SITE_GROUPS=[
            freq_head:'Давтамжийн гарчиг',notify_head:'Мэдэгдлийн гарчиг',apikey_head:'API түлхүүрийн гарчиг',
            apikey_btn:'Түлхүүр авах товч',response_head:'Хариуны гарчиг',excel_btn:'Excel татах товч',
            ask_btn:'Асуух товч'}},
-  {key:'sector', title:'Салбарын хуудас', where:'Салбар бүрийн дэлгэрэнгүй хуудас',
-   labels:{kicker:'Дээд шошго',data_head:'Өгөгдлийн хэсгийн гарчиг',svc_head:'Үйлчилгээний хэсгийн гарчиг'}},
   {key:'brand',   title:'Брэнд',           where:'Толгой хэсэг · зүүн дээд булан',
    labels:{mark:'Лого товчлол',name:'Брэнд нэр',tagline:'Лого доод тайлбар'}},
   {key:'nav',     title:'Үндсэн цэс',      where:'Толгой хэсэг · дээд мөр',
@@ -1346,11 +1344,59 @@ var SITE_GROUPS=[
   {key:'sectors', title:'Салбарын нэр',    where:'01/02/05/06/07 — виджет доторх салбарын мөр бүрд',
    labels:{road:'Авто зам',rail:'Төмөр зам',air:'Агаарын тээвэр',water:'Ус, далайн тээвэр',public:'Нийтийн тээвэр'}},
   {key:'a11y',    title:'Хандах боломж',   where:'aria-label — дэлгэц уншигчид зориулсан',
-   labels:{menu:'Цэсний товч',filter:'Шүүлтийн товч',close:'Хаах товч'}}
+   labels:{menu:'Цэсний товч',filter:'Шүүлтийн товч',close:'Хаах товч'}},
+  /* Тээврийн хэрэгслийн бүртгэлийн самбар (#/vehreg). Слотын гарчиг,
+     KPI шошго зэрэг нь үүрлэсэн тул доорх SITE_NESTED-д бичигдэнэ. */
+  {key:'vehreg', title:'Тээврийн хэрэгслийн бүртгэл · самбар', where:'Тээврийн хэрэгсэл хуудас · толгой ба нийтлэг шошго',
+   labels:{title:'Хуудасны гарчиг',sub:'Гарчгийн доод тайлбар',source:'Эх сурвалжийн мөр',rows_word:'"мөр" гэсэн үг',unit:'Тоон утгын нэгж (ТХ)',field_label:'"эх багана" гэсэн шошго',total_word:'Бөөрөнхий доторх "нийт" үг',asof:'Огнооны өмнөх үг',pending:'Хоосон слотын шалтгаан (таталт хүлээж буй)'}}
 ];
 /* hero.ticker / hero.diagram / portal_kpi.<key> нь үүрлэсэн (3+ түвшин)
    тул SITE_GROUPS (2 түвшин)-д биш энд тусад нь */
 var SITE_NESTED=[
+  {path:['vehreg','tabs'], title:'Тээврийн хэрэгсэл · табын нэр', where:'Тээврийн хэрэгсэл хуудас · дөрвөн табын товч',
+   labels:{ops:'1-р таб',structure:'2-р таб',fuel:'3-р таб',plate:'4-р таб'}},
+  {path:['vehreg','tab_sub'], title:'Тээврийн хэрэгсэл · табын дэд гарчиг', where:'Таб сонгоход гарчгийн доор гарах нэг мөр',
+   labels:{ops:'1-р таб',structure:'2-р таб',fuel:'3-р таб',plate:'4-р таб'}},
+  {path:['vehreg','pending_tab'], title:'Тээврийн хэрэгсэл · бэлэн биш табын гарчиг', where:'Эх сурвалж холбогдоогүй табын самбар',
+   labels:{head:'Гарчиг'}},
+  {path:['vehreg','need_source'], title:'Тээврийн хэрэгсэл · табын дутуу эх сурвалж', where:'Бэлэн биш таб тус бүрд ЯГ юу дутууг тайлбарлана',
+   labels:{ops:'Үйл ажиллагаа табын тайлбар',plate:'Дугаар хадгалалт табын тайлбар'}},
+  {path:['vehreg','fuel','share'], title:'Түлшний таб · бөөрөнхийн гарчиг', where:'Түлшний таб · цахилгаан/хайбридын харьцаа',
+   labels:{mix:'Картын гарчиг'}},
+  {path:['vehreg','fuel','top'], title:'Түлшний таб · TOP 8 жагсаалтын гарчиг', where:'Түлшний таб · хоёр жагсаалтын карт',
+   labels:{mark:'Марк',aimag:'Аймаг, нийслэл'}},
+  {path:['vehreg','fuel','year'], title:'Түлшний таб · насжилтын гарчиг', where:'Түлшний таб · үйлдвэрлэсэн оны багана',
+   labels:{title:'Картын гарчиг'}},
+  {path:['vehreg','fuel','kpi','ev'], title:'Түлшний таб · KPI 1 (Цахилгаан ТХ)', where:'Түлшний таб · дээд 4 картын 1-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
+  {path:['vehreg','fuel','kpi','hybrid'], title:'Түлшний таб · KPI 2 (Хайбрид ТХ)', where:'Түлшний таб · дээд 4 картын 2-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
+  {path:['vehreg','fuel','kpi','share'], title:'Түлшний таб · KPI 3 (Цэвэр түлшний эзлэх хувь)', where:'Түлшний таб · дээд 4 картын 3-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
+  {path:['vehreg','fuel','kpi','new12'], title:'Түлшний таб · KPI 4 (Сүүлийн 12 сард бүртгэгдсэн)', where:'Түлшний таб · дээд 4 картын 4-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
+  {path:['vehreg','blocked'], title:'Тээврийн хэрэгсэл · анхааруулга', where:'Тээврийн хэрэгсэл хуудас · шар анхааруулгын хайрцаг',
+   labels:{head:'Гарчиг',body:'Тайлбар',doc:'Баримтын мөр'}},
+  {path:['vehreg','age'], title:'Тээврийн хэрэгсэл · насжилт', where:'Тээврийн хэрэгсэл хуудас · насжилтын карт',
+   labels:{title:'Картын гарчиг',avg:'"дундаж" үг',years:'"жил" үг'}},
+  {path:['vehreg','share'], title:'Тээврийн хэрэгсэл · бөөрөнхий графикийн гарчиг', where:'Тээврийн хэрэгсэл хуудас · 5 бөөрөнхий карт',
+   labels:{wheel:'Хүрдний байрлал',fuel:'Түлшний ангилал',owntype:'Өмчлөгчийн төрөл',gender:'Өмчлөгчийн хүйс',purpose:'Зориулалт'}},
+  {path:['vehreg','top'], title:'Тээврийн хэрэгсэл · TOP 8 жагсаалтын гарчиг', where:'Тээврийн хэрэгсэл хуудас · 3 жагсаалтын карт',
+   labels:{country:'Үйлдвэрлэсэн улс',mark:'Марк',color:'Өнгө'}},
+  {path:['vehreg','need'], title:'Тээврийн хэрэгсэл · дутуу эх сурвалжийн тайлбар', where:'Тээврийн хэрэгсэл хуудас · холбогдоогүй слотын доод бичиг',
+   labels:{owner_id:'Өмчлөгчийн тоо',wanted:'Эрэн сурвалжлалт'}},
+  {path:['vehreg','kpi','total'], title:'Тээврийн хэрэгсэл · KPI 1 (Нийт бүртгэлтэй ТХ)', where:'Тээврийн хэрэгсэл хуудас · дээд 6 картын 1-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
+  {path:['vehreg','kpi','ub'], title:'Тээврийн хэрэгсэл · KPI 2 (Улаанбаатар)', where:'Тээврийн хэрэгсэл хуудас · дээд 6 картын 2-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
+  {path:['vehreg','kpi','rural'], title:'Тээврийн хэрэгсэл · KPI 3 (Орон нутаг)', where:'Тээврийн хэрэгсэл хуудас · дээд 6 картын 3-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
+  {path:['vehreg','kpi','owners'], title:'Тээврийн хэрэгсэл · KPI 4 (Өмчлөгч)', where:'Тээврийн хэрэгсэл хуудас · дээд 6 картын 4-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
+  {path:['vehreg','kpi','indiv'], title:'Тээврийн хэрэгсэл · KPI 5 (Хувь хүний ТХ)', where:'Тээврийн хэрэгсэл хуудас · дээд 6 картын 5-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
+  {path:['vehreg','kpi','wanted'], title:'Тээврийн хэрэгсэл · KPI 6 (Эрэн сурвалжлагдаж буй)', where:'Тээврийн хэрэгсэл хуудас · дээд 6 картын 6-р нь',
+   labels:{label:'Картын шошго',sub:'Доод тайлбар'}},
   {path:['portal_kpi','open_data'],title:'Портал 4 карт · Нээлттэй өгөгдөл',where:'uk виджет — 1-р карт',
    labels:{label:'Гарчиг',unit:'Нэгж',note:'Тэмдэглэл'}},
   {path:['portal_kpi','eservice'], title:'Портал 4 карт · Цахим үйлчилгээ', where:'uk виджет — 2-р карт',
@@ -2303,6 +2349,7 @@ var SITE_LOC={
   services:'eservices|body',
   browse:'browse|body', 'browse.hero':'browse|hero', 'browse.tabs':'browse|tabs',
   datasets:'browse|body', detail:'browse|body', sector:'browse|body',
+  vehreg:'vehreg|body',
   'community.hero':'community|hero', 'community.tabs':'community|tabs',
   history:'history|body', 'history.hero':'history|hero',
   news:'news|body', 'news.hero':'news|hero', 'news.tabs':'news|tabs', doc:'news|body'
@@ -3449,12 +3496,31 @@ function completenessNote(dsId){
   /* 1%-аас бага бол 2 аравтаар — "0.1%" гэж дугуйрвал 0.05% ба 0.14%
      нэг адил харагдана. */
   var txt=(pct<1?pct.toFixed(2):pct.toFixed(1))+'% ('+nf(c.ingested)+' / '+nf(c.source_total)+')';
+  /* ГУРВАН салаа. "дутуу таталт тул тоо нийтлэхгүй" гэдэг нь ЗӨВХӨН
+     blocks_publication үед үнэн — бүрэн татагдсан (ingested ==
+     source_total) датасэт дээр гарвал хуудас ХУДАЛ тайлбарлана. Иймд
+     100% үед эсрэг салаагаар "бүрэн татагдсан" гэж ил бичнэ, дутуу ч
+     нийтлэлийг блоклоогүй бол зөвхөн хувь. */
+  var flag=c.blocks_publication
+    ?' — '+esc(utxt('slot_text.blocks_publication','дутуу таталт тул тоо нийтлэхгүй'))
+    :(c.ingested>=c.source_total
+      ?' — '+esc(utxt('slot_text.complete_ingest','бүрэн татагдсан'))
+      :'');
   return '<p class="pvnote"><b>'+esc(utxt('slot_text.completeness','Эх сурвалжийн бүрэн байдал'))+
-    ':</b> '+esc(txt)+
-    (c.blocks_publication
-      ?' — '+esc(utxt('slot_text.blocks_publication','дутуу таталт тул тоо нийтлэхгүй'))
-      :'')+
+    ':</b> '+esc(txt)+flag+
     (c.measured_on?' <span class="dt">'+esc(c.measured_on)+'</span>':'')+'</p>';
+}
+/* Метрик ХОЛБОГДСОН слот ч датасэтийнхээ бүрэн байдлыг харуулна.
+   Холбоос нь datasets{}.table ↔ metrics{}.dataset (ЯГ ижил silver
+   хүснэгтийн нэр) — тусдаа толь бичиг хөтлөхгүй, check-registry нь
+   table давхардвал унана. Эс тэгвэл 100% татагдсан гэсэн баримт
+   зөвхөн блоклогдсон слотод л харагдаж, амьд слотод ҮХМЭЛ үлдэнэ. */
+function datasetOfMetric(mk){
+  var m=mk&&REG.metrics&&REG.metrics[mk];
+  if(!m||!m.dataset) return '';
+  var ds=REG.datasets||{};
+  for(var k in ds) if(ds[k]&&ds[k].table===m.dataset) return k;
+  return '';
 }
 function slotTextForm(id,path){
   var sv=slotVal(id,path), k=id+'|'+path.join(',');
@@ -3859,7 +3925,7 @@ function lvEdit(){
          гэж ХУДАЛ шошголсон мэт харагдана. */
       '<div class="f" style="margin-bottom:8px"><label>'+esc(utxt('metric.unit_label','Метрик · шаардах нэгж:'))+' '+
         esc(unitLabel(slotUnitNow(id,s.key))||utxt('metric.unit_unknown','тодорхойгүй'))+'</label>'+metricSelect(id,s.path,s.key)+'</div>'+
-      (sv.metric?calcLine(sv.metric)
+      (sv.metric?calcLine(sv.metric)+completenessNote(datasetOfMetric(sv.metric))
         :'<div class="acc" data-wn="1"'+(sv.would_need?'':' style="display:none"')+'><b>'+
            esc(utxt('metric.required','Шаардлагатай:'))+'</b> <span>'+esc(sv.would_need||'')+'</span></div>')+
       (sv.metric?'':slotTextForm(id,s.path))+
