@@ -11,13 +11,12 @@
      node tests/layout-audit.js                  # selftest + бүх хуудас × 1440,1024
      node tests/layout-audit.js --selftest       # зөвхөн шалгагчийн өөрийн тест (фикстур)
      node tests/layout-audit.js --only=air       # хаягаар шүүнэ ("home" = нүүр)
-     node tests/layout-audit.js --vw=1440,390    # өргөн сонгох (390 = гар утас)
+     node tests/layout-audit.js --vw=1440,390    # өргөн сонгох (өгөгдмөл 1440,1024,390)
      node tests/layout-audit.js --html           # олдвор бүрийн HTML-ийн хэсэг
      node tests/layout-audit.js --json           # машинд уншигдах гаралт
 
-   Өргөн: 1440 (desktop), 1024 (tablet/жижиг laptop) — АЛДААТАЙ БОЛ exit 1.
-   390 (гар утас) нь `--vw=390`-ээр тусад нь; сайт одоогоор desktop-first тул
-   үндсэн гүйлтэд ОРООГҮЙ (qa-backlog.md).
+   Өргөн: 1440 (desktop), 1024 (tablet/жижиг laptop), 390 (гар утас) — АЛДААТАЙ БОЛ exit 1.
+   Гар утасны засвар: style.css → `@media (max-width:640px)` (eh-g-1c / eh-g-2c / eh-pg-h …).
 
    Зориудаар зөвшөөрөх: (а) элементэд `data-audit-ignore="шалтгаан"` атрибут,
    (б) `tests/layout-audit-allow.json` руу {route, rule, where?, text?, why}
@@ -37,7 +36,7 @@ const argv = (k) => { const a = args.find((x) => x.startsWith('--' + k + '=')); 
 const ONLY = argv('only');
 const JSON_OUT = args.includes('--json');
 const SELFTEST_ONLY = args.includes('--selftest');
-const VIEWPORTS = (argv('vw') ? argv('vw').split(',').map(Number) : [1440, 1024])
+const VIEWPORTS = (argv('vw') ? argv('vw').split(',').map(Number) : [1440, 1024, 390])
   .map((w) => ({ w, h: w < 500 ? 844 : w < 1100 ? 768 : 900 }));
 
 const CHROME = [

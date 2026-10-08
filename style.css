@@ -48,6 +48,90 @@ body{margin:0;}
 @media (max-width: 1100px) {
   .eh-ls-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important; }
 }
+/* Таблет (641–1100px): auto-fit нь 5 нүдийг 4+1 болгож ганц орчигч үлдээдэг
+   байв. flex-wrap нь мөр бүрийг дүүргэнэ (3+2: сүүлийн мөрийн нүд тэнцүү
+   тэлнэ) — нүдний тоо хэд ч (нуусан салбар) орчигч үлдэхгүй. */
+@media (min-width: 641px) and (max-width: 1100px) {
+  .eh-ls-grid { display: flex !important; flex-wrap: wrap; }
+  .eh-ls-grid > * { flex: 1 1 calc(33.333% - 1px); min-width: 190px; }
+}
+
+/* Тоо нь өөрчлөгддөг карт/нүдний жагсаалт (--fx = нүдний хамгийн бага өргөн): auto-fit grid нь
+   4 нүдийг 3+1 болгож ганц орчигч үлдээдэг байв (layout-audit grid-orphan). flex-wrap + grow
+   нь сүүлийн мөрийг дүүргэнэ. */
+.eh-fx { display: flex !important; flex-wrap: wrap; }
+.eh-fx > * { flex: 1 1 var(--fx, 240px); min-width: 0; }
+/* 4 / 8 нүдтэй тоон тайлууд: auto-fit нь 3+1, 7+1 болгодог байв → desktop 4 багана,
+   таблет/гар утсанд 2 багана (4 ба 8 хоёулаа тэгш хуваагдана). Гар утсанд eh-g-2c давхар ажиллана. */
+@media (max-width: 1100px) {
+  .eh-g4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
+/* Гар утас (≤640px). Нүүр хуудасны grid-үүд inline-style-аар 3–5 багана
+   тавьсан тул 390px-д нүд бүр ~70px болж текст хүрээнээсээ гарч давхцдаг
+   байв. Класс бүр нэг зан төлөвтэй:
+     eh-hero*  — hero 1 багана, гарчиг жижиг
+     eh-g-1c   — 1 багана (нарийн текстийн блок, график + хажуугийн хүснэгт)
+     eh-g-2c   — 2 багана; сондгой тоо бол сүүлчийн нүд бүтэн мөр (орчигч үлдэхгүй)
+   Аудит: node tests/layout-audit.js --vw=390 */
+@media (max-width: 640px) {
+  .eh-hero { grid-template-columns: minmax(0, 1fr) !important; border-radius: 20px !important; }
+  .eh-hero-l { padding: 22px 16px 6px !important; }
+  .eh-hero-h1 { font-size: 34px !important; }
+  .eh-hero-r { padding: 6px 12px 18px !important; }
+  /* Хайлтын мөр: талбар (flex:1) shrink хийж чадахгүй байсан тул «Хайх» товч хүрээнээс гарч таслагддаг байв */
+  .eh-hero-s > :first-child { min-width: 0; padding: 0 14px !important; }
+  .eh-hero-s > button { padding: 0 18px !important; }
+  .eh-g-1c { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
+  .eh-g-2c { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+  .eh-g-2c > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* 7 хоногийн баганын график: 6–7 багана 244px-д багтаж, огнооны шошго ("10.07")
+     хүрээнээсээ гарахгүй. Гурван мөр (утга · багана · огноо) ижил gap-тай байх ЁСТОЙ. */
+  .eh-wk { gap: 4px !important; }
+  .eh-wk-d > * { min-width: 0; font-size: 9px !important; }
+  /* Хуудасны толгой (каталог/коммунити/түүх/мэдээ/датасет): гарчиг + баруун талын блок (auto) → давхарлана */
+  .eh-pg-h { grid-template-columns: minmax(0, 1fr) !important; gap: 18px !important; align-items: start !important; }
+  /* Мэдээний карт: 30|1fr|84|18 нь текстэд ~125px үлдээдэг → огноо текстийн доор, сум баруун дээд */
+  .eh-news-c { grid-template-columns: 30px minmax(0, 1fr) 14px !important; gap: 8px 10px !important; padding: 14px !important; align-items: start !important; }
+  .eh-news-c > :nth-child(3) { grid-column: 2; grid-row: 2; text-align: left !important; }
+  .eh-news-c > :nth-child(4) { grid-column: 3; grid-row: 1; }
+  /* Датасетийн хүснэгтийн хуудаслалт: тоо + ← Өмнөх · 1/112 · Дараах → нэг мөрт багтахгүй */
+  .eh-pager { flex-wrap: wrap; }
+  .eh-pager > :first-child { white-space: normal !important; }
+  /* Урсгалын газрын зураг: min-height:250px нь 273px өргөнд дээд/доор хоосон зай үлдээдэг */
+  .eh-fmap { min-height: 0 !important; }
+  /* Хуудасны толгойн тоон карт (min-width:104px × 3) нэг мөрт багтахгүй → мөр шилжинэ */
+  .eh-pg-stats { flex-wrap: wrap; flex-shrink: 1 !important; }
+  .eh-pg-stats div { white-space: normal !important; overflow-wrap: anywhere; }
+  .eh-pg-stats > * { flex: 1 1 68px; min-width: 0 !important; padding: 12px !important; }
+  /* Гарчиг + тоо/хайлт нэг мөрт багтахгүй (nowrap тоо хүрээнээс гардаг байв) */
+  .eh-wrap-row { flex-wrap: wrap; row-gap: 8px; }
+  .eh-wrap-row > * { min-width: 0; max-width: 100%; flex-shrink: 1 !important; }
+  /* Урт асуултын chip (nowrap) 390px-д багтахгүй → мөр шилжинэ */
+  .eh-chip { white-space: normal !important; text-align: left; max-width: 100%; border-radius: 16px !important; }
+  /* Баримтын карт: 32|1fr|78|52|54 → гарчиг дээр, байгууллага · он · формат доор */
+  .eh-doc-c { display: flex !important; flex-wrap: wrap; align-items: flex-start !important; gap: 6px 10px !important; padding: 14px !important; }
+  .eh-doc-c > :nth-child(2) { flex: 1 1 calc(100% - 52px); min-width: 0; }
+  .eh-doc-c > :nth-child(3) { margin-left: 42px; white-space: normal !important; }
+  .eh-doc-c > :nth-child(5) { margin-left: auto; }
+  /* Хажуугийн самбар (282px / 250px) + агуулга: нэг баганад давхарлахад sticky хэрэггүй */
+  .eh-nosticky { position: static !important; }
+  /* Header: 390px-д лого + Нэвтрэх + Бүртгүүлэх + theme + ☰ багтахгүй тул ☰ товч
+     дэлгэцээс гадуур үлдэж, гар утасны цэс нээгдэхгүй байв. Тагline-ыг нууж зайг чөлөөлнө. */
+  .eh-hdr-in { padding: 0 14px !important; gap: 8px !important; }
+  .eh-brand-tag { display: none; }
+  /* Нэгдсэн гарчигууд (01…08): урт гарчиг nowrap-аар хүрээнээс гардаг байв → мөр шилжинэ */
+  [id^="sec-0"] > span { white-space: normal !important; flex-shrink: 1 !important; min-width: 0 !important; }
+  [id^="sec-0"] > button { flex-shrink: 0; }
+  /* Нэг мөрт таслагдаж байсан шошго/тэмдэглэл мэдээлэл алдахгүй мөр шилжинэ */
+  .eh-uk-l { white-space: normal !important; line-height: 1.35; }
+  .eh-ls-foot { white-space: normal !important; overflow: visible !important; }
+  /* Сектор KPI карт (4-багана → 2): 40px тоо + нэгж 159px-д багтахгүй */
+  .eh-k4-p { padding: 16px 14px 0 !important; }
+  .eh-k4-v { flex-wrap: wrap; }
+  .eh-k4-c { white-space: normal !important; overflow: visible !important; }
+  .eh-k4-v > :first-child { font-size: 30px !important; }
+}
 @keyframes driftA{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(6%,8%,0) scale(1.15);}}
 @keyframes driftB{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(-8%,-5%,0) scale(1.2);}}
 @keyframes driftC{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(5%,-9%,0) scale(1.1);}}

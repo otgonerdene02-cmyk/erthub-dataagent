@@ -18,6 +18,9 @@
      text-overlap   нэг картын доторх хоёр текст бие биеийн дээр давхцсан
      raw-leak       "NaN", "undefined", "[object", "{{" ил гарсан / svg атрибутад NaN
      chart-collapsed график svg нь нурсан (өндөр/өргөн ~0) эсвэл мөр нь хоосон
+     grid-orphan    ижил хэмжээтэй карт/нүдийн grid-ийн сүүлийн мөрт ГАНЦ карт үлдсэн (4+1, 2+1)
+     offscreen-control  товч/холбоос/талбар дэлгэцийн ирмэгээс гарсан (хуудас hscroll хийхгүй ч
+                    хүрэх боломжгүй — жиш. 390px-д header-ийн ☰ цэс 395–433px дээр байсан)
 
    Буцаах: [{rule, where, text, detail}] */
 function auditLayout(doc, win, opts) {
@@ -348,6 +351,70 @@ function auditLayout(doc, win, opts) {
     if (leakSeen.has(k)) return;
     leakSeen.add(k);
     out.push({ rule: 'raw-leak', where: describe(ln.el), text: ln.text, detail: 'харагдах текстэд' });
+  });
+
+  /* 8. offscreen-control — товшиж болох элемент дэлгэцийн хөндлөн ирмэгээс гарсан бол хэрэглэгч
+        түүнд хүрч чадахгүй. page-hscroll үүнийг барьдаггүй: root overflow-x нь хэтэрсэн хэсгийг
+        нууж (scrollWidth = viewport) байдаг. Гүйлгэгддэг/clip хийдэг өвөг дотор бол алдаа биш. */
+  if (!opts.root) {
+    const offSeen = new Set();
+    body.querySelectorAll('button,a[href],input,select,textarea,[role=button]').forEach((el) => {
+      if (ignored(el) || !visible(el)) return;
+      const r = rectOf(el);
+      if (r.width < 4 || r.height < 4) return;
+      if (r.right <= vw + TOL && r.left >= -TOL) return;
+      /* Гүйлгэгддэг өвөг (auto/scroll) эсвэл ДОТООД clip (өвгийн өргөн viewport-оос 16px+ нарийн) бол
+         алдаа биш. Viewport-ийн өргөнөөр clip хийдэг root-ийг тооцохгүй — яг тэр л ☰-г нууж байсан. */
+      let skip = false;
+      for (let p = el.parentElement; p && p !== body && !skip; p = p.parentElement) {
+        const o = cs(p).overflowX;
+        if (o === 'auto' || o === 'scroll') skip = true;
+        else if (o === 'hidden' || o === 'clip') { const pr = rectOf(p); if (pr.width < vw - 16) skip = true; }
+      }
+      if (skip) return;
+      const key = describe(el) + '|' + Math.round(r.left);
+      if (offSeen.has(key)) return;
+      offSeen.add(key);
+      out.push({ rule: 'offscreen-control', where: describe(el), text: short(el.textContent || el.getAttribute('aria-label') || el.placeholder, 30),
+        detail: (r.right > vw + TOL ? 'баруун ирмэг ' + Math.round(r.right) : 'зүүн ирмэг ' + Math.round(r.left)) + 'px · viewport ' + vw + 'px' });
+    });
+  }
+
+  /* 7. grid-orphan — ижил хэмжээтэй карт/нүдүүдийн сүүлийн мөрт ганц нүд үлдсэн (4+1, 2+1).
+        Орчигч нь мөрийн бусад нүдтэй ИЖИЛ өргөнтэй, баруун талд нь хоосон зай үлдсэн байна —
+        өргөсөн (flex-grow / grid-column:1/-1) эсвэл өөр хэмжээтэй нүд алдаа биш.
+        Жижиг зүйл (chip, товч < 120×60) нь энгийн wrap тул тооцохгүй. */
+  const orphanSeen = new Set();
+  body.querySelectorAll('*').forEach((el) => {
+    if (ignored(el) || !visible(el)) return;
+    const st = cs(el);
+    const grid = st.display === 'grid' || st.display === 'inline-grid';
+    const wrap = (st.display === 'flex' || st.display === 'inline-flex') && st.flexWrap !== 'nowrap';
+    if (!grid && !wrap) return;
+    const all = Array.from(el.children).filter((c) => {
+      if (ignored(c) || !visible(c)) return false;
+      const p = cs(c).position;
+      return p !== 'absolute' && p !== 'fixed';
+    });
+    if (all.length < 3) return;
+    const boxes = all.map((c) => rectOf(c));
+    if (boxes.some((r) => r.width < 120 || r.height < 60)) return;
+    const idx = all.map((c, i) => i).sort((a, b) => boxes[a].top - boxes[b].top || boxes[a].left - boxes[b].left);
+    const rows = [];
+    idx.forEach((i) => {
+      const row = rows[rows.length - 1];
+      if (row && boxes[i].top - boxes[row[0]].top <= 12) row.push(i); else rows.push([i]);
+    });
+    if (rows.length < 2 || rows[0].length < 2) return;
+    const last = rows[rows.length - 1];
+    if (last.length !== 1) return;
+    const o = boxes[last[0]], w0 = boxes[rows[0][0]].width, cr = rectOf(el);
+    if (Math.abs(o.width - w0) > 8 || cr.right - o.right < o.width * 0.5) return;
+    const key = describe(el) + '|' + Math.round(cr.left) + '|' + Math.round(cr.top);
+    if (orphanSeen.has(key)) return;
+    orphanSeen.add(key);
+    out.push({ rule: 'grid-orphan', where: describe(el), text: cardTitle(all[last[0]]),
+      detail: all.length + ' нүд · ' + rows.map((r) => r.length).join('+') + ' — сүүлийн мөрт ганц нүд (өргөн ' + Math.round(o.width) + 'px, баруун талд ' + Math.round(cr.right - o.right) + 'px хоосон)' });
   });
 
   return out;
