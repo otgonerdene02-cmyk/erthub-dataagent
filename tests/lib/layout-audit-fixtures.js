@@ -38,6 +38,32 @@ const FIXTURES = {
     '<svg viewBox="0 0 200 40" style="width:400px;height:auto;display:block">' +
     '<foreignObject x="10" y="10" width="40" height="14" style="overflow:visible"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;justify-content:center;white-space:nowrap;font:9.5px monospace">11-р сар</div></foreignObject></svg>' },
 
+  'even-grid-2x2': { expect: [], html:
+    '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:600px">' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' + '</div>' },
+  'orphan-spans-full-row': { expect: [], html:
+    /* 2 багана, 3 нүд — сүүлийнх нь бүтэн мөр (mobile дээрх eh-g-2c) */
+    '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:600px">' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px;grid-column:1/-1">Бүтэн мөр</div></div>' },
+  'flex-wrap-stretched-last': { expect: [], html:
+    /* 3+2: сүүлийн мөрийн нүд тэнцүү тэлнэ (tablet дээрх eh-ls-grid) */
+    '<div style="display:flex;flex-wrap:wrap;gap:10px;width:600px">' +
+    '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' + '</div>' },
+  'control-inside-scroller-is-fine': { expect: [], html:
+    '<div style="overflow-x:auto;width:240px"><div style="display:flex;gap:8px;width:700px"><button>Нэг</button><button style="margin-left:auto">Хоёр</button></div></div>' },
+  'small-chips-wrap-is-fine': { expect: [], html:
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;width:300px">' +
+    Array.from({ length: 7 }, () => '<span style="padding:6px 14px;border:1px solid #ccd;border-radius:999px">chip</span>').join('') + '</div>' },
+
   /* ── алдаатай (user-ийн дэлгэцийн зураг дээрх бодит алдаанууд) ── */
   'text-outside-card': { expect: ['text-overflow'], html:
     '<div style="' + CARD + 'width:160px"><span style="white-space:nowrap">Энэ текст картаасаа ГАРНА гэж бичсэн</span></div>' },
@@ -63,6 +89,22 @@ const FIXTURES = {
   'raw-nan-text': { expect: ['raw-leak'], html: '<div style="' + CARD + 'width:300px">Нийт: NaN нислэг</div>' },
   'raw-nan-svg': { expect: ['raw-leak'], html:
     '<svg viewBox="0 0 100 40" style="width:300px;height:auto"><path d="M0 40 L NaN 10" stroke="#09f" fill="none"/></svg>' },
+  'grid-orphan-4plus1': { expect: ['grid-orphan'], html:
+    /* "ҮНДСЭН ҮЗҮҮЛЭЛТҮҮД" 1024 дээр 5 нүд 4+1 болж ганц орчигч үлдсэн */
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:800px">' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' + '</div>' },
+  'grid-orphan-2plus1': { expect: ['grid-orphan'], html:
+    '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:600px">' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' +
+    '<div style="' + CARD + 'height:80px">Нүд</div>' + '</div>' },
+  'offscreen-control': { expect: ['offscreen-control'], html:
+    /* header: лого + товчнууд өргөн нь viewport-оос давж ☰ баруун ирмэгээс гарсан (root нь overflow-x:hidden) */
+    '<style>html,body{overflow-x:hidden}</style><div style="display:flex;gap:8px;align-items:center;width:1000px"><span>ЛОГО</span><button>Нэвтрэх</button><button style="margin-left:auto">☰</button></div>' },
   'page-hscroll': { expect: ['page-hscroll'], html: '<div style="width:3000px;height:20px;background:#eef">өргөн</div>' }
 };
 
