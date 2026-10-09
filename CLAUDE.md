@@ -89,10 +89,11 @@ node scripts/check-cyrillic.js && node scripts/check-registry.js
 
 ## CI (GitHub Actions)
 
-`.github/workflows/tests.yml` нь PR бүрд ба main руу push хийх бүрд дөрвөн
+`.github/workflows/tests.yml` нь PR бүрд ба main руу push хийх бүрд таван
 шалгуурыг ажиллуулна (`checks` job — кирилл/registry, секундын; `suites`
-job — `run.js` ба `text-coverage.js`). Локал мөчлөгийг ОРЛОХГҮЙ — зэрэгцээ
-олон сешн ажилладаг тул main тест унасан төлөвт орохоос хамгаалах тор.
+job — `run.js`, `text-coverage.js`, `layout-audit.js`). Локал мөчлөгийг
+ОРЛОХГҮЙ — зэрэгцээ олон сешн ажилладаг тул main тест унасан төлөвт
+орохоос хамгаалах тор.
 
 **Хуурамч ногооны хавх:** тестүүд Chrome-ийг хатуу замаар
 (`/usr/bin/google-chrome`, `/usr/bin/chromium`) хайдаг. Олдохгүй бол DOM
