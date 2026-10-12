@@ -58,6 +58,31 @@ const FIXTURES = {
     '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' +
     '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' +
     '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' + '</div>' },
+  /* SVG <text> доторх HTML <span> (dc-runtime {{ }}) → харагдахгүй. Treemap-ийн
+     "Зүүн Ази 85.0%" шошго яг ийм байсан. */
+  /* <span>-ыг скриптээр (createElement → HTML namespace) оруулна — dc-runtime
+     яг ингэж оруулдаг; HTML парсер оруулбал SVG namespace болж өөр зан гаргана. */
+  'svg-text-span-hidden': { expect: ['svg-text-hidden'], html:
+    '<svg viewBox="0 0 300 100" style="width:300px;height:auto;display:block"><g>' +
+    '<rect x="0" y="0" width="300" height="100" fill="#64c"></rect>' +
+    '<text id="tt" x="6" y="18" fill="#fff" font-size="11"></text></g></svg>' +
+    '<script>(function(){var t=document.getElementById("tt");var s=document.createElement("span");' +
+    's.textContent="Зүүн Ази";t.appendChild(s);})();</script>' },
+  /* Сарын график (богино) + тээвэрлэгчийн жагсаалт (урт) зэрэгцэж, grid нь align-items:start —
+     богино карт доор 700px хоосон. Энэ нь дэлгэрэнгүй хуудасны ЯГ алдаа. */
+  'row-height-mismatch': { expect: ['row-height-mismatch'], html:
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;width:700px">' +
+    '<div style="' + CARD + '">' + rows(12) + '</div><div style="' + CARD + '">' + rows(40) + '</div></div>' },
+  'row-stretch-is-fine': { expect: [], html:
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;width:700px">' +
+    '<div style="' + CARD + '">' + rows(12) + '</div>' +
+    /* Яг style.css-ийн eh-fill-* загвар: жагсаалт абсолют гүйлгээтэй → карт мөрийн өндрийг түлхэхгүй */
+    '<div style="' + CARD + 'display:flex;flex-direction:column;"><div style="font-weight:600">Толгой</div>' +
+    '<div style="position:relative;flex:1 1 0;min-height:0;"><div style="position:absolute;inset:0;overflow-y:auto;">' + rows(40) + '</div></div></div></div>' },
+  'svg-text-foreignobject-is-fine': { expect: [], html:
+    '<svg viewBox="0 0 300 100" style="width:300px;height:auto;display:block"><g>' +
+    '<rect x="0" y="0" width="300" height="100" fill="#64c"></rect>' +
+    '<foreignObject x="0" y="0" width="300" height="100"><div xmlns="http://www.w3.org/1999/xhtml" style="color:#fff;font-size:11px;padding:6px">Зүүн Ази 1,749,961</div></foreignObject></g></svg>' },
   'control-inside-scroller-is-fine': { expect: [], html:
     '<div style="overflow-x:auto;width:240px"><div style="display:flex;gap:8px;width:700px"><button>Нэг</button><button style="margin-left:auto">Хоёр</button></div></div>' },
   'small-chips-wrap-is-fine': { expect: [], html:

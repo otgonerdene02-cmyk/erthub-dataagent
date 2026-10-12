@@ -311,6 +311,24 @@ function auditLayout(doc, win, opts) {
       detail: 'svg атрибутад NaN/undefined: ' + bad.slice(0, 4).join(', ') + (bad.length > 4 ? ' …(' + bad.length + ')' : '') });
   });
 
+  /* 4b. svg-text-hidden — SVG <text> доторх HTML <span> (dc-runtime-ийн {{ }}
+     загвар) SVG дотор рендерлэгдэхгүй → текст бүхэлдээ 0×0 болж харагдахгүй.
+     Диаграмм дээрх утга/шошго алга болдог гол шалтгаан. Харагдах текст бүр
+     бодит хэмжээтэй байх ёстой. Засвар: foreignObject + HTML div (monthly
+     chart-ын загвар) эсвэл текстийг шууд, интерполяцгүй бичих. */
+  doc.querySelectorAll('svg text').forEach((t) => {
+    if (ignored(t) || !visible(t)) return;
+    const txt = short(t.textContent, 40);
+    if (!txt) return;
+    const r = rectOf(t);
+    /* Глиф огт layout хийгдээгүй (getComputedTextLength=0) эсвэл хэмжээгүй */
+    const laidOut = typeof t.getComputedTextLength === 'function' ? t.getComputedTextLength() : 1;
+    if (r.width < 1 || r.height < 1 || laidOut === 0) {
+      out.push({ rule: 'svg-text-hidden', where: describe(t), text: txt,
+        detail: 'SVG шошго 0×0 — харагдахгүй (HTML <span>/интерполяци SVG <text> дотор рендерлэгдэхгүй)' });
+    }
+  });
+
   /* 5. text-overlap — нэг frame-ийн ДОТОР өөр өөр элементийн мөрүүд */
   const byFrame = new Map();
   lines.forEach((ln) => {
@@ -375,8 +393,12 @@ function auditLayout(doc, win, opts) {
       const key = describe(el) + '|' + Math.round(r.left);
       if (offSeen.has(key)) return;
       offSeen.add(key);
+      /* Аль хэсэгт байгааг (id/карт) ба ойрын өвгийн өргөнийг хамт хэлнэ — CI-д л гарвал
+         "аль товч, юу түлхэж байна" гэдгийг лог дээрээс шууд харах боломжтой болгоно. */
+      const host = el.parentElement && el.parentElement.closest('[id],[data-eh-card]');
+      const ctx = (host ? ' · ' + describe(host) : '') + (el.parentElement ? ' · өвөг ' + Math.round(rectOf(el.parentElement).width) + 'px' : '');
       out.push({ rule: 'offscreen-control', where: describe(el), text: short(el.textContent || el.getAttribute('aria-label') || el.placeholder, 30),
-        detail: (r.right > vw + TOL ? 'баруун ирмэг ' + Math.round(r.right) : 'зүүн ирмэг ' + Math.round(r.left)) + 'px · viewport ' + vw + 'px' });
+        detail: (r.right > vw + TOL ? 'баруун ирмэг ' + Math.round(r.right) : 'зүүн ирмэг ' + Math.round(r.left)) + 'px · viewport ' + vw + 'px' + ctx });
     });
   }
 
@@ -415,6 +437,27 @@ function auditLayout(doc, win, opts) {
     orphanSeen.add(key);
     out.push({ rule: 'grid-orphan', where: describe(el), text: cardTitle(all[last[0]]),
       detail: all.length + ' нүд · ' + rows.map((r) => r.length).join('+') + ' — сүүлийн мөрт ганц нүд (өргөн ' + Math.round(o.width) + 'px, баруун талд ' + Math.round(cr.right - o.right) + 'px хоосон)' });
+  });
+
+  /* 9. row-height-mismatch — ЗЭРЭГЦЭЭ (нэг мөрөнд, нэг эцэгтэй) байрласан хоёр картын
+        өндөр ихээр зөрвөл богино карт нь урт картын доор ХООСОН зай үлдээнэ — жиш. сарын
+        график 305px, тээвэрлэгчийн жагсаалт 1000px. card-empty үүнийг барьдаггүй (богино
+        карт өөрийн агуулгаараа дүүрсэн байдаг). Засвар: grid-ийн align-items:stretch, эсвэл
+        урт агуулгыг гүйлгэх (style.css → eh-fill-*). Зориудын зөрүү → data-audit-ignore. */
+  const rowSeen = new Set();
+  cards.forEach((a) => {
+    cards.forEach((b) => {
+      if (a === b || a.el.parentElement !== b.el.parentElement) return;
+      if (Math.abs(a.r.top - b.r.top) > 12) return;
+      const diff = b.r.height - a.r.height;
+      if (diff < 200 || b.r.height < 1.5 * a.r.height) return;
+      const key = describe(a.el) + '|' + Math.round(a.r.left) + '|' + Math.round(a.r.top);
+      if (rowSeen.has(key)) return;
+      rowSeen.add(key);
+      out.push({ rule: 'row-height-mismatch', where: describe(a.el), text: cardTitle(a.el),
+        detail: 'карт ' + Math.round(a.r.height) + 'px · зэргэлдээ карт ' + Math.round(b.r.height) + 'px — доор ' +
+          Math.round(diff) + 'px хоосон зай (grid align-items:stretch эсвэл гүйлгэх)' });
+    });
   });
 
   return out;
