@@ -6355,6 +6355,68 @@ async function groupVIS() {
   check('VIS. аудит дуустал ажиллав (' + n + ' кейс)', n > 20 && /Харагдацын аудит:/.test(out), out.slice(-300));
 }
 
+/* ─────────── FM. Газрын зургийн шүүлт — "Бүгд" хасагдсан ───────────
+   Улаанбаатараас чиглэсэн урсгалын газрын зураг дээр "Бүгд" сонголт байхгүй
+   (дэлхийн горимд "Бүгд" = "Олон улсын" тул хоёр шүүлт зэрэг харагдаж
+   төөрөлдүүлдэг байв). "Олон улсын" анхдагчаар идэвхтэй, "Дотоодын"
+   дарахад шилжиж, буцааж дарахад эргэнэ.
+   FM1 — сонголтын бүрдэл (статик)
+   FM2 — DOM: 2 товч, анхдагч идэвхтэй, шилжилт */
+function groupFM() {
+  group('FM. Газрын зургийн шүүлт — "Бүгд" хасагдсан');
+  const dc = dcScript();
+
+  check('FM1. Газрын зургийн сонголт: зөвхөн "Олон улсын" ба "Дотоодын"',
+    /const typeTabs=\[\['intl','Олон улсын'\],\['domestic','Дотоодын'\]\]\.map\(/.test(dc) &&
+    !/const typeTabs=\[\['all'/.test(dc),
+    'газрын зургийн толгойд "Бүгд" дахин орсон байна');
+  check('FM1. "Олон улсын" идэвхтэй тодорхойлолт: airType !== "domestic"',
+    dc.includes("key==='intl'?this.state.airType!=='domestic':this.state.airType===key"),
+    'ОУ гэдэг нь "бүгд" горимд ч идэвхтэй харагдах ёстой');
+
+  if (!CHROME) { skipped('FM2 (DOM)', 'Chrome олдсонгүй'); return; }
+  return (async () => {
+    const srv = serve();
+    try {
+      const con = readJson('content.json');
+      const slugOf = (d) => d.sector + '__' + String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+      const air = (con.site.datasets || []).find((d) => d.sector === 'air');
+      if (!air) { bad('FM2. Агаарын датасэт олдсонгүй'); return; }
+      PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slugOf(air));
+      const R = await runProbe(`async function(d,w){
+        const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+        const mb=()=>[...d.querySelectorAll('button')].filter(b=>b.style.padding==='6px 14px');
+        const on=(b)=>b.style.background.indexOf('var(--ink)')>=0;
+        const st=()=>mb().map(b=>b.textContent.trim()+':'+(on(b)?'ON':'off')).join(' ');
+        for(let t=0;t<60&&mb().length<2;t++) await sleep(250);
+        await sleep(1500);
+        const R={count:mb().length, first:st()};
+        const pick=async (label)=>{
+          const b=mb().find(x=>x.textContent.trim()===label); if(!b) return;
+          b.click();
+          for(let t=0;t<30;t++){ await sleep(250);
+            if(mb().some(x=>x.textContent.trim()===label&&on(x))) break; }
+        };
+        await pick('Дотоодын'); R.afterDom=st();
+        await pick('Олон улсын'); R.back=st();
+        return R;
+      }`, 120000);
+      if (R.__err) { bad('FM2. Газрын зургийн шалгалт ажиллав', R.__err); return; }
+      check('FM1. DOM: газрын зургийн толгойд 2 сонголт (Бүгд алга)', R.count === 2,
+        JSON.stringify(R));
+      check('FM2. Анхдагчаар "Олон улсын" идэвхтэй, "Дотоодын" идэвхгүй',
+        /Олон улсын:ON/.test(R.first) && /Дотоодын:off/.test(R.first), R.first);
+      check('FM2. "Дотоодын" дарахад шилжинэ',
+        /Дотоодын:ON/.test(R.afterDom) && /Олон улсын:off/.test(R.afterDom), R.afterDom);
+      check('FM2. "Олон улсын" буцааж дарахад эргэнэ',
+        /Олон улсын:ON/.test(R.back) && /Дотоодын:off/.test(R.back), R.back);
+    } finally {
+      PROBE_SRC = '/admin/index.html';
+      srv.close();
+    }
+  })();
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    SP. «Салбарын дэлгэрэнгүй» хуудас — ХҮРЭХ ЗАМГҮЙ үхмэл код
 
@@ -6631,6 +6693,7 @@ console.log('ErtHub — систем тест');
   if (process.argv.includes('--only=BE')) { await groupBE(); }
   else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
+  else if (process.argv.includes('--only=FM')) { await groupFM(); }
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
   else if (process.argv.includes('--only=G4')) { await groupG4(); }
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
@@ -6642,7 +6705,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); groupSP(); groupHS(); await groupVIS();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
