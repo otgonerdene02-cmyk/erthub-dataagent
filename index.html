@@ -1141,6 +1141,10 @@
         <sc-for list="{{ trend.dotPts }}" as="dp" hint-placeholder-count="12">
           <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="var(--surface)" stroke="{{ activeColor }}" stroke-width="1.6"><title>{{ dp.tip }}</title></circle>
         </sc-for>
+        <sc-if value="{{ trend.hasPartial }}">
+        <circle cx="{{ trend.partialCx }}" cy="{{ trend.partialCy }}" r="3.6" fill="var(--surface)" stroke="{{ activeColor }}" stroke-width="1.6" stroke-dasharray="2 2"><title>{{ trend.partialLabel }}</title></circle>
+        <text x="{{ trend.partialCx }}" y="{{ trend.partialLy }}" text-anchor="middle" font-size="9.5" fill="var(--ink2)" font-family="'JetBrains Mono',monospace">{{ trend.partialLabel }}</text>
+        </sc-if>
         <sc-if value="{{ trend.showForecast }}">
         <circle cx="{{ trend.peak.cx }}" cy="{{ trend.peak.cy }}" r="4.5" fill="{{ activeColor }}"></circle>
         <foreignObject x="{{ trend.peak.lx }}" y="{{ trend.peak.ly }}" width="120" height="32">
@@ -2389,7 +2393,7 @@
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+    <div class="eh-trend-rank{{ detail.trendFill }}" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
       <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>{{ detail.c1 }}</div>
         <sc-if value="{{ detail.noTrend }}">
@@ -2415,6 +2419,10 @@
           <line x1="{{ detail.trend.fcSplitX }}" y1="{{ detail.trend.padT }}" x2="{{ detail.trend.fcSplitX }}" y2="{{ detail.trend.axisY }}" stroke="var(--line2)" stroke-width="1" stroke-dasharray="2 4"></line>
           <path d="{{ detail.trend.line }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
           <path d="{{ detail.trend.fline }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.1" stroke-linecap="round" stroke-dasharray="6 5" style="animation:dashFlow 1.6s linear infinite;"></path>
+          <sc-if value="{{ detail.trend.hasPartial }}">
+          <circle cx="{{ detail.trend.partialCx }}" cy="{{ detail.trend.partialCy }}" r="3.6" fill="var(--surface)" stroke="{{ detail.color }}" stroke-width="1.6" stroke-dasharray="2 2"><title>{{ detail.trend.partialLabel }}</title></circle>
+          <text x="{{ detail.trend.partialCx }}" y="{{ detail.trend.partialLy }}" text-anchor="middle" font-size="9.5" fill="var(--ink2)" font-family="'JetBrains Mono',monospace">{{ detail.trend.partialLabel }}</text>
+          </sc-if>
           <sc-for list="{{ detail.trend.xTicks }}" as="xt" hint-placeholder-count="6">
             <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
               <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
@@ -2423,9 +2431,9 @@
         </svg>
         </sc-if>
       </div>
-      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dstr" data-eh-field="title">{{ detail.dstrTitle }}</span></div>
-        <div style="display:flex;flex-direction:column;gap:13px;">
+        <div class="eh-fill-list"><div class="eh-fill-scroll" style="display:flex;flex-direction:column;gap:13px;">
           <sc-for list="{{ detail.rank }}" as="rk" hint-placeholder-count="4">
             <div>
               <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2);margin-bottom:6px;">
@@ -2451,7 +2459,7 @@
               <div sc-camel-on-click="{{ detail.rankTotal.toggle }}" style="cursor:pointer;text-align:center;font-size:11.5px;color:var(--ink3);padding-top:4px;">{{ detail.rankTotal.toggleLabel }}</div>
             </sc-if>
           </sc-if>
-        </div>
+        </div></div>
       </div>
     </div>
 
@@ -5194,11 +5202,12 @@ const COVERAGE_DEFAULT={grain:'month',excludes_current:true};
    бүсээс хамааран сар солигдох ёсгүй. */
 function dropPartialMonth(counts,year,cov,now){
   const src=Array.isArray(counts)?counts:[];
-  if(!src.length||(cov||COVERAGE_DEFAULT).excludes_current===false) return {counts:src,partial:null};
+  if(!src.length||(cov||COVERAGE_DEFAULT).excludes_current===false) return {counts:src,partial:null,value:null};
   const ub=new Date((now==null?Date.now():now)+8*3600000);
   const last=src.length;
-  if(year!==ub.getUTCFullYear()||last!==ub.getUTCMonth()+1) return {counts:src,partial:null};
-  return {counts:src.slice(0,last-1),partial:year+'-'+String(last).padStart(2,'0')};
+  if(year!==ub.getUTCFullYear()||last!==ub.getUTCMonth()+1) return {counts:src,partial:null,value:null};
+  /* value — дутуу сарын ОДООГИЙН утга. Цуваанд оруулахгүй (шугам, прогноз бүтэн сараар л үлдэнэ), харин график дээр тусдаа цэгээр харуулна. */
+  return {counts:src.slice(0,last-1),partial:year+'-'+String(last).padStart(2,'0'),value:src[last-1]};
 }
 
 function sectorSummaryToSeries(json,now,cov){
@@ -5212,7 +5221,7 @@ function sectorSummaryToSeries(json,now,cov){
   const dropCur=cv.excludes_current!==false;
   /* Хасагдсан ДУУСААГҮЙ мөчлөг — хэрэглэгчид "яагаад 9-р сар алга вэ"
      гэдгийг хэлэхийн тулд тэмдэглэж авна (тоо ЗОХИОХГҮЙ, зөвхөн шошго). */
-  let partial=null;
+  let partial=null, partialValue=null;
   const byKey=new Map();
   for(const r of rows){
     const t=Date.parse(r&&r.month);
@@ -5223,7 +5232,7 @@ function sectorSummaryToSeries(json,now,cov){
     if(!isFinite(n)||n<0) continue;
     const d=new Date(t), y=d.getUTCFullYear(), m=d.getUTCMonth()+1;
     if(dropCur&&y*100+m>=curKey){
-      if(y*100+m===curKey) partial=y+'-'+String(m).padStart(2,'0');
+      if(y*100+m===curKey){ partial=y+'-'+String(m).padStart(2,'0'); partialValue=n; }
       continue;
     }
     byKey.set(y*100+m,n);
@@ -5239,7 +5248,7 @@ function sectorSummaryToSeries(json,now,cov){
      сар байвал (жиш. 1,2,4) цуваа бүрэн биш — хэсэгчилж зурахгүй. */
   const maxM=Math.max.apply(null,[...byKey.keys()].filter(k=>Math.floor(k/100)===year).map(k=>k%100));
   if(!counts.length||maxM!==counts.length) return null;
-  return {unit,year,counts,lastMonth:counts.length,partial};
+  return {unit,year,counts,lastMonth:counts.length,partial,partialValue};
 }
 
 /* Вагон ачилтын ТУСДАА endpoint (/api/sectors/rail/wagon-loading) →
@@ -5355,7 +5364,7 @@ function weekAxis(vals){
   return {base,top,step};
 }
 
-function buildTrendChart(data,off){
+function buildTrendChart(data,off,partial){
   /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
      хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
      Math.max.apply(null,[]) = -Infinity, data[-1] = undefined болж график
@@ -5377,7 +5386,9 @@ function buildTrendChart(data,off){
   const all=data.concat(fcast);
   const hi=all.map((v,i)=>i<n?v:v+resid*1.9*(i-n+1));
   const lo=all.map((v,i)=>i<n?v:v-resid*1.9*(i-n+1));
-  const rawMax=Math.max.apply(null,hi), rawMin=Math.min.apply(null,lo);
+  /* Дутуу сарын цэг (partial) — шугам/прогнозд ОРОХГҮЙ, гэвч Y хүрээнд багтана. */
+  const pv=(partial!=null&&isFinite(partial)&&partial>=0)?partial:null;
+  const rawMax=Math.max.apply(null,hi.concat(pv!=null?[pv]:[])), rawMin=Math.min.apply(null,lo.concat(pv!=null?[pv]:[]));
   const span=(rawMax-rawMin)||1;
   const niceStep=Math.pow(10,Math.floor(Math.log10(span/4)));
   const niceMax=Math.ceil(rawMax/niceStep)*niceStep, niceMin=Math.floor(rawMin/niceStep)*niceStep;
@@ -5416,7 +5427,12 @@ function buildTrendChart(data,off){
     text:stxt('chart.forecast_prefix','AI прогноз +')+FC+' '+stxt('chart.forecast_suffix','сар'),
     delta:((fcast[FC-1]-data[n-1])/(data[n-1]||1)*100)};
   const avgVal=data.reduce((a,v)=>a+v,0)/data.length, avgY=Y(avgVal).toFixed(1);
+  /* Дутуу сар: forecast-ын ЯГ ТЭР слот дээр (X(n)) hollow цэг. Шошгыг дээр нь. */
+  const pY=pv!=null?Y(pv):0;
+  const partialLabel=pv!=null?(MONTHS[n+off]||'')+' · '+stxt('chart.partial_mark','дутуу')+': '+Math.round(pv).toLocaleString('en-US'):'';
   return {line,area,fline,band,yTicks,xTicks,dotPts,peak,fcLabel,
+    hasPartial:pv!=null,partialCx:X(n).toFixed(1),partialCy:pY.toFixed(1),
+    partialLy:Math.max(pY-9,padT+8).toFixed(1),partialLabel,
     fcSplitX:X(n-1).toFixed(1),fcEndX:X(n+FC-1).toFixed(1),
     fcDeltaLabel:(fcLabel.delta>0?'+':'')+fcLabel.delta.toFixed(1)+'%',
     avgY,avgYLabel:Math.max(0,avgY-15).toFixed(1),avgLabel:stxt('range.average','дундаж')+' '+Math.round(avgVal).toLocaleString(),
@@ -6259,6 +6275,7 @@ class Component extends DCLogic {
     SECTORS[k]._liveSeries=true;
     /* t05-ийн толгойд "* … дуусаагүй" тэмдэглэгээ ҮҮНЭЭС гарна */
     SECTORS[k]._partialDropped=s.partial||null;
+    SECTORS[k]._partialValue=(s.partial&&isFinite(s.partialValue))?s.partialValue:null;
     /* Цуваа ЭНЭ датасэтийнх — өөр датасэтийн хуудсан дээр муруй гаргахгүй */
     SECTORS[k]._liveSeriesDs=cfg.dataset;
     /* Датасэтийн мета — u07-ийн мөр ба датасэтийн дэлгэрэнгүй ҮҮНЭЭС
@@ -7034,6 +7051,7 @@ class Component extends DCLogic {
     const airTrim=dropPartialMonth(lastRealIdx>=0?c1dFull.slice(0,lastRealIdx+1):[],
       year,this.coverageOf('air.monthly_flight_series'));
     SECTORS.air._partialDropped=airTrim.partial;
+    SECTORS.air._partialValue=airTrim.partial?airTrim.value:null;
     SECTORS.air.c1d=airTrim.counts;
     const lastRealM=airTrim.counts.length||12;
     /* Энэ салбарын сарын ЦУВАА нь бодит (_liveKpis нь зөвхөн KPI мөр амьд
@@ -8801,7 +8819,7 @@ class Component extends DCLogic {
        ийм "САРЫН ЗОРЧИГЧ" муруйг арилгасан). Air-д тэмдэглээгүй тул хэвээр. */
     const dsHasTrend=!dsSec._liveKpis||(!!dsSec._liveSeries&&
       (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name));
-    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d):null;
+    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue):null;
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
@@ -8960,7 +8978,7 @@ class Component extends DCLogic {
     const detail={
       t:detailT,
       dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
-      isAirDetail,...airExtra,
+      isAirDetail,...airExtra,trendFill:isAirDetail?' eh-fill':'',
       freqCard,useCard,
       name:dsel.name,desc:dsel.desc,agency:dsel.agency,fmt:dsel.fmt,freq:dsel.freq,use:dsel.use,
       color:NEON[dsel.sector],glyph:GLYPH[dsel.sector],sectorLabel:SECTORS[dsel.sector].label,
@@ -10025,7 +10043,8 @@ class Component extends DCLogic {
     const trend=t05Verified
       ? (t05Ser
           ? buildTrendChart(t05Ser,0)
-          : buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0))
+          : buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0,
+              mto>=s.c1d.length?s._partialValue:null))
       : Object.assign(buildTrendChart(new Array(12).fill(0),0),
           {showForecast:false,dataNote:stxt('status.no_data','мэдээлэл алга')});
     /* Цуваагүй үед ГРАФИКИЙГ ОГТ зурахгүй. Өмнө нь 12 тэгийн хавтгай
@@ -10244,7 +10263,7 @@ class Component extends DCLogic {
          цуваанаас ДУУСААГҮЙ мөчлөг хасагдсан бол яагаад гэдгийг ил хэлнэ.
          Хасагдаагүй бол ХООСОН мөр — хуудсан дээр юу ч нэмэгдэхгүй. */
       t05CovNote:(s&&s._partialDropped)
-        ?' · '+stxt('status.partial_month','* дуусаагүй сар цуваанд ороогүй')+
+        ?' · '+stxt('status.partial_month','* дуусаагүй сар тусад цэгээр тэмдэглэгдсэн — шугам ба прогнозт ороогүй')+
           ' ('+s._partialDropped+')':'',
       t05Foot:this.txt('t05','foot','Дундаж шугам харуулах'),
       i06Title:this.txt('i06','title','Салбар хоорондын харьцуулалт (индекс)'),

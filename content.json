@@ -475,7 +475,7 @@
       "road_inspect_asof": "Хоногийн мэдээ:",
       "road_inspect_stale": "хоног шинэчлэгдээгүй",
       "no_series": "чиг хандлагын цуваа алга",
-      "partial_month": "* дуусаагүй сар цуваанд ороогүй",
+      "partial_month": "* дуусаагүй сар тусад цэгээр тэмдэглэгдсэн — шугам ба прогнозт ороогүй",
       "no_compare": "харьцуулах өгөгдөл алга"
     },
     "range": {
@@ -653,6 +653,7 @@
       "daily_trend": "хоногийн чиг хандлага",
       "forecast_prefix": "AI прогноз +",
       "forecast_suffix": "сар",
+      "partial_mark": "дутуу",
       "peak": "оргил",
       "compare_prev_year": "өмнөх оны мөн үетэй харьцуулахад",
       "compare_prev_month_mid": "· өмнөх оны мөн сартай (",

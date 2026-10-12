@@ -417,6 +417,27 @@ function auditLayout(doc, win, opts) {
       detail: all.length + ' нүд · ' + rows.map((r) => r.length).join('+') + ' — сүүлийн мөрт ганц нүд (өргөн ' + Math.round(o.width) + 'px, баруун талд ' + Math.round(cr.right - o.right) + 'px хоосон)' });
   });
 
+  /* 9. row-height-mismatch — ЗЭРЭГЦЭЭ (нэг мөрөнд, нэг эцэгтэй) байрласан хоёр картын
+        өндөр ихээр зөрвөл богино карт нь урт картын доор ХООСОН зай үлдээнэ — жиш. сарын
+        график 305px, тээвэрлэгчийн жагсаалт 1000px. card-empty үүнийг барьдаггүй (богино
+        карт өөрийн агуулгаараа дүүрсэн байдаг). Засвар: grid-ийн align-items:stretch, эсвэл
+        урт агуулгыг гүйлгэх (style.css → eh-fill-*). Зориудын зөрүү → data-audit-ignore. */
+  const rowSeen = new Set();
+  cards.forEach((a) => {
+    cards.forEach((b) => {
+      if (a === b || a.el.parentElement !== b.el.parentElement) return;
+      if (Math.abs(a.r.top - b.r.top) > 12) return;
+      const diff = b.r.height - a.r.height;
+      if (diff < 200 || b.r.height < 1.5 * a.r.height) return;
+      const key = describe(a.el) + '|' + Math.round(a.r.left) + '|' + Math.round(a.r.top);
+      if (rowSeen.has(key)) return;
+      rowSeen.add(key);
+      out.push({ rule: 'row-height-mismatch', where: describe(a.el), text: cardTitle(a.el),
+        detail: 'карт ' + Math.round(a.r.height) + 'px · зэргэлдээ карт ' + Math.round(b.r.height) + 'px — доор ' +
+          Math.round(diff) + 'px хоосон зай (grid align-items:stretch эсвэл гүйлгэх)' });
+    });
+  });
+
   return out;
 }
 

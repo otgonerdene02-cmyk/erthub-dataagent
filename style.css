@@ -61,6 +61,15 @@ body{margin:0;}
    нь сүүлийн мөрийг дүүргэнэ. */
 .eh-fx { display: flex !important; flex-wrap: wrap; }
 .eh-fx > * { flex: 1 1 var(--fx, 240px); min-width: 0; }
+
+/* Сарын график (зүүн) + тээвэрлэгчдийн жагсаалт (баруун): жагсаалт нь ГРАФИКИЙН
+   ӨНДӨРТЭЙ яг тэнцүү байж, дотроо гүйлгэнэ. Карт нь өөрийн агуулгаараа мөрийн
+   өндрийг түлхэхгүй (жагсаалт absolute scroll), толгой нь тогтмол. */
+/* Зөвхөн агаарын дэлгэрэнгүйд (.eh-fill) — бусад салбарт жагсаалт богино тул хоосон зай үлдэхгүй */
+.eh-trend-rank.eh-fill { align-items: stretch !important; }
+.eh-fill .eh-fill-card { display: flex; flex-direction: column; }
+.eh-fill .eh-fill-list { position: relative; flex: 1 1 0; min-height: 0; }
+.eh-fill .eh-fill-scroll { position: absolute; inset: 0; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }
 /* 4 / 8 нүдтэй тоон тайлууд: auto-fit нь 3+1, 7+1 болгодог байв → desktop 4 багана,
    таблет/гар утсанд 2 багана (4 ба 8 хоёулаа тэгш хуваагдана). Гар утсанд eh-g-2c давхар ажиллана. */
 @media (max-width: 1100px) {
@@ -85,6 +94,10 @@ body{margin:0;}
   .eh-g-1c { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
   .eh-g-2c { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
   .eh-g-2c > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* Сарын график + тээвэрлэгчийн жагсаалт: гар утсанд дараалан, жагсаалт бүтнээрээ */
+  .eh-trend-rank { grid-template-columns: minmax(0, 1fr) !important; }
+  .eh-fill .eh-fill-list { position: static; flex: none; }
+  .eh-fill .eh-fill-scroll { position: static; overflow: visible; padding-right: 0; }
   /* 7 хоногийн баганын график: 6–7 багана 244px-д багтаж, огнооны шошго ("10.07")
      хүрээнээсээ гарахгүй. Гурван мөр (утга · багана · огноо) ижил gap-тай байх ЁСТОЙ. */
   .eh-wk { gap: 4px !important; }

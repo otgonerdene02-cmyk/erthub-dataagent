@@ -58,6 +58,17 @@ const FIXTURES = {
     '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' +
     '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' +
     '<div style="' + CARD + 'height:80px;flex:1 1 150px">Нүд</div>' + '</div>' },
+  /* Сарын график (богино) + тээвэрлэгчийн жагсаалт (урт) зэрэгцэж, grid нь align-items:start —
+     богино карт доор 700px хоосон. Энэ нь дэлгэрэнгүй хуудасны ЯГ алдаа. */
+  'row-height-mismatch': { expect: ['row-height-mismatch'], html:
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;width:700px">' +
+    '<div style="' + CARD + '">' + rows(12) + '</div><div style="' + CARD + '">' + rows(40) + '</div></div>' },
+  'row-stretch-is-fine': { expect: [], html:
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;width:700px">' +
+    '<div style="' + CARD + '">' + rows(12) + '</div>' +
+    /* Яг style.css-ийн eh-fill-* загвар: жагсаалт абсолют гүйлгээтэй → карт мөрийн өндрийг түлхэхгүй */
+    '<div style="' + CARD + 'display:flex;flex-direction:column;"><div style="font-weight:600">Толгой</div>' +
+    '<div style="position:relative;flex:1 1 0;min-height:0;"><div style="position:absolute;inset:0;overflow-y:auto;">' + rows(40) + '</div></div></div></div>' },
   'control-inside-scroller-is-fine': { expect: [], html:
     '<div style="overflow-x:auto;width:240px"><div style="display:flex;gap:8px;width:700px"><button>Нэг</button><button style="margin-left:auto">Хоёр</button></div></div>' },
   'small-chips-wrap-is-fine': { expect: [], html:

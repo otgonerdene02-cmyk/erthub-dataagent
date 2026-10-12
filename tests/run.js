@@ -4419,14 +4419,52 @@ async function groupBE() {
   check('BE42. "48,210" мөр утга болж кодод ч content.json-д ч үлдээгүй',
     !/'48,210/.test(dcScript()) && !/48,210/.test(fs.readFileSync(path.join(ROOT, 'content.json'), 'utf8')));
   /* Хоосон цуваа график бүтээгчийг нураахгүй (Math.max([]) = -Infinity) */
-  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off\)\{([\s\S]*?)\n\}\n/);
+  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial)?\)\{([\s\S]*?)\n\}\n/);
   let btcOk = false, btcErr = '';
   try {
-    const f = new Function('data', 'off', 'MONTHS', 'stxt', btc42[1]);
-    const r = f([], 0, MONTHS25, (p, x) => x);
+    const f = new Function('data', 'off', 'partial', 'MONTHS', 'stxt', btc42[1]);
+    const r = f([], 0, undefined, MONTHS25, (p, x) => x);
     btcOk = !!r && /^M/.test(r.line) && !/NaN|Infinity/.test(r.line + r.peak.value);
   } catch (e) { btcErr = e.message; }
   check('BE42. buildTrendChart([]) нурахгүй, хавтгай шугам зурна', btcOk, btcErr);
+  /* ── BE44. ДУТУУ САР (одоогийн сар) ГАЦСАН БИШ — тусдаа цэгээр харагдана ──
+     Өмнө: dropPartialMonth 10-р сарыг хасаад үлдээдэг → график 9-р сар дээр гацсан
+     мэт харагддаг байв. Одоо: шугам ба прогноз бүтэн сараар хэвээр, харин дутуу
+     сарын ОДООГИЙН утга тусдаа "дутуу" шошготой цэг болно. Фикстур: 2026-10-12. */
+  const now44 = Date.UTC(2026, 9, 12, 4); // УБ 2026-10-12
+  const cov44 = { grain: 'month', excludes_current: true };
+  const v44 = [1719, 1241, 1403, 1392, 1622, 2044, 2478, 2450, 1966, 654];
+  const dpm44 = dcScript().match(/\nfunction dropPartialMonth\(counts,year,cov,now\)\{([\s\S]*?)\n\}\n/);
+  if (dpm44) {
+    const dpmFn = new Function('return function dropPartialMonth(counts,year,cov,now){' + dpm44[1] + '\n}')();
+    const dp44 = dpmFn(v44, 2026, cov44, now44);
+    check('BE44. dropPartialMonth: дутуу сар цуваанаас хасагдаж, ОДООГИЙН утгыг буцаана',
+      dp44.counts.length === 9 && dp44.partial === '2026-10' && dp44.value === 654,
+      JSON.stringify({ n: dp44.counts.length, p: dp44.partial, v: dp44.value }));
+  }
+  const sss44 = dcScript().match(/\nfunction sectorSummaryToSeries\(json,now,cov\)\{([\s\S]*?)\n\}\n/);
+  if (sss44) {
+    const sssFn = new Function('return function sectorSummaryToSeries(json,now,cov){' + sss44[1] + '\n}')();
+    const rows44 = v44.map((n, i) => ({ month: '2026-' + String(i + 1).padStart(2, '0') + '-01T00:00:00.000Z', total_volume: String(n) }));
+    const s44 = sssFn({ status: 'ok', unit: 'нислэг', data: rows44 }, now44, cov44);
+    check('BE44. sectorSummaryToSeries: дутуу сарын утга partialValue-д, цуваанд 9 сар',
+      !!s44 && s44.counts.length === 9 && s44.partial === '2026-10' && s44.partialValue === 654,
+      JSON.stringify(s44 && { n: s44.counts.length, p: s44.partial, v: s44.partialValue }));
+  }
+  if (btc42) {
+    const mk44 = new Function('MONTHS', 'stxt',
+      'return function buildTrendChart(data,off,partial){' + btc42[1] + '}')(MONTHS25, (p, x) => x);
+    const d9 = v44.slice(0, 9);
+    const a44 = mk44(d9, 0), b44 = mk44(d9, 0, 654);
+    check('BE44. Дутуу сарын цэг график дээр гарна ("дутуу: 654")',
+      b44.hasPartial === true && /дутуу/.test(b44.partialLabel) && /654/.test(b44.partialLabel), b44.partialLabel);
+    check('BE44. Дутуу сар шугам/прогнозыг ӨӨРЧИЛДӨГГҮЙ (прогноз, шугамын цэгийн тоо адил)',
+      a44.fcLabel.delta === b44.fcLabel.delta && a44.fcSplitX === b44.fcSplitX &&
+      a44.line.split('L').length === b44.line.split('L').length, '');
+    check('BE44. Дутуу сарын цэг хүрээндээ багтана (Y тэнхлэгээс гарахгүй)',
+      Number(b44.partialCy) <= b44.h - b44.padB && Number(b44.partialCy) >= b44.padT, b44.partialCy);
+    check('BE44. Дутуу сар байхгүй үед цэг ГАРАХГҮЙ', a44.hasPartial === false, '');
+  }
 
   /* ── BE43. Датасэтийн "Салбарын бүтэц" — ЗӨВХӨН тухайн датасэтийн задаргаа ──
      SECTORS[k].rank нь салбарын түвшнийх; төмөр замд үүнийг вагоны датасэт
@@ -5026,10 +5064,10 @@ async function groupBE() {
      АЧААЛАЛ (МЯНГА) · мэдээлэл алга" гэсэн гарчгийн доор ХАВТГАЙ муруй
      зурагдаж, Y тэнхлэг "-6 -3 0 3 6" (сөрөг "мянган" ачаалал!), X
      тэнхлэг "1-р сар … 11-р сар" гэж бичигдэж байв. */
-  const btm = dcScript().match(/\nfunction buildTrendChart\(data,off\)\{([\s\S]*?)\r?\n\}\r?\n/);
+  const btm = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
   if (!btm) { bad('BE39. buildTrendChart() олдсонгүй'); return; }
   const btc = new Function('MONTHS', 'stxt',
-    'return function buildTrendChart(data,off){' + btm[1] + '}')(
+    'return function buildTrendChart(data,off,partial){' + btm[1] + '}')(
     ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар',
       '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'], sx);
   const zeroCh = btc(new Array(12).fill(0), 0);
@@ -5243,7 +5281,7 @@ async function groupBE() {
   check('BE37. t05-ийн толгойд тэмдэглэгээ гарна, текст content.json-д',
     read('index.html').includes('{{ t05CovNote }}') &&
     dcScript().includes("stxt('status.partial_month'") &&
-    readJson('content.json').site.status.partial_month === '* дуусаагүй сар цуваанд ороогүй');
+    readJson('content.json').site.status.partial_month === '* дуусаагүй сар тусад цэгээр тэмдэглэгдсэн — шугам ба прогнозт ороогүй');
 
   /* ── BE38. datasets{} — БҮРЭН БАЙДАЛ машинаар уншигдана ──
      Өмнө нь "эх сурвалжийн 0.1% нь татагдсан" гэсэн баримт ЗӨВХӨН
