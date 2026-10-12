@@ -2137,6 +2137,142 @@
       </div>
     </div>
 
+    <!-- Вагоны датасэтийн АНАЛИЗ — агаарын хуудасны зохион байгуулалттай адил
+         (KPI → харьцааны donut + төрөл → сарын график + станцын эрэмбэ).
+         Эх сурвалж: /api/sectors/rail/wagon-loading/history. Түүх ирээгүй бол
+         зөвхөн "мэдээлэл алга" — тоо зохиохгүй. -->
+    <sc-if value="{{ detail.isWagonDetail }}">
+    <div data-wagon-an style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);font-weight:600;white-space:nowrap;">{{ detail.wagonT.head }}</div>
+        <sc-if value="{{ detail.wagonHasData }}">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">{{ detail.wagonScope }}</span>
+        </sc-if>
+      </div>
+      <sc-if value="{{ detail.wagonNoData }}">
+        <div style="background:var(--surface2);border:1px dashed var(--line2);border-radius:14px;padding:18px 20px;font-size:13px;color:var(--ink2);line-height:1.5;">{{ detail.wagonT.noData }}</div>
+      </sc-if>
+      <sc-if value="{{ detail.wagonHasData }}">
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px;">
+          <sc-for list="{{ detail.wagonYearChips }}" as="wy" hint-placeholder-count="3">
+            <button sc-camel-on-click="{{ wy.pick }}" style="{{ wy.style }}">{{ wy.label }}</button>
+          </sc-for>
+        </div>
+        <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px;">
+          <sc-for list="{{ detail.wagonKpis }}" as="wk" hint-placeholder-count="6">
+            <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px;">
+              <div style="font-size:9.5px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ wk.label }}</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.02em;">{{ wk.value }}</div>
+              <div style="font-size:11px;color:var(--ink3);margin-top:2px;">{{ wk.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ detail.wagonHasPartial }}">
+          <div style="font-size:11.5px;color:var(--ink3);margin:-6px 0 14px;">* {{ detail.wagonPartialNote }}</div>
+        </sc-if>
+
+        <div class="eh-g-1c" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.wagonT.donutTitle }}</div>
+            <div style="display:flex;align-items:center;gap:20px;">
+              <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
+                <sc-for list="{{ detail.wagonDonut }}" as="wd" hint-placeholder-count="2">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ wd.color }}" stroke-width="13" stroke-dasharray="{{ wd.dash }}" stroke-dashoffset="{{ wd.offset }}" transform="rotate(-90 50 50)"></circle>
+                </sc-for>
+              </svg>
+              <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
+                <sc-for list="{{ detail.wagonDonut }}" as="wd" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <div style="width:9px;height:9px;border-radius:3px;background:{{ wd.color }};flex-shrink:0;"></div>
+                    <div style="font-size:13px;color:var(--ink2);flex:1;">{{ wd.label }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink);">{{ wd.pctLabel }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.wagonT.typesTitle }}</div>
+            <sc-if value="{{ detail.wagonHasTypes }}">
+              <div style="display:flex;flex-direction:column;gap:11px;">
+                <sc-for list="{{ detail.wagonTypes }}" as="wt" hint-placeholder-count="6">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ wt.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ wt.value }} · {{ wt.pct }}</span>
+                    </div>
+                    <div style="height:7px;border-radius:4px;background:var(--surface2);"><div style="height:100%;width:{{ wt.width }};border-radius:4px;background:{{ activeColor }};opacity:.8;"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.wagonBreakdownPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.wagonT.pending }}</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div class="eh-g-1c" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.wagonT.chartTitle }}</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-bottom:12px;">{{ detail.wagonT.chartLegend }}</div>
+            <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;display:block;">
+              <sc-for list="{{ detail.wagonChart.yTicksLeft }}" as="yt" hint-placeholder-count="5">
+                <line x1="{{ detail.wagonChart.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.wagonChart.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
+                <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.wagonChart.yTicksRight }}" as="yt2" hint-placeholder-count="5">
+                <foreignObject x="{{ yt2.fx }}" y="{{ yt2.fy }}" width="42" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:{{ activeColor }};font-family:'JetBrains Mono',monospace;text-align:left;padding-left:6px;">{{ yt2.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.wagonChart.barRects }}" as="br" hint-placeholder-count="12">
+                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="var(--ink3)" opacity=".35" rx="2"><title>{{ br.tip }}</title></rect>
+              </sc-for>
+              <path d="{{ detail.wagonChart.line }}" fill="none" stroke="{{ activeColor }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+              <sc-for list="{{ detail.wagonChart.dotPts }}" as="dp" hint-placeholder-count="12">
+                <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ activeColor }}"><title>{{ dp.tip }}</title></circle>
+              </sc-for>
+              <sc-for list="{{ detail.wagonChart.xTicks }}" as="xt" hint-placeholder-count="6">
+                <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
+                </foreignObject>
+              </sc-for>
+            </svg>
+          </div>
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.wagonT.stationsTitle }}</div>
+            <sc-if value="{{ detail.wagonHasStations }}">
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <sc-for list="{{ detail.wagonStations }}" as="ws" hint-placeholder-count="10">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ws.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ ws.value }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ ws.width }};border-radius:3px;background:{{ activeColor }};opacity:.8;"></div></div>
+                    <div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ ws.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.wagonStationsTotal }}</span>
+                <sc-if value="{{ detail.wagonStationsMore.show }}">
+                  <button sc-camel-on-click="{{ detail.wagonStationsMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.wagonStationsMore.label }}</button>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.wagonBreakdownPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.wagonT.pending }}</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
     <!-- Нэгдсэн шүүлт + KPI: эх veritech dashboard-той адил "Шүүлт" товч дарахад
          яг доор нь нээгддэг, БҮХ картад (KPI/chart/хүснэгт) нэгэн зэрэг
          нөлөөлдөг цонх — өмнө нь энэ панель хүснэгтийн карт дотор
@@ -5747,6 +5883,63 @@ function buildDualAxisChart(barSeries,lineSeries,labels){
     w,h,padL,padR,padT,padB,axisX1:padL,axisX2:w-padR,axisYBottom:(padT+plotH).toFixed(1)};
 }
 
+/* Вагон ачилтын АНАЛИЗ — backend-ийн /wagon-loading/history хариуг
+   (бүтэн түүх `all`, сонгосон оны `sel`) самбарын хэлбэрт хөрвүүлнэ.
+   ЦЭВЭР функц: DOM/state хөндөхгүй тул tests/run.js-д гараар бодох
+   фикстур дээр шалгана. Тоо ЗОХИОХГҮЙ — түүх ирээгүй бол {hasData:false}.
+   Дутуу сар (partial) графикт "*" шошготой, YoY-д ОРОХГҮЙ. */
+function wagonAnalysisModel(all,sel,year){
+  const ok=h=>h&&h.status==='ok'&&Array.isArray(h.months)&&h.months.length;
+  if(!ok(all)) return {hasData:false};
+  /* "Дутуу сар" = календарийн өдрийн <90%-д л өгөгдөлтэй сар (эсвэл
+     үргэлжилж буй сар). backend-ийн `partial`/complete_days-ийг ЭНД
+     хэрэглэхгүй: бодит өгөгдөлд сар бүрд ≥1 станц дутуу өдөр байдаг тул
+     46/46 сар "дутуу" болж график бүхэлдээ "*", YoY үргэлж "—" болдог байв. */
+  const isPartial=m=>{
+    const ym=String(m.month).split('-'), y=+ym[0], mo=+ym[1];
+    const dim=new Date(Date.UTC(y,mo,0)).getUTCDate();
+    return !(dim>0)||(+m.days||0)<dim*0.9;
+  };
+  const months=all.months.map(m=>({...m,partial:isPartial(m)}));
+  const years=[...new Set(months.map(m=>+String(m.month).slice(0,4)))].sort();
+  const yr=(year==='all'||year==null)?'all':+year;
+  const inScope=m=>yr==='all'||+String(m.month).slice(0,4)===yr;
+  const ms=months.filter(inScope);
+  if(!ms.length) return {hasData:false};
+  const sum=(a,k)=>a.reduce((t,m)=>t+(+m[k]||0),0);
+  const loaded=sum(ms,'loaded'), unloaded=sum(ms,'unloaded');
+  const dom=sum(ms,'loaded_domestic'), frn=sum(ms,'loaded_foreign');
+  const days=sum(ms,'days');
+  const partialN=ms.filter(m=>m.partial).length;
+  /* YoY: зөвхөн ХОЁР оны ХОЁУЛАНД бүтэн (partial биш) байгаа сарууд. */
+  let yoy=null;
+  if(yr!=='all'){
+    const prev=new Map(months.filter(m=>+String(m.month).slice(0,4)===yr-1&&!m.partial)
+      .map(m=>[String(m.month).slice(5),m]));
+    const pairs=ms.filter(m=>!m.partial&&prev.has(String(m.month).slice(5)));
+    const a=sum(pairs,'loaded'), b=pairs.reduce((t,m)=>t+(+prev.get(String(m.month).slice(5)).loaded||0),0);
+    if(pairs.length&&b>0) yoy={pct:(a-b)/b*100,months:pairs.length};
+  }
+  const bd=(yr==='all'?all:sel);
+  const hasBreakdown=!!(bd&&Array.isArray(bd.by_station)&&bd.by_station.length);
+  const pct=(v,t)=>t>0?v/t*100:0;
+  const types=(bd&&Array.isArray(bd.by_wagon_type)?bd.by_wagon_type:[])
+    .filter(t=>(+t.loaded||0)>0||(+t.unloaded||0)>0)
+    .map(t=>({type:t.type,loaded:+t.loaded||0,unloaded:+t.unloaded||0}))
+    .sort((a,b)=>b.loaded-a.loaded);
+  const stations=(bd&&Array.isArray(bd.by_station)?bd.by_station:[])
+    .map(s=>({station:s.station,code:s.code,loaded:+s.loaded||0,unloaded:+s.unloaded||0}))
+    .sort((a,b)=>b.loaded-a.loaded);
+  return {hasData:true,years,year:yr,monthCount:ms.length,days,partialN,
+    loaded,unloaded,dom,frn,domPct:pct(dom,dom+frn),frnPct:pct(frn,dom+frn),
+    ratio:unloaded>0?loaded/unloaded:null,perDay:days>0?loaded/days:null,yoy,
+    series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
+      loaded:ms.map(m=>+m.loaded||0),unloaded:ms.map(m=>+m.unloaded||0)},
+    hasBreakdown,types,stations,
+    typeTotal:types.reduce((t,x)=>t+x.loaded,0),
+    stationTotal:stations.reduce((t,x)=>t+x.loaded,0)};
+}
+
 /* miniSpark() УСТГАВ (2026-09-18): чиглэлээс (up/down) синус муруй ЗОХИОЖ
    зурдаг байсан бөгөөд "12 сарын чиг хандлага" шошготой хамт бодит цуваа
    мэт уншигдаж байв — "тоо ЗОХИОХГҮЙ" дүрмийн зөрчил. Бодит цуваагүй бол
@@ -5797,6 +5990,7 @@ class Component extends DCLogic {
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12', airTreemapRegion:null,
     airRankExpanded:false, airCountryExpanded:false, airCargoExpanded:false,
+    wagonYear:'all', wagonStationsExpanded:false, wagonHistVer:0,
     airAiThread:null, airAiInput:'',
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
@@ -6248,9 +6442,34 @@ class Component extends DCLogic {
          амьд болоход fetchSectorSummary-тай хамт хэрэглэгдэнэ). */
       this._railWagonLoading=wagonLoadingToValue(d);
       this.applyRailWagonData();
+      this.loadWagonHistory();   // ТУСАД: унавал дээрх хэсгийг хөндөхгүй
     }catch(e){
       console.info('[ErtHub] etransport-backend уншигдсангүй:',e.message);
     }
+  }
+  /* Вагон ачилтын түүх (анализын самбар). Бүтэн түүх нэг удаа, сонгосон
+     оны задаргаа (станц/төрөл) оныг солиход тусад нь. Endpoint байхгүй/унтарсан
+     бол null → самбар "мэдээлэл алга" гэж ил хэлнэ. */
+  async loadWagonHistory(){
+    if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchRailWagonHistory) return;
+    try{
+      this._wagonHistAll=await EHBackend.fetchRailWagonHistory();
+      this._wagonHistSel=null;
+      this.setState(s=>({wagonHistVer:s.wagonHistVer+1}));
+    }catch(e){
+      console.info('[ErtHub] wagon-loading/history уншигдсангүй:',e.message);
+    }
+  }
+  setWagonYear(y){
+    this.setState({wagonYear:y,wagonStationsExpanded:false});
+    this._wagonHistSel=null;
+    if(y==='all'||typeof EHBackend==='undefined'||!EHBackend.fetchRailWagonHistory) return;
+    const tok=this._wagonSelTok=(this._wagonSelTok||0)+1;
+    EHBackend.fetchRailWagonHistory(y+'-01-01',y+'-12-31').then(d=>{
+      if(tok!==this._wagonSelTok||this.state.wagonYear!==y) return;   // хоцорсон хариуг үл тооно
+      this._wagonHistSel=d;
+      this.setState(s=>({wagonHistVer:s.wagonHistVer+1}));
+    });
   }
   /* Техникийн хяналтын үзлэг — ТУСДАА эх сурвалж (SOURCES.roadInspect).
      Вагонтой ХАМТ татахгүй: хоёр салбарын хоёр өөр датасэт, нэг нь
@@ -7950,6 +8169,70 @@ class Component extends DCLogic {
       airYearChips,airTypeChips,airDirChips,airRegionChips,airMonthChips,airRangeUi,
       airYearLoading:!!this.state.airYearLoading};
   }
+  /* Вагоны датасэтийн анализын самбар — wagonAnalysisModel() (цэвэр)
+     үр дүнг темплейтийн хэлбэрт хөрвүүлнэ. Бүх текст content.json →
+     site.wagon_an. Түүх ирээгүй бол ЗӨВХӨН "мэдээлэл алга" харагдана. */
+  buildWagonAnalysis(){
+    const T=(k,fb)=>stxt('wagon_an.'+k,fb);
+    const m=wagonAnalysisModel(this._wagonHistAll,this._wagonHistSel,this.state.wagonYear);
+    const fmt=v=>Math.round(v).toLocaleString('en-US');
+    const base={isWagonDetail:true,wagonHasData:m.hasData,wagonNoData:!m.hasData,
+      wagonT:{head:T('head','Вагон ачилтын анализ'),
+        noData:T('no_data','Түүхийн мэдээлэл холбогдоогүй — сарын анализ харуулах боломжгүй.'),
+        donutTitle:T('donut_title','Ачилтын дотоод / гадаадын харьцаа'),
+        typesTitle:T('types_title','Вагоны төрлөөр ачилт'),
+        stationsTitle:T('stations_title','Станцаар ачилт'),
+        chartTitle:T('chart_title','Сараар ачсан ба буулгасан вагон'),
+        chartLegend:T('chart_legend','Багана — ачсан (зүүн тэнхлэг) · шугам — буулгасан (баруун тэнхлэг)'),
+        pending:T('breakdown_pending','Станц, төрлийн задаргаа ачаалж байна…')}};
+    if(!m.hasData) return base;
+    const unit=T('unit','вагон');
+    const dash=T('dash','—');
+    const kpis=[
+      {label:T('kpi_loaded','Ачсан вагон'),value:fmt(m.loaded),sub:unit},
+      {label:T('kpi_unloaded','Буулгасан вагон'),value:fmt(m.unloaded),sub:unit},
+      {label:T('kpi_ratio','Ачсан / буулгасан'),value:m.ratio==null?dash:m.ratio.toFixed(2),sub:T('kpi_ratio_sub','харьцаа')},
+      {label:T('kpi_dom','Дотоодын ачилт'),value:(m.domPct).toFixed(1)+'%',sub:T('kpi_dom_sub','ачсан вагоны')},
+      {label:T('kpi_perday','Өдрийн дундаж ачилт'),value:m.perDay==null?dash:fmt(m.perDay),sub:unit},
+      {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?((m.yoy.pct>0?'+':'')+m.yoy.pct.toFixed(1)+'%'):dash,
+        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):T('kpi_yoy_none','харьцуулах бүтэн сар алга')}
+    ];
+    const circ=2*Math.PI*40;
+    const segs=[{label:T('dom_label','Дотоод'),pct:m.domPct,color:'#2E7CF6'},
+                {label:T('frn_label','Гадаад'),pct:m.frnPct,color:'#0FA37F'}];
+    let acc=0;
+    const donut=segs.map(s=>{const o={...s,pctLabel:s.pct.toFixed(1)+'%',
+      dash:(s.pct/100*circ).toFixed(1)+' '+circ.toFixed(1),offset:(-acc/100*circ).toFixed(1)};acc+=s.pct;return o;});
+    const typeMax=m.types.length?m.types[0].loaded:1;
+    const types=m.types.map(t=>({name:T('types.'+t.type,t.type),value:fmt(t.loaded),
+      width:(t.loaded/(typeMax||1)*100).toFixed(0)+'%',
+      pct:m.typeTotal>0?(t.loaded/m.typeTotal*100).toFixed(1)+'%':''}));
+    const expanded=!!this.state.wagonStationsExpanded;
+    const stMax=m.stations.length?m.stations[0].loaded:1;
+    const rows=(expanded?m.stations:m.stations.slice(0,10)).map(s=>({name:s.station,value:fmt(s.loaded),
+      sub:fmt(s.unloaded)+' '+T('stations_unloaded','буулгасан'),
+      width:(s.loaded/(stMax||1)*100).toFixed(0)+'%'}));
+    const extra=Math.max(0,m.stations.length-10);
+    const chart=buildDualAxisChart(m.series.loaded,m.series.unloaded,m.series.labels);
+    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat(m.years.map(y=>({label:String(y),y}))).map(c=>{
+      const on=c.y===m.year;
+      return {label:c.label,
+        pick:()=>this.setWagonYear(c.y),
+        style:'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
+          +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);')};
+    });
+    const partialNote=m.partialN>0?(m.partialN+' '+T('partial_note','сар дутуу өгөгдөлтэй (* тэмдэглэгээ) — жилийн харьцуулалтад ороогүй')):'';
+    return {...base,wagonKpis:kpis,wagonDonut:donut,wagonTypes:types,wagonHasTypes:types.length>0,
+      wagonStations:rows,wagonHasStations:rows.length>0,
+      wagonBreakdownPending:!m.hasBreakdown,
+      wagonStationsMore:{show:extra>0,expanded,
+        label:expanded?stxt('rank.collapse','△ Хураах'):('↕ '+extra+' '+stxt('rank.more_rows','нэмэлт мөр')),
+        toggle:()=>this.setState(s=>({wagonStationsExpanded:!s.wagonStationsExpanded}))},
+      wagonStationsTotal:T('stations_total','Нийт')+': '+fmt(m.stationTotal),
+      wagonChart:chart,wagonYearChips:yearChips,
+      wagonPartialNote:partialNote,wagonHasPartial:!!partialNote,
+      wagonScope:m.monthCount+' '+T('scope_months','сар')+' · '+fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')};
+  }
   buildDocDetail(){
     const cat=this.state.docCat, list=DOCS[cat]||[];
     const i=this.state.docIndex;
@@ -9234,6 +9517,7 @@ class Component extends DCLogic {
        (render бүрд аймгийн 21 зам зурахгүй). */
     const roadExtra=(isRoadInspect&&this.state.page==='detail')?this.buildRoadInspectExtra():{};
     const isAirDetail=dsel.sector==='air';
+    const wagonExtra=(dsel.source==='railWagon'&&this.state.page==='detail')?this.buildWagonAnalysis():{};
     let airExtra={};
     if(isAirDetail){
       const sAir=SECTORS.air;
@@ -9384,7 +9668,7 @@ class Component extends DCLogic {
     const detail={
       t:detailT,
       dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
-      isAirDetail,...airExtra,trendFill:isAirDetail?' eh-fill':'',notRoadInspect:!isRoadInspect,...roadExtra,
+      isAirDetail,...airExtra,...wagonExtra,trendFill:isAirDetail?' eh-fill':'',notRoadInspect:!isRoadInspect,...roadExtra,
       freqCard,useCard,
       name:dsel.name,desc:dsel.desc,agency:dsel.agency,fmt:dsel.fmt,freq:dsel.freq,use:dsel.use,
       color:NEON[dsel.sector],glyph:GLYPH[dsel.sector],sectorLabel:SECTORS[dsel.sector].label,
