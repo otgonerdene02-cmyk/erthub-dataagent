@@ -9469,8 +9469,12 @@ class Component extends DCLogic {
     // "Олон улсын / Дотоодын" сонголтыг газрын зургийн толгойд segmented
     // control болгон гаргана — бүх буцаалтад (ачаалж байгаа үед ч) байх
     // ёстой тул энд нэг удаа бэлдээд доор тархаана.
-    const typeTabs=[['all','Бүгд'],['intl','Олон улсын'],['domestic','Дотоодын']].map(o=>{
-      const on=this.state.airType===o[0];
+    // "Бүгд" оруулахгүй: дэлхийн зураг дээр "Бүгд" = "Олон улсын" (Улаанбаатараас
+    // гарсан урсгал бүхэлдээ ОУ), тиймээс хоёрыг зэрэг харуулбал хоёр шүүлт
+    // байгаа мэт төөрөлдүүлнэ. airType==='all' үед "Олон улсын" идэвхтэй харагдана.
+    const mapTypeOn=(key)=>key==='intl'?this.state.airType!=='domestic':this.state.airType===key;
+    const typeTabs=[['intl','Олон улсын'],['domestic','Дотоодын']].map(o=>{
+      const on=mapTypeOn(o[0]);
       return {label:o[1],on,pick:()=>this.setAirFilter('airType',o[0]),
         style:'cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:600;white-space:nowrap;border:none;border-radius:8px;padding:6px 14px;transition:.16s var(--ease);'
           +(on?'background:var(--ink);color:#EEF3FA;box-shadow:0 2px 8px -3px rgba(15,23,46,.5);':'background:transparent;color:var(--ink3);')};
