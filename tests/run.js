@@ -4213,6 +4213,25 @@ async function groupBE() {
       WA(null, null, 'all').hasData === false && WA({ status: 'no_data', months: [] }, null, 'all').hasData === false &&
       WA({ status: 'ok', months: [] }, null, 'all').hasData === false);
     check('WA6. Түүхэд байхгүй он → hasData:false', WA(ALL, null, 2030).hasData === false);
+    /* WA9. Бодит өгөгдөл (2026-10): сар бүрд complete_days < days, backend
+       partial:true — гэхдээ календарийн ≥90% өдөртэй сар ДУТУУ БИШ.
+       Өмнө нь 46/46 сар "*"-тай, YoY үргэлж null байв. */
+    const real = (month, days, complete, loaded) => ({ month, days, complete_days: complete, partial: true,
+      loaded, unloaded: loaded, loaded_domestic: 0, loaded_foreign: loaded });
+    const R = WA({ status: 'ok', by_station: [], by_wagon_type: [], months: [
+      real('2025-08', 31, 27, 100), real('2025-02', 25, 24, 90),   // 25/28=89% → дутуу
+      real('2026-08', 31, 26, 120), real('2026-02', 28, 26, 90),   // 100% → бүтэн
+      real('2025-12', 13, 7, 50),                                  // 13/31 → дутуу
+      real('2026-10', 10, 9, 40)] }, null, 'all');   // 10/31 → дутуу
+    check('WA9. complete_days<days ч ≥90% өдөртэй сар дутуу БИШ; зөвхөн 3 сар дутуу',
+      R.partialN === 3 && R.series.labels.filter(l => l.endsWith('*')).length === 3, R.series.labels.join(','));
+    const R26 = WA({ status: 'ok', by_station: [], by_wagon_type: [], months: [
+      real('2025-08', 31, 27, 100), real('2026-08', 31, 26, 120)] }, null, 2026);
+    check('WA9. Backend partial:true боловч бүрэн хамрагдсан сар YoY-д ОРНО (+20%)',
+      !!R26.yoy && Math.abs(R26.yoy.pct - 20) < 1e-9, JSON.stringify(R26.yoy));
+    check('WA9. 28/31 = 90.3% → бүтэн, 27/31 = 87% → дутуу',
+      WA({ status: 'ok', by_station: [], by_wagon_type: [], months: [real('2026-07', 28, 28, 1)] }, null, 'all').partialN === 0 &&
+      WA({ status: 'ok', by_station: [], by_wagon_type: [], months: [real('2026-07', 27, 27, 1)] }, null, 'all').partialN === 1);
     check('WA6. Буулгасан 0 бол харьцаа null (хуваалтын алдаа/Infinity БИШ)',
       WA({ status: 'ok', months: [mo('2026-01', 10, 0, 5, 31, false)], by_station: [], by_wagon_type: [] }, null, 'all').ratio === null);
 

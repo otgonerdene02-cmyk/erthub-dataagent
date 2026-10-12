@@ -5625,7 +5625,16 @@ function buildDualAxisChart(barSeries,lineSeries,labels){
 function wagonAnalysisModel(all,sel,year){
   const ok=h=>h&&h.status==='ok'&&Array.isArray(h.months)&&h.months.length;
   if(!ok(all)) return {hasData:false};
-  const months=all.months;
+  /* "Дутуу сар" = календарийн өдрийн <90%-д л өгөгдөлтэй сар (эсвэл
+     үргэлжилж буй сар). backend-ийн `partial`/complete_days-ийг ЭНД
+     хэрэглэхгүй: бодит өгөгдөлд сар бүрд ≥1 станц дутуу өдөр байдаг тул
+     46/46 сар "дутуу" болж график бүхэлдээ "*", YoY үргэлж "—" болдог байв. */
+  const isPartial=m=>{
+    const ym=String(m.month).split('-'), y=+ym[0], mo=+ym[1];
+    const dim=new Date(Date.UTC(y,mo,0)).getUTCDate();
+    return !(dim>0)||(+m.days||0)<dim*0.9;
+  };
+  const months=all.months.map(m=>({...m,partial:isPartial(m)}));
   const years=[...new Set(months.map(m=>+String(m.month).slice(0,4)))].sort();
   const yr=(year==='all'||year==null)?'all':+year;
   const inScope=m=>yr==='all'||+String(m.month).slice(0,4)===yr;
