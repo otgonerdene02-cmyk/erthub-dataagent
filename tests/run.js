@@ -207,6 +207,10 @@ function groupB() {
          бичлэг хайх аргаар олдохгүй. Зам бүр үнэхээр уншигддагийг
          V13-ын round-trip (content.json → самбарын гаралт) баталдаг. */
       'vehreg',
+      /* `wagon_an` — вагоны анализын самбар. Зам нь T('kpi_loaded') гэх мэт
+         жижиг туслахаар дамждаг (stxt('wagon_an.'+k)) тул шууд бичлэг хайх
+         аргаар олдохгүй. Түлхүүр бүр WA7-д баталгаажна. */
+      'wagon_an',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -4164,6 +4168,71 @@ async function groupBE() {
     JSON.stringify((toW({ status: 'ok', count: 5, by_station: BS }) || {}).byStation) === JSON.stringify(BS));
   check('BE18. by_station ирээгүй бол хоосон массив (undefined БИШ)',
     JSON.stringify((toW({ status: 'ok', count: 5 }) || {}).byStation) === '[]');
+
+  /* ── WA. Вагоны анализын загвар — ГАРААР бодогдох фикстур ──
+     2025-08 100/80 (дотоод 40) · 2025-09 200/150 (100) · 2026-08 150/90 (60)
+     · 2026-09 50/40 (20, ДУТУУ сар, 10 өдөр). Нийт: ачсан 500, буулгасан 360,
+     дотоод 220 (44%), харьцаа 500/360, өдөр 102 (31+30+31+10). */
+  const wam = dcScript().match(/function wagonAnalysisModel\(all,sel,year\)\{([\s\S]*?)\n\}/);
+  if (!wam) { bad('WA0. wagonAnalysisModel() олдсонгүй'); }
+  else {
+    const WA = new Function('all', 'sel', 'year', wam[1]);
+    const mo = (month, loaded, unloaded, dom, days, partial) => ({ month, loaded, unloaded,
+      loaded_domestic: dom, loaded_foreign: loaded - dom, days, complete_days: days, partial });
+    const ALL = { status: 'ok', months: [
+      mo('2025-08', 100, 80, 40, 31, false), mo('2025-09', 200, 150, 100, 30, false),
+      mo('2026-08', 150, 90, 60, 31, false), mo('2026-09', 50, 40, 20, 10, true)],
+      by_station: [{ station: 'B', code: '2', loaded: 200, unloaded: 160 }, { station: 'A', code: '1', loaded: 300, unloaded: 200 }],
+      by_wagon_type: [{ type: 'covered', loaded: 300, unloaded: 200 }, { type: 'tank', loaded: 200, unloaded: 160 },
+        { type: 'reefer', loaded: 0, unloaded: 0 }] };
+    const a = WA(ALL, null, 'all');
+    check('WA1. Нийт ачсан 500, буулгасан 360', a.hasData && a.loaded === 500 && a.unloaded === 360, JSON.stringify(a.loaded));
+    check('WA1. Дотоод 220 → 44%, гадаад 56%', a.dom === 220 && Math.abs(a.domPct - 44) < 1e-9 && Math.abs(a.frnPct - 56) < 1e-9);
+    check('WA1. Харьцаа 500/360, өдрийн дундаж 500/102',
+      Math.abs(a.ratio - 500 / 360) < 1e-9 && a.days === 102 && Math.abs(a.perDay - 500 / 102) < 1e-9);
+    check('WA2. Дутуу сар 1 тоологдоно, шошго "*"-тай',
+      a.partialN === 1 && a.series.labels.join(',') === '25-08,25-09,26-08,26-09*');
+    check('WA2. Жилүүд [2025,2026]; "Бүгд" дээр YoY ЗОХИОХГҮЙ (null)',
+      a.years.join(',') === '2025,2026' && a.yoy === null);
+    check('WA3. Станц ачилтаар буурахаар эрэмбэлэгдэнэ (A, B)',
+      a.stations.map(s => s.station).join(',') === 'A,B' && a.stationTotal === 500);
+    check('WA3. Тэг төрөл (reefer) харагдахгүй, 2 төрөл',
+      a.types.length === 2 && a.types[0].type === 'covered' && a.typeTotal === 500);
+    const SEL26 = { status: 'ok', months: [], by_station: [{ station: 'A', code: '1', loaded: 150, unloaded: 90 }],
+      by_wagon_type: [{ type: 'covered', loaded: 150, unloaded: 90 }] };
+    const y = WA(ALL, SEL26, 2026);
+    check('WA4. 2026: ачсан 200, буулгасан 130', y.loaded === 200 && y.unloaded === 130 && y.monthCount === 2);
+    check('WA4. YoY: ЗӨВХӨН хоёр оны бүтэн сар (08): (150-100)/100 = +50%, 1 сар',
+      !!y.yoy && Math.abs(y.yoy.pct - 50) < 1e-9 && y.yoy.months === 1, JSON.stringify(y.yoy));
+    check('WA4. Станц/төрөл нь сонгосон оны хариунаас (sel)',
+      y.hasBreakdown && y.stations.length === 1 && y.stations[0].loaded === 150);
+    const yn = WA(ALL, null, 2026);
+    check('WA5. Оны задаргаа ирээгүй бол ХУУЧИН бүтэн түүхийн станцыг харуулахгүй',
+      !yn.hasBreakdown && yn.stations.length === 0 && yn.types.length === 0);
+    check('WA6. null / no_data / хоосон months → hasData:false (тоо зохиохгүй)',
+      WA(null, null, 'all').hasData === false && WA({ status: 'no_data', months: [] }, null, 'all').hasData === false &&
+      WA({ status: 'ok', months: [] }, null, 'all').hasData === false);
+    check('WA6. Түүхэд байхгүй он → hasData:false', WA(ALL, null, 2030).hasData === false);
+    check('WA6. Буулгасан 0 бол харьцаа null (хуваалтын алдаа/Infinity БИШ)',
+      WA({ status: 'ok', months: [mo('2026-01', 10, 0, 5, 31, false)], by_station: [], by_wagon_type: [] }, null, 'all').ratio === null);
+
+    /* Текстийн гэрээ: самбарын T('...') түлхүүр бүр content.json → site.wagon_an-д
+       бүртгэлтэй (эс тэгвэл text-coverage F1 унана / админд харагдахгүй). */
+    const bw = dcScript().match(/buildWagonAnalysis\(\)\{([\s\S]*?)\n  \}\n  buildDocDetail/);
+    const WAC = (readJson('content.json').site || {}).wagon_an || {};
+    const keys = bw ? [...bw[1].matchAll(/T\('([a-z_.]+)'/g)].map(m => m[1]).filter(k => !k.endsWith('.')) : [];
+    const miss = keys.filter(k => k.split('.').reduce((o, p) => (o == null ? o : o[p]), WAC) == null);
+    check('WA7. buildWagonAnalysis-ийн текст бүр content.json site.wagon_an-д', keys.length > 20 && miss.length === 0, miss.join(','));
+    check('WA7. Вагоны 6 төрлийн шошго бүртгэлтэй',
+      ['covered', 'platform', 'half', 'tank', 'reefer', 'other'].every(k => WAC.types && WAC.types[k]));
+    check('WA8. Сайт түүхийг EHBackend.fetchRailWagonHistory-аар авна, endpoint замтай таарна',
+      dcScript().includes('EHBackend.fetchRailWagonHistory') &&
+      read('js/erthub-backend.js').includes("/api/sectors/rail/wagon-loading/history") &&
+      /window\.EHBackend\s*=\s*\{[\s\S]*?fetchRailWagonHistory:\s*fetchRailWagonHistory/.test(read('js/erthub-backend.js')));
+    check('WA8. Түүх ачаалахад унавал вагоны өдрийн мэдээг ХӨНДӨХГҮЙ (тусдаа try)',
+      /this\.applyRailWagonData\(\);\s*this\.loadWagonHistory\(\);/.test(dcScript()) &&
+      /async loadWagonHistory\(\)\{[\s\S]*?try\{[\s\S]*?catch\(e\)/.test(dcScript()));
+  }
 
   /* ── BE19. station_count: 0 нь мөрийг БҮРМӨСӨН алга болгодог байв ── */
   check('BE19. station_count 0 → 0 (Number()||null нь null болгож мөрийг залгидаг байв)',

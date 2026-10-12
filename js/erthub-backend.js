@@ -61,6 +61,22 @@
       });
   }
 
+  /* Вагон ачилтын ТҮҮХ — сарын нэгтгэл, станц, вагоны төрөл. from/to
+     (YYYY-MM-DD) заавал биш. Хариу: {status,months[],by_station[],
+     by_wagon_type[]} эсвэл {status:'no_data'}. Endpoint хараахан deploy
+     болоогүй (404) бол fetchJson null буцаана — самбар "мэдээлэл алга". */
+  function fetchRailWagonHistory(from, to) {
+    if (!BASE) return Promise.resolve(null);
+    var q = [];
+    if (from) q.push('from=' + encodeURIComponent(from));
+    if (to) q.push('to=' + encodeURIComponent(to));
+    return fetchJson(BASE + '/api/sectors/rail/wagon-loading/history' + (q.length ? '?' + q.join('&') : ''))
+      .catch(function (e) {
+        console.info('[ErtHub] backend (rail/wagon-loading/history) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
   /* Техникийн хяналтын үзлэг — ТУСДАА endpoint (road summary БИШ). road-ийн
      summary нь gold-ийн замын хөдөлгөөний ачаалал (vehicle_count) бөгөөд
      үзлэгийн тоо ӨӨР нэгжтэй тул хоёрыг хольж болохгүй. Хариу:
@@ -101,6 +117,7 @@
     enabled: !!BASE,
     fetchSectorSummary: fetchSectorSummary,
     fetchRailWagonLoading: fetchRailWagonLoading,
+    fetchRailWagonHistory: fetchRailWagonHistory,
     fetchRoadInspections: fetchRoadInspections,
     fetchVehicleRegistry: fetchVehicleRegistry
   };
