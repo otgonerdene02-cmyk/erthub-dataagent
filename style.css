@@ -96,6 +96,7 @@ body{margin:0;}
   .eh-g-2c > :last-child:nth-child(odd) { grid-column: 1 / -1; }
   /* Сарын график + тээвэрлэгчийн жагсаалт: гар утсанд дараалан, жагсаалт бүтнээрээ */
   .eh-trend-rank { grid-template-columns: minmax(0, 1fr) !important; }
+  .eh-ri-row { grid-template-columns: minmax(0, 1fr) !important; }
   .eh-fill .eh-fill-list { position: static; flex: none; }
   .eh-fill .eh-fill-scroll { position: static; overflow: visible; padding-right: 0; }
   /* 7 хоногийн баганын график: 6–7 багана 244px-д багтаж, огнооны шошго ("10.07")

@@ -111,9 +111,23 @@ const DYNAMIC = [
    2 \u04AF\u0441\u044D\u0433\u0442 \u043C\u04E9\u0440\u0438\u0439\u0433 (\u043A\u043C, \u0442\u043D) \u0437\u04E9\u0432\u0445\u04E9\u043D \u0411\u04AE\u0422\u042D\u041D \u04AF\u0433 \u0431\u0430\u0439\u0445\u0430\u0434 \u043D\u044C \u0445\u0430\u0441\u043D\u0430 \u2014 \u044D\u0441 \u0442\u044D\u0433\u0432\u044D\u043B
    \u0441\u0430\u043D\u0430\u043C\u0441\u0430\u0440\u0433\u04AF\u0439 \u04AF\u0435\u043D\u0438\u0439 \u0434\u0430\u0432\u0445\u0446\u0430\u043B \u0431\u04AF\u0445\u043D\u0438\u0439\u0433 "\u0445\u0430\u043C\u0440\u0430\u0433\u0434\u0441\u0430\u043D" \u0431\u043E\u043B\u0433\u043E\u043D\u043E. */
 function uncoveredPart(phrase, corpus) {
+  /* Хоёр дараалал туршаад үлдэгдэл багатай (илүү цэвэр) үр дүнг авна.
+     (а) template эхлээд — урт AI өгүүлбэр (site.ai.*) template-ээр тайлагдана.
+     (б) бүртгэлтэй мөр эхлээд — "[^кирилл]*: мэдээлэл алга" мэт template нь
+         "эсрэг санал: мэдээлэл алга"-ын ": мэдээлэл алга" хэсгийг өмнөх үгтэйгээ
+         хамт залгаж устгаад бүтэн бүртгэлтэй таарах боломжийг алдуулдаг
+         (community_data.share_unknown). */
+  const a = reduceRest(phrase, corpus, false), b = reduceRest(phrase, corpus, true);
+  return a.replace(/\s/g, '').length <= b.replace(/\s/g, '').length ? a : b;
+}
+function reduceRest(phrase, corpus, phrasesFirst) {
   let s = ' ' + phrase.replace(/\s+/g, ' ').trim() + ' ';
-  (corpus.templates || []).forEach((re) => { s = s.replace(re, (m) => ' '.repeat(m.length)); });
   let low = s.toLowerCase();
+  const applyTemplates = () => {
+    (corpus.templates || []).forEach((re) => { s = s.replace(re, (m) => ' '.repeat(m.length)); });
+    low = s.toLowerCase();
+  };
+  if (!phrasesFirst) applyTemplates();
   const cut = (needle) => {
     const n = needle.toLowerCase();
     for (;;) {
@@ -134,6 +148,7 @@ function uncoveredPart(phrase, corpus) {
     s = s.replace(re, (m, p1) => p1 + '  ');
     low = s.toLowerCase();
   }
+  if (phrasesFirst) applyTemplates();
   for (const d of DYNAMIC) cut(d);
   s = s.replace(/[^\u0400-\u04FF]+/g, ' ').trim();
   return s;

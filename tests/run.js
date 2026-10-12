@@ -4829,6 +4829,78 @@ async function groupBE() {
   check('BE30. Сайт үзлэгийг roadInspectionsToValue-ээр хөрвүүлнэ',
     dcScript().includes('this._roadInspections=roadInspectionsToValue(d)') &&
     dcScript().includes("if(!EHBackend.fetchRoadInspections) return;"));
+  /* ══ BE33. Техникийн хяналтын үзлэгийн ДҮГНЭЛТ (roadInspectAnalysis) ══
+     Гараар бодсон фикстур: 2026-09-23 (Лхагва) 100/10 · 2026-09-26 (Бямба)
+     50/5 · 2026-09-28 (Даваа) 200/30 → нийт 350, тэнцээгүй 45 (12.857%).
+     Гариг: Даваа 200, Лхагва 100 → ажлын дундаж 150; Бямба 50 → амралт 50.
+     Аймаг: Улаанбаатар 270 + Дорнод 30 = 300 → 90.0%. Хэсэг: тоормос 6 (нийлбэр 13). */
+  const fm33src = dcScript().match(/function fillTpl\(s,v\)\{([\s\S]*?)\n\}/);
+  const ra33src = dcScript().match(/function roadInspectAnalysis\(w,T,fmt,age,staleAfter\)\{([\s\S]*?)\n\}/);
+  if (!fm33src || !ra33src) { bad('BE33. fillTpl()/roadInspectAnalysis() олдсонгүй'); }
+  else {
+    const fillTpl33 = new Function('s', 'v', fm33src[1]);
+    const RA = new Function('fillTpl', 'return function roadInspectAnalysis(w,T,fmt,age,staleAfter){' + ra33src[1] + '\n};')(fillTpl33);
+    const T33 = { wd: ['Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя', 'Ня'],
+      cats: ['Ерөнхий', 'Тоормос', 'Жолооны механизм', 'Гэрэл', 'Утаа', 'Дуу чимээ'],
+      s_total: '{days}|{total}|{failed}|{rate}', s_peak: '{peakDate}|{peak}|{lowDate}|{low}',
+      s_week_lower: 'L|{we}|{wk}|{pct}', s_week_higher: 'H|{we}|{wk}|{pct}',
+      s_top: '{top}|{share}|{count}|{n}', s_cat: '{cat}|{pct}', s_stale: '{date}|{age}' };
+    const fx33 = { status: 'ok', count: 350, date: '2026-09-28', vehicleCount: 300,
+      byDay: [{ date: '2026-09-23', count: 100, failed: 10 }, { date: '2026-09-26', count: 50, failed: 5 },
+        { date: '2026-09-28', count: 200, failed: 30 }],
+      byAimag: [{ aimag: 'Улаанбаатар', count: 270, failed: 20 }, { aimag: 'Дорнод', count: 30, failed: 5 }],
+      failedBy: { general: 4, brake: 6, steering: 0, light: 3, emission: 0, noise: 0 } };
+    const same33 = (x) => String(x);
+    const a33 = RA(fx33, T33, same33, 17, 8);
+    check('BE33. Нийт 350 · тэнцээгүй 45 · 12.9% (тэнцээгүйн хоногоор бодно)',
+      !!a33 && a33.total === 350 && a33.failedSum === 45 && a33.lines[0] === '3|350|45|12.9', a33 && a33.lines[0]);
+    check('BE33. Хамгийн их 09-28 (200) · хамгийн бага 09-26 (50)',
+      !!a33 && a33.lines[1] === '2026-09-28|200|2026-09-26|50', a33 && a33.lines[1]);
+    check('BE33. Амралт (50) < ажлын өдөр (150) → "бага" өгүүлбэр, 67%',
+      !!a33 && a33.lines[2] === 'L|50|150|67', a33 && a33.lines[2]);
+    check('BE33. Аймаг: Улаанбаатар 90.0% (270 / 300), 2 аймагт бүртгэл',
+      !!a33 && a33.lines[3] === 'Улаанбаатар|90.0|270|2', a33 && a33.lines[3]);
+    check('BE33. Гол шалтгаан = тоормос, 46.2% (6 / 13)',
+      !!a33 && a33.lines[4] === 'Тоормос|46.2', a33 && a33.lines[4]);
+    check('BE33. Шинэчлэгдээгүй (17 > 8 хоног) → сэрэмжлүүлгийн өгүүлбэр',
+      !!a33 && a33.stale === true && a33.lines[5] === '2026-09-28|17' && a33.lines.length === 6);
+    check('BE33. Гаригийн дундаж: Даваа 200, Лхагва 100, Бямба 50 (Даваа=0 ... Ням=6)',
+      !!a33 && a33.weekday[0].avg === 200 && a33.weekday[2].avg === 100 && a33.weekday[5].avg === 50 &&
+      a33.weekday[1].avg === 0 && a33.weekday[6].avg === 0, a33 && JSON.stringify(a33.weekday));
+    const b33 = RA(fx33, T33, same33, 3, 8);
+    check('BE33. Шинэ өгөгдөл (3 ≤ 8 хоног) → сэрэмжлүүлэг ГАРАХГҮЙ',
+      !!b33 && b33.stale === false && b33.lines.length === 5 && !b33.lines.some((l) => /\|17$/.test(l)));
+    const eqDays = { status: 'ok', count: 100, date: '2026-09-28',
+      byDay: [{ date: '2026-09-23', count: 100, failed: 0 }, { date: '2026-09-26', count: 100, failed: 0 }] };
+    const c33 = RA(eqDays, T33, same33, null, 8);
+    check('BE33. Ажлын/амралтын дундаж тэнцүү → харьцуулах өгүүлбэр ГАРАХГҮЙ',
+      !!c33 && !c33.lines.some((l) => /^[LH]\|/.test(l)), c33 && JSON.stringify(c33.lines));
+    const d33 = RA({ status: 'ok', count: 100, date: '2026-09-28', byDay: [{ date: '2026-09-23', count: 100 }] },
+      T33, same33, null, 8);
+    check('BE33. Тэнцээгүй тоо байхгүй хоног → хувь ТООЦООЛОХГҮЙ (NaN / 0% гэж ЗОХИОХГҮЙ)',
+      !!d33 && d33.rate === null && d33.total === 0 && !d33.lines.some((l) => /NaN|%/.test(l)), d33 && JSON.stringify(d33.lines));
+    check('BE33. Өгөгдөл алга / count null → null (хуудас "мэдээлэл алга" харуулна)',
+      RA(null, T33, same33, null, 8) === null && RA({ status: 'no_data', count: null }, T33, same33, null, 8) === null);
+    check('BE33. Хэсгийн задаргаа алга → шалтгааны өгүүлбэр ГАРАХГҮЙ (0 гэж зохиохгүй)',
+      (RA({ status: 'ok', count: 5, date: '2026-09-28', byDay: [] }, T33, same33, null, 8) || {}).catSum === 0);
+    check('BE33. fillTpl: үл мэдэгдэх нүд хэвээр үлдэнэ (хоосон болгохгүй)',
+      fillTpl33('a {x} b {y}', { x: 1 }) === 'a 1 b {y}');
+  }
+  /* Загварын <sc-if> нь index.html-д (dc скриптийн гадна) байдаг тул тэрийг уншина. */
+  const idxH = read('index.html');
+  check('BE33. Хуудас road-ийн үзлэгт дүгнэлт/график, бусад датасэтэд trend-rank хэвээр',
+    dcScript().includes("const roadExtra=(isRoadInspect&&this.state.page==='detail')?this.buildRoadInspectExtra():{};") &&
+    dcScript().includes("notRoadInspect:!isRoadInspect,...roadExtra,") &&
+    idxH.includes('<sc-if value="{{ detail.notRoadInspect }}">') &&
+    idxH.includes('<sc-if value="{{ detail.isRoadInspect }}">'));
+  check('BE33. Дүгнэлтийн бүх текст content.json → site.road_insp-д бүртгэгдсэн (шинэ хардкод текст алга)',
+    ['summary_title', 'map_title', 'rank_title', 'daily_title', 'cats_title', 'week_title', 'kpi_total',
+      's_total', 's_peak', 's_week_lower', 's_week_higher', 's_top', 's_cat', 's_stale', 'day_title',
+      'region_title', 'region_none', 'rank_rest', 'map_nogeo', 'no_data', 'wd_mon', 'wd_sun'].every((k) =>
+      readJson('content.json').site.road_insp && readJson('content.json').site.road_insp[k] != null));
+  check('BE33. Гар утас: .eh-ri-row нэг багана (@640px)',
+    /@media \(max-width:\s*640px\)[\s\S]*\.eh-ri-row\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*!important/.test(read('style.css')));
+
   /* Модулийг vm дотор ачаалж URL-ийг ЯГ шалгана (BE3-ийн ижил зарчим):
      endpoint-ийг андуурвал road-ийн summary (замын ачаалал) руу унаж,
      үзлэгийн тоог ӨӨР хэмжигдэхүүнээр солих байв. */

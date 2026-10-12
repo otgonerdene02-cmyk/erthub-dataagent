@@ -311,6 +311,24 @@ function auditLayout(doc, win, opts) {
       detail: 'svg атрибутад NaN/undefined: ' + bad.slice(0, 4).join(', ') + (bad.length > 4 ? ' …(' + bad.length + ')' : '') });
   });
 
+  /* 4b. svg-text-hidden — SVG <text> доторх HTML <span> (dc-runtime-ийн {{ }}
+     загвар) SVG дотор рендерлэгдэхгүй → текст бүхэлдээ 0×0 болж харагдахгүй.
+     Диаграмм дээрх утга/шошго алга болдог гол шалтгаан. Харагдах текст бүр
+     бодит хэмжээтэй байх ёстой. Засвар: foreignObject + HTML div (monthly
+     chart-ын загвар) эсвэл текстийг шууд, интерполяцгүй бичих. */
+  doc.querySelectorAll('svg text').forEach((t) => {
+    if (ignored(t) || !visible(t)) return;
+    const txt = short(t.textContent, 40);
+    if (!txt) return;
+    const r = rectOf(t);
+    /* Глиф огт layout хийгдээгүй (getComputedTextLength=0) эсвэл хэмжээгүй */
+    const laidOut = typeof t.getComputedTextLength === 'function' ? t.getComputedTextLength() : 1;
+    if (r.width < 1 || r.height < 1 || laidOut === 0) {
+      out.push({ rule: 'svg-text-hidden', where: describe(t), text: txt,
+        detail: 'SVG шошго 0×0 — харагдахгүй (HTML <span>/интерполяци SVG <text> дотор рендерлэгдэхгүй)' });
+    }
+  });
+
   /* 5. text-overlap — нэг frame-ийн ДОТОР өөр өөр элементийн мөрүүд */
   const byFrame = new Map();
   lines.forEach((ln) => {
