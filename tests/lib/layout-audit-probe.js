@@ -393,8 +393,12 @@ function auditLayout(doc, win, opts) {
       const key = describe(el) + '|' + Math.round(r.left);
       if (offSeen.has(key)) return;
       offSeen.add(key);
+      /* Аль хэсэгт байгааг (id/карт) ба ойрын өвгийн өргөнийг хамт хэлнэ — CI-д л гарвал
+         "аль товч, юу түлхэж байна" гэдгийг лог дээрээс шууд харах боломжтой болгоно. */
+      const host = el.parentElement && el.parentElement.closest('[id],[data-eh-card]');
+      const ctx = (host ? ' · ' + describe(host) : '') + (el.parentElement ? ' · өвөг ' + Math.round(rectOf(el.parentElement).width) + 'px' : '');
       out.push({ rule: 'offscreen-control', where: describe(el), text: short(el.textContent || el.getAttribute('aria-label') || el.placeholder, 30),
-        detail: (r.right > vw + TOL ? 'баруун ирмэг ' + Math.round(r.right) : 'зүүн ирмэг ' + Math.round(r.left)) + 'px · viewport ' + vw + 'px' });
+        detail: (r.right > vw + TOL ? 'баруун ирмэг ' + Math.round(r.right) : 'зүүн ирмэг ' + Math.round(r.left)) + 'px · viewport ' + vw + 'px' + ctx });
     });
   }
 
