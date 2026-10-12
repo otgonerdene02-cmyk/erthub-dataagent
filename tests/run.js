@@ -5353,7 +5353,7 @@ async function groupBE() {
   check('BE37. t05-ийн толгойд тэмдэглэгээ гарна, текст content.json-д',
     read('index.html').includes('{{ t05CovNote }}') &&
     dcScript().includes("stxt('status.partial_month'") &&
-    readJson('content.json').site.status.partial_month === '* дуусаагүй сар тусад цэгээр тэмдэглэгдсэн — шугам ба прогнозт ороогүй');
+    readJson('content.json').site.status.partial_month === '* дуусаагүй сар цэгээр тэмдэглэв');
 
   /* ── BE38. datasets{} — БҮРЭН БАЙДАЛ машинаар уншигдана ──
      Өмнө нь "эх сурвалжийн 0.1% нь татагдсан" гэсэн баримт ЗӨВХӨН
