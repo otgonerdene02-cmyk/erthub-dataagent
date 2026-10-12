@@ -423,11 +423,31 @@
           <div style="position:relative;z-index:1;width:78px;height:5px;border-radius:3px;background:linear-gradient(90deg,#2B4E9B,{{ activeColor }});margin:14px 0 22px;"></div>
         </div>
         <p style="font-size:15.5px;color:var(--ink2);margin:0 0 26px;max-width:52ch;">{{ sHeroLead }}</p>
-        <div class="eh-hero-s" style="display:flex;gap:10px;max-width:540px;margin-bottom:28px;">
+        <div class="eh-hero-s" style="position:relative;display:flex;gap:10px;max-width:540px;margin-bottom:28px;">
           <div style="flex:1;height:54px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);display:flex;align-items:center;gap:11px;padding:0 18px;">
             <span style="font-size:15px;opacity:.6;flex-shrink:0;">⌕</span>
-            <input type="text" value="{{ homeQuery }}" sc-camel-on-input="{{ onHomeQuery }}" sc-camel-on-key-down="{{ onHomeQueryKey }}" placeholder="{{ sHeroSearchPh }}" style="flex:1;min-width:0;height:100%;border:none;background:transparent;font-family:inherit;font-size:14.5px;color:var(--ink);outline:none;">
+            <input type="text" value="{{ homeQuery }}" sc-camel-on-input="{{ onHomeQuery }}" sc-camel-on-key-down="{{ onHomeQueryKey }}" sc-camel-on-focus="{{ homeSugFocus }}" sc-camel-on-blur="{{ homeSugBlur }}" placeholder="{{ sHeroSearchPh }}" aria-label="{{ sHeroSearchPh }}" autocomplete="off" style="flex:1;min-width:0;height:100%;border:none;background:transparent;font-family:inherit;font-size:14.5px;color:var(--ink);outline:none;">
           </div>
+          <sc-if value="{{ homeSugOpen }}">
+          <div role="listbox" data-home-sug="1" style="position:absolute;left:0;right:0;top:100%;margin-top:8px;z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 22px 48px -18px rgba(12,20,40,.35);padding:6px;max-height:360px;overflow:auto;">
+            <sc-for list="{{ homeSugs }}" as="hs" hint-placeholder-count="3">
+              <div role="option" data-home-sug-item="1" sc-camel-on-mouse-down="{{ hs.open }}" sc-camel-on-mouse-enter="{{ hs.hover }}" style="{{ hs.style }}">
+                <div style="width:34px;height:34px;border-radius:10px;background:{{ hs.color }}1c;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">{{ hs.glyph }}</div>
+                <div style="min-width:0;flex:1;">
+                  <div style="font-size:14px;font-weight:600;color:var(--ink);line-height:1.3;text-wrap:pretty;">{{ hs.name }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin-top:2px;">{{ hs.sectorLabel }} · {{ hs.agency }}</div>
+                </div>
+                <span style="color:{{ hs.color }};font-size:15px;flex-shrink:0;">→</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ homeSugNone }}">
+              <div data-home-sug-none="1" style="padding:14px 12px;font-size:13px;color:var(--ink2);line-height:1.5;">{{ homeSugNoneText }}</div>
+            </sc-if>
+            <sc-if value="{{ homeSugCatalog }}">
+              <div data-home-sug-catalog="1" sc-camel-on-mouse-down="{{ onHomeSearchCatalog }}" style="padding:10px 12px;margin-top:2px;border-top:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--ink2);cursor:pointer;">{{ homeSugCatalogLabel }} →</div>
+            </sc-if>
+          </div>
+          </sc-if>
           <button sc-camel-on-click="{{ onHomeSearch }}" style="cursor:pointer;font-family:inherit;border:none;height:54px;padding:0 30px;border-radius:14px;background:linear-gradient(135deg,#2B4E9B,#16306B);color:#fff;font-weight:700;font-size:14.5px;display:flex;align-items:center;box-shadow:0 12px 28px -10px rgba(43,78,155,.7);white-space:nowrap;">{{ sHeroSearchBtn }}</button>
         </div>
       </div>
@@ -581,7 +601,7 @@
               </g>
               <g fill="#04283C" font-family="'Space Grotesk',sans-serif">
                 <text x="350" y="306" text-anchor="middle" font-size="27" font-weight="700" letter-spacing="-.8">ErtHub</text>
-                <text x="350" y="327" text-anchor="middle" font-size="14" font-family="monospace" letter-spacing="1.4" opacity=".72">{{ sDiagCore }}</text>
+                <foreignObject x="150" y="316" width="400" height="16" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-family:monospace;font-size:14px;line-height:1;letter-spacing:1.4px;white-space:nowrap;opacity:.72;color:#04283C;">{{ sDiagCore }}</div></foreignObject>
               </g>
             </g>
 
@@ -600,7 +620,7 @@
                 <circle cx="350" cy="177" r="2.6" opacity=".7" style="animation:netPulse 4s ease-in-out infinite .6s;"></circle>
               </g>
               <g font-family="monospace" font-size="15" fill="#14708C" opacity=".9" letter-spacing="1.6">
-                <text x="350" y="154" text-anchor="middle">{{ sDiagCoreSub }}</text>
+                <foreignObject x="150" y="142" width="400" height="16" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-family:monospace;font-size:15px;line-height:1;letter-spacing:1.6px;white-space:nowrap;color:#14708C;">{{ sDiagCoreSub }}</div></foreignObject>
               </g>
             </g>
 
@@ -1073,7 +1093,7 @@
 
     
 
-    <div id="sec-05" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}{{ t05CovNote }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-05" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;min-width:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}{{ t05CovNote }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
       <button sc-camel-on-click="{{ f05.toggle }}" aria-label="{{ sA11yFilter }}" style="{{ f05.btnStyle }}">⚗</button>
     </div>
     <sc-if value="{{ f05.open }}">
@@ -1141,6 +1161,10 @@
         <sc-for list="{{ trend.dotPts }}" as="dp" hint-placeholder-count="12">
           <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="var(--surface)" stroke="{{ activeColor }}" stroke-width="1.6"><title>{{ dp.tip }}</title></circle>
         </sc-for>
+        <sc-if value="{{ trend.hasPartial }}">
+        <circle cx="{{ trend.partialCx }}" cy="{{ trend.partialCy }}" r="3.6" fill="var(--surface)" stroke="{{ activeColor }}" stroke-width="1.6" stroke-dasharray="2 2"><title>{{ trend.partialLabel }}</title></circle>
+        <foreignObject x="{{ trend.partialFx }}" y="{{ trend.partialFy }}" width="180" height="11" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-size:9.5px;line-height:1;white-space:nowrap;color:var(--ink2);font-family:'JetBrains Mono',monospace;">{{ trend.partialLabel }}</div></foreignObject>
+        </sc-if>
         <sc-if value="{{ trend.showForecast }}">
         <circle cx="{{ trend.peak.cx }}" cy="{{ trend.peak.cy }}" r="4.5" fill="{{ activeColor }}"></circle>
         <foreignObject x="{{ trend.peak.lx }}" y="{{ trend.peak.ly }}" width="120" height="32">
@@ -1164,8 +1188,8 @@
             <circle cx="60" cy="60" r="46" fill="none" stroke="{{ da.color }}" stroke-width="17" stroke-linecap="butt" stroke-dasharray="{{ da.dash }}" stroke-dashoffset="{{ da.offset }}" transform="rotate(-90 60 60)" opacity="{{ da.opacity }}"></circle>
           </sc-for>
           <circle cx="60" cy="60" r="33" fill="var(--surface)"></circle>
-          <text x="60" y="57" text-anchor="middle" fill="var(--ink)" font-size="21" font-weight="700" font-family="'Space Grotesk',sans-serif">{{ donut.activePctLabel }}</text>
-          <text x="60" y="72" text-anchor="middle" fill="var(--ink3)" font-size="7.5" font-family="'JetBrains Mono',monospace">{{ donut.activeName }}</text>
+          <foreignObject x="20" y="40" width="80" height="21" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-size:21px;font-weight:700;line-height:1;white-space:nowrap;color:var(--ink);font-family:'Space Grotesk',sans-serif;">{{ donut.activePctLabel }}</div></foreignObject>
+          <foreignObject x="20" y="66" width="80" height="9" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-size:7.5px;line-height:1;white-space:nowrap;color:var(--ink3);font-family:'JetBrains Mono',monospace;">{{ donut.activeName }}</div></foreignObject>
         </svg>
       </div>
       <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px;">
@@ -1182,10 +1206,10 @@
 
     <div id="sec-06" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#0FA37F,#0FA37Fbb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #0FA37Fcc;">06</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec06 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
-    <div class="eh-g-1c" style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+    <div class="eh-g-1c" style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;margin-bottom:16px;align-items:stretch;">
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-        <div data-eh-card="i06" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);flex:1;">{{ i06Title }}</div>
+        <div data-eh-card="i06" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);flex:1;min-width:0;">{{ i06Title }}</div>
         <button sc-camel-on-click="{{ f07.toggle }}" aria-label="{{ sA11yFilter }}" style="{{ f07.btnStyle }}">⚗</button>
       </div>
       <sc-if value="{{ f07.open }}">
@@ -2364,13 +2388,13 @@
           <button sc-camel-on-click="{{ ph.sortIt }}" style="{{ ph.style }}">{{ ph.label }} {{ ph.arrow }}<div sc-camel-on-mouse-down="{{ ph.startResize }}" style="position:absolute;top:-6px;right:-8px;bottom:-6px;width:13px;cursor:col-resize;"></div></button>
         </sc-for>
       </div>
-      <div style="max-height:640px;overflow-y:auto;">
+      <div style="max-height:548px;overflow-y:auto;">
       <sc-for list="{{ detail.pvRows }}" as="pr" hint-placeholder-count="6">
         <div style="{{ detail.pvGrid }}padding:13px 2px;border-bottom:1px solid var(--line);align-items:center;">
           <sc-for list="{{ pr.cells }}" as="pc" hint-placeholder-count="4">
             <div style="{{ pc.style }}">{{ pc.v }}</div>
           </sc-for>
-          <div style="justify-self:end;font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:999px;color:{{ pr.status.color }};background:{{ pr.status.color }}1c;white-space:nowrap;">{{ pr.status.label }}</div>
+          <div style="justify-self:end;max-width:100%;box-sizing:border-box;text-align:center;line-height:1.3;font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:999px;color:{{ pr.status.color }};background:{{ pr.status.color }}1c;">{{ pr.status.label }}</div>
         </div>
       </sc-for>
       </div>
@@ -2389,7 +2413,132 @@
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+    <sc-if value="{{ detail.isAirDetail }}">
+    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
+      <div class="eh-wrap-row" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dmap" data-eh-field="title">{{ detail.dmapTitle }}</span></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0;">
+          <sc-if value="{{ detail.flowMap.isWorld }}">
+            <div style="display:inline-flex;gap:3px;padding:3px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);">
+              <sc-for list="{{ detail.flowMap.projTabs }}" as="pt" hint-placeholder-count="2">
+                <button sc-camel-on-click="{{ pt.pick }}" style="{{ pt.style }}">{{ pt.label }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ detail.flowMap.isGlobe }}">
+            <div style="display:inline-flex;gap:3px;padding:3px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);">
+              <button sc-camel-on-click="{{ detail.flowMap.zoomOut }}" aria-label="Багасгах" style="cursor:pointer;font-family:inherit;width:26px;height:24px;border:none;border-radius:7px;background:transparent;color:var(--ink2);font-size:14px;line-height:1;">−</button>
+              <button sc-camel-on-click="{{ detail.flowMap.zoomIn }}" aria-label="Томруулах" style="cursor:pointer;font-family:inherit;width:26px;height:24px;border:none;border-radius:7px;background:transparent;color:var(--ink2);font-size:14px;line-height:1;">+</button>
+              <button sc-camel-on-click="{{ detail.flowMap.resetView }}" aria-label="Дахин тохируулах" style="cursor:pointer;font-family:inherit;width:26px;height:24px;border:none;border-radius:7px;background:transparent;color:var(--ink2);font-size:12px;line-height:1;">⟲</button>
+            </div>
+          </sc-if>
+          <div style="display:inline-flex;gap:3px;padding:3px;border-radius:11px;background:var(--surface2);border:1px solid var(--line);">
+            <sc-for list="{{ detail.flowMap.typeTabs }}" as="tt" hint-placeholder-count="3">
+              <button sc-camel-on-click="{{ tt.pick }}" style="{{ tt.style }}">{{ tt.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;"><span data-eh-card="dmap" data-eh-field="foot">{{ detail.dmapFoot }}</span> {{ detail.t.map_hint }}</div>
+      <sc-if value="{{ detail.flowMap.notReady }}">
+        <div style="height:220px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:12.5px;">{{ detail.t.map_loading }}</div>
+      </sc-if>
+      <sc-if value="{{ detail.flowMap.ready }}">
+        <svg class="eh-fmap" sc-camel-view-box="{{ detail.flowMap.viewBox }}" sc-camel-on-mouse-down="{{ detail.flowMap.onGlobeDown }}" style="width:100%;height:auto;min-height:250px;max-height:560px;display:block;border-radius:16px;overflow:hidden;user-select:none;cursor:{{ detail.flowMap.svgCursor }};background:linear-gradient(160deg,{{ detail.flowMap.oceanA }},{{ detail.flowMap.oceanB }});">
+          <defs>
+            <linearGradient id="fmocean" x1="0" y1="0" x2="0.35" y2="1">
+              <stop offset="0" stop-color="{{ detail.flowMap.oceanA }}"></stop>
+              <stop offset="1" stop-color="{{ detail.flowMap.oceanB }}"></stop>
+            </linearGradient>
+            <sc-for list="{{ detail.flowMap.arcs }}" as="ag" hint-placeholder-count="20">
+              <linearGradient id="{{ ag.gradId }}" x1="{{ ag.gx1 }}" y1="{{ ag.gy1 }}" x2="{{ ag.gx2 }}" y2="{{ ag.gy2 }}">
+                <stop offset="0" stop-color="{{ ag.c1 }}" stop-opacity="0.7"></stop>
+                <stop offset="1" stop-color="{{ ag.c2 }}"></stop>
+              </linearGradient>
+            </sc-for>
+          </defs>
+          <sc-if value="{{ detail.flowMap.isDomestic }}">
+            <sc-for list="{{ detail.flowMap.regions }}" as="rg" hint-placeholder-count="24">
+              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="rgba(var(--surface-rgb),.85)" stroke-width="1" vector-effect="non-scaling-stroke"><title>{{ rg.name }}</title></path>
+            </sc-for>
+            <sc-for list="{{ detail.flowMap.aimagLabels }}" as="al" hint-placeholder-count="24">
+              <foreignObject x="{{ al.fx }}" y="{{ al.fy }}" width="{{ al.fw }}" height="{{ al.fh }}" style="overflow:visible;pointer-events:none;">
+                <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:inherit;font-size:{{ al.fs }}px;line-height:1;font-weight:500;white-space:nowrap;text-align:{{ al.align }};color:{{ detail.flowMap.labelColor }};text-shadow:{{ al.shadow }};">{{ al.text }}</div>
+              </foreignObject>
+            </sc-for>
+          </sc-if>
+          <sc-if value="{{ detail.flowMap.isGlobe }}">
+            <circle cx="{{ detail.flowMap.globeCx }}" cy="{{ detail.flowMap.globeCy }}" r="{{ detail.flowMap.globeR }}" fill="{{ detail.flowMap.oceanB }}" stroke="{{ detail.flowMap.landStroke }}" stroke-width="1" vector-effect="non-scaling-stroke"></circle>
+          </sc-if>
+          <sc-if value="{{ detail.flowMap.isWorld }}">
+            <sc-for list="{{ detail.flowMap.countryPaths }}" as="cp" hint-placeholder-count="180">
+              <path d="{{ cp.d }}" fill="{{ cp.fill }}" stroke="{{ cp.stroke }}" stroke-width="{{ cp.width }}" vector-effect="non-scaling-stroke"></path>
+            </sc-for>
+          </sc-if>
+          <sc-for list="{{ detail.flowMap.ribbons }}" as="rb" hint-placeholder-count="20">
+            <path d="{{ rb.d }}" fill="{{ rb.color }}" opacity="{{ rb.opacity }}" stroke="none"><title>{{ rb.title }}</title></path>
+          </sc-for>
+          <sc-for list="{{ detail.flowMap.arcs }}" as="ar" hint-placeholder-count="20">
+            <path d="{{ ar.d }}" fill="none" stroke="{{ ar.stroke }}" stroke-width="{{ ar.width }}" stroke-linecap="round" opacity="0.26" vector-effect="non-scaling-stroke"></path>
+          </sc-for>
+          <sc-for list="{{ detail.flowMap.arcs }}" as="ar2" hint-placeholder-count="20">
+            <path d="{{ ar2.d }}" fill="none" stroke="{{ ar2.stroke }}" stroke-width="{{ ar2.dashWidth }}" stroke-linecap="round" stroke-dasharray="6 6" opacity="0.72" vector-effect="non-scaling-stroke" style="animation:dashFlow 1.8s linear infinite;"></path>
+          </sc-for>
+          <sc-for list="{{ detail.flowMap.ripples }}" as="rp" hint-placeholder-count="24">
+            <circle cx="{{ rp.cx }}" cy="{{ rp.cy }}" r="{{ rp.r }}" fill="none" stroke="{{ rp.color }}" stroke-width="1.2" vector-effect="non-scaling-stroke" style="{{ rp.style }}"></circle>
+          </sc-for>
+          <sc-for list="{{ detail.flowMap.halos }}" as="ha" hint-placeholder-count="6">
+            <circle cx="{{ ha.cx }}" cy="{{ ha.cy }}" r="{{ ha.r }}" fill="none" stroke="{{ ha.color }}" stroke-width="1.1" opacity="0.3" vector-effect="non-scaling-stroke"></circle>
+          </sc-for>
+          <sc-for list="{{ detail.flowMap.nodes }}" as="nd" hint-placeholder-count="14">
+            <circle sc-camel-on-click="{{ nd.pick }}" cx="{{ nd.cx }}" cy="{{ nd.cy }}" r="{{ nd.r }}" fill="{{ nd.color }}" opacity="{{ nd.opacity }}" stroke="{{ nd.ringStroke }}" stroke-width="{{ nd.ringWidth }}" vector-effect="non-scaling-stroke" style="cursor:pointer;"><title>{{ nd.title }}</title></circle>
+          </sc-for>
+          <sc-for list="{{ detail.flowMap.flyDots }}" as="fd" hint-placeholder-count="20">
+            <g style="{{ fd.style }}">
+              <circle cx="0" cy="0" r="{{ fd.glowR }}" fill="{{ fd.glow }}" opacity="0.26"></circle>
+              <circle cx="0" cy="0" r="{{ fd.r }}" fill="{{ fd.core }}" stroke="rgba(var(--surface-rgb),.92)" stroke-width="1.1" vector-effect="non-scaling-stroke"></circle>
+            </g>
+          </sc-for>
+          <sc-if value="{{ detail.flowMap.ubVisible }}">
+            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="15" fill="{{ detail.flowMap.ubInk }}" opacity="0.14" style="transform-box:fill-box;transform-origin:center;animation:pulseGlow 2.8s ease-in-out infinite;"></circle>
+            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="6.5" fill="{{ detail.flowMap.ubInk }}" stroke="rgba(var(--surface-rgb),.95)" stroke-width="2"><title>Улаанбаатар (эх цэг)</title></circle>
+          </sc-if>
+          <sc-for list="{{ detail.flowMap.labels }}" as="lb" hint-placeholder-count="6">
+            <foreignObject x="{{ lb.fx }}" y="{{ lb.fy }}" width="{{ lb.fw }}" height="{{ lb.fh }}" style="overflow:visible;pointer-events:none;">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:inherit;font-size:{{ lb.fs }}px;line-height:1;font-weight:650;white-space:nowrap;text-align:{{ lb.align }};color:{{ lb.color }};text-shadow:{{ lb.shadow }};">{{ lb.text }}</div>
+            </foreignObject>
+          </sc-for>
+        </svg>
+        <sc-if value="{{ detail.flowMap.detail }}">
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 16px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ detail.flowMap.detail.name }}</div>
+              <div style="font-size:11.5px;color:var(--ink3);margin-top:2px;">{{ detail.flowMap.detail.sub }}</div>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;">{{ detail.flowMap.detail.value }} <span style="font-size:10.5px;color:var(--ink3);font-weight:500;">зорчигч</span></div>
+            <button sc-camel-on-click="{{ detail.flowMap.closeNode }}" style="cursor:pointer;font-family:inherit;width:26px;height:26px;flex-shrink:0;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:12px;">✕</button>
+          </div>
+        </sc-if>
+        <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:16px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.flowMap.choroLabel }}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">0</span>
+          <span style="width:150px;height:9px;border-radius:5px;border:1px solid var(--line);background:{{ detail.flowMap.choroLegend.gradient }};flex-shrink:0;"></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);">{{ detail.flowMap.choroLegend.max }}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
+          <sc-for list="{{ detail.flowMap.legend }}" as="lg" hint-placeholder-count="10">
+            <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 9px;white-space:nowrap;">
+              <span style="width:9px;height:9px;border-radius:50%;background:{{ lg.color }};flex-shrink:0;"></span>{{ lg.name }}
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);">{{ lg.value }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ detail.notRoadInspect }}">
+    <div class="eh-trend-rank{{ detail.trendFill }}" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
       <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span>{{ detail.c1 }}</div>
         <sc-if value="{{ detail.noTrend }}">
@@ -2415,6 +2564,10 @@
           <line x1="{{ detail.trend.fcSplitX }}" y1="{{ detail.trend.padT }}" x2="{{ detail.trend.fcSplitX }}" y2="{{ detail.trend.axisY }}" stroke="var(--line2)" stroke-width="1" stroke-dasharray="2 4"></line>
           <path d="{{ detail.trend.line }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
           <path d="{{ detail.trend.fline }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.1" stroke-linecap="round" stroke-dasharray="6 5" style="animation:dashFlow 1.6s linear infinite;"></path>
+          <sc-if value="{{ detail.trend.hasPartial }}">
+          <circle cx="{{ detail.trend.partialCx }}" cy="{{ detail.trend.partialCy }}" r="3.6" fill="var(--surface)" stroke="{{ detail.color }}" stroke-width="1.6" stroke-dasharray="2 2"><title>{{ detail.trend.partialLabel }}</title></circle>
+          <foreignObject x="{{ detail.trend.partialFx }}" y="{{ detail.trend.partialFy }}" width="180" height="11" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-size:9.5px;line-height:1;white-space:nowrap;color:var(--ink2);font-family:'JetBrains Mono',monospace;">{{ detail.trend.partialLabel }}</div></foreignObject>
+          </sc-if>
           <sc-for list="{{ detail.trend.xTicks }}" as="xt" hint-placeholder-count="6">
             <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
               <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
@@ -2423,9 +2576,9 @@
         </svg>
         </sc-if>
       </div>
-      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dstr" data-eh-field="title">{{ detail.dstrTitle }}</span></div>
-        <div style="display:flex;flex-direction:column;gap:13px;">
+        <div class="eh-fill-list"><div class="eh-fill-scroll" style="display:flex;flex-direction:column;gap:13px;">
           <sc-for list="{{ detail.rank }}" as="rk" hint-placeholder-count="4">
             <div>
               <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2);margin-bottom:6px;">
@@ -2451,9 +2604,124 @@
               <div sc-camel-on-click="{{ detail.rankTotal.toggle }}" style="cursor:pointer;text-align:center;font-size:11.5px;color:var(--ink3);padding-top:4px;">{{ detail.rankTotal.toggleLabel }}</div>
             </sc-if>
           </sc-if>
+        </div></div>
+      </div>
+    </div>
+
+    </sc-if>
+
+    <!-- Техникийн хяналтын үзлэг: дүгнэлт + газрын зураг + графикууд. Бүх тоо
+         ба текст buildRoadInspectExtra()-аас (бодит feed) — тэдгээр нь ЗӨВХӨН
+         ачаалагдсан өгөгдөлд түшиглэнэ. Вагоны / агаарын датасэтэд харагдахгүй. -->
+    <sc-if value="{{ detail.isRoadInspect }}">
+    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span>{{ detail.ri.summaryTitle }}</span></div>
+      <sc-if value="{{ detail.ri.notReady }}">
+        <div style="font-size:12.5px;color:var(--ink3);">{{ detail.ri.noData }}</div>
+      </sc-if>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:18px;">
+        <sc-for list="{{ detail.ri.lines }}" as="ln" hint-placeholder-count="5">
+          <div style="display:flex;gap:10px;font-size:13.5px;line-height:1.6;color:var(--ink2);"><span style="color:{{ activeColor }};flex-shrink:0;">▸</span><span>{{ ln.text }}</span></div>
+        </sc-for>
+      </div>
+      <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;">
+        <sc-for list="{{ detail.ri.kpis }}" as="rk" hint-placeholder-count="4">
+          <div style="background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:14px 15px;">
+            <div style="font-size:9.5px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ rk.label }}</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.02em;">{{ rk.value }}</div>
+            <sc-if value="{{ rk.hasSub }}"><div style="font-size:10.5px;color:var(--ink3);margin-top:5px;line-height:1.35;">{{ rk.sub }}</div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div class="eh-ri-row" style="display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span>{{ detail.ri.mapTitle }}</span></div>
+        <sc-if value="{{ detail.ri.map.ready }}">
+          <svg viewBox="0 0 520 360" style="width:100%;height:auto;display:block;">
+            <sc-for list="{{ detail.ri.map.regions }}" as="rg" hint-placeholder-count="24">
+              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="rgba(var(--surface-rgb),.85)" stroke-width="1" vector-effect="non-scaling-stroke"><title>{{ rg.title }}</title></path>
+            </sc-for>
+            <sc-for list="{{ detail.ri.map.labels }}" as="ml" hint-placeholder-count="5">
+              <foreignObject x="{{ ml.fx }}" y="{{ ml.fy }}" width="120" height="18" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:11px;font-weight:600;color:var(--ink);text-align:center;white-space:nowrap;font-family:inherit;line-height:18px;text-shadow:0 0 3px rgba(var(--surface-rgb),.95),0 0 3px rgba(var(--surface-rgb),.95);">{{ ml.text }}</div></foreignObject>
+            </sc-for>
+          </svg>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:10.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;">
+            <span>0</span><div style="flex:1;height:8px;border-radius:4px;background:{{ detail.ri.map.gradient }};"></div><span>{{ detail.ri.map.legendMax }}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ detail.ri.map.notReady }}">
+          <div style="height:200px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ detail.ri.mapNoGeo }}</div>
+        </sc-if>
+      </div>
+      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span>{{ detail.ri.rankTitle }}</span></div>
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <sc-for list="{{ detail.ri.rank }}" as="ra" hint-placeholder-count="10">
+            <div>
+              <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2);margin-bottom:5px;">
+                <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ra.name }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);white-space:nowrap;flex-shrink:0;">{{ ra.value }}</span>
+              </div>
+              <div style="height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;"><div style="height:100%;border-radius:4px;background:{{ activeColor }};width:{{ ra.width }};"></div></div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ detail.ri.hasRest }}"><div style="font-size:11.5px;color:var(--ink3);padding-top:2px;">{{ detail.ri.rankRest }}</div></sc-if>
         </div>
       </div>
     </div>
+
+    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span>{{ detail.ri.dailyTitle }}</span></div>
+      <svg sc-camel-view-box="0 0 720 250" style="width:100%;height:auto;display:block;">
+        <sc-for list="{{ detail.ri.daily.yTicks }}" as="yt" hint-placeholder-count="3">
+          <line x1="44" y1="{{ yt.y }}" x2="712" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
+          <foreignObject x="0" y="{{ yt.fy }}" width="40" height="14" style="overflow:visible;"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;line-height:14px;">{{ yt.label }}</div></foreignObject>
+        </sc-for>
+        <sc-for list="{{ detail.ri.daily.bars }}" as="db" hint-placeholder-count="30">
+          <rect x="{{ db.x }}" y="{{ db.yP }}" width="{{ db.w }}" height="{{ db.hP }}" fill="#2E7CF6" fill-opacity=".6" rx="2"><title>{{ db.title }}</title></rect>
+          <rect x="{{ db.x }}" y="{{ db.yF }}" width="{{ db.w }}" height="{{ db.hF }}" fill="#D2564A" rx="2"><title>{{ db.title }}</title></rect>
+        </sc-for>
+        <sc-for list="{{ detail.ri.daily.xTicks }}" as="xt" hint-placeholder-count="7">
+          <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap;line-height:14px;">{{ xt.label }}</div></foreignObject>
+        </sc-for>
+      </svg>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--ink2);">
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:#2E7CF6;opacity:.6;"></span>{{ detail.ri.passedLabel }}</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:#D2564A;"></span>{{ detail.ri.failedLabel }}</span>
+      </div>
+    </div>
+
+    <div class="eh-ri-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span>{{ detail.ri.catsTitle }}</span></div>
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <sc-for list="{{ detail.ri.cats }}" as="rc" hint-placeholder-count="6">
+            <div>
+              <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2);margin-bottom:5px;">
+                <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rc.name }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);white-space:nowrap;flex-shrink:0;">{{ rc.value }} · {{ rc.pct }}</span>
+              </div>
+              <div style="height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;"><div style="height:100%;border-radius:4px;background:#D2564A;width:{{ rc.width }};"></div></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink3);line-height:1.5;margin-top:14px;">{{ detail.ri.catsNote }}</div>
+      </div>
+      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span>{{ detail.ri.weekTitle }}</span></div>
+        <svg sc-camel-view-box="0 0 360 200" style="width:100%;height:auto;display:block;">
+          <sc-for list="{{ detail.ri.week.bars }}" as="wb" hint-placeholder-count="7">
+            <rect x="{{ wb.x }}" y="{{ wb.y }}" width="{{ wb.w }}" height="{{ wb.h }}" fill="{{ wb.color }}" fill-opacity=".75" rx="3"><title>{{ wb.label }}: {{ wb.value }}</title></rect>
+            <foreignObject x="{{ wb.vfx }}" y="{{ wb.vfy }}" width="40" height="14" style="overflow:visible;"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink2);font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap;line-height:14px;">{{ wb.value }}</div></foreignObject>
+            <foreignObject x="{{ wb.lfx }}" y="{{ wb.lfy }}" width="40" height="14" style="overflow:visible;"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap;line-height:14px;">{{ wb.label }}</div></foreignObject>
+          </sc-for>
+        </svg>
+        <div style="font-size:11.5px;color:var(--ink3);margin-top:10px;display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:#F2A93B;opacity:.75;"></span>{{ detail.ri.weekendNote }}</div>
+      </div>
+    </div>
+    </sc-if>
 
     <sc-if value="{{ detail.isAirDetail }}">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
@@ -2512,17 +2780,39 @@
           <div sc-camel-on-click="{{ detail.airTreemap.back }}" style="cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9px;border:1px solid var(--line2);background:var(--surface);white-space:nowrap;">← {{ detail.airTreemap.regionLabel }}</div>
         </sc-if>
       </div>
-      <svg sc-camel-view-box="0 0 600 300" style="width:100%;height:auto;display:block;">
-        <sc-for list="{{ detail.airTreemap.boxes }}" as="tb" hint-placeholder-count="8">
-          <g sc-camel-on-click="{{ tb.pick }}" style="cursor:pointer;">
-            <rect x="{{ tb.x }}" y="{{ tb.y }}" width="{{ tb.w }}" height="{{ tb.h }}" fill="{{ tb.color }}" stroke="var(--surface)" stroke-width="2" rx="3"></rect>
-            <sc-if value="{{ tb.showLabel }}">
-              <text x="{{ tb.labelX }}" y="{{ tb.labelY }}" fill="#fff" font-size="11" font-weight="600" font-family="inherit">{{ tb.name }}</text>
-              <text x="{{ tb.labelX }}" y="{{ tb.valueY }}" fill="#fff" font-size="10" opacity=".85" font-family="'JetBrains Mono',monospace">{{ tb.pctLabel }}</text>
-            </sc-if>
-          </g>
-        </sc-for>
-      </svg>
+      <div style="font-size:12.5px;color:var(--ink3);line-height:1.5;margin:-4px 0 4px;">{{ detail.airTreemap.help }}</div>
+      <div style="font-size:14px;font-weight:600;color:var(--ink);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">{{ detail.airTreemap.totalLabel }}</div>
+      <sc-if value="{{ detail.airTreemap.empty }}">
+        <div style="height:200px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink3);">{{ detail.airTreemap.emptyText }}</div>
+      </sc-if>
+      <sc-if value="{{ detail.airTreemap.hasBoxes }}">
+        <svg sc-camel-view-box="0 0 600 300" style="width:100%;height:auto;display:block;">
+          <sc-for list="{{ detail.airTreemap.boxes }}" as="tb" hint-placeholder-count="8">
+            <g sc-camel-on-click="{{ tb.pick }}" style="cursor:pointer;">
+              <rect x="{{ tb.x }}" y="{{ tb.y }}" width="{{ tb.w }}" height="{{ tb.h }}" fill="{{ tb.color }}" stroke="var(--surface)" stroke-width="2" rx="3"></rect>
+              <sc-if value="{{ tb.showLabel }}">
+                <foreignObject x="{{ tb.x }}" y="{{ tb.y }}" width="{{ tb.w }}" height="{{ tb.h }}" style="pointer-events:none;">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;box-sizing:border-box;padding:7px 9px;overflow:hidden;color:#fff;font-family:inherit;">
+                    <div style="font-size:12.5px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ tb.name }}</div>
+                    <div style="font-size:12px;font-family:'JetBrains Mono',monospace;margin-top:3px;white-space:nowrap;">{{ tb.valueLabel }}</div>
+                    <div style="font-size:11px;opacity:.85;font-family:'JetBrains Mono',monospace;white-space:nowrap;">{{ tb.pctLabel }}</div>
+                  </div>
+                </foreignObject>
+              </sc-if>
+            </g>
+          </sc-for>
+        </svg>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px 18px;margin-top:16px;">
+          <sc-for list="{{ detail.airTreemap.legend }}" as="lg" hint-placeholder-count="6">
+            <div sc-camel-on-click="{{ lg.pick }}" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12.5px;min-width:0;padding:3px 0;">
+              <span style="width:10px;height:10px;border-radius:3px;background:{{ lg.color }};flex-shrink:0;"></span>
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);">{{ lg.name }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ lg.valueLabel }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;color:var(--ink3);width:50px;text-align:right;flex-shrink:0;">{{ lg.pctLabel }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
@@ -2607,130 +2897,6 @@
         <sc-if value="{{ detail.cargoRankTotal.hasExtra }}">
           <div sc-camel-on-click="{{ detail.cargoRankTotal.toggle }}" style="cursor:pointer;text-align:center;font-size:11.5px;color:var(--ink3);padding-top:6px;">{{ detail.cargoRankTotal.toggleLabel }}</div>
         </sc-if>
-      </sc-if>
-    </div>
-
-    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
-      <div class="eh-wrap-row" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">
-        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="dmap" data-eh-field="title">{{ detail.dmapTitle }}</span></div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0;">
-          <sc-if value="{{ detail.flowMap.isWorld }}">
-            <div style="display:inline-flex;gap:3px;padding:3px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);">
-              <sc-for list="{{ detail.flowMap.projTabs }}" as="pt" hint-placeholder-count="2">
-                <button sc-camel-on-click="{{ pt.pick }}" style="{{ pt.style }}">{{ pt.label }}</button>
-              </sc-for>
-            </div>
-          </sc-if>
-          <sc-if value="{{ detail.flowMap.isGlobe }}">
-            <div style="display:inline-flex;gap:3px;padding:3px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);">
-              <button sc-camel-on-click="{{ detail.flowMap.zoomOut }}" aria-label="Багасгах" style="cursor:pointer;font-family:inherit;width:26px;height:24px;border:none;border-radius:7px;background:transparent;color:var(--ink2);font-size:14px;line-height:1;">−</button>
-              <button sc-camel-on-click="{{ detail.flowMap.zoomIn }}" aria-label="Томруулах" style="cursor:pointer;font-family:inherit;width:26px;height:24px;border:none;border-radius:7px;background:transparent;color:var(--ink2);font-size:14px;line-height:1;">+</button>
-              <button sc-camel-on-click="{{ detail.flowMap.resetView }}" aria-label="Дахин тохируулах" style="cursor:pointer;font-family:inherit;width:26px;height:24px;border:none;border-radius:7px;background:transparent;color:var(--ink2);font-size:12px;line-height:1;">⟲</button>
-            </div>
-          </sc-if>
-          <div style="display:inline-flex;gap:3px;padding:3px;border-radius:11px;background:var(--surface2);border:1px solid var(--line);">
-            <sc-for list="{{ detail.flowMap.typeTabs }}" as="tt" hint-placeholder-count="3">
-              <button sc-camel-on-click="{{ tt.pick }}" style="{{ tt.style }}">{{ tt.label }}</button>
-            </sc-for>
-          </div>
-        </div>
-      </div>
-      <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;"><span data-eh-card="dmap" data-eh-field="foot">{{ detail.dmapFoot }}</span> {{ detail.t.map_hint }}</div>
-      <sc-if value="{{ detail.flowMap.notReady }}">
-        <div style="height:220px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:12.5px;">{{ detail.t.map_loading }}</div>
-      </sc-if>
-      <sc-if value="{{ detail.flowMap.ready }}">
-        <svg class="eh-fmap" sc-camel-view-box="{{ detail.flowMap.viewBox }}" sc-camel-on-mouse-down="{{ detail.flowMap.onGlobeDown }}" style="width:100%;height:auto;min-height:250px;max-height:560px;display:block;border-radius:16px;overflow:hidden;user-select:none;cursor:{{ detail.flowMap.svgCursor }};background:linear-gradient(160deg,{{ detail.flowMap.oceanA }},{{ detail.flowMap.oceanB }});">
-          <defs>
-            <linearGradient id="fmocean" x1="0" y1="0" x2="0.35" y2="1">
-              <stop offset="0" stop-color="{{ detail.flowMap.oceanA }}"></stop>
-              <stop offset="1" stop-color="{{ detail.flowMap.oceanB }}"></stop>
-            </linearGradient>
-            <sc-for list="{{ detail.flowMap.arcs }}" as="ag" hint-placeholder-count="20">
-              <linearGradient id="{{ ag.gradId }}" x1="{{ ag.gx1 }}" y1="{{ ag.gy1 }}" x2="{{ ag.gx2 }}" y2="{{ ag.gy2 }}">
-                <stop offset="0" stop-color="{{ ag.c1 }}" stop-opacity="0.7"></stop>
-                <stop offset="1" stop-color="{{ ag.c2 }}"></stop>
-              </linearGradient>
-            </sc-for>
-          </defs>
-          <sc-if value="{{ detail.flowMap.isDomestic }}">
-            <sc-for list="{{ detail.flowMap.regions }}" as="rg" hint-placeholder-count="24">
-              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="rgba(var(--surface-rgb),.85)" stroke-width="1" vector-effect="non-scaling-stroke"><title>{{ rg.name }}</title></path>
-            </sc-for>
-            <sc-for list="{{ detail.flowMap.aimagLabels }}" as="al0" hint-placeholder-count="24">
-              <text x="{{ al0.x }}" y="{{ al0.y }}" text-anchor="middle" fill="none" stroke="{{ detail.flowMap.labelHalo }}" stroke-width="3" stroke-linejoin="round" style="font-family:inherit;font-size:{{ detail.flowMap.aimagFs }}px;font-weight:500;pointer-events:none;">{{ al0.text }}</text>
-            </sc-for>
-            <sc-for list="{{ detail.flowMap.aimagLabels }}" as="al" hint-placeholder-count="24">
-              <text x="{{ al.x }}" y="{{ al.y }}" text-anchor="middle" fill="{{ detail.flowMap.labelColor }}" style="font-family:inherit;font-size:{{ detail.flowMap.aimagFs }}px;font-weight:500;pointer-events:none;">{{ al.text }}</text>
-            </sc-for>
-          </sc-if>
-          <sc-if value="{{ detail.flowMap.isGlobe }}">
-            <circle cx="{{ detail.flowMap.globeCx }}" cy="{{ detail.flowMap.globeCy }}" r="{{ detail.flowMap.globeR }}" fill="{{ detail.flowMap.oceanB }}" stroke="{{ detail.flowMap.landStroke }}" stroke-width="1" vector-effect="non-scaling-stroke"></circle>
-          </sc-if>
-          <sc-if value="{{ detail.flowMap.isWorld }}">
-            <sc-for list="{{ detail.flowMap.countryPaths }}" as="cp" hint-placeholder-count="180">
-              <path d="{{ cp.d }}" fill="{{ cp.fill }}" stroke="{{ cp.stroke }}" stroke-width="{{ cp.width }}" vector-effect="non-scaling-stroke"></path>
-            </sc-for>
-          </sc-if>
-          <sc-for list="{{ detail.flowMap.ribbons }}" as="rb" hint-placeholder-count="20">
-            <path d="{{ rb.d }}" fill="{{ rb.color }}" opacity="{{ rb.opacity }}" stroke="none"><title>{{ rb.title }}</title></path>
-          </sc-for>
-          <sc-for list="{{ detail.flowMap.arcs }}" as="ar" hint-placeholder-count="20">
-            <path d="{{ ar.d }}" fill="none" stroke="{{ ar.stroke }}" stroke-width="{{ ar.width }}" stroke-linecap="round" opacity="0.26" vector-effect="non-scaling-stroke"></path>
-          </sc-for>
-          <sc-for list="{{ detail.flowMap.arcs }}" as="ar2" hint-placeholder-count="20">
-            <path d="{{ ar2.d }}" fill="none" stroke="{{ ar2.stroke }}" stroke-width="{{ ar2.dashWidth }}" stroke-linecap="round" stroke-dasharray="6 6" opacity="0.72" vector-effect="non-scaling-stroke" style="animation:dashFlow 1.8s linear infinite;"></path>
-          </sc-for>
-          <sc-for list="{{ detail.flowMap.ripples }}" as="rp" hint-placeholder-count="24">
-            <circle cx="{{ rp.cx }}" cy="{{ rp.cy }}" r="{{ rp.r }}" fill="none" stroke="{{ rp.color }}" stroke-width="1.2" vector-effect="non-scaling-stroke" style="{{ rp.style }}"></circle>
-          </sc-for>
-          <sc-for list="{{ detail.flowMap.halos }}" as="ha" hint-placeholder-count="6">
-            <circle cx="{{ ha.cx }}" cy="{{ ha.cy }}" r="{{ ha.r }}" fill="none" stroke="{{ ha.color }}" stroke-width="1.1" opacity="0.3" vector-effect="non-scaling-stroke"></circle>
-          </sc-for>
-          <sc-for list="{{ detail.flowMap.nodes }}" as="nd" hint-placeholder-count="14">
-            <circle sc-camel-on-click="{{ nd.pick }}" cx="{{ nd.cx }}" cy="{{ nd.cy }}" r="{{ nd.r }}" fill="{{ nd.color }}" opacity="{{ nd.opacity }}" stroke="{{ nd.ringStroke }}" stroke-width="{{ nd.ringWidth }}" vector-effect="non-scaling-stroke" style="cursor:pointer;"><title>{{ nd.title }}</title></circle>
-          </sc-for>
-          <sc-for list="{{ detail.flowMap.flyDots }}" as="fd" hint-placeholder-count="20">
-            <g style="{{ fd.style }}">
-              <circle cx="0" cy="0" r="{{ fd.glowR }}" fill="{{ fd.glow }}" opacity="0.26"></circle>
-              <circle cx="0" cy="0" r="{{ fd.r }}" fill="{{ fd.core }}" stroke="rgba(var(--surface-rgb),.92)" stroke-width="1.1" vector-effect="non-scaling-stroke"></circle>
-            </g>
-          </sc-for>
-          <sc-if value="{{ detail.flowMap.ubVisible }}">
-            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="15" fill="{{ detail.flowMap.ubInk }}" opacity="0.14" style="transform-box:fill-box;transform-origin:center;animation:pulseGlow 2.8s ease-in-out infinite;"></circle>
-            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="6.5" fill="{{ detail.flowMap.ubInk }}" stroke="rgba(var(--surface-rgb),.95)" stroke-width="2"><title>Улаанбаатар (эх цэг)</title></circle>
-          </sc-if>
-          <sc-for list="{{ detail.flowMap.labels }}" as="lb0" hint-placeholder-count="6">
-            <text x="{{ lb0.x }}" y="{{ lb0.y }}" text-anchor="{{ lb0.anchor }}" fill="none" stroke="{{ detail.flowMap.labelHalo }}" stroke-width="{{ detail.flowMap.labelHaloW }}" stroke-linejoin="round" style="font-family:inherit;font-size:{{ detail.flowMap.labelFs }}px;font-weight:650;pointer-events:none;">{{ lb0.text }}</text>
-          </sc-for>
-          <sc-for list="{{ detail.flowMap.labels }}" as="lb" hint-placeholder-count="6">
-            <text x="{{ lb.x }}" y="{{ lb.y }}" text-anchor="{{ lb.anchor }}" fill="{{ lb.color }}" style="font-family:inherit;font-size:{{ detail.flowMap.labelFs }}px;font-weight:650;pointer-events:none;">{{ lb.text }}</text>
-          </sc-for>
-        </svg>
-        <sc-if value="{{ detail.flowMap.detail }}">
-          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 16px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;">
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ detail.flowMap.detail.name }}</div>
-              <div style="font-size:11.5px;color:var(--ink3);margin-top:2px;">{{ detail.flowMap.detail.sub }}</div>
-            </div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;">{{ detail.flowMap.detail.value }} <span style="font-size:10.5px;color:var(--ink3);font-weight:500;">зорчигч</span></div>
-            <button sc-camel-on-click="{{ detail.flowMap.closeNode }}" style="cursor:pointer;font-family:inherit;width:26px;height:26px;flex-shrink:0;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:12px;">✕</button>
-          </div>
-        </sc-if>
-        <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:16px;">
-          <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.flowMap.choroLabel }}</span>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">0</span>
-          <span style="width:150px;height:9px;border-radius:5px;border:1px solid var(--line);background:{{ detail.flowMap.choroLegend.gradient }};flex-shrink:0;"></span>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);">{{ detail.flowMap.choroLegend.max }}</span>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
-          <sc-for list="{{ detail.flowMap.legend }}" as="lg" hint-placeholder-count="10">
-            <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 9px;white-space:nowrap;">
-              <span style="width:9px;height:9px;border-radius:50%;background:{{ lg.color }};flex-shrink:0;"></span>{{ lg.name }}
-              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);">{{ lg.value }}</span>
-            </div>
-          </sc-for>
-        </div>
       </sc-if>
     </div>
 
@@ -4280,6 +4446,29 @@ const SERVICES=[
 function datasetSlug(d){
   return d.sector+'__'+String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');
 }
+/* Нүүрийн хайлт — ЗӨВХӨН "Нээлттэй өгөгдөл" каталогийн датасэтээс (DATASETS).
+   Түлхүүр үг бүр (хоосноор тусгаарлагдсан) тохирох ёстой; нэрээр тохирсон нь
+   тайлбар/байгууллага/салбараар тохирсноос өндөр байрлана. Каталогийн
+   хайлтын нөхцөлтэй (нэр+байгууллага+тайлбар+салбар) ижил талбарыг уншина. */
+function searchDatasets(q){
+  var toks=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
+  if(!toks.length) return [];
+  var out=[];
+  DATASETS.forEach(function(d,i){
+    var sec=((SECTORS[d.sector]||{}).label||'');
+    var name=String(d.name||'').toLowerCase();
+    var rest=(String(d.agency||'')+' '+String(d.desc||'')+' '+sec).toLowerCase();
+    var score=0;
+    for(var k=0;k<toks.length;k++){
+      if(name.indexOf(toks[k])>=0) score+=3;
+      else if(rest.indexOf(toks[k])>=0) score+=1;
+      else return;
+    }
+    out.push({d:d,score:score,i:i});
+  });
+  out.sort(function(a,b){return b.score-a.score||a.i-b.i});
+  return out.map(function(x){return x.d});
+}
 // ─── КАРТ ↔ БОДИТ ӨГӨГДЛИЙН НЭГДСЭН ХОЛБООС ─────────────────────────────
 // "Энэ картын энэ утга хаанаас гарах вэ?" гэдгийг ГУРВАН зарлалаар шийднэ.
 // Салбар, датасэт, хуудас харгалзахгүй бүгд ижил замаар явна:
@@ -5194,11 +5383,13 @@ const COVERAGE_DEFAULT={grain:'month',excludes_current:true};
    бүсээс хамааран сар солигдох ёсгүй. */
 function dropPartialMonth(counts,year,cov,now){
   const src=Array.isArray(counts)?counts:[];
-  if(!src.length||(cov||COVERAGE_DEFAULT).excludes_current===false) return {counts:src,partial:null};
+  if(!src.length||(cov||COVERAGE_DEFAULT).excludes_current===false) return {counts:src,partial:null,value:null};
   const ub=new Date((now==null?Date.now():now)+8*3600000);
   const last=src.length;
-  if(year!==ub.getUTCFullYear()||last!==ub.getUTCMonth()+1) return {counts:src,partial:null};
-  return {counts:src.slice(0,last-1),partial:year+'-'+String(last).padStart(2,'0')};
+  if(year!==ub.getUTCFullYear()||last!==ub.getUTCMonth()+1) return {counts:src,partial:null,value:null};
+  /* value — дутуу сарын ОДООГИЙН утга. Цуваанд оруулахгүй (шугам, прогноз
+     бүтэн сараар л үлдэнэ), харин графикт тусдаа цэгээр харуулна. */
+  return {counts:src.slice(0,last-1),partial:year+'-'+String(last).padStart(2,'0'),value:src[last-1]};
 }
 
 function sectorSummaryToSeries(json,now,cov){
@@ -5212,7 +5403,7 @@ function sectorSummaryToSeries(json,now,cov){
   const dropCur=cv.excludes_current!==false;
   /* Хасагдсан ДУУСААГҮЙ мөчлөг — хэрэглэгчид "яагаад 9-р сар алга вэ"
      гэдгийг хэлэхийн тулд тэмдэглэж авна (тоо ЗОХИОХГҮЙ, зөвхөн шошго). */
-  let partial=null;
+  let partial=null, partialValue=null;
   const byKey=new Map();
   for(const r of rows){
     const t=Date.parse(r&&r.month);
@@ -5223,7 +5414,7 @@ function sectorSummaryToSeries(json,now,cov){
     if(!isFinite(n)||n<0) continue;
     const d=new Date(t), y=d.getUTCFullYear(), m=d.getUTCMonth()+1;
     if(dropCur&&y*100+m>=curKey){
-      if(y*100+m===curKey) partial=y+'-'+String(m).padStart(2,'0');
+      if(y*100+m===curKey){ partial=y+'-'+String(m).padStart(2,'0'); partialValue=n; }
       continue;
     }
     byKey.set(y*100+m,n);
@@ -5239,7 +5430,7 @@ function sectorSummaryToSeries(json,now,cov){
      сар байвал (жиш. 1,2,4) цуваа бүрэн биш — хэсэгчилж зурахгүй. */
   const maxM=Math.max.apply(null,[...byKey.keys()].filter(k=>Math.floor(k/100)===year).map(k=>k%100));
   if(!counts.length||maxM!==counts.length) return null;
-  return {unit,year,counts,lastMonth:counts.length,partial};
+  return {unit,year,counts,lastMonth:counts.length,partial,partialValue};
 }
 
 /* Вагон ачилтын ТУСДАА endpoint (/api/sectors/rail/wagon-loading) →
@@ -5294,6 +5485,71 @@ function roadInspectionsToValue(json){
           byDay:Array.isArray(json.by_day)?json.by_day:[],
           /* Аймгийн задаргаа — салбарын бүтэц ба багана энэнээс уншина. */
           byAimag:Array.isArray(json.by_aimag)?json.by_aimag:[]};
+}
+
+/* Техникийн хяналтын үзлэгийн ДҮГНЭЛТ — ЗӨВХӨН roadInspectionsToValue-ийн
+   гаралтаас тооцно (тоо зохиохгүй). T — өгүүлбэрийн загвар (content.json →
+   detail.ri.*), fmt — тоон формат, age — датагийн нас (хоног), staleAfter —
+   "хуучирсан" гэх босго. Өгөгдөл алга бол null. Цэвэр функц: tests/run.js
+   BE33 нь гараар бодсон фикстураар шалгана. */
+function fillTpl(s,v){
+  return String(s==null?'':s).replace(/\{(\w+)\}/g,(m,k)=>v[k]!=null?String(v[k]):m);
+}
+function roadInspectAnalysis(w,T,fmt,age,staleAfter){
+  if(!w||w.count==null) return null;
+  T=T||{};
+  const days=(w.byDay||[]).filter(d=>d&&d.date&&Number(d.count)>=0).map(d=>({
+    date:String(d.date),count:Number(d.count),
+    failed:(d.failed==null||!isFinite(Number(d.failed)))?null:Number(d.failed)}));
+  /* Тэнцээгүйн тоо бүхий хоногоор л хувь бодно — нэг хоног дутуу бол
+     нийт ба тэнцээгүйн харьцаа буруу гарахгүй. */
+  const withF=days.filter(d=>d.failed!=null);
+  const total=withF.reduce((a,d)=>a+d.count,0);
+  const failedSum=withF.reduce((a,d)=>a+d.failed,0);
+  const rate=total?failedSum/total*100:null;
+  /* Гариг: Даваа=0 … Ням=6. UTC-ээр — цагийн бүс огнооны гаригийг эвдэхгүй. */
+  const wdSum=[0,0,0,0,0,0,0], wdN=[0,0,0,0,0,0,0];
+  days.forEach(d=>{
+    const t=Date.parse(d.date+'T00:00:00Z'); if(isNaN(t)) return;
+    const k=(new Date(t).getUTCDay()+6)%7;
+    wdSum[k]+=d.count; wdN[k]++;
+  });
+  const avgOf=ks=>{
+    const s=ks.reduce((a,k)=>a+wdSum[k],0), n=ks.reduce((a,k)=>a+wdN[k],0);
+    return n?Math.round(s/n):null;
+  };
+  const wk=avgOf([0,1,2,3,4]), we=avgOf([5,6]);
+  const weekday=wdSum.map((s,k)=>({label:(T.wd||[])[k]||'',avg:wdN[k]?Math.round(s/wdN[k]):0}));
+  const pos=days.filter(d=>d.count>0);
+  const peak=pos.length?pos.reduce((m,d)=>d.count>m.count?d:m):null;
+  const low=pos.length?pos.reduce((m,d)=>d.count<m.count?d:m):null;
+  const aimags=(w.byAimag||[]).filter(r=>r&&r.aimag&&Number(r.count)>0)
+    .map(r=>({name:String(r.aimag),count:Number(r.count),failed:Number(r.failed)||0}))
+    .sort((a,b)=>b.count-a.count);
+  const aimagSum=aimags.reduce((a,r)=>a+r.count,0);
+  aimags.forEach(r=>{r.share=aimagSum?r.count/aimagSum*100:0;});
+  const FK=['general','brake','steering','light','emission','noise'];
+  const fb=w.failedBy||{};
+  const cats=FK.map((k,i)=>({name:(T.cats||[])[i]||k,n:fb[k]==null?null:fb[k]})).filter(c=>c.n!=null);
+  const catSum=cats.reduce((a,c)=>a+c.n,0);
+  cats.forEach(c=>{c.pct=catSum?c.n/catSum*100:0;});
+  cats.sort((a,b)=>b.n-a.n);
+  const stale=age!=null&&staleAfter!=null&&age>staleAfter;
+  const pc=x=>x.toFixed(1);
+  const lines=[];
+  if(total) lines.push(fillTpl(T.s_total,{days:withF.length,total:fmt(total),failed:fmt(failedSum),rate:pc(rate)}));
+  if(peak&&low) lines.push(fillTpl(T.s_peak,{peakDate:peak.date,peak:fmt(peak.count),lowDate:low.date,low:fmt(low.count)}));
+  /* Амралт/ажлын өдрийн харьцуулалт — аль нь их/бага вэ гэдгийг ӨГӨГДӨЛӨӨР
+     сонгоно (урьдчилсан таамаглал биш). Адил бол өгүүлбэр гаргахгүй. */
+  if(wk!=null&&we!=null&&wk>0&&we!==wk){
+    lines.push(fillTpl(we<wk?T.s_week_lower:T.s_week_higher,
+      {wk:fmt(wk),we:fmt(we),pct:String(Math.round(Math.abs(we-wk)/wk*100))}));
+  }
+  if(aimags.length) lines.push(fillTpl(T.s_top,{top:aimags[0].name,share:pc(aimags[0].share),count:fmt(aimags[0].count),n:aimags.length}));
+  if(cats.length&&catSum>0) lines.push(fillTpl(T.s_cat,{cat:cats[0].name,pct:pc(cats[0].pct)}));
+  if(stale) lines.push(fillTpl(T.s_stale,{date:w.date,age:String(age)}));
+  return {lines:lines.filter(Boolean),stale,total,failedSum,rate,dayCount:days.length,days,
+    weekday,wk,we,peak,low,aimags,cats,catSum};
 }
 
 /* Хоногийн мэдээний НАС (хоногоор). ETL амьд ажиллаж байхад ч эх сурвалж
@@ -5355,7 +5611,7 @@ function weekAxis(vals){
   return {base,top,step};
 }
 
-function buildTrendChart(data,off){
+function buildTrendChart(data,off,partial){
   /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
      хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
      Math.max.apply(null,[]) = -Infinity, data[-1] = undefined болж график
@@ -5377,7 +5633,9 @@ function buildTrendChart(data,off){
   const all=data.concat(fcast);
   const hi=all.map((v,i)=>i<n?v:v+resid*1.9*(i-n+1));
   const lo=all.map((v,i)=>i<n?v:v-resid*1.9*(i-n+1));
-  const rawMax=Math.max.apply(null,hi), rawMin=Math.min.apply(null,lo);
+  /* Дутуу сарын цэг (partial) — шугам/прогнозд ОРОХГҮЙ, гэвч Y хүрээнд багтана. */
+  const pv=(partial!=null&&isFinite(partial)&&partial>=0)?partial:null;
+  const rawMax=Math.max.apply(null,hi.concat(pv!=null?[pv]:[])), rawMin=Math.min.apply(null,lo.concat(pv!=null?[pv]:[]));
   const span=(rawMax-rawMin)||1;
   const niceStep=Math.pow(10,Math.floor(Math.log10(span/4)));
   const niceMax=Math.ceil(rawMax/niceStep)*niceStep, niceMin=Math.floor(rawMin/niceStep)*niceStep;
@@ -5416,7 +5674,15 @@ function buildTrendChart(data,off){
     text:stxt('chart.forecast_prefix','AI прогноз +')+FC+' '+stxt('chart.forecast_suffix','сар'),
     delta:((fcast[FC-1]-data[n-1])/(data[n-1]||1)*100)};
   const avgVal=data.reduce((a,v)=>a+v,0)/data.length, avgY=Y(avgVal).toFixed(1);
+  /* Дутуу сар: forecast-ын ЯГ ТЭР слот дээр (X(n)) hollow цэг. Шошгыг дээр нь. */
+  const pY=pv!=null?Y(pv):0;
+  const partialLabel=pv!=null?(MONTHS[n+off]||'')+' · '+stxt('chart.partial_mark','дутуу')+': '+Math.round(pv).toLocaleString('en-US'):'';
   return {line,area,fline,band,yTicks,xTicks,dotPts,peak,fcLabel,
+    hasPartial:pv!=null,partialCx:X(n).toFixed(1),partialCy:pY.toFixed(1),
+    partialLy:Math.max(pY-9,padT+8).toFixed(1),partialLabel,
+    // SVG <text> дотор {{ }} харагдахгүй тул шошгыг foreignObject-ээр зурна:
+    // төвлөрүүлсэн 180-өргөн хайрцаг, дээд ирмэг = суурь − 0.8·fs (fs=9.5).
+    partialFx:(X(n)-90).toFixed(1),partialFy:(Math.max(pY-9,padT+8)-7.6).toFixed(1),
     fcSplitX:X(n-1).toFixed(1),fcEndX:X(n+FC-1).toFixed(1),
     fcDeltaLabel:(fcLabel.delta>0?'+':'')+fcLabel.delta.toFixed(1)+'%',
     avgY,avgYLabel:Math.max(0,avgY-15).toFixed(1),avgLabel:stxt('range.average','дундаж')+' '+Math.round(avgVal).toLocaleString(),
@@ -6134,6 +6400,127 @@ class Component extends DCLogic {
     }
     this.setState({roadInspectDate:w.date||''});
   }
+  /* Техникийн хяналтын үзлэгийн ДЭЛГЭРЭНГҮЙ дүгнэлт ба графикууд (датасэтийн
+     хуудас). Бүгд _roadInspections-ээс — тоо зохиохгүй. Газрын зураг нь аймгийн
+     хилийн geojson (mongoliaAimags) ачаалагдсан үед л гарна; үгүй бол аймгийн
+     жагсаалт нь мэдээллийг үргэлж хангана. */
+  buildRoadInspectExtra(){
+    const w=this._roadInspections;
+    const dark=this.state.theme==='dark';
+    const T={
+      wd:[stxt('road_insp.wd_mon','Да'),stxt('road_insp.wd_tue','Мя'),stxt('road_insp.wd_wed','Лх'),
+        stxt('road_insp.wd_thu','Пү'),stxt('road_insp.wd_fri','Ба'),stxt('road_insp.wd_sat','Бя'),stxt('road_insp.wd_sun','Ня')],
+      cats:[0,1,2,3,4,5].map(i=>stxt('road_fail_cats.'+i,['Ерөнхий','Тоормос','Жолооны механизм','Гэрэл','Утаа','Дуу чимээ'][i])),
+      s_total:stxt('road_insp.s_total',''),s_peak:stxt('road_insp.s_peak',''),s_week_lower:stxt('road_insp.s_week_lower',''),
+      s_week_higher:stxt('road_insp.s_week_higher',''),s_top:stxt('road_insp.s_top',''),s_cat:stxt('road_insp.s_cat',''),s_stale:stxt('road_insp.s_stale','')
+    };
+    const fmt=fmtNum;
+    const A=roadInspectAnalysis(w,T,fmt,w?dataAgeDays(w.date):null,INSPECT_STALE_DAYS);
+    const ri={
+      notReady:!A,
+      summaryTitle:stxt('road_insp.summary_title','Дүгнэлт'),
+      mapTitle:stxt('road_insp.map_title',''),rankTitle:stxt('road_insp.rank_title',''),dailyTitle:stxt('road_insp.daily_title',''),
+      catsTitle:stxt('road_insp.cats_title',''),weekTitle:stxt('road_insp.week_title',''),catsNote:stxt('road_insp.cats_note',''),
+      passedLabel:stxt('road_insp.passed_label',''),failedLabel:stxt('road_insp.failed_label',''),weekendNote:stxt('road_insp.weekend_note',''),
+      mapNoGeo:stxt('road_insp.map_nogeo',''),noData:stxt('road_insp.no_data','Үзлэгийн өгөгдөл ачаалагдаагүй байна.')
+    };
+    /* Өгөгдөл алга — шаардлагатай бүх хэсгийг хоосон хэлбэрээр өгнө (шаблон
+       хоосон массив/объект дээр унахгүй; мэдээлэл алга гэдгийг ri.noData харуулна). */
+    if(!A) return {isRoadInspect:true,ri:{...ri,lines:[],kpis:[],rank:[],cats:[],hasRest:false,rankRest:'',
+      daily:{yTicks:[],bars:[],xTicks:[]},week:{bars:[]},
+      map:{ready:false,notReady:false}}};
+
+    ri.lines=A.lines.map(t=>({text:t}));
+    const kpis=[{label:stxt('road_insp.kpi_total',''),value:fmt(A.total),sub:fillTpl(stxt('road_insp.kpi_total_note',''),{days:A.dayCount})}];
+    kpis.push({label:stxt('road_insp.kpi_failed',''),value:fmt(A.failedSum),
+      sub:A.rate==null?'':fillTpl(stxt('road_insp.kpi_failed_note',''),{rate:A.rate.toFixed(1)})});
+    if(w.vehicleCount!=null) kpis.push({label:stxt('road_insp.kpi_vehicle',''),value:fmt(w.vehicleCount),sub:stxt('road_insp.kpi_vehicle_note','')});
+    if(w.uncheckedEmission!=null) kpis.push({label:stxt('road_insp.kpi_unchecked',''),value:fmt(w.uncheckedEmission),sub:stxt('road_insp.kpi_unchecked_note','')});
+    ri.kpis=kpis.map(k=>({...k,hasSub:!!k.sub}));
+
+    /* Хоногийн задарсан багана: тэнцсэн (цэнхэр) доор, тэнцээгүй (улаан) дээр.
+       Тэнхлэг нь хамгийн их хоногийн утгаас. X шошго 5 хоног тутам. */
+    const DW=720,DH=250,pl=44,pr=8,pt=14,pb=30,H=DH-pt-pb,y0=DH-pb;
+    const days=A.days, n=Math.max(1,days.length);
+    const maxC=Math.max(1,...days.map(d=>d.count));
+    const slot=(DW-pl-pr)/n, bw=slot*0.7;
+    ri.daily={
+      /* Текстийг <foreignObject>-д бичнэ: шаблон утгыг <span> болгодог тул
+         SVG <text> доторх утга харагдахгүй (trend-ийн x шошготой ижил арга). */
+      yTicks:[0,Math.round(maxC/2),maxC].map(v=>({y:(y0-v/maxC*H).toFixed(1),
+        fy:(y0-v/maxC*H-7).toFixed(1),label:fmt(v)})),
+      bars:days.map((d,i)=>{
+        const f=d.failed||0, p=Math.max(0,d.count-f), x=pl+i*slot+(slot-bw)/2;
+        const hP=p/maxC*H, hF=f/maxC*H;
+        return {x:x.toFixed(1),w:bw.toFixed(1),yP:(y0-hP).toFixed(1),hP:hP.toFixed(1),
+          yF:(y0-hP-hF).toFixed(1),hF:hF.toFixed(1),
+          title:fillTpl(stxt('road_insp.day_title',''),{date:d.date,count:fmt(d.count),failed:fmt(f)})};
+      }),
+      xTicks:days.map((d,i)=>({i,d})).filter(o=>o.i%5===0||o.i===days.length-1)
+        .map(o=>({fx:(pl+o.i*slot+slot/2-20).toFixed(1),fy:(DH-21).toFixed(1),label:o.d.date.slice(5)}))
+    };
+
+    /* Гаригийн задаргаа: амралтын өдрүүд (Бя, Ня) өөр өнгөөр. */
+    const WW=360,WH=200,wl=34,wt=14,wb=28,WHh=WH-wt-wb,wy0=WH-wb;
+    const wmax=Math.max(1,...A.weekday.map(x=>x.avg));
+    const wslot=(WW-wl-6)/7, wbw=wslot*0.62;
+    ri.week={bars:A.weekday.map((x,k)=>{
+      const h=x.avg/wmax*WHh, bx=wl+k*wslot+(wslot-wbw)/2;
+      return {x:bx.toFixed(1),w:wbw.toFixed(1),y:(wy0-h).toFixed(1),h:h.toFixed(1),
+        vfx:(bx+wbw/2-20).toFixed(1),vfy:(wy0-h-18).toFixed(1),
+        lfx:(bx+wbw/2-20).toFixed(1),lfy:(WH-22).toFixed(1),
+        label:x.label,value:fmt(x.avg),color:k>=5?NEON.public:NEON.road};
+    })};
+
+    /* Аймгийн жагсаалт (топ 10) — үргэлж харагдана, газрын зураг ачаалаагүй ч. */
+    const amax=A.aimags.length?A.aimags[0].count:1;
+    ri.rank=A.aimags.slice(0,10).map(r=>({name:r.name,value:fmt(r.count)+' · '+r.share.toFixed(1)+'%',
+      width:(r.count/amax*100).toFixed(1)+'%'}));
+    const rest=A.aimags.length-10;
+    ri.hasRest=rest>0;
+    ri.rankRest=rest>0?fillTpl(stxt('road_insp.rank_rest',''),{n:rest}):'';
+
+    /* Тэнцээгүйн шалтгаан — хэсгийн нийлбэрт эзлэх хувь (нийлбэр 100%). */
+    const cmax=A.cats.length?A.cats[0].n:1;
+    ri.cats=A.cats.map(c=>({name:c.name,value:fmt(c.n),pct:c.pct.toFixed(1)+'%',
+      width:(c.n/cmax*100).toFixed(1)+'%'}));
+
+    /* Аймгийн choropleth — air-ийн хэв маягтай ИЖИЛ (d3.geoMercator, geojson). */
+    const map={ready:false,notReady:!this.mongoliaAimags};
+    if(this.mongoliaAimags&&typeof d3!=='undefined'&&A.aimags.length){
+      const W=520,HM=360;
+      const proj=d3.geoMercator().fitExtent([[12,12],[W-12,HM-12]],this.mongoliaAimags);
+      const pathGen=d3.geoPath(proj);
+      const byName={};
+      A.aimags.forEach(r=>{byName[aimagKey(r.name)]=r;});
+      const cmx=A.aimags[0].count;
+      /* Нэг hue дээр гүнзгийрнэ; sqrt тул их аймаг бусдыг цайруулахгүй. */
+      const fillOf=c=>{
+        if(!c) return dark?'#1C2537':'#E8ECF2';
+        const t=Math.sqrt(c/cmx);
+        return dark?'hsl(221,'+(22+46*t).toFixed(0)+'%,'+(20+28*t).toFixed(0)+'%)'
+                   :'hsl(221,'+(20+50*t).toFixed(0)+'%,'+(90-44*t).toFixed(0)+'%)';
+      };
+      map.regions=this.mongoliaAimags.features.map(f=>{
+        const name=f.properties.name, r=byName[name];
+        return {d:pathGen(f)||'',name,fill:fillOf(r?r.count:0),
+          title:r?fillTpl(stxt('road_insp.region_title',''),{name,count:fmt(r.count),share:r.share.toFixed(1)})
+                 :fillTpl(stxt('road_insp.region_none',''),{name})};
+      });
+      /* Гурван том аймгийг л нэрлэнэ — бусад нь топ жагсаалтад байгаа; таван
+         нэр нь бие биедээ давхцаж уншигдахгүй байсан. */
+      map.labels=A.aimags.slice(0,3).map(r=>{
+        const f=this.mongoliaAimags.features.find(x=>x.properties.name===aimagKey(r.name));
+        const c=f&&pathGen.centroid(f);
+        return c&&isFinite(c[0])?{fx:(c[0]-60).toFixed(1),fy:(c[1]-9).toFixed(1),text:r.name}:null;
+      }).filter(Boolean);
+      map.legendMax=fmt(cmx);
+      map.gradient='linear-gradient(90deg,'+fillOf(1)+','+fillOf(cmx*0.12)+','+fillOf(cmx*0.45)+','+fillOf(cmx)+')';
+      map.ready=true;
+    }
+    ri.map=map;
+    return {isRoadInspect:true,ri};
+  }
   // ── УБТЗ · вагон ачилтын хоногийн мэдээ → SECTORS.rail ────────────────
   // Агаарын applyRealFlightsData()-тай ЯГ ИЖИЛ зарчим: бодит дата ирмэгц
   // SECTORS тогтмолын KPI мөрийг ДАРЖ бичнэ. Ингэснээр 04-р хэсэг (k04),
@@ -6259,6 +6646,7 @@ class Component extends DCLogic {
     SECTORS[k]._liveSeries=true;
     /* t05-ийн толгойд "* … дуусаагүй" тэмдэглэгээ ҮҮНЭЭС гарна */
     SECTORS[k]._partialDropped=s.partial||null;
+    SECTORS[k]._partialValue=(s.partial&&isFinite(s.partialValue))?s.partialValue:null;
     /* Цуваа ЭНЭ датасэтийнх — өөр датасэтийн хуудсан дээр муруй гаргахгүй */
     SECTORS[k]._liveSeriesDs=cfg.dataset;
     /* Датасэтийн мета — u07-ийн мөр ба датасэтийн дэлгэрэнгүй ҮҮНЭЭС
@@ -7034,6 +7422,7 @@ class Component extends DCLogic {
     const airTrim=dropPartialMonth(lastRealIdx>=0?c1dFull.slice(0,lastRealIdx+1):[],
       year,this.coverageOf('air.monthly_flight_series'));
     SECTORS.air._partialDropped=airTrim.partial;
+    SECTORS.air._partialValue=airTrim.partial?airTrim.value:null;
     SECTORS.air.c1d=airTrim.counts;
     const lastRealM=airTrim.counts.length||12;
     /* Энэ салбарын сарын ЦУВАА нь бодит (_liveKpis нь зөвхөн KPI мөр амьд
@@ -8624,6 +9013,37 @@ class Component extends DCLogic {
     const dsListClear=()=>this.setState({dsListQ:'',dsListPage:0});
     const dsListPrev=()=>this.setState({dsListPage:Math.max(0,dsListPg-1)});
     const dsListNext=()=>this.setState({dsListPage:Math.min(dsPages-1,dsListPg+1)});
+    /* Нүүрийн хайлтын санал: идэвхтэй мөр (сонгоогүй бол эхнийх) → Enter ба
+       "Хайх" товч тэр датасэт рүү шууд үсэрнэ. Тохирох нь байхгүй бол
+       каталог руу очиж хоосон төлөвийн зөвлөгөөг үзүүлнэ. */
+    const homeQ=(this.state.homeQ||'').trim();
+    const homeHits=homeQ?searchDatasets(homeQ).slice(0,6):[];
+    const homeHitsAll=homeQ?searchDatasets(homeQ).length:0;
+    const homeSugActive=homeHits.length?Math.max(0,Math.min(this.state.homeSugIdx>=0?this.state.homeSugIdx:0,homeHits.length-1)):-1;
+    const homeSugOpen=!!(this.state.homeSugOpen&&homeQ);
+    const homeOpenDs=(d)=>{
+      this.setState({homeSugOpen:false,homeSugIdx:-1,homeQ:''});
+      this.openDataset(d,{prev:'home'});
+    };
+    const homeToCatalog=()=>{
+      this.setState(s=>({dsListQ:s.homeQ||'',dataFilter:'all',dsListPage:0,homeSugOpen:false,homeSugIdx:-1}));
+      this.go('browse');
+    };
+    const homeSubmit=()=>{
+      if(homeHits.length) homeOpenDs(homeHits[homeSugActive]);
+      else homeToCatalog();
+    };
+    const homeSugs=homeHits.map((d,i)=>({
+      name:d.name,agency:d.agency,sectorLabel:SECTORS[d.sector].label,
+      color:NEON[d.sector],glyph:GLYPH[d.sector],
+      active:i===homeSugActive,
+      style:'display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:10px;cursor:pointer;'
+        +(i===homeSugActive?'background:'+NEON[d.sector]+'1c;':'background:transparent;'),
+      open:(e)=>{ if(e&&e.preventDefault) e.preventDefault(); homeOpenDs(d); },
+      hover:()=>{ if(this.state.homeSugIdx!==i) this.setState({homeSugIdx:i}); }
+    }));
+    const homeSugNone=!!(homeSugOpen&&!homeHits.length);
+    const homeSugCatalog=homeSugOpen&&homeHitsAll>1;
     const vizPath=(kind,seed)=>{
       const pts=Array.from({length:9},(_,i)=>{
         const v=Math.sin((i+seed)*0.9)*0.34+Math.cos((i+seed)*1.7)*0.18+0.5;
@@ -8801,7 +9221,7 @@ class Component extends DCLogic {
        ийм "САРЫН ЗОРЧИГЧ" муруйг арилгасан). Air-д тэмдэглээгүй тул хэвээр. */
     const dsHasTrend=!dsSec._liveKpis||(!!dsSec._liveSeries&&
       (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name));
-    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d):null;
+    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue):null;
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
@@ -8809,6 +9229,10 @@ class Component extends DCLogic {
     const wp={wpNoData:true,hasPlan:false,total:'—',ytd:'—',wow:'—',wowColor:'var(--ink3)',
       yoy:'—',yoyColor:'var(--ink3)',planLabel:'—',planPctLabel:'—',planWidth:'0%',
       note:stxt('detail.wp_no_source','Энэ датасэтийн 7 хоногийн гүйцэтгэлийн эх сурвалж холбогдоогүй — тоо харуулахгүй.')};
+    const isRoadInspect=dsel.source==='roadInspect';
+    /* Газрын зураг/графикийн өгөгдөл зөвхөн датасэтийн хуудсан дээр бодогдоно
+       (render бүрд аймгийн 21 зам зурахгүй). */
+    const roadExtra=(isRoadInspect&&this.state.page==='detail')?this.buildRoadInspectExtra():{};
     const isAirDetail=dsel.sector==='air';
     let airExtra={};
     if(isAirDetail){
@@ -8960,7 +9384,7 @@ class Component extends DCLogic {
     const detail={
       t:detailT,
       dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
-      isAirDetail,...airExtra,
+      isAirDetail,...airExtra,trendFill:isAirDetail?' eh-fill':'',notRoadInspect:!isRoadInspect,...roadExtra,
       freqCard,useCard,
       name:dsel.name,desc:dsel.desc,agency:dsel.agency,fmt:dsel.fmt,freq:dsel.freq,use:dsel.use,
       color:NEON[dsel.sector],glyph:GLYPH[dsel.sector],sectorLabel:SECTORS[dsel.sector].label,
@@ -9273,7 +9697,18 @@ class Component extends DCLogic {
         pick:()=>this.setState(s=>({browseMode:s.browseMode===m.id?null:m.id})),
         style:'border-radius:16px;border:1px solid '+(this.state.browseMode===m.id?m.color:'var(--line)')+';background:'+(this.state.browseMode===m.id?m.color+'0f':'var(--surface)')+';box-shadow:var(--shadow);padding:16px 18px;transition:.18s var(--ease);'})),
       homeQuery:this.state.homeQ||'',
-      onHomeQuery:(e)=>this.setState({homeQ:e.target.value}),
+      onHomeQuery:(e)=>this.setState({homeQ:e.target.value,homeSugOpen:true,homeSugIdx:-1}),
+      /* Хайлтын санал — бичих үед нээлттэй өгөгдлийн датасэтүүд шууд гарна,
+         дарахад тухайн датасэтийн хуудас руу ШУУД үсэрнэ. Идэвхтэй мөр
+         сонгогдоогүй бол хамгийн сайн тохирсон (эхний) нь идэвхтэй. */
+      homeSugOpen:homeSugOpen,
+      homeSugs:homeSugs,
+      homeSugNone:homeSugNone,
+      homeSugNoneText:homeQ?('«'+homeQ+'» '+this.stxt('hero.search_empty','гэсэн хайлтад тохирох датасэт олдсонгүй')):'',
+      homeSugCatalog:homeSugCatalog,
+      homeSugCatalogLabel:this.stxt('hero.search_catalog','Каталогоос бүгдийг харах'),
+      homeSugFocus:()=>this.setState({homeSugOpen:true}),
+      homeSugBlur:()=>this.setState({homeSugOpen:false,homeSugIdx:-1}),
       /* Каталогийн хайлт — хуудас дотроо засварлагдана (буцаад нүүр рүү
          явах шаардлагагүй). Шүүлт өөрчлөгдвөл хуудаслалт эхэлнэ. */
       dsListQVal:this.state.dsListQ||'',
@@ -9298,10 +9733,18 @@ class Component extends DCLogic {
           : this.stxt('browse.empty_head','Шүүлтэд тохирох датасэт олдсонгүй'),
       /* Хайлт ч go()-оор дамжина — эс тэгвэл каталог руу орох энэ замд
          хаяг шинэчлэгдэхгүй, Back товч сайтаас гаргана. */
-      onHomeQueryKey:(e)=>{if(e.key==='Enter'){
-        this.setState(s=>({dsListQ:s.homeQ||'',dataFilter:'all',dsListPage:0})); this.go('browse');}},
-      onHomeSearch:()=>{
-        this.setState(s=>({dsListQ:s.homeQ||'',dataFilter:'all',dsListPage:0})); this.go('browse');},
+      onHomeQueryKey:(e)=>{
+        const n=homeHits.length;
+        if((e.key==='ArrowDown'||e.key==='ArrowUp')&&n){
+          e.preventDefault();
+          const step=e.key==='ArrowDown'?1:-1;
+          this.setState({homeSugOpen:true,homeSugIdx:(homeSugActive+step+n)%n});
+        }else if(e.key==='Escape'){
+          this.setState({homeSugOpen:false,homeSugIdx:-1});
+        }else if(e.key==='Enter'){ homeSubmit(); }
+      },
+      onHomeSearch:homeSubmit,
+      onHomeSearchCatalog:(e)=>{ if(e&&e.preventDefault) e.preventDefault(); homeToCatalog(); },
       isHistory:page==='history',isNews:page==='news',isTimeline:histTab==='timeline',isPeople:histTab==='people',histEras,
       histYFrom:yFrom||'',histYTo:yTo||'',onHistYFrom,onHistYTo,histYearInputStyle,histManualActive,
       histShowPager,histPageLabel,histPrev,histNext,
@@ -9435,25 +9878,41 @@ class Component extends DCLogic {
         .map(([key,value])=>({key,name:key.slice(prefix.length),value}))
         .sort((a,b)=>b.value-a.value);
     }
-    const total=items.reduce((s,it)=>s+it.value,0)||1;
+    const total=items.reduce((s,it)=>s+it.value,0);
+    const pctOf=(v)=>(total?(v/total*100).toFixed(1):'0.0')+'%';
+    const pickOf=(name)=>drilled?(()=>{}):()=>this.setState({airTreemapRegion:name});
+    // Хайрцаг бүрийн утга (тоо + хувь) нь ХАРАГДАХ ёстой. SVG <text> доторх
+    // {{ }} нь dc-runtime-д HTML <span> болдог тул SVG дээр харагддаггүй —
+    // тиймээс шошгыг foreignObject + HTML div-ээр зурна (monthly chart-тай адил).
     const boxes=squarify(items,0,0,W,H).filter(b=>b.w>0&&b.h>0).map(b=>({
       x:b.x.toFixed(1),y:b.y.toFixed(1),w:b.w.toFixed(1),h:b.h.toFixed(1),
       name:b.name,valueLabel:b.value.toLocaleString('en-US'),
-      pctLabel:(b.value/total*100).toFixed(1)+'%',
+      pctLabel:pctOf(b.value),
       color:nodeColor(b.name),
-      // Жижиг хайрчигт нэр багтахгүй тул текстийг зөвхөн хангалттай том
-      // (badge-тэй харьцуулбал) хайрцагт харуулна.
-      showLabel:b.w>46&&b.h>26,
-      labelX:(b.x+6).toFixed(1),labelY:(b.y+18).toFixed(1),
-      valueY:(b.y+34).toFixed(1),
-      pick:drilled?(()=>{}):()=>this.setState({airTreemapRegion:b.name})
+      // Хайрцаг нэр + тоо + хувь гурван мөрөө багтаах хэмжээтэй үед л харуулна.
+      // Үлдсэн жижиг хэсгийн утгыг доорх жагсаалт харуулна.
+      showLabel:b.w>90&&b.h>64,
+      pick:pickOf(b.name)
+    }));
+    // Бүх бүсийн (эсвэл улсын) жагсаалт — хайрцагт багтаагүй жижиг утгыг
+    // ч тоогоор нь харуулна. Дарахад мөн л задална.
+    const legend=items.map(it=>({
+      name:it.name,color:nodeColor(it.name),
+      valueLabel:it.value.toLocaleString('en-US'),
+      pctLabel:pctOf(it.value),
+      pick:pickOf(it.name)
     }));
     return {
       w:W,h:H,drilled:!!drilled,
       regionLabel:drilled||'',
+      help:drilled?stxt('dtree.drilled_help','Улсаар задалсан харагдац.'):this.txt('dtree','sub',''),
+      totalLabel:stxt('dtree.total','Нийт')+': '+total.toLocaleString('en-US')+' '+stxt('unit.passenger','зорчигч'),
       back:()=>this.setState({airTreemapRegion:null}),
       boxes,
-      empty:!boxes.length
+      legend,
+      hasBoxes:boxes.length>0,
+      empty:!boxes.length,
+      emptyText:stxt('dtree.empty','Энэ хугацаанд бүс нутгийн мэдээлэл алга')
     };
   }
   // "Улаанбаатараас чиглэсэн зорчигчийн урсгал" — жинхэнэ газрын зураг дээрх
@@ -9571,11 +10030,23 @@ class Component extends DCLogic {
     // Шошгын ард зурах "гэрэлтүүлэг" — paint-order-т найдалгүй, доор нэг
     // удаа зузаан stroke-оор, дээр нь дүүргэлтээр давхарлаж зурна.
     const labelHalo=dark?'rgba(14,22,38,.88)':'rgba(255,255,255,.9)';
+    // SVG <text> дотор {{ }} харагдахгүй (dc-runtime HTML <span> болгодог) тул
+    // шошгыг foreignObject + HTML div-ээр зурна (buildAirTreemap-тай адил).
+    // Дээд ирмэг = суурь − 0.8·fs. Гэрэлтүүлэг (halo) нь text-shadow-оор.
+    const haloCss=(r)=>{const d=r.toFixed(2),e=(r*0.7).toFixed(2);
+      return [[d,0],[-d,0],[0,d],[0,-d],[e,e],[-e,e],[e,-e],[-e,-e]]
+        .map(p=>p[0]+'px '+p[1]+'px 0 '+labelHalo).join(',');};
+    const labelBox=(x,y,fs,anchor,boxW)=>{
+      const fw=px(boxW), x0=anchor==='middle'?x-fw/2:anchor==='end'?x-fw:x;
+      return {fx:x0.toFixed(1),fy:(y-fs*0.8).toFixed(1),fw:fw.toFixed(1),fh:fs.toFixed(1),
+        fs:fs.toFixed(2),shadow:haloCss(labelHaloW/2),
+        align:anchor==='middle'?'center':anchor==='end'?'right':'left'};
+    };
     // Нум/бөмбөлгийг өгөгдлөөс бүтээх нийтлэг хэсэг: хоёр горим ижил
     // харагдацтай байхын тулд энд нэг л удаа тодорхойлж, доор дуудна.
     const buildFlow=(items,ubPt,bend)=>{
       const maxPax=items.reduce((m,it)=>Math.max(m,it.pax),0);
-      const arcs=[],halos=[],labels=[];
+      const arcs=[],halos=[],labels=[],labelBoxes=[];
       items.forEach((it,i)=>{
         if(it.atUb) return;
         const g=gradDir(ubPt[0],ubPt[1],it.x,it.y);
@@ -9605,9 +10076,19 @@ class Component extends DCLogic {
         // хувьд асар том бүдэг толбо болж, газрын зургийг бүрхэхээс сэргийлнэ.
         halos.push({cx:it.x.toFixed(1),cy:it.y.toFixed(1),r:(it.r+5.5).toFixed(1),color:it.color});
         if(it.atUb) return;
-        const right=it.x<W*0.84;
-        labels.push({x:(it.x+(right?it.r+px(7):-it.r-px(7))).toFixed(1),y:(it.y+labelFs*0.34).toFixed(1),
-          anchor:right?'start':'end',text:it.name,color:labelColor});
+        // Текстийн жинхэнэ өргөнөөр (тооцоолсон) хүрээнээс гарахгүй талд байрлуулна;
+        // тэгвэл зураг дээрх шошго хүрээнээс гарч, бие биендээ давхцахгүй.
+        let right=it.x<W*0.84;
+        let bx=it.x+(right?it.r+px(7):-it.r-px(7));
+        const tw=Math.min(px(180),it.name.length*labelFs*0.6);
+        if(right&&bx+tw>W){ right=false; bx=it.x-it.r-px(7); }
+        else if(!right&&bx-tw<0){ right=true; bx=it.x+it.r+px(7); }
+        const by=it.y+labelFs*0.34;
+        const x0=right?bx:bx-tw, y0=by-labelFs*0.8;
+        // Өмнө (том) бөмбөлгийн шошго аль хэдийн байрласан бол энэ шошгыг алгасна.
+        if(labelBoxes.some(b=>x0<b.x+b.w+px(2)&&b.x<x0+tw+px(2)&&y0<b.y+b.h+px(1)&&b.y<y0+labelFs+px(1))) return;
+        labelBoxes.push({x:x0,y:y0,w:tw,h:labelFs});
+        labels.push({...labelBox(bx,by,labelFs,right?'start':'end',180),text:it.name,color:labelColor});
       });
       return {arcs,halos,labels,ribbons,flyDots};
     };
@@ -9645,7 +10126,7 @@ class Component extends DCLogic {
       const aimagLabels=this.mongoliaAimags.features.map(f=>{
         const c=pathGen.centroid(f);
         if(!c||isNaN(c[0])) return null;
-        return {x:c[0].toFixed(1),y:c[1].toFixed(1),text:f.properties.name};
+        return {...labelBox(c[0],c[1],px(10.5),'middle',120),text:f.properties.name};
       }).filter(Boolean);
       const aimagFs=px(10.5).toFixed(2);
       const choroLegend={
@@ -10025,7 +10506,8 @@ class Component extends DCLogic {
     const trend=t05Verified
       ? (t05Ser
           ? buildTrendChart(t05Ser,0)
-          : buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0))
+          : buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0,
+              mto>=s.c1d.length?s._partialValue:null))
       : Object.assign(buildTrendChart(new Array(12).fill(0),0),
           {showForecast:false,dataNote:stxt('status.no_data','мэдээлэл алга')});
     /* Цуваагүй үед ГРАФИКИЙГ ОГТ зурахгүй. Өмнө нь 12 тэгийн хавтгай
@@ -10244,7 +10726,7 @@ class Component extends DCLogic {
          цуваанаас ДУУСААГҮЙ мөчлөг хасагдсан бол яагаад гэдгийг ил хэлнэ.
          Хасагдаагүй бол ХООСОН мөр — хуудсан дээр юу ч нэмэгдэхгүй. */
       t05CovNote:(s&&s._partialDropped)
-        ?' · '+stxt('status.partial_month','* дуусаагүй сар цуваанд ороогүй')+
+        ?' · '+stxt('status.partial_month','* дуусаагүй сар цэгээр тэмдэглэв')+
           ' ('+s._partialDropped+')':'',
       t05Foot:this.txt('t05','foot','Дундаж шугам харуулах'),
       i06Title:this.txt('i06','title','Салбар хоорондын харьцуулалт (индекс)'),

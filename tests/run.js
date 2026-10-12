@@ -3232,8 +3232,8 @@ async function groupY() {
       check('Y7. Хөтчийн Back сайт ДОТОР өмнөх хуудас руу буцна',
         N.afterBack && N.afterBack.hash === '#/community' && N.afterBack.onCommunity === true,
         JSON.stringify(N.afterBack));
-      check('Y7. Hero-гийн хайлт ч хаягаа шинэчилнэ (#/browse)',
-        N.search && N.search.hash === '#/browse', JSON.stringify(N.search));
+      check('Y7. Hero-гийн хайлт ч хаягаа шинэчилнэ (#/browse эсвэл #/browse/<датасэт>)',
+        N.search && /^#\/browse(\/|$)/.test(N.search.hash), JSON.stringify(N.search));
       check('Y8. Байгаа хуудсаа дахин дарахад "буцах" өөр рүүгээ ЗААХГҮЙ',
         N.c2 && N.c2.back && N.c2.back.indexOf('Коммунити') < 0 && N.c2.back === N.c1.back,
         JSON.stringify({ first: N.c1 && N.c1.back, again: N.c2 && N.c2.back }));
@@ -4419,14 +4419,52 @@ async function groupBE() {
   check('BE42. "48,210" мөр утга болж кодод ч content.json-д ч үлдээгүй',
     !/'48,210/.test(dcScript()) && !/48,210/.test(fs.readFileSync(path.join(ROOT, 'content.json'), 'utf8')));
   /* Хоосон цуваа график бүтээгчийг нураахгүй (Math.max([]) = -Infinity) */
-  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off\)\{([\s\S]*?)\n\}\n/);
+  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial)?\)\{([\s\S]*?)\n\}\n/);
   let btcOk = false, btcErr = '';
   try {
-    const f = new Function('data', 'off', 'MONTHS', 'stxt', btc42[1]);
-    const r = f([], 0, MONTHS25, (p, x) => x);
+    const f = new Function('data', 'off', 'partial', 'MONTHS', 'stxt', btc42[1]);
+    const r = f([], 0, undefined, MONTHS25, (p, x) => x);
     btcOk = !!r && /^M/.test(r.line) && !/NaN|Infinity/.test(r.line + r.peak.value);
   } catch (e) { btcErr = e.message; }
   check('BE42. buildTrendChart([]) нурахгүй, хавтгай шугам зурна', btcOk, btcErr);
+  /* ── BE44. ДУТУУ САР (одоогийн сар) ГАЦСАН БИШ — тусдаа цэгээр харагдана ──
+     Өмнө: dropPartialMonth 10-р сарыг хасаад үлдээдэг → график 9-р сар дээр гацсан
+     мэт харагддаг байв. Одоо: шугам ба прогноз бүтэн сараар хэвээр, харин дутуу
+     сарын ОДООГИЙН утга тусдаа "дутуу" шошготой цэг болно. Фикстур: 2026-10-12. */
+  const now44 = Date.UTC(2026, 9, 12, 4); // УБ 2026-10-12
+  const cov44 = { grain: 'month', excludes_current: true };
+  const v44 = [1719, 1241, 1403, 1392, 1622, 2044, 2478, 2450, 1966, 654];
+  const dpm44 = dcScript().match(/\nfunction dropPartialMonth\(counts,year,cov,now\)\{([\s\S]*?)\n\}\n/);
+  if (dpm44) {
+    const dpmFn = new Function('return function dropPartialMonth(counts,year,cov,now){' + dpm44[1] + '\n}')();
+    const dp44 = dpmFn(v44, 2026, cov44, now44);
+    check('BE44. dropPartialMonth: дутуу сар цуваанаас хасагдаж, ОДООГИЙН утгыг буцаана',
+      dp44.counts.length === 9 && dp44.partial === '2026-10' && dp44.value === 654,
+      JSON.stringify({ n: dp44.counts.length, p: dp44.partial, v: dp44.value }));
+  }
+  const sss44 = dcScript().match(/\nfunction sectorSummaryToSeries\(json,now,cov\)\{([\s\S]*?)\n\}\n/);
+  if (sss44) {
+    const sssFn = new Function('return function sectorSummaryToSeries(json,now,cov){' + sss44[1] + '\n}')();
+    const rows44 = v44.map((n, i) => ({ month: '2026-' + String(i + 1).padStart(2, '0') + '-01T00:00:00.000Z', total_volume: String(n) }));
+    const s44 = sssFn({ status: 'ok', unit: 'нислэг', data: rows44 }, now44, cov44);
+    check('BE44. sectorSummaryToSeries: дутуу сарын утга partialValue-д, цуваанд 9 сар',
+      !!s44 && s44.counts.length === 9 && s44.partial === '2026-10' && s44.partialValue === 654,
+      JSON.stringify(s44 && { n: s44.counts.length, p: s44.partial, v: s44.partialValue }));
+  }
+  if (btc42) {
+    const mk44 = new Function('MONTHS', 'stxt',
+      'return function buildTrendChart(data,off,partial){' + btc42[1] + '}')(MONTHS25, (p, x) => x);
+    const d9 = v44.slice(0, 9);
+    const a44 = mk44(d9, 0), b44 = mk44(d9, 0, 654);
+    check('BE44. Дутуу сарын цэг график дээр гарна ("дутуу: 654")',
+      b44.hasPartial === true && /дутуу/.test(b44.partialLabel) && /654/.test(b44.partialLabel), b44.partialLabel);
+    check('BE44. Дутуу сар шугам/прогнозыг ӨӨРЧИЛДӨГГҮЙ (прогноз, шугамын цэгийн тоо адил)',
+      a44.fcLabel.delta === b44.fcLabel.delta && a44.fcSplitX === b44.fcSplitX &&
+      a44.line.split('L').length === b44.line.split('L').length, '');
+    check('BE44. Дутуу сарын цэг хүрээндээ багтана (Y тэнхлэгээс гарахгүй)',
+      Number(b44.partialCy) <= b44.h - b44.padB && Number(b44.partialCy) >= b44.padT, b44.partialCy);
+    check('BE44. Дутуу сар байхгүй үед цэг ГАРАХГҮЙ', a44.hasPartial === false, '');
+  }
 
   /* ── BE43. Датасэтийн "Салбарын бүтэц" — ЗӨВХӨН тухайн датасэтийн задаргаа ──
      SECTORS[k].rank нь салбарын түвшнийх; төмөр замд үүнийг вагоны датасэт
@@ -4791,6 +4829,78 @@ async function groupBE() {
   check('BE30. Сайт үзлэгийг roadInspectionsToValue-ээр хөрвүүлнэ',
     dcScript().includes('this._roadInspections=roadInspectionsToValue(d)') &&
     dcScript().includes("if(!EHBackend.fetchRoadInspections) return;"));
+  /* ══ BE33. Техникийн хяналтын үзлэгийн ДҮГНЭЛТ (roadInspectAnalysis) ══
+     Гараар бодсон фикстур: 2026-09-23 (Лхагва) 100/10 · 2026-09-26 (Бямба)
+     50/5 · 2026-09-28 (Даваа) 200/30 → нийт 350, тэнцээгүй 45 (12.857%).
+     Гариг: Даваа 200, Лхагва 100 → ажлын дундаж 150; Бямба 50 → амралт 50.
+     Аймаг: Улаанбаатар 270 + Дорнод 30 = 300 → 90.0%. Хэсэг: тоормос 6 (нийлбэр 13). */
+  const fm33src = dcScript().match(/function fillTpl\(s,v\)\{([\s\S]*?)\n\}/);
+  const ra33src = dcScript().match(/function roadInspectAnalysis\(w,T,fmt,age,staleAfter\)\{([\s\S]*?)\n\}/);
+  if (!fm33src || !ra33src) { bad('BE33. fillTpl()/roadInspectAnalysis() олдсонгүй'); }
+  else {
+    const fillTpl33 = new Function('s', 'v', fm33src[1]);
+    const RA = new Function('fillTpl', 'return function roadInspectAnalysis(w,T,fmt,age,staleAfter){' + ra33src[1] + '\n};')(fillTpl33);
+    const T33 = { wd: ['Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя', 'Ня'],
+      cats: ['Ерөнхий', 'Тоормос', 'Жолооны механизм', 'Гэрэл', 'Утаа', 'Дуу чимээ'],
+      s_total: '{days}|{total}|{failed}|{rate}', s_peak: '{peakDate}|{peak}|{lowDate}|{low}',
+      s_week_lower: 'L|{we}|{wk}|{pct}', s_week_higher: 'H|{we}|{wk}|{pct}',
+      s_top: '{top}|{share}|{count}|{n}', s_cat: '{cat}|{pct}', s_stale: '{date}|{age}' };
+    const fx33 = { status: 'ok', count: 350, date: '2026-09-28', vehicleCount: 300,
+      byDay: [{ date: '2026-09-23', count: 100, failed: 10 }, { date: '2026-09-26', count: 50, failed: 5 },
+        { date: '2026-09-28', count: 200, failed: 30 }],
+      byAimag: [{ aimag: 'Улаанбаатар', count: 270, failed: 20 }, { aimag: 'Дорнод', count: 30, failed: 5 }],
+      failedBy: { general: 4, brake: 6, steering: 0, light: 3, emission: 0, noise: 0 } };
+    const same33 = (x) => String(x);
+    const a33 = RA(fx33, T33, same33, 17, 8);
+    check('BE33. Нийт 350 · тэнцээгүй 45 · 12.9% (тэнцээгүйн хоногоор бодно)',
+      !!a33 && a33.total === 350 && a33.failedSum === 45 && a33.lines[0] === '3|350|45|12.9', a33 && a33.lines[0]);
+    check('BE33. Хамгийн их 09-28 (200) · хамгийн бага 09-26 (50)',
+      !!a33 && a33.lines[1] === '2026-09-28|200|2026-09-26|50', a33 && a33.lines[1]);
+    check('BE33. Амралт (50) < ажлын өдөр (150) → "бага" өгүүлбэр, 67%',
+      !!a33 && a33.lines[2] === 'L|50|150|67', a33 && a33.lines[2]);
+    check('BE33. Аймаг: Улаанбаатар 90.0% (270 / 300), 2 аймагт бүртгэл',
+      !!a33 && a33.lines[3] === 'Улаанбаатар|90.0|270|2', a33 && a33.lines[3]);
+    check('BE33. Гол шалтгаан = тоормос, 46.2% (6 / 13)',
+      !!a33 && a33.lines[4] === 'Тоормос|46.2', a33 && a33.lines[4]);
+    check('BE33. Шинэчлэгдээгүй (17 > 8 хоног) → сэрэмжлүүлгийн өгүүлбэр',
+      !!a33 && a33.stale === true && a33.lines[5] === '2026-09-28|17' && a33.lines.length === 6);
+    check('BE33. Гаригийн дундаж: Даваа 200, Лхагва 100, Бямба 50 (Даваа=0 ... Ням=6)',
+      !!a33 && a33.weekday[0].avg === 200 && a33.weekday[2].avg === 100 && a33.weekday[5].avg === 50 &&
+      a33.weekday[1].avg === 0 && a33.weekday[6].avg === 0, a33 && JSON.stringify(a33.weekday));
+    const b33 = RA(fx33, T33, same33, 3, 8);
+    check('BE33. Шинэ өгөгдөл (3 ≤ 8 хоног) → сэрэмжлүүлэг ГАРАХГҮЙ',
+      !!b33 && b33.stale === false && b33.lines.length === 5 && !b33.lines.some((l) => /\|17$/.test(l)));
+    const eqDays = { status: 'ok', count: 100, date: '2026-09-28',
+      byDay: [{ date: '2026-09-23', count: 100, failed: 0 }, { date: '2026-09-26', count: 100, failed: 0 }] };
+    const c33 = RA(eqDays, T33, same33, null, 8);
+    check('BE33. Ажлын/амралтын дундаж тэнцүү → харьцуулах өгүүлбэр ГАРАХГҮЙ',
+      !!c33 && !c33.lines.some((l) => /^[LH]\|/.test(l)), c33 && JSON.stringify(c33.lines));
+    const d33 = RA({ status: 'ok', count: 100, date: '2026-09-28', byDay: [{ date: '2026-09-23', count: 100 }] },
+      T33, same33, null, 8);
+    check('BE33. Тэнцээгүй тоо байхгүй хоног → хувь ТООЦООЛОХГҮЙ (NaN / 0% гэж ЗОХИОХГҮЙ)',
+      !!d33 && d33.rate === null && d33.total === 0 && !d33.lines.some((l) => /NaN|%/.test(l)), d33 && JSON.stringify(d33.lines));
+    check('BE33. Өгөгдөл алга / count null → null (хуудас "мэдээлэл алга" харуулна)',
+      RA(null, T33, same33, null, 8) === null && RA({ status: 'no_data', count: null }, T33, same33, null, 8) === null);
+    check('BE33. Хэсгийн задаргаа алга → шалтгааны өгүүлбэр ГАРАХГҮЙ (0 гэж зохиохгүй)',
+      (RA({ status: 'ok', count: 5, date: '2026-09-28', byDay: [] }, T33, same33, null, 8) || {}).catSum === 0);
+    check('BE33. fillTpl: үл мэдэгдэх нүд хэвээр үлдэнэ (хоосон болгохгүй)',
+      fillTpl33('a {x} b {y}', { x: 1 }) === 'a 1 b {y}');
+  }
+  /* Загварын <sc-if> нь index.html-д (dc скриптийн гадна) байдаг тул тэрийг уншина. */
+  const idxH = read('index.html');
+  check('BE33. Хуудас road-ийн үзлэгт дүгнэлт/график, бусад датасэтэд trend-rank хэвээр',
+    dcScript().includes("const roadExtra=(isRoadInspect&&this.state.page==='detail')?this.buildRoadInspectExtra():{};") &&
+    dcScript().includes("notRoadInspect:!isRoadInspect,...roadExtra,") &&
+    idxH.includes('<sc-if value="{{ detail.notRoadInspect }}">') &&
+    idxH.includes('<sc-if value="{{ detail.isRoadInspect }}">'));
+  check('BE33. Дүгнэлтийн бүх текст content.json → site.road_insp-д бүртгэгдсэн (шинэ хардкод текст алга)',
+    ['summary_title', 'map_title', 'rank_title', 'daily_title', 'cats_title', 'week_title', 'kpi_total',
+      's_total', 's_peak', 's_week_lower', 's_week_higher', 's_top', 's_cat', 's_stale', 'day_title',
+      'region_title', 'region_none', 'rank_rest', 'map_nogeo', 'no_data', 'wd_mon', 'wd_sun'].every((k) =>
+      readJson('content.json').site.road_insp && readJson('content.json').site.road_insp[k] != null));
+  check('BE33. Гар утас: .eh-ri-row нэг багана (@640px)',
+    /@media \(max-width:\s*640px\)[\s\S]*\.eh-ri-row\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*!important/.test(read('style.css')));
+
   /* Модулийг vm дотор ачаалж URL-ийг ЯГ шалгана (BE3-ийн ижил зарчим):
      endpoint-ийг андуурвал road-ийн summary (замын ачаалал) руу унаж,
      үзлэгийн тоог ӨӨР хэмжигдэхүүнээр солих байв. */
@@ -5026,10 +5136,10 @@ async function groupBE() {
      АЧААЛАЛ (МЯНГА) · мэдээлэл алга" гэсэн гарчгийн доор ХАВТГАЙ муруй
      зурагдаж, Y тэнхлэг "-6 -3 0 3 6" (сөрөг "мянган" ачаалал!), X
      тэнхлэг "1-р сар … 11-р сар" гэж бичигдэж байв. */
-  const btm = dcScript().match(/\nfunction buildTrendChart\(data,off\)\{([\s\S]*?)\r?\n\}\r?\n/);
+  const btm = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
   if (!btm) { bad('BE39. buildTrendChart() олдсонгүй'); return; }
   const btc = new Function('MONTHS', 'stxt',
-    'return function buildTrendChart(data,off){' + btm[1] + '}')(
+    'return function buildTrendChart(data,off,partial){' + btm[1] + '}')(
     ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар',
       '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'], sx);
   const zeroCh = btc(new Array(12).fill(0), 0);
@@ -5243,7 +5353,7 @@ async function groupBE() {
   check('BE37. t05-ийн толгойд тэмдэглэгээ гарна, текст content.json-д',
     read('index.html').includes('{{ t05CovNote }}') &&
     dcScript().includes("stxt('status.partial_month'") &&
-    readJson('content.json').site.status.partial_month === '* дуусаагүй сар цуваанд ороогүй');
+    readJson('content.json').site.status.partial_month === '* дуусаагүй сар цэгээр тэмдэглэв');
 
   /* ── BE38. datasets{} — БҮРЭН БАЙДАЛ машинаар уншигдана ──
      Өмнө нь "эх сурвалжийн 0.1% нь татагдсан" гэсэн баримт ЗӨВХӨН
@@ -6437,6 +6547,56 @@ async function groupOD() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   HS. НҮҮРИЙН ХАЙЛТ → ДАТАСЭТИЙН ХУУДАС
+
+   Хайлт ЗӨВХӨН "Нээлттэй өгөгдөл" каталогийн датасэтээс (DATASETS)
+   олно; дарахад тухайн датасэтийн хуудас руу шууд үсэрнэ.
+   searchDatasets() нь index.html-ээс задлагдаж, 3 датасэтийн
+   ГАРААР БОДОХ БОЛОМЖТОЙ фикстур дээр шалгагдана.
+   ══════════════════════════════════════════════════════════════════ */
+function groupHS() {
+  group('HS. Нүүрийн хайлт → датасэт');
+  const idx = read('index.html');
+  const m = idx.match(/function searchDatasets\(q\)\{[\s\S]*?\n\}\r?\n/);
+  if (!m) { bad('HS. searchDatasets() олдсонгүй'); return; }
+  const DATASETS = [
+    { sector: 'air', name: 'Агаарын тээврийн статистик', agency: 'ИНЕГ', desc: 'Нислэг, зорчигч.' },
+    { sector: 'rail', name: 'Вагон ачилт', agency: 'УБТЗ', desc: 'Агаар биш, төмөр зам.' },
+    { sector: 'road', name: 'Техникийн үзлэг', agency: 'ЗТХЕГ', desc: 'Тээврийн хэрэгсэл.' }
+  ];
+  const SECTORS = { air: { label: 'Агаарын тээвэр' }, rail: { label: 'Төмөр зам' }, road: { label: 'Авто зам' } };
+  const S = new Function('DATASETS', 'SECTORS', m[0] + '\nreturn searchDatasets;')(DATASETS, SECTORS);
+  const names = (q) => S(q).map(d => d.name);
+
+  check('HS1. "агаар" → нэрээр тохирсон нь ЭХЭНД, тайлбараар тохирсон нь дараа',
+    JSON.stringify(names('агаар')) === JSON.stringify(['Агаарын тээврийн статистик', 'Вагон ачилт']),
+    JSON.stringify(names('агаар')));
+  check('HS2. Том/жижиг үсэг ялгахгүй', names('АГААР').length === 2);
+  check('HS3. Байгууллагаар олдоно (УБТЗ → вагон)', names('убтз')[0] === 'Вагон ачилт');
+  check('HS4. Түлхүүр үг бүр тохирно (AND): "агаар зорчигч" → 1', names('агаар зорчигч').length === 1);
+  check('HS5. Тохирохгүй → хоосон (зохиомол үр дүн гаргахгүй)', S('xyz').length === 0);
+  check('HS6. Хоосон хайлт → хоосон', S('  ').length === 0 && S('').length === 0);
+  check('HS7. Салбарын нэрээр олдоно ("авто" → Техникийн үзлэг)', names('авто')[0] === 'Техникийн үзлэг');
+
+  /* Сайт талын холболт: Enter/товч/дарах бүгд датасэтийн хуудас руу */
+  const flat = idx.replace(/\s+/g, ' ');
+  check('HS8. Санал нь DATASETS-ээс (каталогоос өөр жагсаалт биш)',
+    flat.includes('searchDatasets(homeQ).slice(0,6)') && /DATASETS\.forEach/.test(m[0]));
+  check('HS9. Дарах/Enter → openDataset (датасэтийн хуудас)',
+    /const homeOpenDs=\(d\)=>\{.{0,200}this\.openDataset\(d,/.test(flat) &&
+    /const homeSubmit=\(\)=>\{ if\(homeHits\.length\) homeOpenDs\(homeHits\[homeSugActive\]\)/.test(flat));
+  check('HS10. Тохирох нь байхгүй үед каталог руу (хоосон төлөвийн зөвлөгөөтэй)',
+    /else homeToCatalog\(\)/.test(flat));
+  check('HS11. Санал нь mousedown-аар (blur нь жагсаалтыг дарахаас өмнө хаахгүй)',
+    /data-home-sug-item="1" sc-camel-on-mouse-down="\{\{ hs\.open \}\}"/.test(idx));
+  const con = readJson('content.json'), adm = read('admin/index.html');
+  check('HS12. Шинэ текст content.json (site.hero + ui_form) ба админы бүртгэлд',
+    !!(con.site.hero.search_empty && con.site.hero.search_catalog) &&
+    /search_empty:'/.test(adm) && /search_catalog:'/.test(adm) &&
+    JSON.stringify(con.ui_form).includes('"search_empty"') && JSON.stringify(con.ui_form).includes('"search_catalog"'));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -6453,10 +6613,11 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=I')) { groupI(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
+  else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); await groupVIS();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
