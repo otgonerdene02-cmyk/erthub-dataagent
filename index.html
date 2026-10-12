@@ -1093,7 +1093,7 @@
 
     
 
-    <div id="sec-05" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}{{ t05CovNote }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-05" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;min-width:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}{{ t05CovNote }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
       <button sc-camel-on-click="{{ f05.toggle }}" aria-label="{{ sA11yFilter }}" style="{{ f05.btnStyle }}">⚗</button>
     </div>
     <sc-if value="{{ f05.open }}">
@@ -10726,7 +10726,7 @@ class Component extends DCLogic {
          цуваанаас ДУУСААГҮЙ мөчлөг хасагдсан бол яагаад гэдгийг ил хэлнэ.
          Хасагдаагүй бол ХООСОН мөр — хуудсан дээр юу ч нэмэгдэхгүй. */
       t05CovNote:(s&&s._partialDropped)
-        ?' · '+stxt('status.partial_month','* дуусаагүй сар тусад цэгээр тэмдэглэгдсэн — шугам ба прогнозт ороогүй')+
+        ?' · '+stxt('status.partial_month','* дуусаагүй сар цэгээр тэмдэглэв')+
           ' ('+s._partialDropped+')':'',
       t05Foot:this.txt('t05','foot','Дундаж шугам харуулах'),
       i06Title:this.txt('i06','title','Салбар хоорондын харьцуулалт (индекс)'),
