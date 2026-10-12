@@ -3232,8 +3232,8 @@ async function groupY() {
       check('Y7. Хөтчийн Back сайт ДОТОР өмнөх хуудас руу буцна',
         N.afterBack && N.afterBack.hash === '#/community' && N.afterBack.onCommunity === true,
         JSON.stringify(N.afterBack));
-      check('Y7. Hero-гийн хайлт ч хаягаа шинэчилнэ (#/browse)',
-        N.search && N.search.hash === '#/browse', JSON.stringify(N.search));
+      check('Y7. Hero-гийн хайлт ч хаягаа шинэчилнэ (#/browse эсвэл #/browse/<датасэт>)',
+        N.search && /^#\/browse(\/|$)/.test(N.search.hash), JSON.stringify(N.search));
       check('Y8. Байгаа хуудсаа дахин дарахад "буцах" өөр рүүгээ ЗААХГҮЙ',
         N.c2 && N.c2.back && N.c2.back.indexOf('Коммунити') < 0 && N.c2.back === N.c1.back,
         JSON.stringify({ first: N.c1 && N.c1.back, again: N.c2 && N.c2.back }));
@@ -6485,6 +6485,56 @@ async function groupOD() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   HS. НҮҮРИЙН ХАЙЛТ → ДАТАСЭТИЙН ХУУДАС
+
+   Хайлт ЗӨВХӨН "Нээлттэй өгөгдөл" каталогийн датасэтээс (DATASETS)
+   олно; дарахад тухайн датасэтийн хуудас руу шууд үсэрнэ.
+   searchDatasets() нь index.html-ээс задлагдаж, 3 датасэтийн
+   ГАРААР БОДОХ БОЛОМЖТОЙ фикстур дээр шалгагдана.
+   ══════════════════════════════════════════════════════════════════ */
+function groupHS() {
+  group('HS. Нүүрийн хайлт → датасэт');
+  const idx = read('index.html');
+  const m = idx.match(/function searchDatasets\(q\)\{[\s\S]*?\n\}\r?\n/);
+  if (!m) { bad('HS. searchDatasets() олдсонгүй'); return; }
+  const DATASETS = [
+    { sector: 'air', name: 'Агаарын тээврийн статистик', agency: 'ИНЕГ', desc: 'Нислэг, зорчигч.' },
+    { sector: 'rail', name: 'Вагон ачилт', agency: 'УБТЗ', desc: 'Агаар биш, төмөр зам.' },
+    { sector: 'road', name: 'Техникийн үзлэг', agency: 'ЗТХЕГ', desc: 'Тээврийн хэрэгсэл.' }
+  ];
+  const SECTORS = { air: { label: 'Агаарын тээвэр' }, rail: { label: 'Төмөр зам' }, road: { label: 'Авто зам' } };
+  const S = new Function('DATASETS', 'SECTORS', m[0] + '\nreturn searchDatasets;')(DATASETS, SECTORS);
+  const names = (q) => S(q).map(d => d.name);
+
+  check('HS1. "агаар" → нэрээр тохирсон нь ЭХЭНД, тайлбараар тохирсон нь дараа',
+    JSON.stringify(names('агаар')) === JSON.stringify(['Агаарын тээврийн статистик', 'Вагон ачилт']),
+    JSON.stringify(names('агаар')));
+  check('HS2. Том/жижиг үсэг ялгахгүй', names('АГААР').length === 2);
+  check('HS3. Байгууллагаар олдоно (УБТЗ → вагон)', names('убтз')[0] === 'Вагон ачилт');
+  check('HS4. Түлхүүр үг бүр тохирно (AND): "агаар зорчигч" → 1', names('агаар зорчигч').length === 1);
+  check('HS5. Тохирохгүй → хоосон (зохиомол үр дүн гаргахгүй)', S('xyz').length === 0);
+  check('HS6. Хоосон хайлт → хоосон', S('  ').length === 0 && S('').length === 0);
+  check('HS7. Салбарын нэрээр олдоно ("авто" → Техникийн үзлэг)', names('авто')[0] === 'Техникийн үзлэг');
+
+  /* Сайт талын холболт: Enter/товч/дарах бүгд датасэтийн хуудас руу */
+  const flat = idx.replace(/\s+/g, ' ');
+  check('HS8. Санал нь DATASETS-ээс (каталогоос өөр жагсаалт биш)',
+    flat.includes('searchDatasets(homeQ).slice(0,6)') && /DATASETS\.forEach/.test(m[0]));
+  check('HS9. Дарах/Enter → openDataset (датасэтийн хуудас)',
+    /const homeOpenDs=\(d\)=>\{.{0,200}this\.openDataset\(d,/.test(flat) &&
+    /const homeSubmit=\(\)=>\{ if\(homeHits\.length\) homeOpenDs\(homeHits\[homeSugActive\]\)/.test(flat));
+  check('HS10. Тохирох нь байхгүй үед каталог руу (хоосон төлөвийн зөвлөгөөтэй)',
+    /else homeToCatalog\(\)/.test(flat));
+  check('HS11. Санал нь mousedown-аар (blur нь жагсаалтыг дарахаас өмнө хаахгүй)',
+    /data-home-sug-item="1" sc-camel-on-mouse-down="\{\{ hs\.open \}\}"/.test(idx));
+  const con = readJson('content.json'), adm = read('admin/index.html');
+  check('HS12. Шинэ текст content.json (site.hero + ui_form) ба админы бүртгэлд',
+    !!(con.site.hero.search_empty && con.site.hero.search_catalog) &&
+    /search_empty:'/.test(adm) && /search_catalog:'/.test(adm) &&
+    JSON.stringify(con.ui_form).includes('"search_empty"') && JSON.stringify(con.ui_form).includes('"search_catalog"'));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -6500,10 +6550,11 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=I')) { groupI(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
+  else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); groupSP(); await groupVIS();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); groupSP(); groupHS(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
