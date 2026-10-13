@@ -3942,7 +3942,8 @@ async function groupBE() {
     'status.rail_wagon_asof': 'Хоногийн мэдээ:', 'status.rail_wagon_stale': 'хоног шинэчлэгдээгүй',
     'ds_schema_rail_wagon.head.0': 'Станц', 'ds_schema_rail_wagon.head.1': 'Код',
     'ds_schema_rail_wagon.head.2': 'Ачсан (вагон)', 'ds_schema_rail_wagon.head.3': 'Буулгасан (вагон)',
-    'ds_schema_rail_wagon.head.4': 'Төлөв',
+    'ds_schema_rail_wagon.head.4': 'Нетто (вагон)', 'ds_schema_rail_wagon.head.5': 'Ачилтын эзлэх %',
+    'ds_schema_rail_wagon.head.6': 'Төлөв',
     'ds_schema_rail_wagon.st_loaded': 'Ачилттай', 'ds_schema_rail_wagon.st_none': 'Зөвхөн буулгалт',
     'sector_rank_rail_live': 'Станц тус бүрийн ачилт', 'sector_rank_rail_other': 'Бусад станц',
     'sector_chart2_rail_live': 'Ачилт ихтэй станц'
@@ -4143,12 +4144,15 @@ async function groupBE() {
   const B = runApply({ count: 200, unloadedCount: 335, stationCount: 4, date: '2026-09-17', byStation: BS });
   const bw = B.DSS.rail_wagon;
   check('BE18. 4 станц → 4 мөр', bw.rows.length === 4, JSON.stringify(bw.rows));
-  check('BE18. Мөр = [станц, код, ачсан, буулгасан, төлөв]',
-    JSON.stringify(bw.rows[0]) === JSON.stringify(['Ерөө', '32', 100, 10, 'ok:Ачилттай']), JSON.stringify(bw.rows[0]));
+  check('BE18. Мөр = [станц, код, ачсан, буулгасан, нетто, эзлэх %, төлөв]',
+    JSON.stringify(bw.rows[0]) === JSON.stringify(['Ерөө', '32', 100, 10, 90, 50, 'ok:Ачилттай']), JSON.stringify(bw.rows[0]));
   check('BE18. Ачилтгүй станц warn: шошготой (0-г ЗОХИОЖ ok болгохгүй)',
-    bw.rows[3][4] === 'warn:Зөвхөн буулгалт' && bw.rows[3][2] === 0, JSON.stringify(bw.rows[3]));
-  check('BE18. Баганын нэр content.json-оос (stxt) — 5 багана',
-    bw.head.length === 5 && bw.head[0] === 'Станц' && bw.head[2] === 'Ачсан (вагон)', JSON.stringify(bw.head));
+    bw.rows[3][6] === 'warn:Зөвхөн буулгалт' && bw.rows[3][2] === 0 && bw.rows[3][4] === -25, JSON.stringify(bw.rows[3]));
+  check('BE18. Эзлэх % нийлбэр = 100 (нийт ачилт 200: 50+30+20+0)',
+    bw.rows.reduce((t, r) => t + r[5], 0) === 100 && bw.rows[1][5] === 30, JSON.stringify(bw.rows.map(r => r[5])));
+  check('BE18. Баганын нэр content.json-оос (stxt) — 7 багана',
+    bw.head.length === 7 && bw.head[0] === 'Станц' && bw.head[2] === 'Ачсан (вагон)' && bw.head[4] === 'Нетто (вагон)',
+    JSON.stringify(bw.head));
   check('BE18. Зохиомол галт тэрэгний мөр ОРОХГҮЙ',
     !JSON.stringify(bw.rows).includes('271') && !JSON.stringify(bw.rows).includes('Замын-Үүд'));
   check('BE18. rank ачилтаар эрэмбэлэгдэж, хувь нь ГАРААР БОДОХТОЙ таарна',
@@ -4168,6 +4172,22 @@ async function groupBE() {
     JSON.stringify((toW({ status: 'ok', count: 5, by_station: BS }) || {}).byStation) === JSON.stringify(BS));
   check('BE18. by_station ирээгүй бол хоосон массив (undefined БИШ)',
     JSON.stringify((toW({ status: 'ok', count: 5 }) || {}).byStation) === '[]');
+
+  /* ── CH. Графикийн тэнхлэг — бүхэл алхам, шошгын нягтрал, дутуу сар ──
+     46 сар, хамгийн их багана 37,000 → алхам 10,000 (9,250 биш). */
+  const CH = dcScript().match(/function buildDualAxisChart\(barSeries,lineSeries,labels\)\{([\s\S]*?)\n\}/);
+  if (!CH) { bad('CH0. buildDualAxisChart() олдсонгүй'); }
+  else {
+    const bdc = new Function('barSeries', 'lineSeries', 'labels', CH[1]);
+    const labs = Array.from({ length: 46 }, (_, i) => 'L' + i); labs[45] = 'L45*';
+    const bars = Array.from({ length: 46 }, (_, i) => (i === 45 ? 37000 : i * 800));
+    const c = bdc(bars, bars.map(v => v / 2), labs);
+    check('CH1. Зүүн тэнхлэг бүхэл алхам: 0…40,000 (9,250-ийн алхам БИШ)',
+      c.yTicksLeft.map(t => t.label).join('|') === '0|10,000|20,000|30,000|40,000', c.yTicksLeft.map(t => t.label).join('|'));
+    check('CH2. 46 сарын шошго 3 сар тутам (16), давхцахгүй', c.xTicks.length === 16, String(c.xTicks.length));
+    check('CH3. Дутуу сар ("*") бүдэг (op .14), бүтэн сар .35',
+      c.barRects[45].op === '.14' && c.barRects[0].op === '.35', JSON.stringify([c.barRects[45].op, c.barRects[0].op]));
+  }
 
   /* ── WA. Вагоны анализын загвар — ГАРААР бодогдох фикстур ──
      2025-08 100/80 (дотоод 40) · 2025-09 200/150 (100) · 2026-08 150/90 (60)
@@ -4392,8 +4412,8 @@ async function groupBE() {
 
   /* ── BE23. Шинэ харагдах текст content.json-д бүртгэгдсэн ── */
   const cw = con14.site.ds_schema_rail_wagon || {};
-  check('BE23. ds_schema_rail_wagon.head 5 баганатай', (cw.head || []).length === 5, JSON.stringify(cw.head));
-  check('BE23. ds_schema_rail_wagon.notes 5 тайлбартай', (cw.notes || []).length === 5);
+  check('BE23. ds_schema_rail_wagon.head 7 баганатай', (cw.head || []).length === 7, JSON.stringify(cw.head));
+  check('BE23. ds_schema_rail_wagon.notes 7 тайлбартай', (cw.notes || []).length === 7);
   check('BE23. Төлөвийн 2 шошго бүртгэлтэй', !!cw.st_loaded && !!cw.st_none);
   check('BE23. Салбарын бүтэц/баганын амьд гарчиг бүртгэлтэй',
     !!con14.site.sector_rank_rail_live && !!con14.site.sector_rank_rail_other && !!con14.site.sector_chart2_rail_live);
