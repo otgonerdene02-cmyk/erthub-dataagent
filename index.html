@@ -2155,6 +2155,7 @@
       </sc-if>
       <sc-if value="{{ detail.wagonHasData }}">
         <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);">{{ detail.wagonT.yearLabel }}</span>
           <sc-for list="{{ detail.wagonYearChips }}" as="wy" hint-placeholder-count="3">
             <button sc-camel-on-click="{{ wy.pick }}" style="{{ wy.style }}">{{ wy.label }}</button>
           </sc-for>
@@ -2230,7 +2231,7 @@
                 </foreignObject>
               </sc-for>
               <sc-for list="{{ detail.wagonChart.barRects }}" as="br" hint-placeholder-count="12">
-                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="var(--ink3)" opacity=".35" rx="2"><title>{{ br.tip }}</title></rect>
+                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="var(--ink3)" opacity="{{ br.op }}" rx="2"><title>{{ br.tip }}</title></rect>
               </sc-for>
               <path d="{{ detail.wagonChart.line }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
               <sc-for list="{{ detail.wagonChart.dotPts }}" as="dp" hint-placeholder-count="12">
@@ -4608,10 +4609,12 @@ const DS_SCHEMA={
      тул DS_SCHEMA.rail-ыг дарж бичвэл нөгөө хоёр нь худал болно. rows нь
      ХООСОН эхэлнэ: backend-ээс by_station ирэх хүртэл хүснэгт "мэдээлэл
      алга" гэж ил хэлнэ — зохиомол мөр ОГТ ҮЗҮҮЛЭХГҮЙ ("Тоо ЗОХИОХГҮЙ"). */
-  rail_wagon:{head:['Станц','Код','Ачсан (вагон)','Буулгасан (вагон)','Төлөв'],
-    types:['string','string','int','int','enum'],
+  rail_wagon:{head:['Станц','Код','Ачсан (вагон)','Буулгасан (вагон)','Нетто (вагон)','Ачилтын эзлэх %','Төлөв'],
+    types:['string','string','int','int','int','float','enum'],
     notes:['Ачилт, буулгалт бүртгэгдсэн өртөөний нэр','УБТЗ-ийн өртөөний код',
       'Тухайн хоногт ачигдсан вагоны тоо','Тухайн хоногт буулгасан вагоны тоо',
+      'Ачсан хасах буулгасан: + бол вагон үлдэж буй, − бол буулгалт давамгайлсан',
+      'Станцын ачилт нийт ачилтын хэдэн хувь вэ (нийт ачилт = 100%)',
       'Тухайн хоногт ачилт хийгдсэн эсэх'],
     rows:[]},
   /* Техникийн хяналтын үзлэг — вагонтой ЯГ ИЖИЛ зарчим: энэ нь САЛБАРЫН
@@ -6085,11 +6088,13 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
   const lbl=i=>(labels&&labels[i]?labels[i]+': ':'');
   const tipAt=(i,v,pre)=>lbl(i)+(pre?pre+' ':'')+Math.round(v).toLocaleString('en-US');
   const gap=prevBars?slot*0.02:0;
+  /* Дутуу сар ("*" шошготой) — багана бүдэг, шошгонд "(дутуу сар)" гэж бичнэ
+     (wagon/pax графикийн дүрэм: бүтэн сартай андуурахгүйн тулд). */
   const barRects=barSeries.map((v,i)=>{
-    const y=Y1(v);
+    const y=Y1(v), part=String(labels[i]||'').slice(-1)==='*';
     const x=prevBars?X(i)+gap:(padL+i*slot+(slot-barW)/2);
     return {x:x.toFixed(1),y:y.toFixed(1),w:barW.toFixed(1),h:(padT+plotH-y).toFixed(1),
-      tip:tipAt(i,v,opts.barLabel)};
+      tip:tipAt(i,v,opts.barLabel)+(part?' (дутуу сар)':''),op:part?'.14':'.35'};
   });
   const prevRects=prevBars?prevBars.map((v,i)=>{
     const y=Y1(v);
@@ -6120,7 +6125,9 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
     return {y:y.toFixed(1),label:(linePct&&val>0?'+':'')+fmtAxisNum(val)+(linePct?'%':''),fx:(w-padR).toFixed(1),fy:(y-7).toFixed(1)};
   });
   const zeroLineY=(linePct&&ax2.lo<0&&ax2.hi>0)?Y2(0).toFixed(1):'';
-  const every=n>8?2:1;
+  /* Шошгыг нягтруулахгүй: 46 сарын графикт 2 алхам тутамд гэх мэт
+     давхцдаггүй. Жижиг цувааны хувьд бүгдийг харуулна. */
+  const every=n>24?3:n>12?2:1;
   const xTicks=labels.map((lb,i)=>({x:X(i).toFixed(1),label:lb||'',fx:(X(i)-19).toFixed(1),fy:(h-padB+6).toFixed(1)})).filter((_,i)=>i%every===0);
 
   return {barRects,prevRects,hasPrev:!!prevBars,line,dotPts,yTicksLeft,yTicksRight,xTicks,
@@ -6171,7 +6178,9 @@ function wagonAnalysisModel(all,sel,year){
   const types=(bd&&Array.isArray(bd.by_wagon_type)?bd.by_wagon_type:[])
     .filter(t=>(+t.loaded||0)>0||(+t.unloaded||0)>0)
     .map(t=>({type:t.type,loaded:+t.loaded||0,unloaded:+t.unloaded||0}))
-    .sort((a,b)=>b.loaded-a.loaded);
+    /* "Бусад" бол ангилалгүй үлдэгдэл — эрэмбэд хамгийн сүүлд, харьцуулах
+       боломжтой төрлүүд түрүүнд. */
+    .sort((a,b)=>(a.type==='other')-(b.type==='other')||b.loaded-a.loaded);
   const stations=(bd&&Array.isArray(bd.by_station)?bd.by_station:[])
     .map(s=>({station:s.station,code:s.code,loaded:+s.loaded||0,unloaded:+s.unloaded||0}))
     .sort((a,b)=>b.loaded-a.loaded);
@@ -7117,15 +7126,20 @@ class Component extends DCLogic {
       const h=(x,i)=>stxt('ds_schema_rail_wagon.head.'+i,x);
       const nt=(x,i)=>stxt('ds_schema_rail_wagon.notes.'+i,x);
       DS_SCHEMA.rail_wagon.head=[h('Станц',0),h('Код',1),h('Ачсан (вагон)',2),
-        h('Буулгасан (вагон)',3),h('Төлөв',4)];
+        h('Буулгасан (вагон)',3),h('Нетто (вагон)',4),h('Ачилтын эзлэх %',5),h('Төлөв',6)];
       DS_SCHEMA.rail_wagon.notes=[
         nt('Ачилт, буулгалт бүртгэгдсэн өртөөний нэр',0),nt('УБТЗ-ийн өртөөний код',1),
         nt('Тухайн хоногт ачигдсан вагоны тоо',2),nt('Тухайн хоногт буулгасан вагоны тоо',3),
-        nt('Тухайн хоногт ачилт хийгдсэн эсэх',4)];
+        nt('Ачсан хасах буулгасан: + бол вагон үлдэж буй, − бол буулгалт давамгайлсан',4),
+        nt('Станцын ачилт нийт ачилтын хэдэн хувь вэ (нийт ачилт = 100%)',5),
+        nt('Тухайн хоногт ачилт хийгдсэн эсэх',6)];
       const stOk=stxt('ds_schema_rail_wagon.st_loaded','Ачилттай');
       const stNo=stxt('ds_schema_rail_wagon.st_none','Зөвхөн буулгалт');
+      /* Эзлэх % нь бүх станцын НИЙТ ачилтаас — нийлбэр нь 100-д тулгана */
+      const totLd=bs.reduce((a,r)=>a+ld(r),0);
+      const shr=r=>totLd>0?Math.round(ld(r)/totLd*1000)/10:0;
       DS_SCHEMA.rail_wagon.rows=bs.map(r=>[String(r.station||''),String(r.code||''),
-        ld(r),ul(r),(ld(r)>0?'ok:'+stOk:'warn:'+stNo)]);
+        ld(r),ul(r),ld(r)-ul(r),shr(r),(ld(r)>0?'ok:'+stOk:'warn:'+stNo)]);
       /* Салбарын бүтэц ба багана — ачилтаар эрэмбэлсэн бодит станцууд */
       const top=bs.slice().sort((a,b)=>ld(b)-ld(a));
       const tot=bs.reduce((a,r)=>a+ld(r),0);
@@ -8521,7 +8535,8 @@ class Component extends DCLogic {
         typesTitle:T('types_title','Вагоны төрлөөр ачилт'),
         stationsTitle:T('stations_title','Станцаар ачилт'),
         chartTitle:T('chart_title','Сараар ачсан ба буулгасан вагон'),
-        chartLegend:T('chart_legend','Багана — ачсан (зүүн тэнхлэг) · шугам — буулгасан (баруун тэнхлэг)'),
+        chartLegend:T('chart_legend','Багана — ачсан (зүүн тэнхлэг) · шугам — буулгасан (баруун тэнхлэг) · бүдэг багана — дутуу сар'),
+        yearLabel:T('year_label','Жил'),
         pending:T('breakdown_pending','Станц, төрлийн задаргаа ачаалж байна…')}};
     if(!m.hasData) return base;
     const unit=T('unit','вагон');
