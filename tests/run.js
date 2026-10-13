@@ -4971,6 +4971,24 @@ async function groupBE() {
       RA(null, T33, same33, null, 8) === null && RA({ status: 'no_data', count: null }, T33, same33, null, 8) === null);
     check('BE33. Хэсгийн задаргаа алга → шалтгааны өгүүлбэр ГАРАХГҮЙ (0 гэж зохиохгүй)',
       (RA({ status: 'ok', count: 5, date: '2026-09-28', byDay: [] }, T33, same33, null, 8) || {}).catSum === 0);
+    /* MA7 ба хоорондын харьцуулалт — гараар бодсон: 09-01…09-07 = 100/хоног,
+       09-08…09-14 = 200/хоног. MA7[5] null (бүтэн 7 хоног биш), MA7[6] = 100,
+       MA7[13] = 200. Сүүлийн 7 хоног 200 vs өмнөх 100 → +100.0% (өсөх). */
+    const TT33 = { ...T33, s_trend_up: "UP|{cur}|{prev}|{pct}", s_trend_down: "DN|{cur}|{prev}|{pct}" };
+    const mkDays = (lo, hi) => Array.from({ length: 14 }, (_, i) => ({
+      date: "2026-09-" + String(i + 1).padStart(2, "0"), count: i < 7 ? lo : hi, failed: 0 }));
+    const up33 = RA({ status: "ok", count: 200, date: "2026-09-14", byDay: mkDays(100, 200) }, TT33, same33, null, 8);
+    check("BE33. MA7: эхний 6 өдөр null, 7 дэх = 100, сүүлийн = 200 (ГАРААР бодов)",
+      !!up33 && up33.ma7[5] === null && up33.ma7[6] === 100 && up33.ma7[13] === 200, up33 && JSON.stringify(up33.ma7));
+    check("BE33. Хандлага: 14 хоног → сүүлийн 7 (200) vs өмнөх 7 (100) = өсөлт +100.0%",
+      !!up33 && up33.trend && up33.trend.cur === 200 && up33.trend.prev === 100 && up33.trend.pct === 100 &&
+      up33.lines.includes("UP|200|100|100.0"), up33 && JSON.stringify(up33.lines));
+    const dn33 = RA({ status: "ok", count: 100, date: "2026-09-14", byDay: mkDays(200, 100) }, TT33, same33, null, 8);
+    check("BE33. Буурсан үед \"DN\" загвар сонгогдоно (өсөлт БИШ)",
+      !!dn33 && dn33.lines.some((l) => l.startsWith("DN|")) && !dn33.lines.some((l) => l.startsWith("UP|")), dn33 && JSON.stringify(dn33.lines));
+    check("BE33. 13 хоног (14-өөс бага) → хандлага ГАРАХГҮЙ (богино цуваа дээр таамаглахгүй)",
+      (() => { const r = RA({ status: "ok", count: 100, date: "2026-09-13", byDay: mkDays(100, 200).slice(1) }, TT33, same33, null, 8);
+        return !!r && r.trend === null && !r.lines.some((l) => /^(UP|DN)\|/.test(l)); })());
     check('BE33. fillTpl: үл мэдэгдэх нүд хэвээр үлдэнэ (хоосон болгохгүй)',
       fillTpl33('a {x} b {y}', { x: 1 }) === 'a 1 b {y}');
   }
@@ -4984,7 +5002,8 @@ async function groupBE() {
   check('BE33. Дүгнэлтийн бүх текст content.json → site.road_insp-д бүртгэгдсэн (шинэ хардкод текст алга)',
     ['summary_title', 'map_title', 'rank_title', 'daily_title', 'cats_title', 'week_title', 'kpi_total',
       's_total', 's_peak', 's_week_lower', 's_week_higher', 's_top', 's_cat', 's_stale', 'day_title',
-      'region_title', 'region_none', 'rank_rest', 'map_nogeo', 'no_data', 'wd_mon', 'wd_sun'].every((k) =>
+      'region_title', 'region_none', 'rank_rest', 'map_nogeo', 'no_data', 'wd_mon', 'wd_sun',
+      's_trend_up', 's_trend_down', 'ma_label'].every((k) =>
       readJson('content.json').site.road_insp && readJson('content.json').site.road_insp[k] != null));
   check('BE33. Гар утас: .eh-ri-row нэг багана (@640px)',
     /@media \(max-width:\s*640px\)[\s\S]*\.eh-ri-row\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*!important/.test(read('style.css')));
@@ -5026,8 +5045,9 @@ async function groupBE() {
     'sector_chart2_road_live': 'Аймаг тус бүрийн үзлэг',
     'chart.daily_trend': 'хоногийн чиг хандлага',
     'ds_schema_road_inspect.head.0': 'Аймаг, нийслэл', 'ds_schema_road_inspect.head.1': 'Үзлэг',
-    'ds_schema_road_inspect.head.2': 'Тэнцээгүй', 'ds_schema_road_inspect.head.3': 'Тэнцээгүй хувь',
-    'ds_schema_road_inspect.head.4': 'Төлөв',
+    'ds_schema_road_inspect.head.2': 'Тэнцсэн', 'ds_schema_road_inspect.head.3': 'Тэнцээгүй',
+    'ds_schema_road_inspect.head.4': 'Тэнцээгүй хувь', 'ds_schema_road_inspect.head.5': 'Эзлэх хувь',
+    'ds_schema_road_inspect.head.6': 'Төлөв',
     'ds_schema_road_inspect.st_fail': 'Тэнцээгүй бүртгэгдсэн',
     'ds_schema_road_inspect.st_clean': 'Бүгд тэнцсэн'
   };
@@ -5265,30 +5285,32 @@ async function groupBE() {
     /road_inspect:\{head:\[[\s\S]*?rows:\[\]\}/.test(dcScript()));
   const ISch = I.DSS.road_inspect;
   check('BE33. by_aimag-ийн 3 мөр хүснэгтэд буув', ISch.rows.length === 3, JSON.stringify(ISch.rows.length));
-  check('BE33. Толгой content.json-оос (5 багана)',
-    ISch.head.length === 5 && ISch.head[0] === 'Аймаг, нийслэл' && ISch.head[1] === 'Үзлэг' &&
-    ISch.head[3] === 'Тэнцээгүй хувь', JSON.stringify(ISch.head));
-  check('BE33. Мөр 1 = Улаанбаатар · 1,621 · 120 · 7.4% (ГАРААР бодов)',
-    ISch.rows[0][0] === 'Улаанбаатар' && ISch.rows[0][1] === 1621 &&
-    ISch.rows[0][2] === 120 && ISch.rows[0][3] === 7.4, JSON.stringify(ISch.rows[0]));
-  check('BE33. Мөр 2 = Орхон · 131 · 9 · 6.9% (ГАРААР бодов)',
-    ISch.rows[1][0] === 'Орхон' && ISch.rows[1][3] === 6.9, JSON.stringify(ISch.rows[1]));
+  check('BE33. Толгой content.json-оос (7 багана: тэнцсэн/тэнцээгүй/хувь/эзлэх хувь нэмэгдсэн)',
+    ISch.head.length === 7 && ISch.head[0] === 'Аймаг, нийслэл' && ISch.head[1] === 'Үзлэг' &&
+    ISch.head[4] === 'Тэнцээгүй хувь' && ISch.head[5] === 'Эзлэх хувь', JSON.stringify(ISch.head));
+  check('BE33. Мөр 1 = Улаанбаатар · 1,621 · тэнцсэн 1,501 · тэнцээгүй 120 · 7.4% (ГАРААР бодов)',
+    ISch.rows[0][0] === 'Улаанбаатар' && ISch.rows[0][1] === 1621 && ISch.rows[0][2] === 1501 &&
+    ISch.rows[0][3] === 120 && ISch.rows[0][4] === 7.4, JSON.stringify(ISch.rows[0]));
+  check('BE33. Эзлэх хувь = үзлэг / бүх аймгийн нийлбэр (1621 / 1876 = 86.4%)',
+    ISch.rows[0][5] === 86.4, JSON.stringify(ISch.rows[0]));
+  check('BE33. Мөр 2 = Орхон · 131 · тэнцээгүй 9 · 6.9% (ГАРААР бодов)',
+    ISch.rows[1][0] === 'Орхон' && ISch.rows[1][3] === 9 && ISch.rows[1][4] === 6.9, JSON.stringify(ISch.rows[1]));
   check('BE33. Үзлэгийн тоогоор БУУРАХ эрэмбэтэй',
     ISch.rows[0][1] > ISch.rows[1][1] && ISch.rows[1][1] > ISch.rows[2][1]);
   check('BE33. Тэнцээгүйтэй аймаг "warn:", тайлбар нь content.json-оос',
-    ISch.rows[0][4] === 'warn:Тэнцээгүй бүртгэгдсэн', ISch.rows[0][4]);
+    ISch.rows[0][6] === 'warn:Тэнцээгүй бүртгэгдсэн', ISch.rows[0][6]);
   /* Бүгд тэнцсэн аймаг → "ok:" (хувь 0). Эсрэг тохиолдлыг ЗААВАЛ шалгана:
      эс тэгвэл status үргэлж "warn" байсан ч тест ногоон үлдэнэ. */
   const ICl = runInsp(toI({ ...INSP_LIVE,
     by_aimag: [{ aimag: 'Говьсүмбэр', count: 40, failed: 0 }] })).DSS.road_inspect;
   check('BE33. Тэнцээгүйгүй аймаг → "ok:Бүгд тэнцсэн" · хувь 0',
-    ICl.rows[0][3] === 0 && ICl.rows[0][4] === 'ok:Бүгд тэнцсэн', JSON.stringify(ICl.rows[0]));
+    ICl.rows[0][4] === 0 && ICl.rows[0][6] === 'ok:Бүгд тэнцсэн' && ICl.rows[0][2] === 40, JSON.stringify(ICl.rows[0]));
   /* by_aimag ирээгүй бол хүснэгтийг ОГТ ХӨНДӨХГҮЙ (хуучин байдал хэвээр) */
   const INo = runInsp(toI({ ...INSP_LIVE, by_aimag: [] })).DSS.road_inspect;
   check('BE33. by_aimag хоосон → мөр ҮҮСГЭХГҮЙ (тоо ЗОХИОХГҮЙ)', INo.rows.length === 0);
   check('BE33. Шинэ харагдах текст content.json-д бүртгэгдсэн',
     (() => { const d = readJson('content.json').site.ds_schema_road_inspect || {};
-      return (d.head || []).length === 5 && (d.notes || []).length === 5 &&
+      return (d.head || []).length === 7 && (d.notes || []).length === 7 &&
         d.st_fail === 'Тэнцээгүй бүртгэгдсэн' && d.st_clean === 'Бүгд тэнцсэн'; })());
 
   /* ── BE34. Hero ticker-ийн зорчигч — цэвэр "0" БИШ ──
