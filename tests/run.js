@@ -3126,7 +3126,10 @@ const PROBE_Y = `async function(d,w){
 /* Y6 — админы үүсгэдэг гүн холбоос ("#sec-06") ЖИНХЭНЭ газар руу аваачна */
 const PROBE_Y_ANCHOR = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  await sleep(7500);
+  /* Хуудас зурагдахыг хүлээнэ; гүйлгэлт тогтох жижиг хугацааг л үлдээнэ
+     (scrollY-г нөхцөлөөр хүлээвэл шалгалт өөрөө хуурамч болно) */
+  for(let i=0;i<150&&!(d.getElementById('sec-06')&&d.getElementById('hero'));i++) await sleep(100);
+  await sleep(600);
   const ids=['hero','portal-kpi','sec-01','sec-02','sec-04','sec-05','sec-06','sec-07','sec-08'];
   const e=d.getElementById('sec-06');
   return { exists:ids.filter(i=>!!d.getElementById(i)),
@@ -3137,9 +3140,10 @@ const PROBE_Y_ANCHOR = `async function(d,w){
 /* Y7/Y8 — хуудас бүр хаягтай, Back сайт дотор, "буцах" өөр рүүгээ заахгүй */
 const PROBE_Y_ROUTE = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  await sleep(7000);
+  const waitFor=async(fn,ms)=>{const t=Date.now()+ms;while(Date.now()<t){try{if(fn())return true}catch(e){}await sleep(100)}return false};
+  await waitFor(()=>[...d.querySelectorAll('button,a')].some(x=>x.textContent.trim()==='Коммунити'),15000);
   const go=async(n)=>{const b=[...d.querySelectorAll('button,a')].filter(x=>x.textContent.trim()===n)[0];
-    if(b){b.click(); await sleep(1300)} return !!b};
+    if(b){const h=w.location.hash; b.click(); await waitFor(()=>w.location.hash!==h,3000)} return !!b};
   const back=()=>{const b=[...d.querySelectorAll('button,a')].filter(x=>/руу буцах/.test(x.textContent))[0];
     return b?b.textContent.trim():null};
   const R={start:w.location.hash};
@@ -3149,7 +3153,8 @@ const PROBE_Y_ROUTE = `async function(d,w){
   R.c2={hash:w.location.hash, back:back()};
   await go('Салбарын түүх');
   R.h={hash:w.location.hash, back:back()};
-  w.history.back(); await sleep(1300);
+  const hBeforeBack=w.location.hash;
+  w.history.back(); await waitFor(()=>w.location.hash!==hBeforeBack,5000);
   R.afterBack={hash:w.location.hash,
     onCommunity:d.body.innerText.indexOf('Төр, иргэнийг холбосон')>=0};
   /* Hero-гийн хайлт ч хаягаа шинэчилнэ */
@@ -3157,7 +3162,7 @@ const PROBE_Y_ROUTE = `async function(d,w){
   const inp=[...d.querySelectorAll('input[type=\\"text\\"]')][0];
   if(inp){ inp.value='нислэг'; inp.dispatchEvent(new w.Event('input',{bubbles:true})); await sleep(300);
     const sb=[...d.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Хайх')[0];
-    if(sb){ sb.click(); await sleep(1300) } }
+    if(sb){ const h=w.location.hash; sb.click(); await waitFor(()=>w.location.hash!==h,3000) } }
   R.search={hash:w.location.hash};
   return R;
 }`;
@@ -3202,7 +3207,8 @@ const PROBE_Y_DS_OPEN = `async function(d,w){
 /* Y9 — хаягаар ШУУД орох (хуваалцсан холбоос / F5) */
 const PROBE_Y_DS_DIRECT = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  await sleep(6500);
+  /* Дэлгэрэнгүйн толгой гарч ирэхийг хүлээнэ (тогтмол хугацаа биш) */
+  for(let i=0;i<150&&!((d.querySelector('h1,h2')||{}).innerText||'').trim();i++) await sleep(100);
   return { hash:decodeURIComponent(w.location.hash),
     head:((d.querySelector('h1,h2')||{}).innerText||'').trim(),
     back:([...d.querySelectorAll('button,a')].filter(x=>/руу буцах/.test(x.textContent))[0]||{}).textContent||null };
@@ -3216,7 +3222,13 @@ const PROBE_Y_DS_STALE = `async function(d,w){
     if(d.body&&d.body.textContent.indexOf('Холбоосын датасэт олдсонгүй')>=0){ seen=true; break }
     await sleep(100);
   }
-  await sleep(800);
+  /* Toast харагдсаны дараа каталог руу шилжиж, каталог зурагдахыг хүлээнэ
+     (тогтмол 800 мс биш — ачаалалтай үед redirect-ээс түрүүлж уншигддаг байв).
+     Хугацаа дуусвал одоогийн төлөвийг буцаана → шалгалт ҮНЭНЭЭР унана. */
+  for(let i=0;i<100;i++){
+    if(w.location.hash==='#/browse'&&d.querySelector('input[placeholder=\\"Датасэт хайх…\\"]')) break;
+    await sleep(100);
+  }
   return { toast:seen, hash:w.location.hash,
     catalog:!!d.querySelector('input[placeholder=\\"Датасэт хайх…\\"]') };
 }`;
@@ -7127,6 +7139,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=I')) { groupI(); }
   else if (process.argv.includes('--only=AX')) { groupAX(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
+  else if (process.argv.includes('--only=Y')) { await groupY(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
