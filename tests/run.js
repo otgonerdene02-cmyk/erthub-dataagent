@@ -207,6 +207,10 @@ function groupB() {
          бичлэг хайх аргаар олдохгүй. Зам бүр үнэхээр уншигддагийг
          V13-ын round-trip (content.json → самбарын гаралт) баталдаг. */
       'vehreg',
+      /* `wagon_an` — вагоны анализын самбар. Зам нь T('kpi_loaded') гэх мэт
+         жижиг туслахаар дамждаг (stxt('wagon_an.'+k)) тул шууд бичлэг хайх
+         аргаар олдохгүй. Түлхүүр бүр WA7-д баталгаажна. */
+      'wagon_an', 'pax_an',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -4247,6 +4251,148 @@ async function groupBE() {
   check('BE18. by_station ирээгүй бол хоосон массив (undefined БИШ)',
     JSON.stringify((toW({ status: 'ok', count: 5 }) || {}).byStation) === '[]');
 
+  /* ── WA. Вагоны анализын загвар — ГАРААР бодогдох фикстур ──
+     2025-08 100/80 (дотоод 40) · 2025-09 200/150 (100) · 2026-08 150/90 (60)
+     · 2026-09 50/40 (20, ДУТУУ сар, 10 өдөр). Нийт: ачсан 500, буулгасан 360,
+     дотоод 220 (44%), харьцаа 500/360, өдөр 102 (31+30+31+10). */
+  const wam = dcScript().match(/function wagonAnalysisModel\(all,sel,year\)\{([\s\S]*?)\n\}/);
+  if (!wam) { bad('WA0. wagonAnalysisModel() олдсонгүй'); }
+  else {
+    const WA = new Function('all', 'sel', 'year', wam[1]);
+    const mo = (month, loaded, unloaded, dom, days, partial) => ({ month, loaded, unloaded,
+      loaded_domestic: dom, loaded_foreign: loaded - dom, days, complete_days: days, partial });
+    const ALL = { status: 'ok', months: [
+      mo('2025-08', 100, 80, 40, 31, false), mo('2025-09', 200, 150, 100, 30, false),
+      mo('2026-08', 150, 90, 60, 31, false), mo('2026-09', 50, 40, 20, 10, true)],
+      by_station: [{ station: 'B', code: '2', loaded: 200, unloaded: 160 }, { station: 'A', code: '1', loaded: 300, unloaded: 200 }],
+      by_wagon_type: [{ type: 'covered', loaded: 300, unloaded: 200 }, { type: 'tank', loaded: 200, unloaded: 160 },
+        { type: 'reefer', loaded: 0, unloaded: 0 }] };
+    const a = WA(ALL, null, 'all');
+    check('WA1. Нийт ачсан 500, буулгасан 360', a.hasData && a.loaded === 500 && a.unloaded === 360, JSON.stringify(a.loaded));
+    check('WA1. Дотоод 220 → 44%, гадаад 56%', a.dom === 220 && Math.abs(a.domPct - 44) < 1e-9 && Math.abs(a.frnPct - 56) < 1e-9);
+    check('WA1. Харьцаа 500/360, өдрийн дундаж 500/102',
+      Math.abs(a.ratio - 500 / 360) < 1e-9 && a.days === 102 && Math.abs(a.perDay - 500 / 102) < 1e-9);
+    check('WA2. Дутуу сар 1 тоологдоно, шошго "*"-тай',
+      a.partialN === 1 && a.series.labels.join(',') === '25-08,25-09,26-08,26-09*');
+    check('WA2. Жилүүд [2025,2026]; "Бүгд" дээр YoY ЗОХИОХГҮЙ (null)',
+      a.years.join(',') === '2025,2026' && a.yoy === null);
+    check('WA3. Станц ачилтаар буурахаар эрэмбэлэгдэнэ (A, B)',
+      a.stations.map(s => s.station).join(',') === 'A,B' && a.stationTotal === 500);
+    check('WA3. Тэг төрөл (reefer) харагдахгүй, 2 төрөл',
+      a.types.length === 2 && a.types[0].type === 'covered' && a.typeTotal === 500);
+    const SEL26 = { status: 'ok', months: [], by_station: [{ station: 'A', code: '1', loaded: 150, unloaded: 90 }],
+      by_wagon_type: [{ type: 'covered', loaded: 150, unloaded: 90 }] };
+    const y = WA(ALL, SEL26, 2026);
+    check('WA4. 2026: ачсан 200, буулгасан 130', y.loaded === 200 && y.unloaded === 130 && y.monthCount === 2);
+    check('WA4. YoY: ЗӨВХӨН хоёр оны бүтэн сар (08): (150-100)/100 = +50%, 1 сар',
+      !!y.yoy && Math.abs(y.yoy.pct - 50) < 1e-9 && y.yoy.months === 1, JSON.stringify(y.yoy));
+    check('WA4. Станц/төрөл нь сонгосон оны хариунаас (sel)',
+      y.hasBreakdown && y.stations.length === 1 && y.stations[0].loaded === 150);
+    const yn = WA(ALL, null, 2026);
+    check('WA5. Оны задаргаа ирээгүй бол ХУУЧИН бүтэн түүхийн станцыг харуулахгүй',
+      !yn.hasBreakdown && yn.stations.length === 0 && yn.types.length === 0);
+    check('WA6. null / no_data / хоосон months → hasData:false (тоо зохиохгүй)',
+      WA(null, null, 'all').hasData === false && WA({ status: 'no_data', months: [] }, null, 'all').hasData === false &&
+      WA({ status: 'ok', months: [] }, null, 'all').hasData === false);
+    check('WA6. Түүхэд байхгүй он → hasData:false', WA(ALL, null, 2030).hasData === false);
+    /* WA9. Бодит өгөгдөл (2026-10): сар бүрд complete_days < days, backend
+       partial:true — гэхдээ календарийн ≥90% өдөртэй сар ДУТУУ БИШ.
+       Өмнө нь 46/46 сар "*"-тай, YoY үргэлж null байв. */
+    const real = (month, days, complete, loaded) => ({ month, days, complete_days: complete, partial: true,
+      loaded, unloaded: loaded, loaded_domestic: 0, loaded_foreign: loaded });
+    const R = WA({ status: 'ok', by_station: [], by_wagon_type: [], months: [
+      real('2025-08', 31, 27, 100), real('2025-02', 25, 24, 90),   // 25/28=89% → дутуу
+      real('2026-08', 31, 26, 120), real('2026-02', 28, 26, 90),   // 100% → бүтэн
+      real('2025-12', 13, 7, 50),                                  // 13/31 → дутуу
+      real('2026-10', 10, 9, 40)] }, null, 'all');   // 10/31 → дутуу
+    check('WA9. complete_days<days ч ≥90% өдөртэй сар дутуу БИШ; зөвхөн 3 сар дутуу',
+      R.partialN === 3 && R.series.labels.filter(l => l.endsWith('*')).length === 3, R.series.labels.join(','));
+    const R26 = WA({ status: 'ok', by_station: [], by_wagon_type: [], months: [
+      real('2025-08', 31, 27, 100), real('2026-08', 31, 26, 120)] }, null, 2026);
+    check('WA9. Backend partial:true боловч бүрэн хамрагдсан сар YoY-д ОРНО (+20%)',
+      !!R26.yoy && Math.abs(R26.yoy.pct - 20) < 1e-9, JSON.stringify(R26.yoy));
+    check('WA9. 28/31 = 90.3% → бүтэн, 27/31 = 87% → дутуу',
+      WA({ status: 'ok', by_station: [], by_wagon_type: [], months: [real('2026-07', 28, 28, 1)] }, null, 'all').partialN === 0 &&
+      WA({ status: 'ok', by_station: [], by_wagon_type: [], months: [real('2026-07', 27, 27, 1)] }, null, 'all').partialN === 1);
+    check('WA6. Буулгасан 0 бол харьцаа null (хуваалтын алдаа/Infinity БИШ)',
+      WA({ status: 'ok', months: [mo('2026-01', 10, 0, 5, 31, false)], by_station: [], by_wagon_type: [] }, null, 'all').ratio === null);
+
+    /* Текстийн гэрээ: самбарын T('...') түлхүүр бүр content.json → site.wagon_an-д
+       бүртгэлтэй (эс тэгвэл text-coverage F1 унана / админд харагдахгүй). */
+    const bw = dcScript().match(/buildWagonAnalysis\(\)\{([\s\S]*?)\n  \}\n  \/\* Зорчигчийн датасэтийн анализын самбар/);
+    const WAC = (readJson('content.json').site || {}).wagon_an || {};
+    const keys = bw ? [...bw[1].matchAll(/T\('([a-z_.]+)'/g)].map(m => m[1]).filter(k => !k.endsWith('.')) : [];
+    const miss = keys.filter(k => k.split('.').reduce((o, p) => (o == null ? o : o[p]), WAC) == null);
+    check('WA7. buildWagonAnalysis-ийн текст бүр content.json site.wagon_an-д', keys.length > 20 && miss.length === 0, miss.join(','));
+    check('WA7. Вагоны 6 төрлийн шошго бүртгэлтэй',
+      ['covered', 'platform', 'half', 'tank', 'reefer', 'other'].every(k => WAC.types && WAC.types[k]));
+    check('WA8. Сайт түүхийг EHBackend.fetchRailWagonHistory-аар авна, endpoint замтай таарна',
+      dcScript().includes('EHBackend.fetchRailWagonHistory') &&
+      read('js/erthub-backend.js').includes("/api/sectors/rail/wagon-loading/history") &&
+      /window\.EHBackend\s*=\s*\{[\s\S]*?fetchRailWagonHistory:\s*fetchRailWagonHistory/.test(read('js/erthub-backend.js')));
+    check('WA8. Түүх ачаалахад унавал вагоны өдрийн мэдээг ХӨНДӨХГҮЙ (тусдаа try)',
+      /this\.applyRailWagonData\(\);\s*this\.loadWagonHistory\(\);/.test(dcScript()) &&
+      /async loadWagonHistory\(\)\{[\s\S]*?try\{[\s\S]*?catch\(e\)/.test(dcScript()));
+  }
+
+  /* ── PA. Зорчигчийн анализын загвар — ГАРААР бодогдох фикстур ──
+     2025-09 30/30 өдөр: 100 зорчигч (ОН 90 / ОУ 10), 20 аялал
+     2026-09 30/30 өдөр: 120 (ОН 100 / ОУ 20), 25 аялал
+     2026-10 10/31 өдөр (ДУТУУ): 30 (ОН 30 / ОУ 0), 8 аялал. Нийт 250/53. */
+  const pam = dcScript().match(/function paxAnalysisModel\(all,sel,year\)\{([\s\S]*?)\n\}/);
+  if (!pam) { bad('PA0. paxAnalysisModel() олдсонгүй'); }
+  else {
+    const PA = new Function('all', 'sel', 'year', pam[1]);
+    const pm = (month, days, dim, trips, passengers, domestic, international) =>
+      ({ month, days, days_in_month: dim, trips, passengers, domestic, international });
+    const PALL = { status: 'ok', months: [pm('2025-09', 30, 30, 20, 100, 90, 10), pm('2026-09', 30, 30, 25, 120, 100, 20),
+      pm('2026-10', 10, 31, 8, 30, 30, 0)],
+      by_route: [{ route: 'Б', trips: 20, passengers: 100 }, { route: 'А', trips: 33, passengers: 150 }],
+      by_type: [{ type: 'ОН', trips: 40, passengers: 220 }, { type: 'ОУ', trips: 13, passengers: 30 }] };
+    const p = PA(PALL, null, 'all');
+    check('PA1. Нийт зорчигч 250, аялал 53, ОУ 30 → 12%', p.hasData && p.pax === 250 && p.trips === 53 &&
+      Math.abs(p.intlPct - 12) < 1e-9 && Math.abs(p.domPct - 88) < 1e-9, JSON.stringify([p.pax, p.trips, p.intlPct]));
+    check('PA1. Аялал бүрийн дундаж 250/53, өдрийн дундаж 250/70',
+      Math.abs(p.perTrip - 250 / 53) < 1e-9 && p.days === 70 && Math.abs(p.perDay - 250 / 70) < 1e-9);
+    check('PA2. 10/31 өдөр → дутуу (1), шошго "*"; бусад бүтэн',
+      p.partialN === 1 && p.series.labels.join(',') === '25-09,26-09,26-10*');
+    check('PA2. Бүгд дээр YoY ЗОХИОХГҮЙ: null, шалтгаан "pick_year"', p.yoy === null && p.yoyReason === 'pick_year');
+    check('PA3. Чиглэл зорчигчоор буурахаар (А, Б), нийлбэр 250',
+      p.routes.map(r => r.route).join(',') === 'А,Б' && p.routeTotal === 250);
+    check('PA3. Сараар эрэмбэ: 2026-09 (120) тэргүүлнэ, дутуу сар тэмдэглэгдэнэ',
+      p.ranked[0].month === '2026-09' && p.ranked[0].passengers === 120 && p.ranked[2].partial === true);
+    const q = PA(PALL, { status: 'ok', months: [], by_route: [{ route: 'А', trips: 33, passengers: 150 }], by_type: [] }, 2026);
+    check('PA4. 2026: нийт 150; YoY = (120-100)/100 = +20% (зөвхөн 09 сар)',
+      q.pax === 150 && !!q.yoy && Math.abs(q.yoy.pct - 20) < 1e-9 && q.yoy.months === 1, JSON.stringify(q.yoy));
+    check('PA4. Чиглэл нь сонгосон оны хариунаас (sel)', q.hasBreakdown && q.routes.length === 1 && q.routes[0].passengers === 150);
+    const q0 = PA(PALL, null, 2026);
+    check('PA5. Оны задаргаа ирээгүй бол бүтэн түүхийн чиглэлийг харуулахгүй', !q0.hasBreakdown && q0.routes.length === 0);
+    const only = PA({ status: 'ok', months: [pm('2026-09', 30, 30, 25, 120, 100, 20)], by_route: [], by_type: [] }, null, 2026);
+    check('PA5. Өмнөх оны өгөгдөл байхгүй → YoY null, шалтгаан "none"', only.yoy === null && only.yoyReason === 'none');
+    check('PA6. null / no_data / хоосон / байхгүй он → hasData:false',
+      PA(null, null, 'all').hasData === false && PA({ status: 'no_data', months: [] }, null, 'all').hasData === false &&
+      PA(PALL, null, 2030).hasData === false);
+    check('PA6. Аялал 0 бол дундаж null (хуваалтын алдаа БИШ)',
+      PA({ status: 'ok', months: [pm('2026-01', 31, 31, 0, 0, 0, 0)], by_route: [], by_type: [] }, null, 'all').perTrip === null);
+
+    const bp = dcScript().match(/buildPaxAnalysis\(\)\{([\s\S]*?)\n  \}\n  buildDocDetail/);
+    const PAC = (readJson('content.json').site || {}).pax_an || {};
+    const pkeys = bp ? [...bp[1].matchAll(/T\('([a-z_.]+)'/g)].map(m => m[1]) : [];
+    const pmiss = pkeys.filter(k => k.split('.').reduce((o, x) => (o == null ? o : o[x]), PAC) == null);
+    check('PA7. buildPaxAnalysis-ийн текст бүр content.json site.pax_an-д', pkeys.length > 20 && pmiss.length === 0, pmiss.join(','));
+    const wk = (readJson('content.json').site.wagon_an || {});
+    check('PA7. "Бүгд" үед YoY тайлбар (kpi_yoy_pick) вагонд бүртгэлтэй', !!wk.kpi_yoy_pick);
+    check('PA8. Сайт зорчигчийн түүхийг EHBackend-ээр авч, endpoint замтай таарна',
+      dcScript().includes('EHBackend.fetchRailPassengersHistory') &&
+      /window\.EHBackend\s*=\s*\{[\s\S]*?fetchRailPassengersHistory:\s*fetchRailPassengersHistory/.test(read('js/erthub-backend.js')) &&
+      read('js/erthub-backend.js').includes('/api/sectors/rail/passengers/history'));
+    check('PA8. Түүх унавал вагоны өдрийн мэдээг хөндөхгүй (тусдаа try, дараалал)',
+      /this\.loadWagonHistory\(\);[^\n]*\n\s*this\.loadPaxHistory\(\);/.test(dcScript()) &&
+      /async loadPaxHistory\(\)\{[\s\S]*?try\{[\s\S]*?catch\(e\)/.test(dcScript()));
+    check('PA8. Самбар зөвхөн railPax датасэтэд, вагонтой холилдохгүй',
+      /dsel\.source==='railPax'&&this\.state\.page==='detail'\)\?this\.buildPaxAnalysis/.test(dcScript()));
+  }
+
   /* ── BE19. station_count: 0 нь мөрийг БҮРМӨСӨН алга болгодог байв ── */
   check('BE19. station_count 0 → 0 (Number()||null нь null болгож мөрийг залгидаг байв)',
     (toW({ status: 'ok', count: 5, station_count: 0 }) || {}).stationCount === 0);
@@ -6510,6 +6656,68 @@ async function groupVIS() {
   check('VIS. аудит дуустал ажиллав (' + n + ' кейс)', n > 20 && /Харагдацын аудит:/.test(out), out.slice(-300));
 }
 
+/* ─────────── FM. Газрын зургийн шүүлт — "Бүгд" хасагдсан ───────────
+   Улаанбаатараас чиглэсэн урсгалын газрын зураг дээр "Бүгд" сонголт байхгүй
+   (дэлхийн горимд "Бүгд" = "Олон улсын" тул хоёр шүүлт зэрэг харагдаж
+   төөрөлдүүлдэг байв). "Олон улсын" анхдагчаар идэвхтэй, "Дотоодын"
+   дарахад шилжиж, буцааж дарахад эргэнэ.
+   FM1 — сонголтын бүрдэл (статик)
+   FM2 — DOM: 2 товч, анхдагч идэвхтэй, шилжилт */
+function groupFM() {
+  group('FM. Газрын зургийн шүүлт — "Бүгд" хасагдсан');
+  const dc = dcScript();
+
+  check('FM1. Газрын зургийн сонголт: зөвхөн "Олон улсын" ба "Дотоодын"',
+    /const typeTabs=\[\['intl','Олон улсын'\],\['domestic','Дотоодын'\]\]\.map\(/.test(dc) &&
+    !/const typeTabs=\[\['all'/.test(dc),
+    'газрын зургийн толгойд "Бүгд" дахин орсон байна');
+  check('FM1. "Олон улсын" идэвхтэй тодорхойлолт: airType !== "domestic"',
+    dc.includes("key==='intl'?this.state.airType!=='domestic':this.state.airType===key"),
+    'ОУ гэдэг нь "бүгд" горимд ч идэвхтэй харагдах ёстой');
+
+  if (!CHROME) { skipped('FM2 (DOM)', 'Chrome олдсонгүй'); return; }
+  return (async () => {
+    const srv = serve();
+    try {
+      const con = readJson('content.json');
+      const slugOf = (d) => d.sector + '__' + String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+      const air = (con.site.datasets || []).find((d) => d.sector === 'air');
+      if (!air) { bad('FM2. Агаарын датасэт олдсонгүй'); return; }
+      PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slugOf(air));
+      const R = await runProbe(`async function(d,w){
+        const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+        const mb=()=>[...d.querySelectorAll('button')].filter(b=>b.style.padding==='6px 14px');
+        const on=(b)=>b.style.background.indexOf('var(--ink)')>=0;
+        const st=()=>mb().map(b=>b.textContent.trim()+':'+(on(b)?'ON':'off')).join(' ');
+        for(let t=0;t<60&&mb().length<2;t++) await sleep(250);
+        await sleep(1500);
+        const R={count:mb().length, first:st()};
+        const pick=async (label)=>{
+          const b=mb().find(x=>x.textContent.trim()===label); if(!b) return;
+          b.click();
+          for(let t=0;t<30;t++){ await sleep(250);
+            if(mb().some(x=>x.textContent.trim()===label&&on(x))) break; }
+        };
+        await pick('Дотоодын'); R.afterDom=st();
+        await pick('Олон улсын'); R.back=st();
+        return R;
+      }`, 120000);
+      if (R.__err) { bad('FM2. Газрын зургийн шалгалт ажиллав', R.__err); return; }
+      check('FM1. DOM: газрын зургийн толгойд 2 сонголт (Бүгд алга)', R.count === 2,
+        JSON.stringify(R));
+      check('FM2. Анхдагчаар "Олон улсын" идэвхтэй, "Дотоодын" идэвхгүй',
+        /Олон улсын:ON/.test(R.first) && /Дотоодын:off/.test(R.first), R.first);
+      check('FM2. "Дотоодын" дарахад шилжинэ',
+        /Дотоодын:ON/.test(R.afterDom) && /Олон улсын:off/.test(R.afterDom), R.afterDom);
+      check('FM2. "Олон улсын" буцааж дарахад эргэнэ',
+        /Олон улсын:ON/.test(R.back) && /Дотоодын:off/.test(R.back), R.back);
+    } finally {
+      PROBE_SRC = '/admin/index.html';
+      srv.close();
+    }
+  })();
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    SP. «Салбарын дэлгэрэнгүй» хуудас — ХҮРЭХ ЗАМГҮЙ үхмэл код
 
@@ -6832,6 +7040,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
   else if (process.argv.includes('--only=HV')) { await groupHV(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
+  else if (process.argv.includes('--only=FM')) { await groupFM(); }
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
   else if (process.argv.includes('--only=G4')) { await groupG4(); }
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
@@ -6844,7 +7053,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); groupSP(); groupHS(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));

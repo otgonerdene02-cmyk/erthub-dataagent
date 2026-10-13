@@ -111,6 +111,11 @@ const DYNAMIC = [
    2 \u04AF\u0441\u044D\u0433\u0442 \u043C\u04E9\u0440\u0438\u0439\u0433 (\u043A\u043C, \u0442\u043D) \u0437\u04E9\u0432\u0445\u04E9\u043D \u0411\u04AE\u0422\u042D\u041D \u04AF\u0433 \u0431\u0430\u0439\u0445\u0430\u0434 \u043D\u044C \u0445\u0430\u0441\u043D\u0430 \u2014 \u044D\u0441 \u0442\u044D\u0433\u0432\u044D\u043B
    \u0441\u0430\u043D\u0430\u043C\u0441\u0430\u0440\u0433\u04AF\u0439 \u04AF\u0435\u043D\u0438\u0439 \u0434\u0430\u0432\u0445\u0446\u0430\u043B \u0431\u04AF\u0445\u043D\u0438\u0439\u0433 "\u0445\u0430\u043C\u0440\u0430\u0433\u0434\u0441\u0430\u043D" \u0431\u043E\u043B\u0433\u043E\u043D\u043E. */
 function uncoveredPart(phrase, corpus) {
+  /* Яг бүртгэлтэй мөр бол шууд бүрэн хамрагдсан. Доорх багасгалт нь корпусын
+     дарааллаас хамаарч (урт мөр эхлээд) CI дээр өөр үр дүн өгдөг тул эхлээд
+     шалгана. */
+  const whole = phrase.replace(/\s+/g, ' ').trim();
+  if (whole && corpus.includes(whole)) return '';
   /* Хоёр дараалал туршаад үлдэгдэл багатай (илүү цэвэр) үр дүнг авна.
      (а) template эхлээд — урт AI өгүүлбэр (site.ai.*) template-ээр тайлагдана.
      (б) бүртгэлтэй мөр эхлээд — "[^кирилл]*: мэдээлэл алга" мэт template нь
@@ -361,7 +366,13 @@ function report(title, texts, corpus) {
   const uncovered = [];
   texts.forEach((t) => {
     const rest = uncoveredPart(t, corpus);
-    if (rest) uncovered.push({ t, rest });
+    if (rest) {
+      /* Оношилгоо: бүртгэлтэй мөр яагаад таарахгүйг лог дээр харуулна —
+         корпуст байгаа эсэх ба тэмдэгт бүрийн code point (нуугдмал тэмдэгт). */
+      const codes = [...t].map((c) => c.codePointAt(0).toString(16)).join(' ');
+      console.log('        ↳ корпуст: ' + corpus.includes(t) + ' · code point: ' + codes);
+      uncovered.push({ t, rest });
+    }
   });
   const total = texts.length;
   const cov = total ? ((total - uncovered.length) / total * 100) : 100;
