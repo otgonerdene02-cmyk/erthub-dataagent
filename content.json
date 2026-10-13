@@ -662,6 +662,7 @@
     "sector_chart_rail_live": "Сарын зорчигч",
     "chart": {
       "_note": "05-р хэсгийн график дээрх тэмдэглэгээ.",
+      "index_unit": "индекс",
       "daily_trend": "хоногийн чиг хандлага",
       "forecast_prefix": "AI прогноз +",
       "forecast_suffix": "сар",

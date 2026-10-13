@@ -6409,6 +6409,167 @@ async function groupAI() {
    (tests/layout-audit.js, дүрмүүд tests/lib/layout-audit-probe.js).
    Шалгагчийн selftest фикстурууд эхэлж ажиллана — тэр унавал хуудасны
    үр дүнд итгэхгүй. Дэлгэрэнгүй: node tests/layout-audit.js --html */
+/* ═════════════════════════════════════════════════════════════════
+   HV. Графикийн hover стандарт (нэр + нийт дүн хулганаар харагдана)
+
+   Яагаад энэ бүлэг байхгүй байсан бэ: өмнөх тестүүд "график зурагдсан,
+   тоо зөв, текст холбогдсон" гэдгийг шалгадаг байсан ч ХУЛГАНЫГ ЗАЛГАСАН
+   хэрэглэгчийн алхмыг (улсын цэг дээр очих) ХЭЗЭЭ Ч давтаагүй. Native SVG
+   <title> нь DOM-д байгаа тул "tooltip бий" гэж харагддаг ч Electron/
+   webview дээр огт гардаггүй, бусад хөтөч дээр ~1 сек хоцорч гардаг.
+
+     HV1. Tooltip-ийн задлал (нэр — утга) гараар бодогдох фикстур дээр
+     HV2. Статик: модуль ачаалагдсан, чимэглэлийн давхарга hover хаахгүй
+     HV3. Браузер: глобус/хавтгай/дотоод бүх тэмдэг дээр tooltip = нэр+тоо
+     HV4. Статистик нийцэл: нэг тоо хоёр газар өөр байж болохгүй
+   ═════════════════════════════════════════════════════════════════ */
+function hvClean(s) { return !/NaN|undefined|null|\[object|Infinity/.test(String(s)); }
+async function groupHV() {
+  group('HV. Графикийн hover стандарт (нэр + нийт дүн)');
+  const idx = read('index.html');
+
+  /* ── HV1. Модулийн задлал: гараар бодогдох фикстур ── */
+  const T = (() => { try { return require(path.join(ROOT, 'js', 'erthub-tip.js')); } catch (e) { return null; } })();
+  check('HV1. js/erthub-tip.js ачаалагдана (EHTip.parse)', !!T && typeof T.parse === 'function');
+  if (T) {
+    const a = T.parse('Хятад — 500,304 зорчигч');
+    check('HV1. "Нэр — утга" → нэр ба утга салгагдана',
+      a && a.name === 'Хятад' && a.value === '500,304 зорчигч', JSON.stringify(a));
+    const b = T.parse('  Улаанбаатар (эх цэг)  ');
+    check('HV1. Тусгаарлагчгүй текст → зөвхөн нэр',
+      b && b.name === 'Улаанбаатар (эх цэг)' && b.value === '', JSON.stringify(b));
+    check('HV1. Хоосон/null → tooltip ГАРАХГҮЙ (null)',
+      T.parse('') === null && T.parse(null) === null && T.parse('   ') === null);
+    const c = T.parse('Хонг Конг — 86,174 зорчигч — нэмэлт');
+    check('HV1. Олон тусгаарлагч → эхнийх дээр л хуваана',
+      c && c.name === 'Хонг Конг' && c.value === '86,174 зорчигч — нэмэлт', JSON.stringify(c));
+  }
+
+  /* ── HV2. Статик ── */
+  check('HV2. Сайт tooltip модулийг ачаална', idx.includes('<script src="js/erthub-tip.js"></script>'));
+  const a0 = idx.indexOf('<svg class="eh-fmap"');
+  const tplFlow = idx.slice(a0, idx.indexOf('<sc-if value="{{ detail.flowMap.detail }}">', a0));
+  [
+    ['ripples', /<circle cx="\{\{ rp\.cx \}\}"[^>]*pointer-events="none"/],
+    ['halos', /<circle cx="\{\{ ha\.cx \}\}"[^>]*pointer-events="none"/],
+    ['arcs', /<path d="\{\{ ar\.d \}\}"[^>]*pointer-events="none"/],
+    ['arcs dash', /<path d="\{\{ ar2\.d \}\}"[^>]*pointer-events="none"/],
+    ['flyDots', /<g style="\{\{ fd\.style \}\}"[^>]*pointer-events="none"/],
+    ['UB pulse', /r="15"[^>]*pointer-events="none"/]
+  ].forEach(([n, re]) => check('HV2. Чимэглэл давхарга hover-ийг ХААХГҮЙ (' + n + ')', re.test(tplFlow), n));
+  check('HV2. Улсын polygon нэр + дүн (title) агуулна',
+    /<path d="\{\{ cp\.d \}\}"[^>]*><title>\{\{ cp\.title \}\}<\/title><\/path>/.test(tplFlow));
+  check('HV2. Аймгийн polygon нэр + дүн (rg.title)', /<title>\{\{ rg\.title \}\}<\/title>/.test(tplFlow));
+  check('HV2. .eh-tip хэв маяг style.css-д', /\.eh-tip\s*\{[^}]*pointer-events:\s*none/.test(read('style.css')));
+
+  if (!CHROME) { skipped('HV3–HV4 (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
+  const conH = readJson('content.json');
+  const slugH = (d) => d.sector + '__' + String(d.name).toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  const air = (conH.site.datasets || []).find((x) => x.sector === 'air');
+  if (!air) { skipped('HV3–HV4', 'агаарын датасэт content.json-д алга'); return; }
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slugH(air));
+    const probeSrc = '(' + require(path.join(ROOT, 'tests', 'lib', 'hover-probe.js')).toString() + ')';
+    const R = await runProbe(probeSrc, 150000);
+    if (R.__err) { bad('HV3. Hover шалгагч ажиллав', R.__err); return; }
+    if (!R.ready) {
+      skipped('HV3–HV4', 'газрын зургийн feed ирсэнгүй (сүлжээ/эх сурвалж) — худал FAIL гаргахгүй');
+      return;
+    }
+
+    const num = (s) => { const m = String(s).replace(/,/g, '').match(/\d+(\.\d+)?/); return m ? +m[0] : NaN; };
+    [['intlGlobe', 'Бөмбөрцөг'], ['intlFlat', 'Хавтгай'], ['domestic', 'Дотоод']].forEach(([key, label]) => {
+      const P = R.phases[key];
+      if (!P) { bad('HV3. ' + label + ': газрын зураг зурагдсан', 'phase алга'); return; }
+      const nodes = P.rows.filter((r) => r.kind === 'node');
+      check('HV3. ' + label + ': бөмбөлөг/цэг байна (' + nodes.length + ')', nodes.length >= (key === 'domestic' ? 2 : 3));
+      const noTip = P.rows.filter((r) => !r.tip.vis).map((r) => r.title);
+      check('HV3. ' + label + ': ТЭМДЭГ БҮР дээр tooltip гарна (' + P.rows.length + ')',
+        noTip.length === 0, 'tooltip-гүй: ' + noTip.slice(0, 5).join(' | '));
+      const wrong = P.rows.filter((r) => r.tip.vis).filter((r) => {
+        const want = T.parse(r.title);
+        return !want || r.tip.name !== want.name || r.tip.value !== want.value;
+      }).map((r) => r.title + ' → ' + r.tip.name + '/' + r.tip.value);
+      check('HV3. ' + label + ': tooltip = нэр + дүн (title-тэй ЯГ ижил)', wrong.length === 0, wrong.slice(0, 4).join(' | '));
+      const noVal = nodes.filter((r) => !(num(r.tip.value) >= 0)).map((r) => r.title);
+      check('HV3. ' + label + ': бөмбөлөг бүр НЭР ба ТОО харуулна', noVal.length === 0, noVal.slice(0, 5).join(' | '));
+      const junk = P.rows.filter((r) => !hvClean(r.title) || !hvClean(r.tip.name + r.tip.value)).map((r) => r.title);
+      check('HV3. ' + label + ': NaN/undefined ил гарахгүй', junk.length === 0, junk.slice(0, 4).join(' | '));
+      /* Polygon нь бөмбөлөг/тууз ДООР байх нь хэвийн — зөвхөн бөмбөлөгт шаардана */
+      const blocked = nodes.filter((r) => !r.reach).map((r) => r.title);
+      check('HV3. ' + label + ': тэмдэг бүр ХҮРЭГДЭНЭ (нисэх цэг/цагираг дарахгүй)',
+        blocked.length === 0, blocked.slice(0, 5).join(' | '));
+      const dbl = P.rows.filter((r) => r.tip.vis && (r.tip.native || !r.tip.restored)).map((r) => r.title);
+      check('HV3. ' + label + ': native <title> давхцахгүй, hover дараа ЯГ буцна', dbl.length === 0, dbl.slice(0, 4).join(' | '));
+
+      /* HV4. Статистик нийцэл — нэг тоо хоёр өөр байж болохгүй */
+      const byName = {};
+      nodes.forEach((r) => { const p = T.parse(r.title); (byName[p.name] = byName[p.name] || []).push(p.value); });
+      const dup = Object.keys(byName).filter((k) => new Set(byName[k]).size > 1);
+      check('HV4. ' + label + ': нэг нэр хоёр өөр дүнтэй биш', dup.length === 0, dup.join(', '));
+      const polys = P.rows.filter((r) => r.kind === 'path');
+      const polyBad = polys.filter((r) => { const p = T.parse(r.title); return byName[p.name] && byName[p.name][0] !== p.value; })
+        .map((r) => r.title);
+      check('HV4. ' + label + ': polygon-ы дүн бөмбөлгийнхтэй ЯГ ижил (' + polys.length + ')',
+        polyBad.length === 0, polyBad.slice(0, 4).join(' | '));
+      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const legBad = nodes.filter((r) => {
+        const p = T.parse(r.title), v = p.value.replace(/\s*зорчигч.*$/, '');
+        const m = new RegExp(esc(p.name) + '\\s+(\\d[\\d,]*)').exec(P.cardText);
+        return m && m[1] !== v;
+      }).map((r) => r.title);
+      check('HV4. ' + label + ': легендийн тоо tooltip-тэй тэнцүү', legBad.length === 0, legBad.slice(0, 4).join(' | '));
+      if (key === 'domestic') {
+        /* Аймгийн дүнгийн нийлбэр = нисэх буудлуудын нийлбэр: нэг зорчигч
+           хоёр дахин тоологдох ч, алдагдах ч ёсгүй. */
+        const sum = (arr) => arr.reduce((t, r) => t + (num(T.parse(r.title).value) || 0), 0);
+        const nodeSum = sum(nodes), polySum = sum(polys.filter((r) => /[0-9]/.test(T.parse(r.title).value)));
+        check('HV4. Дотоод: аймгуудын нийлбэр (' + polySum + ') = нисэх буудлуудын нийлбэр (' + nodeSum + ')',
+          nodeSum === polySum, 'зөрүү ' + (nodeSum - polySum));
+      }
+      const vals = nodes.map((r) => num(r.tip.value));
+      check('HV4. ' + label + ': зорчигчийн дүн сөрөг/бутархай биш бүхэл тоо',
+        vals.every((v) => Number.isInteger(v) && v >= 0), vals.filter((v) => !(Number.isInteger(v) && v >= 0)).join(','));
+    });
+    check('HV3. "Хавтгай" ба "Дотоодын" товч олдлоо', R.hasProjTabs === true && R.hasDomestic === true,
+      JSON.stringify({ proj: R.hasProjTabs, dom: R.hasDomestic }));
+
+    /* Хуудасны бусад график (trend цэг, багана, ...) — ижил стандарт */
+    const pg = R.page || [];
+    const pgMiss = pg.filter((r) => !r.tip.vis).map((r) => r.title);
+    check('HV3. Хуудасны бусад графикийн тэмдэг бүрд tooltip гарна (' + pg.length + '/' + R.pageTotal + ')',
+      pgMiss.length === 0, pgMiss.slice(0, 5).join(' | '));
+    /* Статистикч: тэгээс их тоо "0.0%" гэж харагдвал "огт байхгүй" гэж
+       уншигдана (Европ — 589 зорчигч (0.0%) байсан). */
+    const zeroPct = pg.map((r) => r.title).filter((t) => /\(0\.0%\)/.test(t) && /[1-9]/.test(t.split('(0.0%)')[0].split(' — ')[1] || ''));
+    check('HV4. Тэгээс их дүн "0.0%" гэж харагдахгүй (<0.1%)', zeroPct.length === 0, zeroPct.slice(0, 4).join(' | '));
+    const pgJunk = pg.filter((r) => !hvClean(r.title)).map((r) => r.title);
+    check('HV3. Бусад графикийн tooltip-д NaN/undefined алга', pgJunk.length === 0, pgJunk.slice(0, 5).join(' | '));
+
+    /* HV5. Дата тэмдэгтэй боловч ГАНЦ ч tooltip-гүй график байж болохгүй.
+       Чимэглэл (hero дүрслэл, AI цөм, түүхийн шугам) нь жагсаалтад нэрээр
+       бүртгэлтэй — шинэ график нэмбэл tooltip өгөх ЭСВЭЛ энд шалтгаантай
+       нэмэх ёстой. */
+    const DECOR = ['ErtHub AI CORE', 'НЭЭЛТТЭЙ ӨГӨГДӨЛ', 'COMMUNITY', 'САЛБАРЫН ТҮҮХ', 'ШИНЭЧЛЭЛ', 'Монголын зам'];
+    const invOf = async (src) => {
+      PROBE_SRC = src;
+      return runProbe('(' + require(path.join(ROOT, 'tests', 'lib', 'hover-probe.js')).inventory.toString() + ')', 120000);
+    };
+    for (const [label, src] of [['нүүр', '/index.html#/'], ['агаарын датасэт', '/index.html#/browse/' + encodeURIComponent(slugH(air))]]) {
+      const I = await invOf(src);
+      if (I.__err) { bad('HV5. ' + label + ': инвентар ажиллав', I.__err); continue; }
+      const naked = (I.svgs || []).filter((x) => x.w > 60 && x.h > 50 && x.shapes >= 2 && x.tips === 0)
+        .filter((x) => !DECOR.some((k) => x.sec.indexOf(k) >= 0)).map((x) => x.sec + ' [' + x.shapes + ']');
+      check('HV5. ' + label + ': tooltip-гүй график алга (' + (I.svgs || []).length + ' svg)', naked.length === 0, naked.join(' | '));
+    }
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 async function groupVIS() {
   group('VIS. Дэлгэцийн харагдацын аудит (хуудас × өргөн)');
   if (!CHROME) { skipped('VIS. харагдацын аудит', 'Chrome олдсонгүй'); return; }
@@ -6770,6 +6931,7 @@ console.log('ErtHub — систем тест');
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
   else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
+  else if (process.argv.includes('--only=HV')) { await groupHV(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
   else if (process.argv.includes('--only=FM')) { await groupFM(); }
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
@@ -6783,7 +6945,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupVIS();
+  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));

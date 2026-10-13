@@ -17,6 +17,7 @@
 <script src="js/erthub-publish.js"></script>
 <script src="js/erthub-backend.js"></script>
 <script src="js/erthub-chart.js"></script>
+<script src="js/erthub-tip.js"></script>
 <script src="js/vendor/dc-runtime.js"></script>
 </head>
 <body>
@@ -1185,7 +1186,7 @@
         <svg sc-camel-view-box="0 0 120 120" style="width:150px;height:150px;">
           <circle cx="60" cy="60" r="46" fill="none" stroke="var(--surface2)" stroke-width="17"></circle>
           <sc-for list="{{ donut.arcs }}" as="da" hint-placeholder-count="5">
-            <circle cx="60" cy="60" r="46" fill="none" stroke="{{ da.color }}" stroke-width="17" stroke-linecap="butt" stroke-dasharray="{{ da.dash }}" stroke-dashoffset="{{ da.offset }}" transform="rotate(-90 60 60)" opacity="{{ da.opacity }}"></circle>
+            <circle cx="60" cy="60" r="46" fill="none" stroke="{{ da.color }}" stroke-width="17" stroke-linecap="butt" stroke-dasharray="{{ da.dash }}" stroke-dashoffset="{{ da.offset }}" transform="rotate(-90 60 60)" opacity="{{ da.opacity }}"><title>{{ da.tip }}</title></circle>
           </sc-for>
           <circle cx="60" cy="60" r="33" fill="var(--surface)"></circle>
           <foreignObject x="20" y="40" width="80" height="21" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-size:21px;font-weight:700;line-height:1;white-space:nowrap;color:var(--ink);font-family:'Space Grotesk',sans-serif;">{{ donut.activePctLabel }}</div></foreignObject>
@@ -1236,7 +1237,7 @@
         </sc-if>
         <sc-for list="{{ compareLines }}" as="cl" hint-placeholder-count="5">
           <path d="{{ cl.d }}" fill="none" stroke="{{ cl.color }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="{{ cl.dash }}"></path>
-          <circle cx="{{ cl.ex }}" cy="{{ cl.ey }}" r="3.4" fill="{{ cl.color }}" stroke="#FFFFFF" stroke-width="1.6"></circle>
+          <circle cx="{{ cl.ex }}" cy="{{ cl.ey }}" r="3.4" fill="{{ cl.color }}" stroke="#FFFFFF" stroke-width="1.6"><title>{{ cl.tip }}</title></circle>
           <foreignObject x="{{ cl.endLabelX }}" y="{{ cl.endLabelY }}" width="54" height="14">
             <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;color:{{ cl.color }};white-space:nowrap;">{{ cl.endLabel }}</div>
           </foreignObject>
@@ -2731,7 +2732,7 @@
           </defs>
           <sc-if value="{{ detail.flowMap.isDomestic }}">
             <sc-for list="{{ detail.flowMap.regions }}" as="rg" hint-placeholder-count="24">
-              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="rgba(var(--surface-rgb),.85)" stroke-width="1" vector-effect="non-scaling-stroke"><title>{{ rg.name }}</title></path>
+              <path d="{{ rg.d }}" fill="{{ rg.fill }}" stroke="rgba(var(--surface-rgb),.85)" stroke-width="1" vector-effect="non-scaling-stroke"><title>{{ rg.title }}</title></path>
             </sc-for>
             <sc-for list="{{ detail.flowMap.aimagLabels }}" as="al" hint-placeholder-count="24">
               <foreignObject x="{{ al.fx }}" y="{{ al.fy }}" width="{{ al.fw }}" height="{{ al.fh }}" style="overflow:visible;pointer-events:none;">
@@ -2744,36 +2745,36 @@
           </sc-if>
           <sc-if value="{{ detail.flowMap.isWorld }}">
             <sc-for list="{{ detail.flowMap.countryPaths }}" as="cp" hint-placeholder-count="180">
-              <path d="{{ cp.d }}" fill="{{ cp.fill }}" stroke="{{ cp.stroke }}" stroke-width="{{ cp.width }}" vector-effect="non-scaling-stroke"></path>
+              <path d="{{ cp.d }}" fill="{{ cp.fill }}" stroke="{{ cp.stroke }}" stroke-width="{{ cp.width }}" vector-effect="non-scaling-stroke"><title>{{ cp.title }}</title></path>
             </sc-for>
           </sc-if>
           <sc-for list="{{ detail.flowMap.ribbons }}" as="rb" hint-placeholder-count="20">
             <path d="{{ rb.d }}" fill="{{ rb.color }}" opacity="{{ rb.opacity }}" stroke="none"><title>{{ rb.title }}</title></path>
           </sc-for>
           <sc-for list="{{ detail.flowMap.arcs }}" as="ar" hint-placeholder-count="20">
-            <path d="{{ ar.d }}" fill="none" stroke="{{ ar.stroke }}" stroke-width="{{ ar.width }}" stroke-linecap="round" opacity="0.26" vector-effect="non-scaling-stroke"></path>
+            <path d="{{ ar.d }}" fill="none" stroke="{{ ar.stroke }}" stroke-width="{{ ar.width }}" stroke-linecap="round" opacity="0.26" pointer-events="none" vector-effect="non-scaling-stroke"></path>
           </sc-for>
           <sc-for list="{{ detail.flowMap.arcs }}" as="ar2" hint-placeholder-count="20">
-            <path d="{{ ar2.d }}" fill="none" stroke="{{ ar2.stroke }}" stroke-width="{{ ar2.dashWidth }}" stroke-linecap="round" stroke-dasharray="6 6" opacity="0.72" vector-effect="non-scaling-stroke" style="animation:dashFlow 1.8s linear infinite;"></path>
+            <path d="{{ ar2.d }}" pointer-events="none" fill="none" stroke="{{ ar2.stroke }}" stroke-width="{{ ar2.dashWidth }}" stroke-linecap="round" stroke-dasharray="6 6" opacity="0.72" vector-effect="non-scaling-stroke" style="animation:dashFlow 1.8s linear infinite;"></path>
           </sc-for>
           <sc-for list="{{ detail.flowMap.ripples }}" as="rp" hint-placeholder-count="24">
-            <circle cx="{{ rp.cx }}" cy="{{ rp.cy }}" r="{{ rp.r }}" fill="none" stroke="{{ rp.color }}" stroke-width="1.2" vector-effect="non-scaling-stroke" style="{{ rp.style }}"></circle>
+            <circle cx="{{ rp.cx }}" cy="{{ rp.cy }}" r="{{ rp.r }}" pointer-events="none" fill="none" stroke="{{ rp.color }}" stroke-width="1.2" vector-effect="non-scaling-stroke" style="{{ rp.style }}"></circle>
           </sc-for>
           <sc-for list="{{ detail.flowMap.halos }}" as="ha" hint-placeholder-count="6">
-            <circle cx="{{ ha.cx }}" cy="{{ ha.cy }}" r="{{ ha.r }}" fill="none" stroke="{{ ha.color }}" stroke-width="1.1" opacity="0.3" vector-effect="non-scaling-stroke"></circle>
+            <circle cx="{{ ha.cx }}" cy="{{ ha.cy }}" r="{{ ha.r }}" pointer-events="none" fill="none" stroke="{{ ha.color }}" stroke-width="1.1" opacity="0.3" vector-effect="non-scaling-stroke"></circle>
           </sc-for>
           <sc-for list="{{ detail.flowMap.nodes }}" as="nd" hint-placeholder-count="14">
             <circle sc-camel-on-click="{{ nd.pick }}" cx="{{ nd.cx }}" cy="{{ nd.cy }}" r="{{ nd.r }}" fill="{{ nd.color }}" opacity="{{ nd.opacity }}" stroke="{{ nd.ringStroke }}" stroke-width="{{ nd.ringWidth }}" vector-effect="non-scaling-stroke" style="cursor:pointer;"><title>{{ nd.title }}</title></circle>
           </sc-for>
           <sc-for list="{{ detail.flowMap.flyDots }}" as="fd" hint-placeholder-count="20">
-            <g style="{{ fd.style }}">
+            <g style="{{ fd.style }}" pointer-events="none">
               <circle cx="0" cy="0" r="{{ fd.glowR }}" fill="{{ fd.glow }}" opacity="0.26"></circle>
               <circle cx="0" cy="0" r="{{ fd.r }}" fill="{{ fd.core }}" stroke="rgba(var(--surface-rgb),.92)" stroke-width="1.1" vector-effect="non-scaling-stroke"></circle>
             </g>
           </sc-for>
           <sc-if value="{{ detail.flowMap.ubVisible }}">
-            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="15" fill="{{ detail.flowMap.ubInk }}" opacity="0.14" style="transform-box:fill-box;transform-origin:center;animation:pulseGlow 2.8s ease-in-out infinite;"></circle>
-            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="6.5" fill="{{ detail.flowMap.ubInk }}" stroke="rgba(var(--surface-rgb),.95)" stroke-width="2"><title>Улаанбаатар (эх цэг)</title></circle>
+            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="15" pointer-events="none" fill="{{ detail.flowMap.ubInk }}" opacity="0.14" style="transform-box:fill-box;transform-origin:center;animation:pulseGlow 2.8s ease-in-out infinite;"></circle>
+            <circle cx="{{ detail.flowMap.ubX }}" cy="{{ detail.flowMap.ubY }}" r="6.5" pointer-events="{{ detail.flowMap.ubPe }}" fill="{{ detail.flowMap.ubInk }}" stroke="rgba(var(--surface-rgb),.95)" stroke-width="2"><title>Улаанбаатар (эх цэг)</title></circle>
           </sc-if>
           <sc-for list="{{ detail.flowMap.labels }}" as="lb" hint-placeholder-count="6">
             <foreignObject x="{{ lb.fx }}" y="{{ lb.fy }}" width="{{ lb.fw }}" height="{{ lb.fh }}" style="overflow:visible;pointer-events:none;">
@@ -2839,6 +2840,10 @@
           <sc-if value="{{ detail.trend.hasPartial }}">
           <circle cx="{{ detail.trend.partialCx }}" cy="{{ detail.trend.partialCy }}" r="3.6" fill="var(--surface)" stroke="{{ detail.color }}" stroke-width="1.6" stroke-dasharray="2 2"><title>{{ detail.trend.partialLabel }}</title></circle>
           <foreignObject x="{{ detail.trend.partialFx }}" y="{{ detail.trend.partialFy }}" width="180" height="11" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-size:9.5px;line-height:1;white-space:nowrap;color:var(--ink2);font-family:'JetBrains Mono',monospace;">{{ detail.trend.partialLabel }}</div></foreignObject>
+          <sc-for list="{{ detail.trend.dotPts }}" as="ddp" hint-placeholder-count="12">
+            <circle cx="{{ ddp.cx }}" cy="{{ ddp.cy }}" r="2.6" fill="var(--surface)" stroke="{{ detail.color }}" stroke-width="1.6" pointer-events="none"></circle>
+            <circle cx="{{ ddp.cx }}" cy="{{ ddp.cy }}" r="9" fill="transparent" stroke="none" style="cursor:default;"><title>{{ ddp.tip }}</title></circle>
+          </sc-for>
           </sc-if>
           <sc-for list="{{ detail.trend.xTicks }}" as="xt" hint-placeholder-count="6">
             <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
@@ -3002,7 +3007,7 @@
         <div style="display:flex;align-items:center;gap:20px;">
           <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
             <sc-for list="{{ detail.airDonut }}" as="ad" hint-placeholder-count="2">
-              <circle cx="50" cy="50" r="40" fill="none" stroke="{{ ad.color }}" stroke-width="13" stroke-dasharray="{{ ad.dash }}" stroke-dashoffset="{{ ad.offset }}" transform="rotate(-90 50 50)"></circle>
+              <circle cx="50" cy="50" r="40" fill="none" stroke="{{ ad.color }}" stroke-width="13" stroke-dasharray="{{ ad.dash }}" stroke-dashoffset="{{ ad.offset }}" transform="rotate(-90 50 50)"><title>{{ ad.tip }}</title></circle>
             </sc-for>
           </svg>
           <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
@@ -3061,7 +3066,7 @@
         <svg sc-camel-view-box="0 0 600 300" style="width:100%;height:auto;display:block;">
           <sc-for list="{{ detail.airTreemap.boxes }}" as="tb" hint-placeholder-count="8">
             <g sc-camel-on-click="{{ tb.pick }}" style="cursor:pointer;">
-              <rect x="{{ tb.x }}" y="{{ tb.y }}" width="{{ tb.w }}" height="{{ tb.h }}" fill="{{ tb.color }}" stroke="var(--surface)" stroke-width="2" rx="3"></rect>
+              <rect x="{{ tb.x }}" y="{{ tb.y }}" width="{{ tb.w }}" height="{{ tb.h }}" fill="{{ tb.color }}" stroke="var(--surface)" stroke-width="2" rx="3"><title>{{ tb.tip }}</title></rect>
               <sc-if value="{{ tb.showLabel }}">
                 <foreignObject x="{{ tb.x }}" y="{{ tb.y }}" width="{{ tb.w }}" height="{{ tb.h }}" style="pointer-events:none;">
                   <div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;box-sizing:border-box;padding:7px 9px;overflow:hidden;color:#fff;font-family:inherit;">
@@ -3382,7 +3387,7 @@
                 <svg sc-camel-view-box="0 0 120 120" style="width:118px;height:118px;display:block;">
                   <circle cx="60" cy="60" r="46" fill="none" stroke="var(--surface2)" stroke-width="15"></circle>
                   <sc-for list="{{ vs.segs }}" as="sg" hint-placeholder-count="0">
-                    <circle cx="60" cy="60" r="46" fill="none" stroke="{{ sg.color }}" stroke-width="15" stroke-dasharray="{{ sg.dash }}" stroke-dashoffset="{{ sg.offset }}" transform="rotate(-90 60 60)" stroke-linecap="butt"></circle>
+                    <circle cx="60" cy="60" r="46" fill="none" stroke="{{ sg.color }}" stroke-width="15" stroke-dasharray="{{ sg.dash }}" stroke-dashoffset="{{ sg.offset }}" transform="rotate(-90 60 60)" stroke-linecap="butt"><title>{{ sg.tip }}</title></circle>
                   </sc-for>
                 </svg>
                 <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
@@ -3494,7 +3499,7 @@
                   <svg sc-camel-view-box="0 0 120 120" style="width:118px;height:118px;display:block;">
                     <circle cx="60" cy="60" r="46" fill="none" stroke="var(--surface2)" stroke-width="15"></circle>
                     <sc-for list="{{ fs.segs }}" as="fg" hint-placeholder-count="0">
-                      <circle cx="60" cy="60" r="46" fill="none" stroke="{{ fg.color }}" stroke-width="15" stroke-dasharray="{{ fg.dash }}" stroke-dashoffset="{{ fg.offset }}" transform="rotate(-90 60 60)" stroke-linecap="butt"></circle>
+                      <circle cx="60" cy="60" r="46" fill="none" stroke="{{ fg.color }}" stroke-width="15" stroke-dasharray="{{ fg.dash }}" stroke-dashoffset="{{ fg.offset }}" transform="rotate(-90 60 60)" stroke-linecap="butt"><title>{{ fg.tip }}</title></circle>
                     </sc-for>
                   </svg>
                   <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
@@ -5154,6 +5159,7 @@ function vehregDonut(items){
   const segs=rows.map((r,i)=>{
     const len=r.count/total*VEHREG_C, off=-acc; acc+=len;
     return {dash:len.toFixed(2)+' '+(VEHREG_C-len).toFixed(2),offset:off.toFixed(2),
+      tip:r.label+' — '+fmtNum(r.count)+' ('+vehregPct(r.count,total)+')',
       color:VEHREG_COLORS[i%VEHREG_COLORS.length]};
   });
   return {empty:false,segs,total:fmtNum(total),
@@ -9379,7 +9385,7 @@ class Component extends DCLogic {
     const Y=(v)=>pT+(Hh-pT-pB)*(1-(v-vmin)/rng);
     const compareLines=all.map(k=>{
       const t=trendFor(k);
-      return {key:k,color:NEON[k],
+      return {key:k,color:NEON[k],tip:SECTORS[k].label+' — '+Math.round(t[lastIdx])+' '+stxt('chart.index_unit','индекс'),
         // H5: verified эсэхээс үл хамааран бүх шугам ижил (тасралтгүй)
         // стильтэй — 0 бол зүгээр нэг үнэн тоо, тусгай ялгаа шаардлагагүй.
         dash:'none',
@@ -9822,7 +9828,7 @@ class Component extends DCLogic {
       ];
       let acc2=0;
       const airDonut=donutSegs.map(s=>{
-        const seg={...s,pctLabel:s.pct.toFixed(1)+'%',dash:(s.pct/100*circA).toFixed(1)+' '+circA.toFixed(1),offset:(-acc2/100*circA).toFixed(1)};
+        const seg={...s,tip:s.label+' — '+s.pct.toFixed(1)+'%',pctLabel:s.pct.toFixed(1)+'%',dash:(s.pct/100*circA).toFixed(1)+' '+circA.toFixed(1),offset:(-acc2/100*circA).toFixed(1)};
         acc2+=s.pct; return seg;
       });
       // bars ХООСОН байж болно (feed ирээгүй) — Math.max([]) = -Infinity.
@@ -10352,7 +10358,8 @@ class Component extends DCLogic {
       const dash=`${(pct/100*circ).toFixed(1)} ${circ.toFixed(1)}`;
       const offset=(-acc/100*circ).toFixed(1);
       acc+=pct;
-      return {label:r.label,color:r.color,pct:pct.toFixed(1),dash,offset,opacity:r.key===activeKey?1:0.45};
+      return {label:r.label,color:r.color,pct:pct.toFixed(1),dash,offset,opacity:r.key===activeKey?1:0.45,
+        tip:r.label+' — '+pct.toFixed(1)+'%'};
     });
     const act=raw.find(r=>r.key===activeKey)||raw[0];
     const activePct=(act.v/total*100).toFixed(0);
@@ -10455,7 +10462,13 @@ class Component extends DCLogic {
         .sort((a,b)=>b.value-a.value);
     }
     const total=items.reduce((s,it)=>s+it.value,0);
-    const pctOf=(v)=>(total?(v/total*100).toFixed(1):'0.0')+'%';
+    // 589 зорчигч "0.0%" гэвэл "огт байхгүй" гэж уншигдана — тэгээс их
+    // боловч 0.1%-д хүрэхгүй хэсгийг "<0.1%" гэж ил хэлнэ.
+    const pctOf=(v)=>{
+      if(!total) return '0.0%';
+      const p=v/total*100;
+      return (p>0&&p<0.05)?'<0.1%':p.toFixed(1)+'%';
+    };
     const pickOf=(name)=>drilled?(()=>{}):()=>this.setState({airTreemapRegion:name});
     // Хайрцаг бүрийн утга (тоо + хувь) нь ХАРАГДАХ ёстой. SVG <text> доторх
     // {{ }} нь dc-runtime-д HTML <span> болдог тул SVG дээр харагддаггүй —
@@ -10464,6 +10477,7 @@ class Component extends DCLogic {
       x:b.x.toFixed(1),y:b.y.toFixed(1),w:b.w.toFixed(1),h:b.h.toFixed(1),
       name:b.name,valueLabel:b.value.toLocaleString('en-US'),
       pctLabel:pctOf(b.value),
+      tip:b.name+' — '+b.value.toLocaleString('en-US')+' зорчигч ('+pctOf(b.value)+')',
       color:nodeColor(b.name),
       // Хайрцаг нэр + тоо + хувь гурван мөрөө багтаах хэмжээтэй үед л харуулна.
       // Үлдсэн жижиг хэсгийн утгыг доорх жагсаалт харуулна.
@@ -10695,7 +10709,9 @@ class Component extends DCLogic {
       };
       const regions=this.mongoliaAimags.features.map(f=>{
         const name=f.properties.name;
-        return {d:pathGen(f)||'',name,fill:aimagFill(aimagTotals[name]||0)};
+        const tot=aimagTotals[name]||0;
+        return {d:pathGen(f)||'',name,fill:aimagFill(tot),
+          title:tot?name+' — '+tot.toLocaleString('en-US')+' зорчигч':name+' — нислэгийн мэдээлэл алга'};
       });
       // Аймаг бүрийн нэрийг центроид дээр нь бичнэ (reference-д geo.label
       // show:true fontSize:9 — энд дэлгэцийн px тогтмол байлгахаар px()).
@@ -10720,6 +10736,10 @@ class Component extends DCLogic {
           x:pt[0],y:pt[1],color:nodeColor(c),
           r:bubbleSize(totals[c].pax,maxPax,6,26)*(atUb?0.55:1)};
       });
+      // УБ-ын хоёр нисэх буудал яг нэг цэгт давхцаж, дээд талынх нь доодохыг
+      // hover/дарахаас хаадаг байв — хоёуланг нь хэвтээ тэнхлэгт зэрэгцүүлнэ.
+      const ubItems=items.filter(it=>it.atUb);
+      ubItems.forEach((it,k)=>{ it.x=ubProj[0]+(k-(ubItems.length-1)/2)*(it.r*2+2); });
       const flow=buildFlow(items,ubProj,0.16);
       const nodes=items.slice().sort((a,b)=>b.r-a.r).map(it=>{
         const key='dom:'+it.name, sel=isSelected(key);
@@ -10743,7 +10763,10 @@ class Component extends DCLogic {
       return {ready:true,isDomestic:true,isWorld:false,viewBox:'0 0 '+W+' '+H,
         regions,arcs:flow.arcs,halos:flow.halos,labels:flow.labels,flyDots:flow.flyDots,nodes,closeNode,
         aimagLabels,aimagFs,choroLegend,ripples,choroLabel:'Аймгийн choropleth (нийт зорчигч):',
-        isGlobe:false,ubVisible:true,svgCursor:'default',onGlobeDown:null,
+        isGlobe:false,ubVisible:true,
+        // Дотоодод УБ-ын нисэх буудлууд өөрсдөө бөмбөлөг тул эх цэгийн тэмдэг
+        // тэдний hover-ийг хаавал "Улаанбаатар (эх цэг)" л гарна.
+        ubPe:'none',svgCursor:'default',onGlobeDown:null,
         oceanA,oceanB,landStroke,ubInk,labelHalo,labelColor,typeTabs,labelFs,labelHaloW,
         ubX:ubProj[0].toFixed(1),ubY:ubProj[1].toFixed(1),
         detail:selected,
@@ -10823,8 +10846,11 @@ class Component extends DCLogic {
       const d=pathGen(f)||'';
       if(!d) return null;
       const dest=hit[i];
+      // Улс бүр hover хийхэд нэр + нийт зорчигчоо хэлнэ (тойрог цэгтэй
+      // ижил текст). Урсгалгүй улс тоо зохиохгүй — гарчиггүй.
       return {d,fill:dest?choroColor(totals[dest]):landIdle,
-        stroke:landStroke,width:dest?'0.9':'0.6'};
+        stroke:landStroke,width:dest?'0.9':'0.6',
+        title:dest?dest+' — '+totals[dest].toLocaleString('en-US')+' зорчигч':''};
     }).filter(Boolean);
     const fmtPax=(n)=>n>=1000000?(n/1000000).toFixed(1)+'M':(n>=1000?(n/1000).toFixed(1)+'K':String(Math.round(n)));
     const choroLegend={
@@ -10893,7 +10919,7 @@ class Component extends DCLogic {
     const zoomBy=(f)=>()=>this.setState(s=>({globeZoom:Math.max(0.7,Math.min(2.6,(s.globeZoom||1)*f))}));
     return {ready:true,isDomestic:false,isWorld:true,viewBox:'0 0 '+W+' '+H,
       countryPaths,arcs:[],ribbons:flow.ribbons,aimagLabels:[],ripples:[],choroLabel:'Улсын choropleth (нийт зорчигч):',halos:flow.halos,labels:flow.labels,flyDots:flow.flyDots,nodes,closeNode,
-      choroLegend,projTabs,isGlobe,sphereD,ubVisible,
+      choroLegend,projTabs,isGlobe,sphereD,ubVisible,ubPe:'auto',
       globeCx:globeCx.toFixed(1),globeCy:globeCy.toFixed(1),globeR:globeR.toFixed(1),
       zoomIn:zoomBy(1.25),zoomOut:zoomBy(0.8),
       resetView:()=>this.setState({globeRot:[-72,-26],globeZoom:1}),
