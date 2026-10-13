@@ -2847,6 +2847,10 @@
           <sc-if value="{{ detail.trend.hasPartial }}">
           <circle cx="{{ detail.trend.partialCx }}" cy="{{ detail.trend.partialCy }}" r="3.6" fill="var(--surface)" stroke="{{ detail.color }}" stroke-width="1.6" stroke-dasharray="2 2"><title>{{ detail.trend.partialLabel }}</title></circle>
           <foreignObject x="{{ detail.trend.partialFx }}" y="{{ detail.trend.partialFy }}" width="180" height="11" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-size:9.5px;line-height:1;white-space:nowrap;color:var(--ink2);font-family:'JetBrains Mono',monospace;">{{ detail.trend.partialLabel }}</div></foreignObject>
+          <sc-for list="{{ detail.trend.dotPts }}" as="ddp" hint-placeholder-count="12">
+            <circle cx="{{ ddp.cx }}" cy="{{ ddp.cy }}" r="2.6" fill="var(--surface)" stroke="{{ detail.color }}" stroke-width="1.6" pointer-events="none"></circle>
+            <circle cx="{{ ddp.cx }}" cy="{{ ddp.cy }}" r="9" fill="transparent" stroke="none" style="cursor:default;"><title>{{ ddp.tip }}</title></circle>
+          </sc-for>
           </sc-if>
           <sc-for list="{{ detail.trend.xTicks }}" as="xt" hint-placeholder-count="6">
             <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
