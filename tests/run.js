@@ -20,6 +20,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const http = require('http');
 const { execFileSync, spawn } = require('child_process');
 
@@ -467,14 +468,20 @@ setTimeout(poll,1000);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 async function runProbe(jsBody, waitMs) {
   PROBE_JS = jsBody; PROBE_RESULT = null;
+  /* Тусдаа профайл — өөрийн хэрэглэгчийн Chrome эсвэл зэрэгцээ проб руу
+     хуудас дамжуулж (process handoff), хугацаа хэтэрдэг байсныг зайлсхийнэ */
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'erthub-probe-'));
   const ch = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-sandbox',
     '--no-first-run', '--no-default-browser-check', '--disable-extensions',
     '--disable-background-networking', '--disable-sync', '--mute-audio',
     '--disable-features=Translate,OptimizationHints',
+    '--user-data-dir=' + profile,
     'http://localhost:' + PORT + '/__probe__'], { stdio: 'ignore' });
   const deadline = Date.now() + (waitMs || 90000);
   while (PROBE_RESULT === null && Date.now() < deadline) await sleep(250);
   try { ch.kill(); } catch (e) {}
+  /* Профайлыг цэвэрлэнэ; Windows дээр Chrome түгжсэн байвал алгасна */
+  setTimeout(() => { try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) {} }, 1000);
   if (PROBE_RESULT === null) return { __err: 'probe хугацаа хэтэрлээ' };
   try { return JSON.parse(PROBE_RESULT); }
   catch (e) { return { __err: 'JSON задлахад алдаа: ' + e.message }; }
@@ -2650,7 +2657,9 @@ async function groupS() {
   try {
     const R = await runProbe(`async function(d,w){
       const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-      await sleep(4500);
+      /* Нөхцөл биелэхийг хүлээнэ (тогтмол хугацаа биш) — ачаалалтай үед тогтворгүй байдлаас сэргийлнэ */
+      const waitFor=async(fn,ms)=>{const t=Date.now()+ms;while(Date.now()<t){try{if(fn())return true}catch(e){}await sleep(100)}return false};
+      await waitFor(()=>d.querySelector('#dsList .st'),15000);
       const R={};
       /* S5 — модны тэмдэгт */
       const st=d.querySelector('#dsList .st');
@@ -2662,17 +2671,20 @@ async function groupS() {
       const fq=d.getElementById('fQuality');
       R.qOpts=fq?[...fq.options].map(o=>o.text):[];
       /* S1 — төлөвлөгөөт метрик нэмэх */
-      d.querySelector('[data-tab="metrics"]').click(); await sleep(1300);
+      d.querySelector('[data-tab="metrics"]').click();
+      await waitFor(()=>d.getElementById('mNewKey'),5000);
       const k=d.getElementById('mNewKey'), nm=d.getElementById('mNewName');
       const add=d.querySelector('[data-madd]');
       if(!k||!add) return {__err:'метрик нэмэх маягт алга'};
       k.value='qa.test_planned'; if(nm) nm.value='';
-      add.click(); await sleep(400);
+      add.click();
+      await waitFor(()=>(d.getElementById('toast')||{}).textContent,3000);
       R.toastNoName=(d.getElementById('toast')||{}).textContent||'';
       R.addedNoName=d.querySelectorAll('[data-metric="qa.test_planned"]').length;
       const k2=d.getElementById('mNewKey'), nm2=d.getElementById('mNewName');
       k2.value='qa.test_planned'; nm2.value='QA туршилтын метрик';
-      d.querySelector('[data-madd]').click(); await sleep(400);
+      d.querySelector('[data-madd]').click();
+      await waitFor(()=>(d.getElementById('toast')||{}).textContent!==R.toastNoName,3000);
       R.toastOk=(d.getElementById('toast')||{}).textContent||'';
       R.added=d.querySelectorAll('[data-metric="qa.test_planned"]').length;
       /* S3 — MAP товч */
@@ -3154,22 +3166,34 @@ const PROBE_Y_ROUTE = `async function(d,w){
 /* Y9 — датасэтийн дэлгэрэнгүй: жагсаалтаас нээхэд хаяг, Back */
 const PROBE_Y_DS_OPEN = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  await sleep(6500);
+  /* Нөхцөл биелэхийг хүлээнэ (тогтмол хугацаа биш) — ачаалалтай үед тогтворгүй байдлаас сэргийлнэ */
+  const waitFor=async(fn,ms)=>{const t=Date.now()+ms;while(Date.now()<t){try{if(fn())return true}catch(e){}await sleep(100)}return false};
+  const cardList=()=>[...d.querySelectorAll('button')].filter(b=>b.innerText.length>60&&/Дэлгэрэнгүй|Үзэх/.test(b.innerText));
+  await waitFor(()=>[...d.querySelectorAll('button,a')].some(x=>x.textContent.trim()==='Нээлттэй өгөгдөл'),15000);
   const go=async(n)=>{const b=[...d.querySelectorAll('button,a')].filter(x=>x.textContent.trim()===n)[0];
-    if(b){b.click(); await sleep(1300)} return !!b};
+    if(b){b.click()} return !!b};
   await go('Нээлттэй өгөгдөл');
   /* ХОЁР дахь картыг нээнэ — эхнийх нь анхдагч dsIndex:0-тэй санамсаргүй
-     таарч, тест хуурамчаар давах эрсдэлтэй */
-  const cards=[...d.querySelectorAll('button')].filter(b=>b.innerText.length>60&&/Дэлгэрэнгүй|Үзэх/.test(b.innerText));
+     таарч, тест хуурамчаар давах эрсдэлтэй. Карт бүрэн зурагдахыг хүлээнэ. */
+  await waitFor(()=>cardList().length>=2,15000);
+  const cards=cardList();
   const card=cards[1];
   if(!card) return {__err:'датасэтийн карт олдсонгүй ('+cards.length+')'};
   const name=(card.innerText.split('\\n').filter(x=>x.trim().length>6)[0]||'').trim();
-  card.click(); await sleep(1500);
+  const hash0=w.location.hash;
+  card.click();
+  await waitFor(()=>w.location.hash!==hash0,10000);
+  await waitFor(()=>((d.querySelector('h1,h2')||{}).innerText||'').trim().length>0,10000);
   const R={name:name, hash:decodeURIComponent(w.location.hash),
     head:((d.querySelector('h1,h2')||{}).innerText||'').trim()};
-  w.history.back(); await sleep(1300);
+  const hashOpen=w.location.hash;
+  w.history.back();
+  await waitFor(()=>w.location.hash!==hashOpen,10000);
   R.back={hash:w.location.hash};
-  w.history.forward(); await sleep(1500);
+  const hashBack=w.location.hash;
+  w.history.forward();
+  await waitFor(()=>w.location.hash!==hashBack,10000);
+  await waitFor(()=>((d.querySelector('h1,h2')||{}).innerText||'').trim().length>0,10000);
   R.fwd={hash:decodeURIComponent(w.location.hash),
     head:((d.querySelector('h1,h2')||{}).innerText||'').trim()};
   return R;
