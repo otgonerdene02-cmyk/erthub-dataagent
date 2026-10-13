@@ -210,7 +210,7 @@ function groupB() {
       /* `wagon_an` — вагоны анализын самбар. Зам нь T('kpi_loaded') гэх мэт
          жижиг туслахаар дамждаг (stxt('wagon_an.'+k)) тул шууд бичлэг хайх
          аргаар олдохгүй. Түлхүүр бүр WA7-д баталгаажна. */
-      'wagon_an',
+      'wagon_an', 'pax_an',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -4237,7 +4237,7 @@ async function groupBE() {
 
     /* Текстийн гэрээ: самбарын T('...') түлхүүр бүр content.json → site.wagon_an-д
        бүртгэлтэй (эс тэгвэл text-coverage F1 унана / админд харагдахгүй). */
-    const bw = dcScript().match(/buildWagonAnalysis\(\)\{([\s\S]*?)\n  \}\n  buildDocDetail/);
+    const bw = dcScript().match(/buildWagonAnalysis\(\)\{([\s\S]*?)\n  \}\n  \/\* Зорчигчийн датасэтийн анализын самбар/);
     const WAC = (readJson('content.json').site || {}).wagon_an || {};
     const keys = bw ? [...bw[1].matchAll(/T\('([a-z_.]+)'/g)].map(m => m[1]).filter(k => !k.endsWith('.')) : [];
     const miss = keys.filter(k => k.split('.').reduce((o, p) => (o == null ? o : o[p]), WAC) == null);
@@ -4251,6 +4251,64 @@ async function groupBE() {
     check('WA8. Түүх ачаалахад унавал вагоны өдрийн мэдээг ХӨНДӨХГҮЙ (тусдаа try)',
       /this\.applyRailWagonData\(\);\s*this\.loadWagonHistory\(\);/.test(dcScript()) &&
       /async loadWagonHistory\(\)\{[\s\S]*?try\{[\s\S]*?catch\(e\)/.test(dcScript()));
+  }
+
+  /* ── PA. Зорчигчийн анализын загвар — ГАРААР бодогдох фикстур ──
+     2025-09 30/30 өдөр: 100 зорчигч (ОН 90 / ОУ 10), 20 аялал
+     2026-09 30/30 өдөр: 120 (ОН 100 / ОУ 20), 25 аялал
+     2026-10 10/31 өдөр (ДУТУУ): 30 (ОН 30 / ОУ 0), 8 аялал. Нийт 250/53. */
+  const pam = dcScript().match(/function paxAnalysisModel\(all,sel,year\)\{([\s\S]*?)\n\}/);
+  if (!pam) { bad('PA0. paxAnalysisModel() олдсонгүй'); }
+  else {
+    const PA = new Function('all', 'sel', 'year', pam[1]);
+    const pm = (month, days, dim, trips, passengers, domestic, international) =>
+      ({ month, days, days_in_month: dim, trips, passengers, domestic, international });
+    const PALL = { status: 'ok', months: [pm('2025-09', 30, 30, 20, 100, 90, 10), pm('2026-09', 30, 30, 25, 120, 100, 20),
+      pm('2026-10', 10, 31, 8, 30, 30, 0)],
+      by_route: [{ route: 'Б', trips: 20, passengers: 100 }, { route: 'А', trips: 33, passengers: 150 }],
+      by_type: [{ type: 'ОН', trips: 40, passengers: 220 }, { type: 'ОУ', trips: 13, passengers: 30 }] };
+    const p = PA(PALL, null, 'all');
+    check('PA1. Нийт зорчигч 250, аялал 53, ОУ 30 → 12%', p.hasData && p.pax === 250 && p.trips === 53 &&
+      Math.abs(p.intlPct - 12) < 1e-9 && Math.abs(p.domPct - 88) < 1e-9, JSON.stringify([p.pax, p.trips, p.intlPct]));
+    check('PA1. Аялал бүрийн дундаж 250/53, өдрийн дундаж 250/70',
+      Math.abs(p.perTrip - 250 / 53) < 1e-9 && p.days === 70 && Math.abs(p.perDay - 250 / 70) < 1e-9);
+    check('PA2. 10/31 өдөр → дутуу (1), шошго "*"; бусад бүтэн',
+      p.partialN === 1 && p.series.labels.join(',') === '25-09,26-09,26-10*');
+    check('PA2. Бүгд дээр YoY ЗОХИОХГҮЙ: null, шалтгаан "pick_year"', p.yoy === null && p.yoyReason === 'pick_year');
+    check('PA3. Чиглэл зорчигчоор буурахаар (А, Б), нийлбэр 250',
+      p.routes.map(r => r.route).join(',') === 'А,Б' && p.routeTotal === 250);
+    check('PA3. Сараар эрэмбэ: 2026-09 (120) тэргүүлнэ, дутуу сар тэмдэглэгдэнэ',
+      p.ranked[0].month === '2026-09' && p.ranked[0].passengers === 120 && p.ranked[2].partial === true);
+    const q = PA(PALL, { status: 'ok', months: [], by_route: [{ route: 'А', trips: 33, passengers: 150 }], by_type: [] }, 2026);
+    check('PA4. 2026: нийт 150; YoY = (120-100)/100 = +20% (зөвхөн 09 сар)',
+      q.pax === 150 && !!q.yoy && Math.abs(q.yoy.pct - 20) < 1e-9 && q.yoy.months === 1, JSON.stringify(q.yoy));
+    check('PA4. Чиглэл нь сонгосон оны хариунаас (sel)', q.hasBreakdown && q.routes.length === 1 && q.routes[0].passengers === 150);
+    const q0 = PA(PALL, null, 2026);
+    check('PA5. Оны задаргаа ирээгүй бол бүтэн түүхийн чиглэлийг харуулахгүй', !q0.hasBreakdown && q0.routes.length === 0);
+    const only = PA({ status: 'ok', months: [pm('2026-09', 30, 30, 25, 120, 100, 20)], by_route: [], by_type: [] }, null, 2026);
+    check('PA5. Өмнөх оны өгөгдөл байхгүй → YoY null, шалтгаан "none"', only.yoy === null && only.yoyReason === 'none');
+    check('PA6. null / no_data / хоосон / байхгүй он → hasData:false',
+      PA(null, null, 'all').hasData === false && PA({ status: 'no_data', months: [] }, null, 'all').hasData === false &&
+      PA(PALL, null, 2030).hasData === false);
+    check('PA6. Аялал 0 бол дундаж null (хуваалтын алдаа БИШ)',
+      PA({ status: 'ok', months: [pm('2026-01', 31, 31, 0, 0, 0, 0)], by_route: [], by_type: [] }, null, 'all').perTrip === null);
+
+    const bp = dcScript().match(/buildPaxAnalysis\(\)\{([\s\S]*?)\n  \}\n  buildDocDetail/);
+    const PAC = (readJson('content.json').site || {}).pax_an || {};
+    const pkeys = bp ? [...bp[1].matchAll(/T\('([a-z_.]+)'/g)].map(m => m[1]) : [];
+    const pmiss = pkeys.filter(k => k.split('.').reduce((o, x) => (o == null ? o : o[x]), PAC) == null);
+    check('PA7. buildPaxAnalysis-ийн текст бүр content.json site.pax_an-д', pkeys.length > 20 && pmiss.length === 0, pmiss.join(','));
+    const wk = (readJson('content.json').site.wagon_an || {});
+    check('PA7. "Бүгд" үед YoY тайлбар (kpi_yoy_pick) вагонд бүртгэлтэй', !!wk.kpi_yoy_pick);
+    check('PA8. Сайт зорчигчийн түүхийг EHBackend-ээр авч, endpoint замтай таарна',
+      dcScript().includes('EHBackend.fetchRailPassengersHistory') &&
+      /window\.EHBackend\s*=\s*\{[\s\S]*?fetchRailPassengersHistory:\s*fetchRailPassengersHistory/.test(read('js/erthub-backend.js')) &&
+      read('js/erthub-backend.js').includes('/api/sectors/rail/passengers/history'));
+    check('PA8. Түүх унавал вагоны өдрийн мэдээг хөндөхгүй (тусдаа try, дараалал)',
+      /this\.loadWagonHistory\(\);[^\n]*\n\s*this\.loadPaxHistory\(\);/.test(dcScript()) &&
+      /async loadPaxHistory\(\)\{[\s\S]*?try\{[\s\S]*?catch\(e\)/.test(dcScript()));
+    check('PA8. Самбар зөвхөн railPax датасэтэд, вагонтой холилдохгүй',
+      /dsel\.source==='railPax'&&this\.state\.page==='detail'\)\?this\.buildPaxAnalysis/.test(dcScript()));
   }
 
   /* ── BE19. station_count: 0 нь мөрийг БҮРМӨСӨН алга болгодог байв ── */
