@@ -618,7 +618,7 @@ async function groupC() {
   } finally { srv.close(); }
 }
 
-const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n  await sleep(3500);\n  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',\n    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',\n    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',\n    r06:'sec-06',u07:'sec-07'};\n  const norm=t=>t.replace(/[\\s\\u00a0]+/g,' ').trim();\n  const pvT=()=>norm(d.getElementById('pvhost').innerText);\n  const edT=()=>norm(d.querySelector('.edit2').innerText);\n  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost rect,#pvhost circle,#pvhost path,'+\n      '#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvrk i,'+\n      '#pvhost .pvcd .d,#pvhost .sp-val'))\n    .map(e=>e.tagName+':'+(e.getAttribute('height')||e.getAttribute('d')||\n      e.getAttribute('stroke-dasharray')||e.getAttribute('style')||e.textContent)).join('|');\n  const snap=()=>({t:pvT(),g:geo()});\n  const go=id=>{ let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();\n    const s=d.querySelector('[data-section=\"'+SEC[id]+'\"]'); if(!s) return false;\n    s.click(); const c=d.querySelector('[data-widget=\"'+id+'\"]'); if(!c) return false;\n    c.click(); return true; };\n  const probeAll=(q,attr,mk,scope)=>{ const out={};\n    [].slice.call(d.querySelectorAll(q)).map(x=>x.getAttribute(attr)).forEach(k=>{\n      const e=d.querySelector('['+attr+'=\"'+k+'\"]'); if(!e) return;\n      const ov=e.value, pr=mk(k);\n      e.value=pr; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n      out[k]=scope().indexOf(pr)>=0?'PASS':'FAIL';\n      e.value=ov; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n    }); return out; };\n  const R={rows:[]};\n  for(const id of Object.keys(SEC)){\n    const row={id:id};\n    if(!go(id)){ row.nav=false; R.rows.push(row); continue }\n    row.nav=true;\n    const pw=()=>!!d.querySelector('[data-periodwarn]');\n    row.pw0=pw();\n    const s0=snap();\n    const sels=[].slice.call(d.querySelectorAll('[data-slot]'));\n    if(!sels.length){ row.swap='N/A'; row.back='N/A' }\n    else{\n      const sel=sels[0], cur=sel.value;\n      const en=[].slice.call(sel.options).filter(o=>!o.disabled&&o.value!==cur).map(o=>o.value);\n      const all=[].slice.call(sel.options).map(o=>o.value).filter(v=>v!==cur);\n      const pref=en.filter(v=>v);\n      const tgt=pref.length?pref[0]:(en.length?en[0]:all[0]);\n      sel.value=tgt; sel.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s1=snap();\n      row.pwSwap=pw();\n      row.swap=(s1.t!==s0.t||s1.g!==s0.g);\n      row.swapInfo=(cur||'—')+' → '+(tgt||'—');\n      const s2=d.querySelector('[data-slot]');\n      s2.value=cur; s2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s3=snap();\n      row.pwBack=pw();\n      row.back=(s3.t===s0.t&&s3.g===s0.g);\n    }\n    const tf=probeAll('[data-tf]','data-tf',k=>'ZZ'+k.toUpperCase()+'ZZ',pvT);\n    const sf=probeAll('.e-fm [data-sf]','data-sf',()=>'ZZSFZZ',pvT);\n    const rf=probeAll('[data-rf]','data-rf',()=>'ZZRFZZ',edT);\n    row.tfN=Object.keys(tf).length; row.sfN=Object.keys(sf).length; row.rfN=Object.keys(rf).length;\n    row.dead=[].concat(Object.entries(tf),Object.entries(sf),Object.entries(rf))\n      .filter(x=>x[1]!=='PASS').map(x=>x[0]);\n    row.text=Object.values(tf).every(v=>v==='PASS');\n    R.rows.push(row);\n  }\n  if(go('hero_px')){\n    const sx=d.querySelector('[data-slot]');\n    sx.value='air.weekly_pax'; sx.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const vis=()=>{const b=d.querySelector('[data-periodwarn]');\n      return !!b&&b.style.display!=='none'};\n    R.px={warn:vis()};\n    const fb=d.querySelector('[data-periodwarn] [data-autoname]');\n    R.px.fix=fb?fb.getAttribute('data-autoname'):null;\n    if(fb) fb.click();\n    R.px.title=(d.querySelector('[data-tf=\"title\"]')||{}).value;\n    R.px.warnAfterFix=vis();\n    const sy=d.querySelector('[data-slot]');\n    sy.value=''; sy.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const cc=d.querySelector('[data-tcancel]'); if(cc&&!cc.disabled) cc.click();\n  }\n  if(go('ls')){\n    const pv=()=>{const x=d.getElementById('pendRow');return !!x&&x.style.display!=='none'};\n    const t1=d.querySelector('[data-tf=\"title\"]');\n    const orig=t1.value;\n    t1.value='ZZDRAFTZZ'; t1.dispatchEvent(new w.Event('input',{bubbles:true}));\n    R.dr={bar:pv()};\n    let q,qn=0; while((q=d.querySelector('[data-back]'))&&qn++<6) q.click();\n    R.dr.barAway=pv();\n    go('ls');\n    R.dr.kept=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZDRAFTZZ';\n    d.querySelector('[data-penddrop]').click();\n    R.dr.dropped=(d.querySelector('[data-tf=\"title\"]')||{}).value===orig&&!pv();\n    const t2=d.querySelector('[data-tf=\"title\"]');\n    t2.value='ZZAPPLYZZ'; t2.dispatchEvent(new w.Event('input',{bubbles:true}));\n    let q2,qm=0; while((q2=d.querySelector('[data-back]'))&&qm++<6) q2.click();\n    d.querySelector('[data-pendsave]').click();\n    go('ls');\n    R.dr.applied=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZAPPLYZZ'&&!pv();\n    const t3=d.querySelector('[data-tf=\"title\"]');\n    t3.value=orig; t3.dispatchEvent(new w.Event('input',{bubbles:true}));\n    const sv=d.querySelector('[data-tsave]'); if(sv&&!sv.disabled) sv.click();\n  }\n  if(go('hero_fl')){\n    const a1=d.querySelector('[data-slot]'), c1=a1.value;\n    const fo=[].slice.call(a1.options).filter(function(o){\n      return !o.disabled&&o.value.indexOf('field:')===0&&o.value.indexOf('field:|')!==0})[0];\n    if(fo){\n      a1.value=fo.value; a1.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt={pick:fo.value,mid:d.getElementById('dirtyMsg').textContent};\n      /* render() дараа select нь ШИНЭ зангилаа — ДАХИН асууж авна */\n      const a2=d.querySelector('[data-slot]');\n      R.rt.fresh=(a1!==a2);\n      a2.value=c1; a2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt.back=d.getElementById('dirtyMsg').textContent;\n      R.rt.card=(d.querySelector('#pvhost')||{}).innerText;\n    }\n  }\n  R.dirty=d.getElementById('dirtyMsg').textContent;\n  return R;\n}";
+const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n  await sleep(3500);\n  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);\n  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',\n    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',\n    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',\n    r06:'sec-06',u07:'sec-07'};\n  const norm=t=>t.replace(/[\\s\\u00a0]+/g,' ').trim();\n  const pvT=()=>norm(d.getElementById('pvhost').innerText);\n  const edT=()=>norm(d.querySelector('.edit2').innerText);\n  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost rect,#pvhost circle,#pvhost path,'+\n      '#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvrk i,'+\n      '#pvhost .pvcd .d,#pvhost .sp-val'))\n    .map(e=>e.tagName+':'+(e.getAttribute('height')||e.getAttribute('d')||\n      e.getAttribute('stroke-dasharray')||e.getAttribute('style')||e.textContent)).join('|');\n  const snap=()=>({t:pvT(),g:geo()});\n  const go=id=>{ let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();\n    const s=d.querySelector('[data-section=\"'+SEC[id]+'\"]'); if(!s) return false;\n    s.click(); const c=d.querySelector('[data-widget=\"'+id+'\"]'); if(!c) return false;\n    c.click(); return true; };\n  const probeAll=(q,attr,mk,scope)=>{ const out={};\n    [].slice.call(d.querySelectorAll(q)).map(x=>x.getAttribute(attr)).forEach(k=>{\n      const e=d.querySelector('['+attr+'=\"'+k+'\"]'); if(!e) return;\n      const ov=e.value, pr=mk(k);\n      e.value=pr; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n      out[k]=scope().indexOf(pr)>=0?'PASS':'FAIL';\n      e.value=ov; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n    }); return out; };\n  const R={rows:[]};\n  for(const id of Object.keys(SEC)){\n    const row={id:id};\n    if(!go(id)){ row.nav=false; R.rows.push(row); continue }\n    row.nav=true;\n    const pw=()=>!!d.querySelector('[data-periodwarn]');\n    row.pw0=pw();\n    const s0=snap();\n    const sels=[].slice.call(d.querySelectorAll('[data-slot]'));\n    if(!sels.length){ row.swap='N/A'; row.back='N/A' }\n    else{\n      const sel=sels[0], cur=sel.value;\n      const en=[].slice.call(sel.options).filter(o=>!o.disabled&&o.value!==cur).map(o=>o.value);\n      const all=[].slice.call(sel.options).map(o=>o.value).filter(v=>v!==cur);\n      const pref=en.filter(v=>v);\n      const tgt=pref.length?pref[0]:(en.length?en[0]:all[0]);\n      sel.value=tgt; sel.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s1=snap();\n      row.pwSwap=pw();\n      row.swap=(s1.t!==s0.t||s1.g!==s0.g);\n      row.swapInfo=(cur||'—')+' → '+(tgt||'—');\n      const s2=d.querySelector('[data-slot]');\n      s2.value=cur; s2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s3=snap();\n      row.pwBack=pw();\n      row.back=(s3.t===s0.t&&s3.g===s0.g);\n    }\n    const tf=probeAll('[data-tf]','data-tf',k=>'ZZ'+k.toUpperCase()+'ZZ',pvT);\n    const sf=probeAll('.e-fm [data-sf]','data-sf',()=>'ZZSFZZ',pvT);\n    const rf=probeAll('[data-rf]','data-rf',()=>'ZZRFZZ',edT);\n    row.tfN=Object.keys(tf).length; row.sfN=Object.keys(sf).length; row.rfN=Object.keys(rf).length;\n    row.dead=[].concat(Object.entries(tf),Object.entries(sf),Object.entries(rf))\n      .filter(x=>x[1]!=='PASS').map(x=>x[0]);\n    row.text=Object.values(tf).every(v=>v==='PASS');\n    R.rows.push(row);\n  }\n  if(go('hero_px')){\n    const sx=d.querySelector('[data-slot]');\n    sx.value='air.weekly_pax'; sx.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const vis=()=>{const b=d.querySelector('[data-periodwarn]');\n      return !!b&&b.style.display!=='none'};\n    R.px={warn:vis()};\n    const fb=d.querySelector('[data-periodwarn] [data-autoname]');\n    R.px.fix=fb?fb.getAttribute('data-autoname'):null;\n    if(fb) fb.click();\n    R.px.title=(d.querySelector('[data-tf=\"title\"]')||{}).value;\n    R.px.warnAfterFix=vis();\n    const sy=d.querySelector('[data-slot]');\n    sy.value=''; sy.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const cc=d.querySelector('[data-tcancel]'); if(cc&&!cc.disabled) cc.click();\n  }\n  if(go('ls')){\n    const pv=()=>{const x=d.getElementById('pendRow');return !!x&&x.style.display!=='none'};\n    const t1=d.querySelector('[data-tf=\"title\"]');\n    const orig=t1.value;\n    t1.value='ZZDRAFTZZ'; t1.dispatchEvent(new w.Event('input',{bubbles:true}));\n    R.dr={bar:pv()};\n    let q,qn=0; while((q=d.querySelector('[data-back]'))&&qn++<6) q.click();\n    R.dr.barAway=pv();\n    go('ls');\n    R.dr.kept=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZDRAFTZZ';\n    d.querySelector('[data-penddrop]').click();\n    R.dr.dropped=(d.querySelector('[data-tf=\"title\"]')||{}).value===orig&&!pv();\n    const t2=d.querySelector('[data-tf=\"title\"]');\n    t2.value='ZZAPPLYZZ'; t2.dispatchEvent(new w.Event('input',{bubbles:true}));\n    let q2,qm=0; while((q2=d.querySelector('[data-back]'))&&qm++<6) q2.click();\n    d.querySelector('[data-pendsave]').click();\n    go('ls');\n    R.dr.applied=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZAPPLYZZ'&&!pv();\n    const t3=d.querySelector('[data-tf=\"title\"]');\n    t3.value=orig; t3.dispatchEvent(new w.Event('input',{bubbles:true}));\n    const sv=d.querySelector('[data-tsave]'); if(sv&&!sv.disabled) sv.click();\n  }\n  if(go('hero_fl')){\n    const a1=d.querySelector('[data-slot]'), c1=a1.value;\n    const fo=[].slice.call(a1.options).filter(function(o){\n      return !o.disabled&&o.value.indexOf('field:')===0&&o.value.indexOf('field:|')!==0})[0];\n    if(fo){\n      a1.value=fo.value; a1.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt={pick:fo.value,mid:d.getElementById('dirtyMsg').textContent};\n      /* render() дараа select нь ШИНЭ зангилаа — ДАХИН асууж авна */\n      const a2=d.querySelector('[data-slot]');\n      R.rt.fresh=(a1!==a2);\n      a2.value=c1; a2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt.back=d.getElementById('dirtyMsg').textContent;\n      R.rt.card=(d.querySelector('#pvhost')||{}).innerText;\n    }\n  }\n  R.dirty=d.getElementById('dirtyMsg').textContent;\n  return R;\n}";
 
 /* ── Хугацааны нарийвчлалын (period grain) логикийг АДМИНЫ ЭХ КОДООС
    гаргаж авна. Тест хуулбар бичихгүй: админ юу боддог, тест ЯГ түүгээр
@@ -1392,6 +1392,7 @@ async function groupH() {
 const PROBE_I = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await sleep(4000);
+  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);
   const R={};
   const sec=d.querySelector('[data-section="sec-01"]');
   if(!sec) return {__err:'sec-01 олдсонгүй'};
@@ -1422,6 +1423,7 @@ const PROBE_I = `async function(d,w){
 const PROBE_I6 = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await sleep(4000);
+  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);
   const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',
     w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',
     w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',
@@ -1501,6 +1503,7 @@ async function groupI3() {
 const PROBE_I7 = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await sleep(4000);
+  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);
   const R={};
   const pvT=()=>{const e=d.querySelector('#pvhost [data-ed="title"]');return e?e.textContent.trim():null};
   const pickField=(q)=>{const sl2=d.querySelector(q), og2=sl2?sl2.querySelector('optgroup'):null;
@@ -1594,6 +1597,88 @@ async function groupI2() {
   } finally { srv.close(); }
 }
 
+/* ── AX. Агаарын датасэтийн хуудасны график — статистикийн үндсэн шаардлага ──
+   Эх veritech dashboard-тай харьцуулахад илэрсэн алдаанууд:
+   (1) тэнхлэг "82,500 · 165,000 · 247,500" / "1,525" гэх мэт дугуй бус тоо,
+   (2) өмнөх оны багана, legend алга, өсөлтийн тэнхлэгт "%" ба 0 шугам алга,
+   (3) өмнөх оны дата алга үед өсөлтийг 0% гэж ЗОХИОДОГ байв,
+   (4) "ОУ/Дотоодын харьцаа" (зорчигч) донут НИСЛЭГИЙН хувиар (75/25) зурагдаж,
+       өгөгдөлгүй үед '75%' зохиомол утга руу унадаг байв,
+   (5) treemap дээр "Зүүн Ази"/"Зүүн Өмнөд Ази" ижил өнгөтэй байв.
+   Доорх тоонууд ГАРААР бодогдсон. */
+function groupAX() {
+  group('AX. Агаарын графикийн тэнхлэг/legend/донут');
+  const src = dcScript();
+  const fn = (name) => {
+    const m = src.match(new RegExp('function ' + name + '\\(([^)]*)\\)\\{([\\s\\S]*?)\\n\\}'));
+    return m ? 'function ' + name + '(' + m[1] + '){' + m[2] + '\n}' : null;
+  };
+  const parts = ['niceStep', 'niceAxis', 'fmtAxisNum', 'buildDualAxisChart'].map(fn);
+  if (parts.some((x) => !x)) { bad('AX. график функц олдсонгүй'); return; }
+  const lib = new Function('MONTHS',
+    parts.join('\n') + '\nreturn {niceStep,niceAxis,fmtAxisNum,buildDualAxisChart};')(
+    ['1-р сар', '2-р сар', '3-р сар']);
+
+  /* niceStep: 82,500 → 10^4·8.25 → 10 → 100,000; 75 → 100; 2.5 → 2.5; 30 → 50 */
+  check('AX1. niceStep — 1/2/2.5/5×10^k',
+    lib.niceStep(82500) === 100000 && lib.niceStep(75) === 100 &&
+    lib.niceStep(2.5) === 2.5 && lib.niceStep(30) === 50,
+    [lib.niceStep(82500), lib.niceStep(75), lib.niceStep(2.5), lib.niceStep(30)].join(','));
+  /* 0…320,000: алхам niceStep(80,000)=100,000 → 0,100k,200k,300k,400k */
+  const a1 = lib.niceAxis(0, 320000);
+  check('AX2. Зорчигчийн тэнхлэг дугуй тоо (82,500 биш)',
+    JSON.stringify(a1.ticks) === JSON.stringify([0, 100000, 200000, 300000, 400000]),
+    JSON.stringify(a1.ticks));
+  /* 1,300…2,500 (нислэг): 1200/4=300 → 500; 1000…2500 */
+  const a2 = lib.niceAxis(1300, 2500);
+  check('AX3. Нислэгийн тэнхлэг 1,000/1,500/2,000/2,500 (1,525 биш)',
+    JSON.stringify(a2.ticks) === JSON.stringify([1000, 1500, 2000, 2500]), JSON.stringify(a2.ticks));
+  /* Өсөлт −20…30: 50/4=12.5 → 20; −20,0,20,40 — 0 тэнхлэгт заавал */
+  const a3 = lib.niceAxis(-20, 30);
+  check('AX4. Өсөлтийн % тэнхлэгт 0 багтана',
+    JSON.stringify(a3.ticks) === JSON.stringify([-20, 0, 20, 40]), JSON.stringify(a3.ticks));
+
+  /* Хос багана: [100,200] + өмнөх он [50,300]; max 300 → алхам 100 → 0…300.
+     Шугам (%) [10,null]: 0…10, алхам 2.5 → "0%,+2.5%,+5%,+7.5%,+10%". */
+  const c1 = lib.buildDualAxisChart([100, 200], [10, null], ['1-р сар', '2-р сар'],
+    { prevBars: [50, 300], linePct: true });
+  check('AX5. Багана 0-ээс, өмнөх оны баганыг ч багтаасан тэнхлэг',
+    c1.yTicksLeft.map((t) => t.label).join(',') === '0,100,200,300',
+    c1.yTicksLeft.map((t) => t.label).join(','));
+  check('AX6. Өмнөх оны багана зурагдана (2 ш)', c1.hasPrev === true && c1.prevRects.length === 2,
+    String(c1.prevRects.length));
+  check('AX7. Өсөлтийн баруун тэнхлэг "%" тэмдэгтэй',
+    c1.yTicksRight.map((t) => t.label).join(',') === '0%,+2.5%,+5%,+7.5%,+10%',
+    c1.yTicksRight.map((t) => t.label).join(','));
+  check('AX8. Суурьгүй (null) сар цэг/шугамгүй — 0% зохиохгүй',
+    c1.dotPts.length === 1 && !/L/.test(c1.line) && c1.dotPts[0].color === '#2FA37B',
+    c1.dotPts.length + ' · ' + c1.line);
+  const c2 = lib.buildDualAxisChart([5, 5], [-10, 20], ['1-р сар', '2-р сар'], { linePct: true });
+  check('AX9. Сөрөг/эерэг өсөлт — 0 лавлах шугам + улаан/ногоон цэг',
+    c2.hasZeroLine === true && c2.dotPts[0].color === '#D2564A' && c2.dotPts[1].color === '#2FA37B',
+    c2.hasZeroLine + ' ' + c2.dotPts.map((d) => d.color).join(','));
+  const c3 = lib.buildDualAxisChart([100, 200], [1, 2], ['1-р сар', '2-р сар']);
+  check('AX10. opts-гүй дуудлага (чарт бүтээгч) хуучнаараа — өмнөх оны багана алга',
+    c3.hasPrev === false && c3.prevRects.length === 0 && c3.barRects.length === 2);
+
+  /* Донут — зорчигчоор, зохиомол fallback-гүй */
+  check('AX11. ОУ/Дотоодын донут НИСЛЭГИЙН хувиар (kpis[2]) БИШ, \'75%\' fallback-гүй',
+    !/sAir\.kpis\[2\]\[2\]\|\|'75%'/.test(src) && /sAir\.paxSplit/.test(src) &&
+    /SECTORS\.air\.paxSplit=\{intl:cur\.intlPax,dom:cur\.domPax/.test(src));
+  check('AX12. Өмнөх оны дата алга үед ачааны өсөлт null (0% биш)',
+    src.includes('monthCargoYoyArr.push(hasPrev&&pKg>0?pctNum(cur.monthCargoKg[m]||0,pKg):null)'));
+  /* Treemap — бүс нутгийн палитр давхардалгүй */
+  const pal = (src.match(/const REGION_PAL=\[([\s\S]*?)\];/) || [])[1] || '';
+  const cols = pal.match(/#[0-9A-Fa-f]{6}/g) || [];
+  check('AX13. Treemap бүс нутгийн өнгө давхцахгүй (' + cols.length + ')',
+    cols.length >= 12 && new Set(cols.map((c) => c.toUpperCase())).size === cols.length);
+  /* Legend текст content.json-оос */
+  const cj = JSON.parse(read('content.json'));
+  check('AX14. Legend/донутын шошго content.json → site.chart-д бүртгэлтэй',
+    ['year_word', 'legend_pax', 'legend_flights_axis', 'legend_cargo', 'legend_growth_axis', 'intl', 'domestic']
+      .every((k) => typeof (cj.site.chart || {})[k] === 'string'));
+}
+
 function groupI() {
   group('I. Чарт бүтээгч (EHChart — X/Y тэнхлэг + нэгтгэл)');
   const src = read('js/erthub-chart.js');
@@ -1638,7 +1723,7 @@ function groupI() {
   /* Сайт талын холболт — тохиргоогүй бол ӨМНӨХ хатуу зан төлөв */
   const idx = read('index.html');
   check('I3. Сайт тохиргоогүй үед хуучин чарт руу унана (fallback)',
-    /chartFromSpec\('ds_air_monthly'\)\|\|\s*buildDualAxisChart\(sAir\.monthly\.pax/.test(idx.replace(/\n\s*/g, ' ')),
+    /chartFromSpec\('ds_air_monthly'\);\s*const airMonthly=paint\(specM\|\|\s*buildDualAxisChart\(mo\.pax/.test(idx.replace(/\n\s*/g, ' ')),
     'fallback хэлбэр олдсонгүй');
   check('I3. Чарт нь ХУУДАСНЫ ШҮҮЛТЭД орсон мөрүүд дээр ажиллана',
     idx.includes('this._airFilteredRows=filtered'));
@@ -1853,6 +1938,7 @@ async function groupK() {
     const R = await runProbe(`async function(d,w){
       const sleep=ms=>new Promise(r=>setTimeout(r,ms));
       await sleep(4500);
+  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);
       d.querySelector('[data-section="sec-05"]').click(); await sleep(600);
       d.querySelector('[data-widget="d05"]').click(); await sleep(1100);
       const rows=()=>[].slice.call(d.querySelectorAll('#pvhost .pvrow'))
@@ -4175,13 +4261,22 @@ async function groupBE() {
 
   /* ── CH. Графикийн тэнхлэг — бүхэл алхам, шошгын нягтрал, дутуу сар ──
      46 сар, хамгийн их багана 37,000 → алхам 10,000 (9,250 биш). */
-  const CH = dcScript().match(/function buildDualAxisChart\(barSeries,lineSeries,labels\)\{([\s\S]*?)\n\}/);
+  const CH = dcScript().match(/function buildDualAxisChart\(barSeries,lineSeries,labels,opts\)\{([\s\S]*?)\n\}/);
   if (!CH) { bad('CH0. buildDualAxisChart() олдсонгүй'); }
   else {
-    const bdc = new Function('barSeries', 'lineSeries', 'labels', CH[1]);
+    /* opts (заавал биш) — өмнөх оны багана / өсөлтийн % (агаарын график).
+       Энд огт өгөхгүй: CH1–CH3 нь дутуу сарын дүрмийг л шалгана. */
+    /* Тэнхлэгийн туслах функцүүд (niceStep/niceAxis/fmtAxisNum) нь гадна
+       байдаг тул хамт бүтээнэ. */
+    const helpers = ['niceStep', 'niceAxis', 'fmtAxisNum'].map((nm) => {
+      const h = dcScript().match(new RegExp('function ' + nm + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}'));
+      return h ? h[0] : '';
+    }).join('\n');
+    const bdc = new Function('barSeries', 'lineSeries', 'labels', 'opts',
+      helpers + '\nreturn (function(barSeries,lineSeries,labels,opts){' + CH[1] + '\n})(barSeries,lineSeries,labels,opts);');
     const labs = Array.from({ length: 46 }, (_, i) => 'L' + i); labs[45] = 'L45*';
     const bars = Array.from({ length: 46 }, (_, i) => (i === 45 ? 37000 : i * 800));
-    const c = bdc(bars, bars.map(v => v / 2), labs);
+    const c = bdc(bars, bars.map(v => v / 2), labs, {});
     check('CH1. Зүүн тэнхлэг бүхэл алхам: 0…40,000 (9,250-ийн алхам БИШ)',
       c.yTicksLeft.map(t => t.label).join('|') === '0|10,000|20,000|30,000|40,000', c.yTicksLeft.map(t => t.label).join('|'));
     check('CH2. 46 сарын шошго 3 сар тутам (16), давхцахгүй', c.xTicks.length === 16, String(c.xTicks.length));
@@ -6868,6 +6963,51 @@ async function groupOD() {
     if (B.__err) bad('OD4. Зорчигчийн датасэтийн API цонх', B.__err);
     else check('OD4. Зорчигч: /api/sectors/rail/summary (өөр датасэтийн URL биш)',
       /portal\.mrt\.gov\.mn\/api\/sectors\/rail\/summary$/.test(B.ep), B.ep);
+
+    /* OD5. Регресс: "Төрөл → Дотоодын" сонгоход ОУ НИСЛЭГ / ОУ ЗОРЧИГЧ карт
+       "0 / 0.0%" гэж харагдаж өгөгдөл алга мэт төөрөгдүүлдэг байв. Одоо "—" +
+       шалтгаан; "Бүгд" руу буцахад тоо буцна. */
+    PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slugOf(air));
+    const E = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      const cards=()=>{ const out={};
+        [...d.querySelectorAll('span,div')].filter(e=>e.children.length===0&&/^(ОУ НИСЛЭГ|ОУ ЗОРЧИГЧ|ДОТООД ЗОРЧИГЧ)$/i.test(e.textContent.trim()))
+          .forEach(e=>{ const k=e.textContent.trim().toUpperCase();
+            /* {{ }} нь span-д ороогддог — шошгоны div биш КАРТ хүртэл дээш алхана */
+            let c=e.parentElement, t='';
+            for(let i=0;c&&i<4;i++,c=c.parentElement){ t=c.innerText.replace(/\\s+/g,' ').trim(); if(t.length>k.length+2) break; }
+            if(t.length>k.length+2&&t.length<400&&(!out[k]||t.length<out[k].length)) out[k]=t; });
+        return out; };
+      for(let t=0;t<60;t++){ const c=cards(); if(c['ОУ НИСЛЭГ']&&/\\d/.test(c['ОУ НИСЛЭГ'])) break; await sleep(300); }
+      await sleep(1500);
+      const R={all:cards()};
+      const fb=[...d.querySelectorAll('button')].find(b=>/Шүүлт/.test(b.textContent)&&b.getBoundingClientRect().top<500);
+      if(fb){ fb.click(); await sleep(800); }
+      const dom=[...d.querySelectorAll('span')].find(e=>e.children.length===0&&e.textContent.trim()==='Дотоодын'
+        &&e.getBoundingClientRect().top>0&&e.getBoundingClientRect().top<900);
+      /* "Бүгд" нь он/чиглэл/бүсийн мөрөнд ч бий — ЗӨВХӨН «Төрөл»-ийн мөрийнхийг */
+      const rowTop=dom?Math.round(dom.getBoundingClientRect().top):-1;
+      R.picked=!!dom; if(dom) dom.click(); await sleep(1500); R.dom=cards();
+      const all=[...d.querySelectorAll('span')].find(e=>e.children.length===0&&e.textContent.trim()==='Бүгд'
+        &&Math.abs(Math.round(e.getBoundingClientRect().top)-rowTop)<4);
+      if(all) all.click(); await sleep(1500); R.back=cards();
+      return R;
+    }`, 150000);
+    if (E.__err) bad('OD5. Төрлийн шүүлтийн KPI шалгагч', E.__err);
+    else if (!E.picked || !/\d/.test(E.all['ОУ НИСЛЭГ'] || '')) {
+      skipped('OD5', 'нислэгийн feed ирсэнгүй (сүлжээ) — худал FAIL гаргахгүй');
+    } else {
+      check('OD5. Дотоодын шүүлт: ОУ НИСЛЭГ карт "0" БИШ — "—" + шалтгаан',
+        /—/.test(E.dom['ОУ НИСЛЭГ']) && !/(^|\s)0(\s|$)/.test(E.dom['ОУ НИСЛЭГ']) && /шүүлтээр хасагдсан/.test(E.dom['ОУ НИСЛЭГ']),
+        E.dom['ОУ НИСЛЭГ']);
+      check('OD5. Дотоодын шүүлт: ОУ ЗОРЧИГЧ карт "—" + шалтгаан, "0.0%" алга',
+        /—/.test(E.dom['ОУ ЗОРЧИГЧ']) && /шүүлтээр хасагдсан/.test(E.dom['ОУ ЗОРЧИГЧ']) && !/0\.0%/.test(E.dom['ОУ ЗОРЧИГЧ']),
+        E.dom['ОУ ЗОРЧИГЧ']);
+      check('OD5. Дотоодын шүүлт: ДОТООД ЗОРЧИГЧ карт тоотой хэвээр', /\d/.test(E.dom['ДОТООД ЗОРЧИГЧ']) && !/—/.test(E.dom['ДОТООД ЗОРЧИГЧ']),
+        E.dom['ДОТООД ЗОРЧИГЧ']);
+      check('OD5. "Бүгд" руу буцахад ОУ НИСЛЭГ тоо буцна (зөвхөн шүүлтийн үед хасагдана)',
+        E.back['ОУ НИСЛЭГ'] === E.all['ОУ НИСЛЭГ'] && !/—/.test(E.back['ОУ НИСЛЭГ']), E.back['ОУ НИСЛЭГ']);
+    }
   } finally {
     PROBE_SRC = '/admin/index.html';
     srv.close();
@@ -6939,13 +7079,14 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
   else if (process.argv.includes('--only=VR')) { await groupVR(); }
   else if (process.argv.includes('--only=I')) { groupI(); }
+  else if (process.argv.includes('--only=AX')) { groupAX(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
