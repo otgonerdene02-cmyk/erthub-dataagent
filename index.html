@@ -2967,6 +2967,7 @@
           <rect x="{{ db.x }}" y="{{ db.yP }}" width="{{ db.w }}" height="{{ db.hP }}" fill="#2E7CF6" fill-opacity=".6" rx="2"><title>{{ db.title }}</title></rect>
           <rect x="{{ db.x }}" y="{{ db.yF }}" width="{{ db.w }}" height="{{ db.hF }}" fill="#D2564A" rx="2"><title>{{ db.title }}</title></rect>
         </sc-for>
+        <polyline points="{{ detail.ri.daily.maPoints }}" fill="none" stroke="#F2A93B" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" pointer-events="none"></polyline>
         <sc-for list="{{ detail.ri.daily.xTicks }}" as="xt" hint-placeholder-count="7">
           <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap;line-height:14px;">{{ xt.label }}</div></foreignObject>
         </sc-for>
@@ -2974,6 +2975,7 @@
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--ink2);">
         <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:#2E7CF6;opacity:.6;"></span>{{ detail.ri.passedLabel }}</span>
         <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:#D2564A;"></span>{{ detail.ri.failedLabel }}</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:0;border-top:2px solid #F2A93B;"></span>{{ detail.ri.maLabel }}</span>
       </div>
     </div>
 
@@ -4628,11 +4630,16 @@ const DS_SCHEMA={
      дата мэт харуулж, Excel татах товч түүнийг файлаар гаргаж байв —
      "Тоо ЗОХИОХГҮЙ" дүрмийн шууд зөрчил. rows нь ХООСОН эхэлнэ: backend-ээс
      by_aimag ирэх хүртэл хүснэгт "мэдээлэл алга" гэж ил хэлнэ. */
-  road_inspect:{head:['Аймаг, нийслэл','Үзлэг','Тэнцээгүй','Тэнцээгүй хувь','Төлөв'],
-    types:['string','int','int','float','enum'],
+  road_inspect:{head:['Аймаг, нийслэл','Үзлэг','Тэнцсэн','Тэнцээгүй','Тэнцээгүй хувь','Эзлэх хувь','Төлөв'],
+    types:['string','int','int','int','float','float','enum'],
+    /* Өргөн (px) — "Төлөв"-ийн шошго нэг мөрөнд багтах ёстой (өмнө нь 2 мөрт
+       хуваагдаж харагдаж байв). */
+    widths:[150,74,84,96,112,92,170],
     notes:['Үзлэг хийсэн салбарын харьяалагдах аймаг, нийслэл',
-      'Тухайн хоногт бүртгэгдсэн үзлэгийн тоо','Тэнцээгүй дүгнэлт авсан үзлэгийн тоо',
-      'Тэнцээгүй үзлэгийн эзлэх хувь','Тухайн аймагт тэнцээгүй үзлэг бүртгэгдсэн эсэх'],
+      'Тухайн хоногт бүртгэгдсэн үзлэгийн тоо','Тэнцсэн үзлэг (үзлэг − тэнцээгүй)',
+      'Тэнцээгүй дүгнэлт авсан үзлэгийн тоо',
+      'Тэнцээгүй үзлэгийн эзлэх хувь','Энэ аймгийн үзлэг бүх аймгийн нийт дотроос эзлэх хувь',
+      'Тухайн аймагт тэнцээгүй үзлэг бүртгэгдсэн эсэх'],
     rows:[]},
   /* Агаарын тээврийн статистик — head/types/notes/rows ДӨРВҮҮЛЭЭ
      applyRealFlightsData()-д AIR_COLUMNS-аас бүрэн дахин бичигдэнэ. Энд
@@ -5859,6 +5866,21 @@ function roadInspectAnalysis(w,T,fmt,age,staleAfter){
   const catSum=cats.reduce((a,c)=>a+c.n,0);
   cats.forEach(c=>{c.pct=catSum?c.n/catSum*100:0;});
   cats.sort((a,b)=>b.n-a.n);
+  /* 7 хоногийн хөдөлгөөнт дундаж (MA7) — өдрийн хэлбэлзэл ба ажлын/амралтын
+     мөчлөгийг тэгшилнэ. Бүтэн 7 хоног цуглахгүй эхний 6 өдөр null. */
+  const ma7=days.map((d,i)=>{
+    if(i<6) return null;
+    let s=0; for(let k=i-6;k<=i;k++) s+=days[k].count;
+    return s/7;
+  });
+  /* Сүүлийн 7 хоногийн дундаж ба өмнөх 7 хоногийнх — ЗӨВХӨН 14 бүтэн хоног
+     байвал. Цуваа богино бол хандлагыг тооцохгүй (null). */
+  let trend=null;
+  if(days.length>=14){
+    const avg=a=>a.reduce((x,d)=>x+d.count,0)/a.length;
+    const cur=avg(days.slice(-7)), prev=avg(days.slice(-14,-7));
+    trend={cur:Math.round(cur),prev:Math.round(prev),pct:prev>0?(cur-prev)/prev*100:null};
+  }
   const stale=age!=null&&staleAfter!=null&&age>staleAfter;
   const pc=x=>x.toFixed(1);
   const lines=[];
@@ -5872,9 +5894,13 @@ function roadInspectAnalysis(w,T,fmt,age,staleAfter){
   }
   if(aimags.length) lines.push(fillTpl(T.s_top,{top:aimags[0].name,share:pc(aimags[0].share),count:fmt(aimags[0].count),n:aimags.length}));
   if(cats.length&&catSum>0) lines.push(fillTpl(T.s_cat,{cat:cats[0].name,pct:pc(cats[0].pct)}));
+  if(trend&&trend.pct!=null&&Math.abs(trend.pct)>=0.5){
+    lines.push(fillTpl(trend.pct<0?T.s_trend_down:T.s_trend_up,
+      {cur:fmt(trend.cur),prev:fmt(trend.prev),pct:pc(Math.abs(trend.pct))}));
+  }
   if(stale) lines.push(fillTpl(T.s_stale,{date:w.date,age:String(age)}));
   return {lines:lines.filter(Boolean),stale,total,failedSum,rate,dayCount:days.length,days,
-    weekday,wk,we,peak,low,aimags,cats,catSum};
+    weekday,wk,we,peak,low,aimags,cats,catSum,ma7,trend};
 }
 
 /* Хоногийн мэдээний НАС (хоногоор). ETL амьд ажиллаж байхад ч эх сурвалж
@@ -6933,18 +6959,22 @@ class Component extends DCLogic {
       const h=(x,i)=>stxt('ds_schema_road_inspect.head.'+i,x);
       const nt=(x,i)=>stxt('ds_schema_road_inspect.notes.'+i,x);
       DS_SCHEMA.road_inspect.head=[h('Аймаг, нийслэл',0),h('Үзлэг',1),
-        h('Тэнцээгүй',2),h('Тэнцээгүй хувь',3),h('Төлөв',4)];
+        h('Тэнцсэн',2),h('Тэнцээгүй',3),h('Тэнцээгүй хувь',4),h('Эзлэх хувь',5),h('Төлөв',6)];
       DS_SCHEMA.road_inspect.notes=[
         nt('Үзлэг хийсэн салбарын харьяалагдах аймаг, нийслэл',0),
         nt('Тухайн хоногт бүртгэгдсэн үзлэгийн тоо',1),
-        nt('Тэнцээгүй дүгнэлт авсан үзлэгийн тоо',2),
-        nt('Тэнцээгүй үзлэгийн эзлэх хувь',3),
-        nt('Тухайн аймагт тэнцээгүй үзлэг бүртгэгдсэн эсэх',4)];
+        nt('Тэнцсэн үзлэг (үзлэг − тэнцээгүй)',2),
+        nt('Тэнцээгүй дүгнэлт авсан үзлэгийн тоо',3),
+        nt('Тэнцээгүй үзлэгийн эзлэх хувь',4),
+        nt('Энэ аймгийн үзлэг бүх аймгийн нийт дотроос эзлэх хувь',5),
+        nt('Тухайн аймагт тэнцээгүй үзлэг бүртгэгдсэн эсэх',6)];
       const stBad=stxt('ds_schema_road_inspect.st_fail','Тэнцээгүй бүртгэгдсэн');
       const stOkA=stxt('ds_schema_road_inspect.st_clean','Бүгд тэнцсэн');
+      const sumA=top.reduce((a,r)=>a+(Number(r.count)||0),0);
       DS_SCHEMA.road_inspect.rows=top.map(r=>{
         const c=Number(r.count)||0, f=Number(r.failed)||0;
-        return [String(r.aimag||''),c,f,c?Number((f/c*100).toFixed(1)):0,
+        return [String(r.aimag||''),c,c-f,f,c?Number((f/c*100).toFixed(1)):0,
+          sumA?Number((c/sumA*100).toFixed(1)):0,
           (f>0?'warn:'+stBad:'ok:'+stOkA)];
       });
     }
@@ -6962,7 +6992,8 @@ class Component extends DCLogic {
         stxt('road_insp.wd_thu','Пү'),stxt('road_insp.wd_fri','Ба'),stxt('road_insp.wd_sat','Бя'),stxt('road_insp.wd_sun','Ня')],
       cats:[0,1,2,3,4,5].map(i=>stxt('road_fail_cats.'+i,['Ерөнхий','Тоормос','Жолооны механизм','Гэрэл','Утаа','Дуу чимээ'][i])),
       s_total:stxt('road_insp.s_total',''),s_peak:stxt('road_insp.s_peak',''),s_week_lower:stxt('road_insp.s_week_lower',''),
-      s_week_higher:stxt('road_insp.s_week_higher',''),s_top:stxt('road_insp.s_top',''),s_cat:stxt('road_insp.s_cat',''),s_stale:stxt('road_insp.s_stale','')
+      s_week_higher:stxt('road_insp.s_week_higher',''),s_top:stxt('road_insp.s_top',''),s_cat:stxt('road_insp.s_cat',''),s_stale:stxt('road_insp.s_stale',''),
+      s_trend_up:stxt('road_insp.s_trend_up',''),s_trend_down:stxt('road_insp.s_trend_down','')
     };
     const fmt=fmtNum;
     const A=roadInspectAnalysis(w,T,fmt,w?dataAgeDays(w.date):null,INSPECT_STALE_DAYS);
@@ -6972,6 +7003,7 @@ class Component extends DCLogic {
       mapTitle:stxt('road_insp.map_title',''),rankTitle:stxt('road_insp.rank_title',''),dailyTitle:stxt('road_insp.daily_title',''),
       catsTitle:stxt('road_insp.cats_title',''),weekTitle:stxt('road_insp.week_title',''),catsNote:stxt('road_insp.cats_note',''),
       passedLabel:stxt('road_insp.passed_label',''),failedLabel:stxt('road_insp.failed_label',''),weekendNote:stxt('road_insp.weekend_note',''),
+      maLabel:stxt('road_insp.ma_label','7 хоногийн дундаж'),
       mapNoGeo:stxt('road_insp.map_nogeo',''),noData:stxt('road_insp.no_data','Үзлэгийн өгөгдөл ачаалагдаагүй байна.')
     };
     /* Өгөгдөл алга — шаардлагатай бүх хэсгийг хоосон хэлбэрээр өгнө (шаблон
@@ -7007,7 +7039,10 @@ class Component extends DCLogic {
           title:fillTpl(stxt('road_insp.day_title',''),{date:d.date,count:fmt(d.count),failed:fmt(f)})};
       }),
       xTicks:days.map((d,i)=>({i,d})).filter(o=>o.i%5===0||o.i===days.length-1)
-        .map(o=>({fx:(pl+o.i*slot+slot/2-20).toFixed(1),fy:(DH-21).toFixed(1),label:o.d.date.slice(5)}))
+        .map(o=>({fx:(pl+o.i*slot+slot/2-20).toFixed(1),fy:(DH-21).toFixed(1),label:o.d.date.slice(5)})),
+      /* MA7 шугам — бүтэн 7 хоног цугласан өдрүүдээс л зурна. */
+      maPoints:A.ma7.map((v,i)=>v==null?null:(pl+i*slot+slot/2).toFixed(1)+','+(y0-v/maxC*H).toFixed(1))
+        .filter(Boolean).join(' ')
     };
 
     /* Гаригийн задаргаа: амралтын өдрүүд (Бя, Ня) өөр өнгөөр. */
@@ -8404,6 +8439,7 @@ class Component extends DCLogic {
     const isNum=(ci)=>types[ci]==='int'||types[ci]==='float';
     const isMono=(ci)=>isNum(ci)||types[ci]==='date';
     const defaultW=(ci)=>{
+      if(sc.widths&&sc.widths[ci]) return sc.widths[ci];
       if(types[ci]==='date') return 106;
       if(isNum(ci)) return Math.max(84,Math.min(130,(sc.head[ci]||'').length*8+30));
       if(types[ci]==='enum') return 124;
