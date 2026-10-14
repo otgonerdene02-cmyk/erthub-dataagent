@@ -77,6 +77,21 @@
       });
   }
 
+  /* Зорчигчийн галт тэрэгний ТҮҮХ — сар (ОН/ОУ), чиглэл, төрөл. from/to
+     (YYYY-MM-DD) заавал биш. Хариу: {status,months[],by_route[],by_type[]}
+     эсвэл {status:'no_data'}. 404/унтарсан бол null → "мэдээлэл алга". */
+  function fetchRailPassengersHistory(from, to) {
+    if (!BASE) return Promise.resolve(null);
+    var q = [];
+    if (from) q.push('from=' + encodeURIComponent(from));
+    if (to) q.push('to=' + encodeURIComponent(to));
+    return fetchJson(BASE + '/api/sectors/rail/passengers/history' + (q.length ? '?' + q.join('&') : ''))
+      .catch(function (e) {
+        console.info('[ErtHub] backend (rail/passengers/history) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
   /* Техникийн хяналтын үзлэг — ТУСДАА endpoint (road summary БИШ). road-ийн
      summary нь gold-ийн замын хөдөлгөөний ачаалал (vehicle_count) бөгөөд
      үзлэгийн тоо ӨӨР нэгжтэй тул хоёрыг хольж болохгүй. Хариу:
@@ -118,6 +133,7 @@
     fetchSectorSummary: fetchSectorSummary,
     fetchRailWagonLoading: fetchRailWagonLoading,
     fetchRailWagonHistory: fetchRailWagonHistory,
+    fetchRailPassengersHistory: fetchRailPassengersHistory,
     fetchRoadInspections: fetchRoadInspections,
     fetchVehicleRegistry: fetchVehicleRegistry
   };

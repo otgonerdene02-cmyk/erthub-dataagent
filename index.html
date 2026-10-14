@@ -2273,6 +2273,195 @@
     </div>
     </sc-if>
 
+        <!-- Зорчигчийн галт тэрэгний АНАЛИЗ — вагоны самбартай ижил хэлбэр.
+         Эх сурвалж: /api/sectors/rail/passengers/history. Түүх ирээгүй бол
+         зөвхөн "мэдээлэл алга". Борлуулалтын суваг silver-т байхгүй. -->
+    <sc-if value="{{ detail.isPaxDetail }}">
+    <div data-pax-an style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);font-weight:600;white-space:nowrap;">{{ detail.paxT.head }}</div>
+        <sc-if value="{{ detail.paxHasData }}">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">{{ detail.paxScope }}</span>
+        </sc-if>
+      </div>
+      <sc-if value="{{ detail.paxNoData }}">
+        <div style="background:var(--surface2);border:1px dashed var(--line2);border-radius:14px;padding:18px 20px;font-size:13px;color:var(--ink2);line-height:1.5;">{{ detail.paxT.noData }}</div>
+      </sc-if>
+      <sc-if value="{{ detail.paxHasData }}">
+        <div style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">{{ detail.paxT.filterTitle }}</div>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;min-width:52px;">{{ detail.paxT.fYear }}</div>
+            <sc-for list="{{ detail.paxFilterUi.yearChips }}" as="yc" hint-placeholder-count="3">
+              <button sc-camel-on-click="{{ yc.pick }}" style="{{ yc.style }}">{{ yc.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.paxT.fMonth }}</div>
+            <input type="number" value="{{ detail.paxFilterUi.mFrom }}" sc-camel-on-input="{{ detail.paxFilterUi.onMFrom }}" min="1" max="12" placeholder="1" style="{{ detail.paxFilterUi.inputStyle }}">
+            <span style="font-size:11.5px;color:var(--ink3);">—</span>
+            <input type="number" value="{{ detail.paxFilterUi.mTo }}" sc-camel-on-input="{{ detail.paxFilterUi.onMTo }}" min="1" max="12" placeholder="12" style="{{ detail.paxFilterUi.inputStyle }}">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;margin-left:4px;">{{ detail.paxFilterUi.summary }}</span>
+            <sc-if value="{{ detail.paxFilterUi.dirty }}">
+              <button sc-camel-on-click="{{ detail.paxFilterUi.reset }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.paxT.fReset }}</button>
+            </sc-if>
+          </div>
+        </div>
+        <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px;">
+          <sc-for list="{{ detail.paxKpis }}" as="wk" hint-placeholder-count="6">
+            <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px;">
+              <div style="font-size:9.5px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ wk.label }}</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.02em;">{{ wk.value }}</div>
+              <div style="font-size:11px;color:var(--ink3);margin-top:2px;">{{ wk.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ detail.paxHasPartial }}">
+          <div style="font-size:11.5px;color:var(--ink3);margin:-6px 0 14px;">* {{ detail.paxPartialNote }}</div>
+        </sc-if>
+
+        <div class="eh-g-1c" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.paxT.donutTitle }}</div>
+            <div style="display:flex;align-items:center;gap:20px;">
+              <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
+                <sc-for list="{{ detail.paxDonut }}" as="wd" hint-placeholder-count="2">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ wd.color }}" stroke-width="13" stroke-dasharray="{{ wd.dash }}" stroke-dashoffset="{{ wd.offset }}" transform="rotate(-90 50 50)"></circle>
+                </sc-for>
+              </svg>
+              <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
+                <sc-for list="{{ detail.paxDonut }}" as="wd" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <div style="width:9px;height:9px;border-radius:3px;background:{{ wd.color }};flex-shrink:0;"></div>
+                    <div style="font-size:13px;color:var(--ink2);flex:1;">{{ wd.label }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink);">{{ wd.pctLabel }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.paxT.monthsTitle }}</div>
+            <sc-if value="{{ detail.paxHasMonths }}">
+              <div style="display:flex;flex-direction:column;gap:11px;">
+                <sc-for list="{{ detail.paxMonths }}" as="wt" hint-placeholder-count="6">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ wt.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ wt.value }} · {{ wt.pct }}</span>
+                    </div>
+                    <div style="height:7px;border-radius:4px;background:var(--surface2);"><div style="height:100%;width:{{ wt.width }};border-radius:4px;background:{{ activeColor }};opacity:.8;"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.paxBreakdownPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.pending }}</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div class="eh-g-1c" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.paxT.chartTitle }}</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-bottom:12px;">{{ detail.paxT.chartLegend }}</div>
+            <svg sc-camel-view-box="0 0 640 230" style="width:100%;height:auto;display:block;">
+              <sc-for list="{{ detail.paxChart.yTicksLeft }}" as="yt" hint-placeholder-count="5">
+                <line x1="{{ detail.paxChart.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.paxChart.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
+                <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.paxChart.yTicksRight }}" as="yt2" hint-placeholder-count="5">
+                <foreignObject x="{{ yt2.fx }}" y="{{ yt2.fy }}" width="42" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:{{ activeColor }};font-family:'JetBrains Mono',monospace;text-align:left;padding-left:6px;">{{ yt2.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.paxChart.barRects }}" as="br" hint-placeholder-count="12">
+                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="{{ br.fill }}" opacity=".85" rx="2"><title>{{ br.tip }}</title></rect>
+              </sc-for>
+              <path d="{{ detail.paxChart.line }}" fill="none" stroke="{{ activeColor }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+              <sc-for list="{{ detail.paxChart.dotPts }}" as="dp" hint-placeholder-count="12">
+                <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ activeColor }}"><title>{{ dp.tip }}</title></circle>
+              </sc-for>
+              <sc-for list="{{ detail.paxChart.xTicks }}" as="xt" hint-placeholder-count="6">
+                <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
+                </foreignObject>
+              </sc-for>
+            </svg>
+          </div>
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.paxT.routesTitle }}</div>
+            <sc-if value="{{ detail.paxHasRoutes }}">
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <sc-for list="{{ detail.paxRoutes }}" as="ws" hint-placeholder-count="10">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ws.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ ws.value }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ ws.width }};border-radius:3px;background:{{ activeColor }};opacity:.8;"></div></div>
+                    <div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ ws.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.paxRoutesTotal }}</span>
+                <sc-if value="{{ detail.paxRoutesMore.show }}">
+                  <button sc-camel-on-click="{{ detail.paxRoutesMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.paxRoutesMore.label }}</button>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.paxBreakdownPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.pending }}</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.paxT.tableTitle }}</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;min-width:680px;">
+              <thead>
+                <tr style="color:var(--ink3);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">
+                  <th style="text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;">{{ detail.paxT.thMonth }}</th>
+                  <th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPax }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thTrips }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thDom }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntl }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntlPct }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPerTrip }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thMom }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thYoy }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ detail.paxRows }}" as="pr" hint-placeholder-count="12">
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <td style="text-align:left;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.month }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.pax }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.trips }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.dom }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intl }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intlPct }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.perTrip }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.mom }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.yoy }}</td>
+                  </tr>
+                </sc-for>
+                <tr style="font-weight:700;border-top:1px solid var(--line2);">
+                  <td style="text-align:left;padding:9px 6px;font-size:12px;">{{ detail.paxT.total }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.pax }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.trips }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.dom }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intl }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intlPct }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.perTrip }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
     <!-- Нэгдсэн шүүлт + KPI: эх veritech dashboard-той адил "Шүүлт" товч дарахад
          яг доор нь нээгддэг, БҮХ картад (KPI/chart/хүснэгт) нэгэн зэрэг
          нөлөөлдөг цонх — өмнө нь энэ панель хүснэгтийн карт дотор
@@ -5930,7 +6119,8 @@ function wagonAnalysisModel(all,sel,year){
   const stations=(bd&&Array.isArray(bd.by_station)?bd.by_station:[])
     .map(s=>({station:s.station,code:s.code,loaded:+s.loaded||0,unloaded:+s.unloaded||0}))
     .sort((a,b)=>b.loaded-a.loaded);
-  return {hasData:true,years,year:yr,monthCount:ms.length,days,partialN,
+  const yoyReason=yoy?'ok':(yr==='all'?'pick_year':'none');
+  return {hasData:true,years,year:yr,monthCount:ms.length,days,partialN,yoyReason,
     loaded,unloaded,dom,frn,domPct:pct(dom,dom+frn),frnPct:pct(frn,dom+frn),
     ratio:unloaded>0?loaded/unloaded:null,perDay:days>0?loaded/days:null,yoy,
     series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
@@ -5938,6 +6128,138 @@ function wagonAnalysisModel(all,sel,year){
     hasBreakdown,types,stations,
     typeTotal:types.reduce((t,x)=>t+x.loaded,0),
     stationTotal:stations.reduce((t,x)=>t+x.loaded,0)};
+}
+
+/* Зорчигчийн галт тэрэгний шүүлтийн ЦОНХ — backend-ээс ямар хугацааны
+   хариу татахыг тодорхойлно. Бүтэн түүх + бүтэн хугацаа бол null (татах
+   шаардлагагүй, `all` ашиглана). Бусад тохиолдолд from/to (YYYY-MM-DD). */
+function paxFetchWindow(all,year,mr){
+  const mFrom=Math.min(12,Math.max(1,+(mr&&mr.from)||1)), mTo=Math.min(12,Math.max(1,+(mr&&mr.to)||12));
+  const allYears=year==='all'||year==null;
+  if(allYears&&mFrom===1&&mTo===12) return null;
+  const ys=(all&&Array.isArray(all.months)?all.months:[]).map(m=>+String(m.month).slice(0,4)).filter(y=>y>0);
+  const y0=allYears?(ys.length?Math.min.apply(null,ys):0):+year;
+  const y1=allYears?(ys.length?Math.max.apply(null,ys):0):+year;
+  if(!(y0>0)||!(y1>0)) return null;
+  const pad=n=>String(n).padStart(2,'0');
+  const last=new Date(Date.UTC(y1,mTo,0)).getUTCDate();
+  return {from:y0+'-'+pad(mFrom)+'-01',to:y1+'-'+pad(mTo)+'-'+pad(last)};
+}
+
+/* Зорчигчийн галт тэрэгний АНАЛИЗ — /rail/passengers/history хариуг
+   самбарын хэлбэрт хөрвүүлнэ. ЦЭВЭР функц (tests/run.js PA*). Дутуу сар =
+   календарийн өдрийн <90%-д өгөгдөлтэй сар (вагонтой ижил дүрэм). Түүх
+   ирээгүй бол {hasData:false} — тоо ЗОХИОХГҮЙ. ОН = орон нутаг (дотоод),
+   ОУ = олон улс. YoY/MoM: хоёр сар ХОЁУЛАА бүтэн байвал л тооцно.
+   mr = {from,to} сарын хүрээ (1–12); бүтэн түүхийн чиглэл нь бүтэн хүрээ +
+   бүх жил үед л `all`-аас, бусад үед `sel`-ээс (шүүлтэд таарсан татлага). */
+function paxAnalysisModel(all,sel,year,mr){
+  const ok=h=>h&&h.status==='ok'&&Array.isArray(h.months)&&h.months.length;
+  if(!ok(all)) return {hasData:false};
+  const isPartial=m=>{
+    const ym=String(m.month).split('-'), y=+ym[0], mo=+ym[1];
+    const dim=+m.days_in_month||new Date(Date.UTC(y,mo,0)).getUTCDate();
+    return !(dim>0)||(+m.days||0)<dim*0.9;
+  };
+  const months=all.months.map(m=>({...m,partial:isPartial(m)}))
+    .sort((a,b)=>String(a.month)<String(b.month)?-1:String(a.month)>String(b.month)?1:0);
+  const years=[...new Set(months.map(m=>+String(m.month).slice(0,4)))].sort();
+  const yr=(year==='all'||year==null)?'all':+year;
+  const mFrom=Math.min(12,Math.max(1,+(mr&&mr.from)||1)), mTo=Math.min(12,Math.max(1,+(mr&&mr.to)||12));
+  const fullRange=mFrom===1&&mTo===12;
+  const mNo=m=>+String(m.month).slice(5);
+  const ms=months.filter(m=>(yr==='all'||+String(m.month).slice(0,4)===yr)&&mNo(m)>=mFrom&&mNo(m)<=mTo);
+  if(!ms.length) return {hasData:false};
+  const sum=(a,k)=>a.reduce((t,m)=>t+(+m[k]||0),0);
+  const pax=sum(ms,'passengers'), trips=sum(ms,'trips'), days=sum(ms,'days');
+  const dom=sum(ms,'domestic'), intl=sum(ms,'international');
+  const partialN=ms.filter(m=>m.partial).length;
+  const pct=(v,t)=>t>0?v/t*100:0;
+  let yoy=null;
+  if(yr!=='all'){
+    const prev=new Map(months.filter(m=>+String(m.month).slice(0,4)===yr-1&&!m.partial)
+      .map(m=>[String(m.month).slice(5),m]));
+    const pairs=ms.filter(m=>!m.partial&&prev.has(String(m.month).slice(5)));
+    const a=sum(pairs,'passengers'), b=pairs.reduce((t,m)=>t+(+prev.get(String(m.month).slice(5)).passengers||0),0);
+    if(pairs.length&&b>0) yoy={pct:(a-b)/b*100,months:pairs.length};
+  }
+  const yoyReason=yoy?'ok':(yr==='all'?'pick_year':'none');
+  /* Сар бүрийн мөр + өмнөх сартай (MoM) ба өмнөх оны ижил сартай (YoY) харьцуулалт.
+     Хоёул бүтэн сар байвал л тооцно — дутуу сарын тоо хэзээ ч өсөлт гэж гарахгүй. */
+  const byKey=new Map(months.map(m=>[String(m.month),m]));
+  const ymk=(y,mo)=>y+'-'+String(mo).padStart(2,'0');
+  const chg=(cur,prev)=>(cur&&prev&&!cur.partial&&!prev.partial&&(+prev.passengers||0)>0)
+    ?((+cur.passengers||0)-(+prev.passengers||0))/(+prev.passengers)*100:null;
+  const rows=ms.map(m=>{
+    const k=String(m.month), y=+k.slice(0,4), mo=+k.slice(5);
+    const prevM=byKey.get(mo===1?ymk(y-1,12):ymk(y,mo-1));
+    const yM=byKey.get(ymk(y-1,mo));
+    const p=+m.passengers||0, t=+m.trips||0, d=+m.domestic||0, i=+m.international||0;
+    return {month:k,label:k+(m.partial?' *':''),partial:m.partial,
+      passengers:p,trips:t,domestic:d,international:i,intlPct:pct(i,d+i),
+      perTrip:t>0?p/t:null,days:+m.days||0,mom:chg(m,prevM),yoy:chg(m,yM)};
+  });
+  const bd=(yr==='all'&&fullRange)?all:sel;
+  const routes=(bd&&Array.isArray(bd.by_route)?bd.by_route:[])
+    .map(r=>({route:r.route,trips:+r.trips||0,passengers:+r.passengers||0}))
+    .sort((a,b)=>b.passengers-a.passengers);
+  const hasBreakdown=routes.length>0;
+  const routeTotal=routes.reduce((t,r)=>t+r.passengers,0);
+  /* Сараар эрэмбэлсэн жагсаалт — дутуу сар тусад нь тэмдэглэгдэнэ */
+  const ranked=ms.map(m=>({month:String(m.month),passengers:+m.passengers||0,partial:m.partial}))
+    .sort((a,b)=>b.passengers-a.passengers);
+  return {hasData:true,years,year:yr,fullRange,rangeFrom:mFrom,rangeTo:mTo,monthCount:ms.length,days,partialN,
+    pax,trips,dom,intl,domPct:pct(dom,dom+intl),intlPct:pct(intl,dom+intl),
+    perTrip:trips>0?pax/trips:null,perDay:days>0?pax/days:null,yoy,yoyReason,
+    series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
+      dom:ms.map(m=>+m.domestic||0),intl:ms.map(m=>+m.international||0),trips:ms.map(m=>+m.trips||0)},
+    rows,ranked,hasBreakdown,routes,routeTotal,
+    topRouteShare:routeTotal>0&&routes.length?routes[0].passengers/routeTotal*100:null};
+}
+
+/* Зорчигчийн сарын график — ОН/ОУ-ийг ЭЭЛЖ харуулсан багана (нийт = өндөр)
+   + аяллын шугам (баруун тэнхлэг). Хоёр тэнхлэг БҮРД 0-ээс эхэлнэ; өмнөх
+   dual-axis нь шугамын тэнхлэгийг 0-ээс эхлүүлдэггүй байсан тул өсөлтийг
+   хэтрүүлж харуулдаг байв. Тоо бүр <title>-д (нэр — утга) гарна. */
+function buildPaxStackedChart(domSeries,intlSeries,tripSeries,labels){
+  const w=640,h=230,padL=58,padR=58,padT=16,padB=32;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const n=(domSeries&&domSeries.length)||0;
+  const base={w,h,padL,padR,padT,padB,axisX1:padL,axisX2:w-padR,axisYBottom:(padT+plotH).toFixed(1)};
+  if(!n) return {...base,barRects:[],line:'',dotPts:[],yTicksLeft:[],yTicksRight:[],xTicks:[]};
+  const dv=domSeries.map(v=>+v||0), iv=(intlSeries||[]).map(v=>+v||0), tv=(tripSeries||[]).map(v=>+v||0);
+  const totals=dv.map((v,i)=>v+(iv[i]||0));
+  /* "Ойлгомжтой" тэгш тэмдэглэгээ: 4 тэнцүү хэсэг, тоо нь 1/2/2.5/5 × 10^k */
+  const niceMax=v=>{
+    if(!(v>0)) return 1;
+    const mag=Math.pow(10,Math.floor(Math.log10(v))), f=v/mag;
+    return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*mag;
+  };
+  const barMax=niceMax(Math.max.apply(null,totals.concat([0]))*1.04);
+  const lineMax=niceMax(Math.max.apply(null,tv.concat([0]))*1.04);
+  const Y1=v=>padT+plotH*(1-v/barMax), Y2=v=>padT+plotH*(1-v/lineMax);
+  const slot=plotW/n, barW=Math.min(34,slot*0.62);
+  const X=i=>padL+i*slot+slot/2;
+  const fmt=v=>Math.round(v).toLocaleString('en-US');
+  const lbl=i=>(labels&&labels[i])||'';
+  const tipBar=i=>lbl(i)+' — ОН: '+fmt(dv[i])+' · ОУ: '+fmt(iv[i]||0)+' · нийт: '+fmt(totals[i]);
+  const barRects=[];
+  dv.forEach((d,i)=>{
+    const x=(padL+i*slot+(slot-barW)/2).toFixed(1), tip=tipBar(i);
+    const yDomTop=Y1(d), yIntlTop=Y1(d+(iv[i]||0)), yBase=padT+plotH;
+    barRects.push({x,y:yDomTop.toFixed(1),w:barW.toFixed(1),h:(yBase-yDomTop).toFixed(1),fill:'#2E7CF6',tip});
+    if(iv[i]>0) barRects.push({x,y:yIntlTop.toFixed(1),w:barW.toFixed(1),h:(yDomTop-yIntlTop).toFixed(1),fill:'#0FA37F',tip});
+  });
+  const xy=tv.map((v,i)=>[X(i),Y2(v)]);
+  const line=xy.length?'M'+xy.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L'):'';
+  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),tip:lbl(i)+' — аялал: '+fmt(tv[i])}));
+  const fr=[0,0.25,0.5,0.75,1];
+  const yTicksLeft=fr.map(f=>{const val=barMax*f,y=Y1(val);return {y:y.toFixed(1),label:fmt(val),fx:0,fy:(y-7).toFixed(1)};});
+  const yTicksRight=fr.map(f=>{const val=lineMax*f,y=Y2(val);return {y:y.toFixed(1),label:fmt(val),fx:(w-padR+4).toFixed(1),fy:(y-7).toFixed(1)};});
+  const every=Math.max(1,Math.ceil(n/12));
+  const xTicks=Array.from({length:n},(_,i)=>({x:X(i).toFixed(1),label:lbl(i),fx:(X(i)-20).toFixed(1),fy:(h-padB+8).toFixed(1)}))
+    .filter((_,i)=>i%every===0);
+  return {...base,barRects,line,dotPts,yTicksLeft,yTicksRight,xTicks};
 }
 
 /* miniSpark() УСТГАВ (2026-09-18): чиглэлээс (up/down) синус муруй ЗОХИОЖ
@@ -5991,6 +6313,7 @@ class Component extends DCLogic {
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12', airTreemapRegion:null,
     airRankExpanded:false, airCountryExpanded:false, airCargoExpanded:false,
     wagonYear:'all', wagonStationsExpanded:false, wagonHistVer:0,
+    paxYear:'all', paxMFrom:1, paxMTo:12, paxRoutesExpanded:false, paxHistVer:0,
     airAiThread:null, airAiInput:'',
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
@@ -6443,6 +6766,7 @@ class Component extends DCLogic {
       this._railWagonLoading=wagonLoadingToValue(d);
       this.applyRailWagonData();
       this.loadWagonHistory();   // ТУСАД: унавал дээрх хэсгийг хөндөхгүй
+      this.loadPaxHistory();
     }catch(e){
       console.info('[ErtHub] etransport-backend уншигдсангүй:',e.message);
     }
@@ -6459,6 +6783,45 @@ class Component extends DCLogic {
     }catch(e){
       console.info('[ErtHub] wagon-loading/history уншигдсангүй:',e.message);
     }
+  }
+  /* Зорчигчийн түүх — вагонтой ЯГ ИЖИЛ зарчим (тусдаа try, null → "мэдээлэл алга"). */
+  async loadPaxHistory(){
+    if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchRailPassengersHistory) return;
+    try{
+      this._paxHistAll=await EHBackend.fetchRailPassengersHistory();
+      this._paxHistSel=null;
+      this.setState(s=>({paxHistVer:s.paxHistVer+1}));
+    }catch(e){
+      console.info('[ErtHub] passengers/history уншигдсангүй:',e.message);
+    }
+  }
+  /* Шүүлт (он + сарын хүрээ) нэг урсгалаар: сонголт өөрчлөгдөх бүрт
+     backend-ээс зөвхөн шаардлагатай хүрээг (paxFetchWindow) дахин татна.
+     Хоцорсон хариуг token-оор үл тооно. */
+  setPaxYear(y){
+    this.setState({paxYear:y,paxRoutesExpanded:false},()=>this.refetchPax());
+  }
+  setPaxRange(key,raw){
+    const v=Math.min(12,Math.max(1,parseInt(raw,10)||1));
+    this.setState({[key]:v,paxRoutesExpanded:false},()=>this.refetchPax());
+  }
+  resetPaxFilter(){
+    this.setState({paxYear:'all',paxMFrom:1,paxMTo:12,paxRoutesExpanded:false},()=>this.refetchPax());
+  }
+  refetchPax(){
+    const st=this.state;
+    const win=paxFetchWindow(this._paxHistAll,st.paxYear,{from:st.paxMFrom,to:st.paxMTo});
+    this._paxHistSel=null;
+    const tok=this._paxSelTok=(this._paxSelTok||0)+1;
+    if(!win||typeof EHBackend==='undefined'||!EHBackend.fetchRailPassengersHistory){
+      this.setState(s=>({paxHistVer:s.paxHistVer+1}));
+      return;
+    }
+    EHBackend.fetchRailPassengersHistory(win.from,win.to).then(d=>{
+      if(tok!==this._paxSelTok) return;
+      this._paxHistSel=d;
+      this.setState(s=>({paxHistVer:s.paxHistVer+1}));
+    });
   }
   setWagonYear(y){
     this.setState({wagonYear:y,wagonStationsExpanded:false});
@@ -8195,7 +8558,7 @@ class Component extends DCLogic {
       {label:T('kpi_dom','Дотоодын ачилт'),value:(m.domPct).toFixed(1)+'%',sub:T('kpi_dom_sub','ачсан вагоны')},
       {label:T('kpi_perday','Өдрийн дундаж ачилт'),value:m.perDay==null?dash:fmt(m.perDay),sub:unit},
       {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?((m.yoy.pct>0?'+':'')+m.yoy.pct.toFixed(1)+'%'):dash,
-        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):T('kpi_yoy_none','харьцуулах бүтэн сар алга')}
+        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):(m.yoyReason==='pick_year'?T('kpi_yoy_pick','жил сонгож харьцуулна'):T('kpi_yoy_none','харьцуулах бүтэн сар алга'))}
     ];
     const circ=2*Math.PI*40;
     const segs=[{label:T('dom_label','Дотоод'),pct:m.domPct,color:'#2E7CF6'},
@@ -8214,7 +8577,7 @@ class Component extends DCLogic {
       width:(s.loaded/(stMax||1)*100).toFixed(0)+'%'}));
     const extra=Math.max(0,m.stations.length-10);
     const chart=buildDualAxisChart(m.series.loaded,m.series.unloaded,m.series.labels);
-    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat(m.years.map(y=>({label:String(y),y}))).map(c=>{
+    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat((m.years||[]).map(y=>({label:String(y),y}))).map(c=>{
       const on=c.y===m.year;
       return {label:c.label,
         pick:()=>this.setWagonYear(c.y),
@@ -8232,6 +8595,97 @@ class Component extends DCLogic {
       wagonChart:chart,wagonYearChips:yearChips,
       wagonPartialNote:partialNote,wagonHasPartial:!!partialNote,
       wagonScope:m.monthCount+' '+T('scope_months','сар')+' · '+fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')};
+  }
+  /* Зорчигчийн датасэтийн анализын самбар — paxAnalysisModel() үр дүнг
+     темплейтийн хэлбэрт хөрвүүлнэ. Текст: content.json → site.pax_an.
+     Шүүлт (он + сарын хүрээ) нь KPI/донут/график/хүснэгт бүгдэд нэгэн зэрэг
+     хамаарна — агаарын хуудасны "Нэгдсэн шүүлт" загвартай адил. */
+  buildPaxAnalysis(){
+    const T=(k,fb)=>stxt('pax_an.'+k,fb);
+    const st=this.state;
+    const m=paxAnalysisModel(this._paxHistAll,this._paxHistSel,st.paxYear,{from:st.paxMFrom,to:st.paxMTo});
+    const fmt=v=>Math.round(v).toLocaleString('en-US');
+    const dash=T('dash','—');
+    const pctTxt=v=>v==null?dash:((v>0?'+':'')+v.toFixed(1)+'%');
+    const base={isPaxDetail:true,paxHasData:m.hasData,paxNoData:!m.hasData,
+      paxT:{head:T('head','Зорчигчийн галт тэрэгний анализ'),
+        noData:T('no_data','Түүхийн мэдээлэл холбогдоогүй — сарын анализ харуулах боломжгүй.'),
+        donutTitle:T('donut_title','Орон нутаг / олон улсын харьцаа'),
+        monthsTitle:T('months_title','Сараар эрэмбэлсэн зорчигч'),
+        routesTitle:T('routes_title','Чиглэлээр зорчигч'),
+        chartTitle:T('chart_title','Сараар: орон нутаг / олон улс ба аялал'),
+        chartLegend:T('chart_legend','Багана — ОН (цэнхэр) + ОУ (ногоон), зүүн тэнхлэг · шугам — аялал, баруун тэнхлэг. Хоёр тэнхлэг тэгээс эхэлнэ.'),
+        pending:T('breakdown_pending','Чиглэлийн задаргаа ачаалж байна…'),
+        filterTitle:T('f_title','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
+        fYear:T('f_year','Жил'), fMonth:T('f_month','Сар'), fRange:T('f_range','хүрээ'),
+        fReset:T('f_reset','Шүүлт арилгах'), fActive:T('f_active','Шүүлт:'),
+        tableTitle:T('table_title','Сарын дэлгэрэнгүй'), total:T('total','Нийт'),
+        thMonth:T('th_month','Сар'), thPax:T('th_pax','Зорчигч'), thTrips:T('th_trips','Аялал'),
+        thDom:T('th_dom','ОН'), thIntl:T('th_intl','ОУ'), thIntlPct:T('th_intl_pct','ОУ %'),
+        thPerTrip:T('th_per_trip','Аяллын дундаж'), thMom:T('th_mom','Өмнөх сараас'), thYoy:T('th_yoy','Өмнөх оноос')}};
+    /* Шүүлтийн самбар — хоосон түүхэд харагдахгүй */
+    const yrOn=m.year==='all'?T('years_all','Бүгд'):String(m.year);
+    const rangeOn=m.fullRange?T('f_full_range','бүх сар'):(m.rangeFrom===m.rangeTo?String(m.rangeFrom):m.rangeFrom+'–'+m.rangeTo)+' '+T('scope_months','сар');
+    const inputStyle='width:64px;font-family:\'JetBrains Mono\',monospace;font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);';
+    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat((m.years||[]).map(y=>({label:String(y),y}))).map(c=>{
+      const on=c.y===m.year;
+      return {label:c.label,
+        pick:()=>this.setPaxYear(c.y),
+        style:'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
+          +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);')};
+    });
+    const filterUi={
+      yearChips,mFrom:String(st.paxMFrom),mTo:String(st.paxMTo),inputStyle,
+      onMFrom:(e)=>this.setPaxRange('paxMFrom',e.target.value),
+      onMTo:(e)=>this.setPaxRange('paxMTo',e.target.value),
+      summary:T('f_active','Шүүлт:')+' '+yrOn+' · '+rangeOn,
+      dirty:!(m.year==='all'&&m.fullRange),
+      reset:()=>this.resetPaxFilter()
+    };
+    if(!m.hasData) return {...base,paxFilterUi:filterUi};
+    const unit=T('unit','зорчигч');
+    const kpis=[
+      {label:T('kpi_pax','Нийт зорчигч'),value:fmt(m.pax),sub:unit},
+      {label:T('kpi_trips','Аялал'),value:fmt(m.trips),sub:T('kpi_trips_sub','галт тэрэг × чиглэл × өдөр')},
+      {label:T('kpi_per_trip','Аялал бүрийн дундаж'),value:m.perTrip==null?dash:fmt(m.perTrip),sub:unit},
+      {label:T('kpi_intl','Олон улсын (ОУ)'),value:m.intlPct.toFixed(1)+'%',sub:T('kpi_intl_sub','нийт зорчигчийн')},
+      {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:unit},
+      {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?pctTxt(m.yoy.pct):dash,
+        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):(m.yoyReason==='pick_year'?T('kpi_yoy_pick','жил сонгож харьцуулна'):T('kpi_yoy_none','өмнөх оны өгөгдөл алга'))}
+    ];
+    const circ=2*Math.PI*40;
+    const segs=[{label:T('dom_label','Орон нутаг (ОН)'),pct:m.domPct,color:'#2E7CF6'},
+                {label:T('intl_label','Олон улс (ОУ)'),pct:m.intlPct,color:'#0FA37F'}];
+    let acc=0;
+    const donut=segs.map(s=>{const o={...s,pctLabel:s.pct.toFixed(1)+'%',
+      dash:(s.pct/100*circ).toFixed(1)+' '+circ.toFixed(1),offset:(-acc/100*circ).toFixed(1)};acc+=s.pct;return o;});
+    const top=m.ranked.length?m.ranked[0].passengers:1;
+    const months=m.ranked.map(r=>({name:r.month+(r.partial?' *':''),value:fmt(r.passengers),
+      width:(r.passengers/(top||1)*100).toFixed(0)+'%',
+      pct:m.pax>0?(r.passengers/m.pax*100).toFixed(1)+'%':''}));
+    const expanded=!!st.paxRoutesExpanded;
+    const rMax=m.routes.length?m.routes[0].passengers:1;
+    const rows=(expanded?m.routes:m.routes.slice(0,10)).map(r=>({name:r.route,value:fmt(r.passengers),
+      sub:fmt(r.trips)+' '+T('routes_trips','аялал')+' · '+(m.routeTotal>0?(r.passengers/m.routeTotal*100).toFixed(1):'0.0')+'%',
+      width:(r.passengers/(rMax||1)*100).toFixed(0)+'%'}));
+    const extra=Math.max(0,m.routes.length-10);
+    const chart=buildPaxStackedChart(m.series.dom,m.series.intl,m.series.trips,m.series.labels);
+    const table=m.rows.map(r=>({month:r.label,pax:fmt(r.passengers),trips:fmt(r.trips),dom:fmt(r.domestic),
+      intl:fmt(r.international),intlPct:r.intlPct.toFixed(1)+'%',perTrip:r.perTrip==null?dash:fmt(r.perTrip),
+      mom:pctTxt(r.mom),yoy:pctTxt(r.yoy)}));
+    const partialNote=m.partialN>0?(m.partialN+' '+T('partial_note','сар дутуу өгөгдөлтэй (* тэмдэглэгээ) — жилийн харьцуулалтад ороогүй')):'';
+    const topShare=m.topRouteShare==null?'':(' · '+T('top_share','тэргүүлэгч чиглэл')+' '+m.topRouteShare.toFixed(1)+'%');
+    return {...base,paxFilterUi:filterUi,paxKpis:kpis,paxDonut:donut,paxMonths:months,paxHasMonths:months.length>0,
+      paxRows:table,paxTotal:{pax:fmt(m.pax),trips:fmt(m.trips),dom:fmt(m.dom),intl:fmt(m.intl),
+        intlPct:m.intlPct.toFixed(1)+'%',perTrip:m.perTrip==null?dash:fmt(m.perTrip)},
+      paxRoutes:rows,paxHasRoutes:rows.length>0,paxBreakdownPending:!m.hasBreakdown,
+      paxRoutesMore:{show:extra>0,expanded,
+        label:expanded?stxt('rank.collapse','△ Хураах'):('↕ '+extra+' '+stxt('rank.more_rows','нэмэлт мөр')),
+        toggle:()=>this.setState(s=>({paxRoutesExpanded:!s.paxRoutesExpanded}))},
+      paxRoutesTotal:T('routes_total','Нийт')+': '+fmt(m.routeTotal)+topShare,
+      paxChart:chart,
+      paxPartialNote:partialNote,paxHasPartial:!!partialNote,
+      paxScope:m.monthCount+' '+T('scope_months','сар')+' · '+fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')};
   }
   buildDocDetail(){
     const cat=this.state.docCat, list=DOCS[cat]||[];
@@ -9518,6 +9972,7 @@ class Component extends DCLogic {
     const roadExtra=(isRoadInspect&&this.state.page==='detail')?this.buildRoadInspectExtra():{};
     const isAirDetail=dsel.sector==='air';
     const wagonExtra=(dsel.source==='railWagon'&&this.state.page==='detail')?this.buildWagonAnalysis():{};
+    const paxExtra=(dsel.source==='railPax'&&this.state.page==='detail')?this.buildPaxAnalysis():{};
     let airExtra={};
     if(isAirDetail){
       const sAir=SECTORS.air;
@@ -9668,7 +10123,7 @@ class Component extends DCLogic {
     const detail={
       t:detailT,
       dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
-      isAirDetail,...airExtra,...wagonExtra,trendFill:isAirDetail?' eh-fill':'',notRoadInspect:!isRoadInspect,...roadExtra,
+      isAirDetail,...airExtra,...wagonExtra,...paxExtra,trendFill:isAirDetail?' eh-fill':'',notRoadInspect:!isRoadInspect,...roadExtra,
       freqCard,useCard,
       name:dsel.name,desc:dsel.desc,agency:dsel.agency,fmt:dsel.fmt,freq:dsel.freq,use:dsel.use,
       color:NEON[dsel.sector],glyph:GLYPH[dsel.sector],sectorLabel:SECTORS[dsel.sector].label,
