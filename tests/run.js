@@ -5480,6 +5480,13 @@ async function groupBE() {
     /schema:'road_inspect',source:'roadInspect'/.test(dcScript()));
   check('BE33. DS_SCHEMA.road_inspect анхнаасаа ХООСОН мөртэй (зохиомол дата алга)',
     /road_inspect:\{head:\[[\s\S]*?rows:\[\]\}/.test(dcScript()));
+  /* Регресс: "Төлөв" шошго ("Тэнцээгүй бүртгэгдсэн") амьд сайтад 2 мөрөнд
+     хуваагдаж байв — 170px багана хэмжээс яг таарч sub-pixel-ээр багтаагүй.
+     Шошго ~170px шаардана, тиймээс сүүлийн баганы өргөн ≥ 190 байх ёстой. */
+  const wm = /road_inspect:\{head:\[[\s\S]*?widths:\[([\d,\s]+)\]/.exec(dcScript());
+  const wv = wm ? wm[1].split(',').map(Number) : [];
+  check('BE33. Схемийн widths нь баганын тоотой таарна (7) ба "Төлөв" ≥ 190px (шошго 2 мөр болохгүй)',
+    wv.length === 7 && wv[6] >= 190, JSON.stringify(wv));
   const ISch = I.DSS.road_inspect;
   check('BE33. by_aimag-ийн 3 мөр хүснэгтэд буув', ISch.rows.length === 3, JSON.stringify(ISch.rows.length));
   check('BE33. Толгой content.json-оос (7 багана: тэнцсэн/тэнцээгүй/хувь/эзлэх хувь нэмэгдсэн)',
