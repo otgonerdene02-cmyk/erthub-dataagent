@@ -20,6 +20,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const http = require('http');
 const { execFileSync, spawn } = require('child_process');
 
@@ -467,14 +468,20 @@ setTimeout(poll,1000);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 async function runProbe(jsBody, waitMs) {
   PROBE_JS = jsBody; PROBE_RESULT = null;
+  /* Тусдаа профайл — өөрийн хэрэглэгчийн Chrome эсвэл зэрэгцээ проб руу
+     хуудас дамжуулж (process handoff), хугацаа хэтэрдэг байсныг зайлсхийнэ */
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'erthub-probe-'));
   const ch = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-sandbox',
     '--no-first-run', '--no-default-browser-check', '--disable-extensions',
     '--disable-background-networking', '--disable-sync', '--mute-audio',
     '--disable-features=Translate,OptimizationHints',
+    '--user-data-dir=' + profile,
     'http://localhost:' + PORT + '/__probe__'], { stdio: 'ignore' });
   const deadline = Date.now() + (waitMs || 90000);
   while (PROBE_RESULT === null && Date.now() < deadline) await sleep(250);
   try { ch.kill(); } catch (e) {}
+  /* Профайлыг цэвэрлэнэ; Windows дээр Chrome түгжсэн байвал алгасна */
+  setTimeout(() => { try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) {} }, 1000);
   if (PROBE_RESULT === null) return { __err: 'probe хугацаа хэтэрлээ' };
   try { return JSON.parse(PROBE_RESULT); }
   catch (e) { return { __err: 'JSON задлахад алдаа: ' + e.message }; }
@@ -618,7 +625,7 @@ async function groupC() {
   } finally { srv.close(); }
 }
 
-const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n  await sleep(3500);\n  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',\n    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',\n    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',\n    r06:'sec-06',u07:'sec-07'};\n  const norm=t=>t.replace(/[\\s\\u00a0]+/g,' ').trim();\n  const pvT=()=>norm(d.getElementById('pvhost').innerText);\n  const edT=()=>norm(d.querySelector('.edit2').innerText);\n  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost rect,#pvhost circle,#pvhost path,'+\n      '#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvrk i,'+\n      '#pvhost .pvcd .d,#pvhost .sp-val'))\n    .map(e=>e.tagName+':'+(e.getAttribute('height')||e.getAttribute('d')||\n      e.getAttribute('stroke-dasharray')||e.getAttribute('style')||e.textContent)).join('|');\n  const snap=()=>({t:pvT(),g:geo()});\n  const go=id=>{ let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();\n    const s=d.querySelector('[data-section=\"'+SEC[id]+'\"]'); if(!s) return false;\n    s.click(); const c=d.querySelector('[data-widget=\"'+id+'\"]'); if(!c) return false;\n    c.click(); return true; };\n  const probeAll=(q,attr,mk,scope)=>{ const out={};\n    [].slice.call(d.querySelectorAll(q)).map(x=>x.getAttribute(attr)).forEach(k=>{\n      const e=d.querySelector('['+attr+'=\"'+k+'\"]'); if(!e) return;\n      const ov=e.value, pr=mk(k);\n      e.value=pr; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n      out[k]=scope().indexOf(pr)>=0?'PASS':'FAIL';\n      e.value=ov; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n    }); return out; };\n  const R={rows:[]};\n  for(const id of Object.keys(SEC)){\n    const row={id:id};\n    if(!go(id)){ row.nav=false; R.rows.push(row); continue }\n    row.nav=true;\n    const pw=()=>!!d.querySelector('[data-periodwarn]');\n    row.pw0=pw();\n    const s0=snap();\n    const sels=[].slice.call(d.querySelectorAll('[data-slot]'));\n    if(!sels.length){ row.swap='N/A'; row.back='N/A' }\n    else{\n      const sel=sels[0], cur=sel.value;\n      const en=[].slice.call(sel.options).filter(o=>!o.disabled&&o.value!==cur).map(o=>o.value);\n      const all=[].slice.call(sel.options).map(o=>o.value).filter(v=>v!==cur);\n      const pref=en.filter(v=>v);\n      const tgt=pref.length?pref[0]:(en.length?en[0]:all[0]);\n      sel.value=tgt; sel.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s1=snap();\n      row.pwSwap=pw();\n      row.swap=(s1.t!==s0.t||s1.g!==s0.g);\n      row.swapInfo=(cur||'—')+' → '+(tgt||'—');\n      const s2=d.querySelector('[data-slot]');\n      s2.value=cur; s2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s3=snap();\n      row.pwBack=pw();\n      row.back=(s3.t===s0.t&&s3.g===s0.g);\n    }\n    const tf=probeAll('[data-tf]','data-tf',k=>'ZZ'+k.toUpperCase()+'ZZ',pvT);\n    const sf=probeAll('.e-fm [data-sf]','data-sf',()=>'ZZSFZZ',pvT);\n    const rf=probeAll('[data-rf]','data-rf',()=>'ZZRFZZ',edT);\n    row.tfN=Object.keys(tf).length; row.sfN=Object.keys(sf).length; row.rfN=Object.keys(rf).length;\n    row.dead=[].concat(Object.entries(tf),Object.entries(sf),Object.entries(rf))\n      .filter(x=>x[1]!=='PASS').map(x=>x[0]);\n    row.text=Object.values(tf).every(v=>v==='PASS');\n    R.rows.push(row);\n  }\n  if(go('hero_px')){\n    const sx=d.querySelector('[data-slot]');\n    sx.value='air.weekly_pax'; sx.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const vis=()=>{const b=d.querySelector('[data-periodwarn]');\n      return !!b&&b.style.display!=='none'};\n    R.px={warn:vis()};\n    const fb=d.querySelector('[data-periodwarn] [data-autoname]');\n    R.px.fix=fb?fb.getAttribute('data-autoname'):null;\n    if(fb) fb.click();\n    R.px.title=(d.querySelector('[data-tf=\"title\"]')||{}).value;\n    R.px.warnAfterFix=vis();\n    const sy=d.querySelector('[data-slot]');\n    sy.value=''; sy.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const cc=d.querySelector('[data-tcancel]'); if(cc&&!cc.disabled) cc.click();\n  }\n  if(go('ls')){\n    const pv=()=>{const x=d.getElementById('pendRow');return !!x&&x.style.display!=='none'};\n    const t1=d.querySelector('[data-tf=\"title\"]');\n    const orig=t1.value;\n    t1.value='ZZDRAFTZZ'; t1.dispatchEvent(new w.Event('input',{bubbles:true}));\n    R.dr={bar:pv()};\n    let q,qn=0; while((q=d.querySelector('[data-back]'))&&qn++<6) q.click();\n    R.dr.barAway=pv();\n    go('ls');\n    R.dr.kept=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZDRAFTZZ';\n    d.querySelector('[data-penddrop]').click();\n    R.dr.dropped=(d.querySelector('[data-tf=\"title\"]')||{}).value===orig&&!pv();\n    const t2=d.querySelector('[data-tf=\"title\"]');\n    t2.value='ZZAPPLYZZ'; t2.dispatchEvent(new w.Event('input',{bubbles:true}));\n    let q2,qm=0; while((q2=d.querySelector('[data-back]'))&&qm++<6) q2.click();\n    d.querySelector('[data-pendsave]').click();\n    go('ls');\n    R.dr.applied=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZAPPLYZZ'&&!pv();\n    const t3=d.querySelector('[data-tf=\"title\"]');\n    t3.value=orig; t3.dispatchEvent(new w.Event('input',{bubbles:true}));\n    const sv=d.querySelector('[data-tsave]'); if(sv&&!sv.disabled) sv.click();\n  }\n  if(go('hero_fl')){\n    const a1=d.querySelector('[data-slot]'), c1=a1.value;\n    const fo=[].slice.call(a1.options).filter(function(o){\n      return !o.disabled&&o.value.indexOf('field:')===0&&o.value.indexOf('field:|')!==0})[0];\n    if(fo){\n      a1.value=fo.value; a1.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt={pick:fo.value,mid:d.getElementById('dirtyMsg').textContent};\n      /* render() дараа select нь ШИНЭ зангилаа — ДАХИН асууж авна */\n      const a2=d.querySelector('[data-slot]');\n      R.rt.fresh=(a1!==a2);\n      a2.value=c1; a2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt.back=d.getElementById('dirtyMsg').textContent;\n      R.rt.card=(d.querySelector('#pvhost')||{}).innerText;\n    }\n  }\n  R.dirty=d.getElementById('dirtyMsg').textContent;\n  return R;\n}";
+const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n  await sleep(3500);\n  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);\n  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',\n    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',\n    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',\n    r06:'sec-06',u07:'sec-07'};\n  const norm=t=>t.replace(/[\\s\\u00a0]+/g,' ').trim();\n  const pvT=()=>norm(d.getElementById('pvhost').innerText);\n  const edT=()=>norm(d.querySelector('.edit2').innerText);\n  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost rect,#pvhost circle,#pvhost path,'+\n      '#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvrk i,'+\n      '#pvhost .pvcd .d,#pvhost .sp-val'))\n    .map(e=>e.tagName+':'+(e.getAttribute('height')||e.getAttribute('d')||\n      e.getAttribute('stroke-dasharray')||e.getAttribute('style')||e.textContent)).join('|');\n  const snap=()=>({t:pvT(),g:geo()});\n  const go=id=>{ let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();\n    const s=d.querySelector('[data-section=\"'+SEC[id]+'\"]'); if(!s) return false;\n    s.click(); const c=d.querySelector('[data-widget=\"'+id+'\"]'); if(!c) return false;\n    c.click(); return true; };\n  const probeAll=(q,attr,mk,scope)=>{ const out={};\n    [].slice.call(d.querySelectorAll(q)).map(x=>x.getAttribute(attr)).forEach(k=>{\n      const e=d.querySelector('['+attr+'=\"'+k+'\"]'); if(!e) return;\n      const ov=e.value, pr=mk(k);\n      e.value=pr; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n      out[k]=scope().indexOf(pr)>=0?'PASS':'FAIL';\n      e.value=ov; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n    }); return out; };\n  const R={rows:[]};\n  for(const id of Object.keys(SEC)){\n    const row={id:id};\n    if(!go(id)){ row.nav=false; R.rows.push(row); continue }\n    row.nav=true;\n    const pw=()=>!!d.querySelector('[data-periodwarn]');\n    row.pw0=pw();\n    const s0=snap();\n    const sels=[].slice.call(d.querySelectorAll('[data-slot]'));\n    if(!sels.length){ row.swap='N/A'; row.back='N/A' }\n    else{\n      const sel=sels[0], cur=sel.value;\n      const en=[].slice.call(sel.options).filter(o=>!o.disabled&&o.value!==cur).map(o=>o.value);\n      const all=[].slice.call(sel.options).map(o=>o.value).filter(v=>v!==cur);\n      const pref=en.filter(v=>v);\n      const tgt=pref.length?pref[0]:(en.length?en[0]:all[0]);\n      sel.value=tgt; sel.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s1=snap();\n      row.pwSwap=pw();\n      row.swap=(s1.t!==s0.t||s1.g!==s0.g);\n      row.swapInfo=(cur||'—')+' → '+(tgt||'—');\n      const s2=d.querySelector('[data-slot]');\n      s2.value=cur; s2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s3=snap();\n      row.pwBack=pw();\n      row.back=(s3.t===s0.t&&s3.g===s0.g);\n    }\n    const tf=probeAll('[data-tf]','data-tf',k=>'ZZ'+k.toUpperCase()+'ZZ',pvT);\n    const sf=probeAll('.e-fm [data-sf]','data-sf',()=>'ZZSFZZ',pvT);\n    const rf=probeAll('[data-rf]','data-rf',()=>'ZZRFZZ',edT);\n    row.tfN=Object.keys(tf).length; row.sfN=Object.keys(sf).length; row.rfN=Object.keys(rf).length;\n    row.dead=[].concat(Object.entries(tf),Object.entries(sf),Object.entries(rf))\n      .filter(x=>x[1]!=='PASS').map(x=>x[0]);\n    row.text=Object.values(tf).every(v=>v==='PASS');\n    R.rows.push(row);\n  }\n  if(go('hero_px')){\n    const sx=d.querySelector('[data-slot]');\n    sx.value='air.weekly_pax'; sx.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const vis=()=>{const b=d.querySelector('[data-periodwarn]');\n      return !!b&&b.style.display!=='none'};\n    R.px={warn:vis()};\n    const fb=d.querySelector('[data-periodwarn] [data-autoname]');\n    R.px.fix=fb?fb.getAttribute('data-autoname'):null;\n    if(fb) fb.click();\n    R.px.title=(d.querySelector('[data-tf=\"title\"]')||{}).value;\n    R.px.warnAfterFix=vis();\n    const sy=d.querySelector('[data-slot]');\n    sy.value=''; sy.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const cc=d.querySelector('[data-tcancel]'); if(cc&&!cc.disabled) cc.click();\n  }\n  if(go('ls')){\n    const pv=()=>{const x=d.getElementById('pendRow');return !!x&&x.style.display!=='none'};\n    const t1=d.querySelector('[data-tf=\"title\"]');\n    const orig=t1.value;\n    t1.value='ZZDRAFTZZ'; t1.dispatchEvent(new w.Event('input',{bubbles:true}));\n    R.dr={bar:pv()};\n    let q,qn=0; while((q=d.querySelector('[data-back]'))&&qn++<6) q.click();\n    R.dr.barAway=pv();\n    go('ls');\n    R.dr.kept=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZDRAFTZZ';\n    d.querySelector('[data-penddrop]').click();\n    R.dr.dropped=(d.querySelector('[data-tf=\"title\"]')||{}).value===orig&&!pv();\n    const t2=d.querySelector('[data-tf=\"title\"]');\n    t2.value='ZZAPPLYZZ'; t2.dispatchEvent(new w.Event('input',{bubbles:true}));\n    let q2,qm=0; while((q2=d.querySelector('[data-back]'))&&qm++<6) q2.click();\n    d.querySelector('[data-pendsave]').click();\n    go('ls');\n    R.dr.applied=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZAPPLYZZ'&&!pv();\n    const t3=d.querySelector('[data-tf=\"title\"]');\n    t3.value=orig; t3.dispatchEvent(new w.Event('input',{bubbles:true}));\n    const sv=d.querySelector('[data-tsave]'); if(sv&&!sv.disabled) sv.click();\n  }\n  if(go('hero_fl')){\n    const a1=d.querySelector('[data-slot]'), c1=a1.value;\n    const fo=[].slice.call(a1.options).filter(function(o){\n      return !o.disabled&&o.value.indexOf('field:')===0&&o.value.indexOf('field:|')!==0})[0];\n    if(fo){\n      a1.value=fo.value; a1.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt={pick:fo.value,mid:d.getElementById('dirtyMsg').textContent};\n      /* render() дараа select нь ШИНЭ зангилаа — ДАХИН асууж авна */\n      const a2=d.querySelector('[data-slot]');\n      R.rt.fresh=(a1!==a2);\n      a2.value=c1; a2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt.back=d.getElementById('dirtyMsg').textContent;\n      R.rt.card=(d.querySelector('#pvhost')||{}).innerText;\n    }\n  }\n  R.dirty=d.getElementById('dirtyMsg').textContent;\n  return R;\n}";
 
 /* ── Хугацааны нарийвчлалын (period grain) логикийг АДМИНЫ ЭХ КОДООС
    гаргаж авна. Тест хуулбар бичихгүй: админ юу боддог, тест ЯГ түүгээр
@@ -1392,6 +1399,7 @@ async function groupH() {
 const PROBE_I = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await sleep(4000);
+  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);
   const R={};
   const sec=d.querySelector('[data-section="sec-01"]');
   if(!sec) return {__err:'sec-01 олдсонгүй'};
@@ -1422,6 +1430,7 @@ const PROBE_I = `async function(d,w){
 const PROBE_I6 = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await sleep(4000);
+  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);
   const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',
     w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',
     w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',
@@ -1501,6 +1510,7 @@ async function groupI3() {
 const PROBE_I7 = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await sleep(4000);
+  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);
   const R={};
   const pvT=()=>{const e=d.querySelector('#pvhost [data-ed="title"]');return e?e.textContent.trim():null};
   const pickField=(q)=>{const sl2=d.querySelector(q), og2=sl2?sl2.querySelector('optgroup'):null;
@@ -1594,6 +1604,88 @@ async function groupI2() {
   } finally { srv.close(); }
 }
 
+/* ── AX. Агаарын датасэтийн хуудасны график — статистикийн үндсэн шаардлага ──
+   Эх veritech dashboard-тай харьцуулахад илэрсэн алдаанууд:
+   (1) тэнхлэг "82,500 · 165,000 · 247,500" / "1,525" гэх мэт дугуй бус тоо,
+   (2) өмнөх оны багана, legend алга, өсөлтийн тэнхлэгт "%" ба 0 шугам алга,
+   (3) өмнөх оны дата алга үед өсөлтийг 0% гэж ЗОХИОДОГ байв,
+   (4) "ОУ/Дотоодын харьцаа" (зорчигч) донут НИСЛЭГИЙН хувиар (75/25) зурагдаж,
+       өгөгдөлгүй үед '75%' зохиомол утга руу унадаг байв,
+   (5) treemap дээр "Зүүн Ази"/"Зүүн Өмнөд Ази" ижил өнгөтэй байв.
+   Доорх тоонууд ГАРААР бодогдсон. */
+function groupAX() {
+  group('AX. Агаарын графикийн тэнхлэг/legend/донут');
+  const src = dcScript();
+  const fn = (name) => {
+    const m = src.match(new RegExp('function ' + name + '\\(([^)]*)\\)\\{([\\s\\S]*?)\\n\\}'));
+    return m ? 'function ' + name + '(' + m[1] + '){' + m[2] + '\n}' : null;
+  };
+  const parts = ['niceStep', 'niceAxis', 'fmtAxisNum', 'buildDualAxisChart'].map(fn);
+  if (parts.some((x) => !x)) { bad('AX. график функц олдсонгүй'); return; }
+  const lib = new Function('MONTHS',
+    parts.join('\n') + '\nreturn {niceStep,niceAxis,fmtAxisNum,buildDualAxisChart};')(
+    ['1-р сар', '2-р сар', '3-р сар']);
+
+  /* niceStep: 82,500 → 10^4·8.25 → 10 → 100,000; 75 → 100; 2.5 → 2.5; 30 → 50 */
+  check('AX1. niceStep — 1/2/2.5/5×10^k',
+    lib.niceStep(82500) === 100000 && lib.niceStep(75) === 100 &&
+    lib.niceStep(2.5) === 2.5 && lib.niceStep(30) === 50,
+    [lib.niceStep(82500), lib.niceStep(75), lib.niceStep(2.5), lib.niceStep(30)].join(','));
+  /* 0…320,000: алхам niceStep(80,000)=100,000 → 0,100k,200k,300k,400k */
+  const a1 = lib.niceAxis(0, 320000);
+  check('AX2. Зорчигчийн тэнхлэг дугуй тоо (82,500 биш)',
+    JSON.stringify(a1.ticks) === JSON.stringify([0, 100000, 200000, 300000, 400000]),
+    JSON.stringify(a1.ticks));
+  /* 1,300…2,500 (нислэг): 1200/4=300 → 500; 1000…2500 */
+  const a2 = lib.niceAxis(1300, 2500);
+  check('AX3. Нислэгийн тэнхлэг 1,000/1,500/2,000/2,500 (1,525 биш)',
+    JSON.stringify(a2.ticks) === JSON.stringify([1000, 1500, 2000, 2500]), JSON.stringify(a2.ticks));
+  /* Өсөлт −20…30: 50/4=12.5 → 20; −20,0,20,40 — 0 тэнхлэгт заавал */
+  const a3 = lib.niceAxis(-20, 30);
+  check('AX4. Өсөлтийн % тэнхлэгт 0 багтана',
+    JSON.stringify(a3.ticks) === JSON.stringify([-20, 0, 20, 40]), JSON.stringify(a3.ticks));
+
+  /* Хос багана: [100,200] + өмнөх он [50,300]; max 300 → алхам 100 → 0…300.
+     Шугам (%) [10,null]: 0…10, алхам 2.5 → "0%,+2.5%,+5%,+7.5%,+10%". */
+  const c1 = lib.buildDualAxisChart([100, 200], [10, null], ['1-р сар', '2-р сар'],
+    { prevBars: [50, 300], linePct: true });
+  check('AX5. Багана 0-ээс, өмнөх оны баганыг ч багтаасан тэнхлэг',
+    c1.yTicksLeft.map((t) => t.label).join(',') === '0,100,200,300',
+    c1.yTicksLeft.map((t) => t.label).join(','));
+  check('AX6. Өмнөх оны багана зурагдана (2 ш)', c1.hasPrev === true && c1.prevRects.length === 2,
+    String(c1.prevRects.length));
+  check('AX7. Өсөлтийн баруун тэнхлэг "%" тэмдэгтэй',
+    c1.yTicksRight.map((t) => t.label).join(',') === '0%,+2.5%,+5%,+7.5%,+10%',
+    c1.yTicksRight.map((t) => t.label).join(','));
+  check('AX8. Суурьгүй (null) сар цэг/шугамгүй — 0% зохиохгүй',
+    c1.dotPts.length === 1 && !/L/.test(c1.line) && c1.dotPts[0].color === '#2FA37B',
+    c1.dotPts.length + ' · ' + c1.line);
+  const c2 = lib.buildDualAxisChart([5, 5], [-10, 20], ['1-р сар', '2-р сар'], { linePct: true });
+  check('AX9. Сөрөг/эерэг өсөлт — 0 лавлах шугам + улаан/ногоон цэг',
+    c2.hasZeroLine === true && c2.dotPts[0].color === '#D2564A' && c2.dotPts[1].color === '#2FA37B',
+    c2.hasZeroLine + ' ' + c2.dotPts.map((d) => d.color).join(','));
+  const c3 = lib.buildDualAxisChart([100, 200], [1, 2], ['1-р сар', '2-р сар']);
+  check('AX10. opts-гүй дуудлага (чарт бүтээгч) хуучнаараа — өмнөх оны багана алга',
+    c3.hasPrev === false && c3.prevRects.length === 0 && c3.barRects.length === 2);
+
+  /* Донут — зорчигчоор, зохиомол fallback-гүй */
+  check('AX11. ОУ/Дотоодын донут НИСЛЭГИЙН хувиар (kpis[2]) БИШ, \'75%\' fallback-гүй',
+    !/sAir\.kpis\[2\]\[2\]\|\|'75%'/.test(src) && /sAir\.paxSplit/.test(src) &&
+    /SECTORS\.air\.paxSplit=\{intl:cur\.intlPax,dom:cur\.domPax/.test(src));
+  check('AX12. Өмнөх оны дата алга үед ачааны өсөлт null (0% биш)',
+    src.includes('monthCargoYoyArr.push(hasPrev&&pKg>0?pctNum(cur.monthCargoKg[m]||0,pKg):null)'));
+  /* Treemap — бүс нутгийн палитр давхардалгүй */
+  const pal = (src.match(/const REGION_PAL=\[([\s\S]*?)\];/) || [])[1] || '';
+  const cols = pal.match(/#[0-9A-Fa-f]{6}/g) || [];
+  check('AX13. Treemap бүс нутгийн өнгө давхцахгүй (' + cols.length + ')',
+    cols.length >= 12 && new Set(cols.map((c) => c.toUpperCase())).size === cols.length);
+  /* Legend текст content.json-оос */
+  const cj = JSON.parse(read('content.json'));
+  check('AX14. Legend/донутын шошго content.json → site.chart-д бүртгэлтэй',
+    ['year_word', 'legend_pax', 'legend_flights_axis', 'legend_cargo', 'legend_growth_axis', 'intl', 'domestic']
+      .every((k) => typeof (cj.site.chart || {})[k] === 'string'));
+}
+
 function groupI() {
   group('I. Чарт бүтээгч (EHChart — X/Y тэнхлэг + нэгтгэл)');
   const src = read('js/erthub-chart.js');
@@ -1638,7 +1730,7 @@ function groupI() {
   /* Сайт талын холболт — тохиргоогүй бол ӨМНӨХ хатуу зан төлөв */
   const idx = read('index.html');
   check('I3. Сайт тохиргоогүй үед хуучин чарт руу унана (fallback)',
-    /chartFromSpec\('ds_air_monthly'\)\|\|\s*buildDualAxisChart\(sAir\.monthly\.pax/.test(idx.replace(/\n\s*/g, ' ')),
+    /chartFromSpec\('ds_air_monthly'\);\s*const airMonthly=paint\(specM\|\|\s*buildDualAxisChart\(mo\.pax/.test(idx.replace(/\n\s*/g, ' ')),
     'fallback хэлбэр олдсонгүй');
   check('I3. Чарт нь ХУУДАСНЫ ШҮҮЛТЭД орсон мөрүүд дээр ажиллана',
     idx.includes('this._airFilteredRows=filtered'));
@@ -1853,6 +1945,7 @@ async function groupK() {
     const R = await runProbe(`async function(d,w){
       const sleep=ms=>new Promise(r=>setTimeout(r,ms));
       await sleep(4500);
+  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);
       d.querySelector('[data-section="sec-05"]').click(); await sleep(600);
       d.querySelector('[data-widget="d05"]').click(); await sleep(1100);
       const rows=()=>[].slice.call(d.querySelectorAll('#pvhost .pvrow'))
@@ -2564,7 +2657,9 @@ async function groupS() {
   try {
     const R = await runProbe(`async function(d,w){
       const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-      await sleep(4500);
+      /* Нөхцөл биелэхийг хүлээнэ (тогтмол хугацаа биш) — ачаалалтай үед тогтворгүй байдлаас сэргийлнэ */
+      const waitFor=async(fn,ms)=>{const t=Date.now()+ms;while(Date.now()<t){try{if(fn())return true}catch(e){}await sleep(100)}return false};
+      await waitFor(()=>d.querySelector('#dsList .st'),15000);
       const R={};
       /* S5 — модны тэмдэгт */
       const st=d.querySelector('#dsList .st');
@@ -2576,17 +2671,20 @@ async function groupS() {
       const fq=d.getElementById('fQuality');
       R.qOpts=fq?[...fq.options].map(o=>o.text):[];
       /* S1 — төлөвлөгөөт метрик нэмэх */
-      d.querySelector('[data-tab="metrics"]').click(); await sleep(1300);
+      d.querySelector('[data-tab="metrics"]').click();
+      await waitFor(()=>d.getElementById('mNewKey'),5000);
       const k=d.getElementById('mNewKey'), nm=d.getElementById('mNewName');
       const add=d.querySelector('[data-madd]');
       if(!k||!add) return {__err:'метрик нэмэх маягт алга'};
       k.value='qa.test_planned'; if(nm) nm.value='';
-      add.click(); await sleep(400);
+      add.click();
+      await waitFor(()=>(d.getElementById('toast')||{}).textContent,3000);
       R.toastNoName=(d.getElementById('toast')||{}).textContent||'';
       R.addedNoName=d.querySelectorAll('[data-metric="qa.test_planned"]').length;
       const k2=d.getElementById('mNewKey'), nm2=d.getElementById('mNewName');
       k2.value='qa.test_planned'; nm2.value='QA туршилтын метрик';
-      d.querySelector('[data-madd]').click(); await sleep(400);
+      d.querySelector('[data-madd]').click();
+      await waitFor(()=>(d.getElementById('toast')||{}).textContent!==R.toastNoName,3000);
       R.toastOk=(d.getElementById('toast')||{}).textContent||'';
       R.added=d.querySelectorAll('[data-metric="qa.test_planned"]').length;
       /* S3 — MAP товч */
@@ -3028,7 +3126,10 @@ const PROBE_Y = `async function(d,w){
 /* Y6 — админы үүсгэдэг гүн холбоос ("#sec-06") ЖИНХЭНЭ газар руу аваачна */
 const PROBE_Y_ANCHOR = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  await sleep(7500);
+  /* Хуудас зурагдахыг хүлээнэ; гүйлгэлт тогтох жижиг хугацааг л үлдээнэ
+     (scrollY-г нөхцөлөөр хүлээвэл шалгалт өөрөө хуурамч болно) */
+  for(let i=0;i<150&&!(d.getElementById('sec-06')&&d.getElementById('hero'));i++) await sleep(100);
+  await sleep(600);
   const ids=['hero','portal-kpi','sec-01','sec-02','sec-04','sec-05','sec-06','sec-07','sec-08'];
   const e=d.getElementById('sec-06');
   return { exists:ids.filter(i=>!!d.getElementById(i)),
@@ -3039,9 +3140,10 @@ const PROBE_Y_ANCHOR = `async function(d,w){
 /* Y7/Y8 — хуудас бүр хаягтай, Back сайт дотор, "буцах" өөр рүүгээ заахгүй */
 const PROBE_Y_ROUTE = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  await sleep(7000);
+  const waitFor=async(fn,ms)=>{const t=Date.now()+ms;while(Date.now()<t){try{if(fn())return true}catch(e){}await sleep(100)}return false};
+  await waitFor(()=>[...d.querySelectorAll('button,a')].some(x=>x.textContent.trim()==='Коммунити'),15000);
   const go=async(n)=>{const b=[...d.querySelectorAll('button,a')].filter(x=>x.textContent.trim()===n)[0];
-    if(b){b.click(); await sleep(1300)} return !!b};
+    if(b){const h=w.location.hash; b.click(); await waitFor(()=>w.location.hash!==h,3000)} return !!b};
   const back=()=>{const b=[...d.querySelectorAll('button,a')].filter(x=>/руу буцах/.test(x.textContent))[0];
     return b?b.textContent.trim():null};
   const R={start:w.location.hash};
@@ -3051,7 +3153,8 @@ const PROBE_Y_ROUTE = `async function(d,w){
   R.c2={hash:w.location.hash, back:back()};
   await go('Салбарын түүх');
   R.h={hash:w.location.hash, back:back()};
-  w.history.back(); await sleep(1300);
+  const hBeforeBack=w.location.hash;
+  w.history.back(); await waitFor(()=>w.location.hash!==hBeforeBack,5000);
   R.afterBack={hash:w.location.hash,
     onCommunity:d.body.innerText.indexOf('Төр, иргэнийг холбосон')>=0};
   /* Hero-гийн хайлт ч хаягаа шинэчилнэ */
@@ -3059,7 +3162,7 @@ const PROBE_Y_ROUTE = `async function(d,w){
   const inp=[...d.querySelectorAll('input[type=\\"text\\"]')][0];
   if(inp){ inp.value='нислэг'; inp.dispatchEvent(new w.Event('input',{bubbles:true})); await sleep(300);
     const sb=[...d.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Хайх')[0];
-    if(sb){ sb.click(); await sleep(1300) } }
+    if(sb){ const h=w.location.hash; sb.click(); await waitFor(()=>w.location.hash!==h,3000) } }
   R.search={hash:w.location.hash};
   return R;
 }`;
@@ -3068,22 +3171,34 @@ const PROBE_Y_ROUTE = `async function(d,w){
 /* Y9 — датасэтийн дэлгэрэнгүй: жагсаалтаас нээхэд хаяг, Back */
 const PROBE_Y_DS_OPEN = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  await sleep(6500);
+  /* Нөхцөл биелэхийг хүлээнэ (тогтмол хугацаа биш) — ачаалалтай үед тогтворгүй байдлаас сэргийлнэ */
+  const waitFor=async(fn,ms)=>{const t=Date.now()+ms;while(Date.now()<t){try{if(fn())return true}catch(e){}await sleep(100)}return false};
+  const cardList=()=>[...d.querySelectorAll('button')].filter(b=>b.innerText.length>60&&/Дэлгэрэнгүй|Үзэх/.test(b.innerText));
+  await waitFor(()=>[...d.querySelectorAll('button,a')].some(x=>x.textContent.trim()==='Нээлттэй өгөгдөл'),15000);
   const go=async(n)=>{const b=[...d.querySelectorAll('button,a')].filter(x=>x.textContent.trim()===n)[0];
-    if(b){b.click(); await sleep(1300)} return !!b};
+    if(b){b.click()} return !!b};
   await go('Нээлттэй өгөгдөл');
   /* ХОЁР дахь картыг нээнэ — эхнийх нь анхдагч dsIndex:0-тэй санамсаргүй
-     таарч, тест хуурамчаар давах эрсдэлтэй */
-  const cards=[...d.querySelectorAll('button')].filter(b=>b.innerText.length>60&&/Дэлгэрэнгүй|Үзэх/.test(b.innerText));
+     таарч, тест хуурамчаар давах эрсдэлтэй. Карт бүрэн зурагдахыг хүлээнэ. */
+  await waitFor(()=>cardList().length>=2,15000);
+  const cards=cardList();
   const card=cards[1];
   if(!card) return {__err:'датасэтийн карт олдсонгүй ('+cards.length+')'};
   const name=(card.innerText.split('\\n').filter(x=>x.trim().length>6)[0]||'').trim();
-  card.click(); await sleep(1500);
+  const hash0=w.location.hash;
+  card.click();
+  await waitFor(()=>w.location.hash!==hash0,10000);
+  await waitFor(()=>((d.querySelector('h1,h2')||{}).innerText||'').trim().length>0,10000);
   const R={name:name, hash:decodeURIComponent(w.location.hash),
     head:((d.querySelector('h1,h2')||{}).innerText||'').trim()};
-  w.history.back(); await sleep(1300);
+  const hashOpen=w.location.hash;
+  w.history.back();
+  await waitFor(()=>w.location.hash!==hashOpen,10000);
   R.back={hash:w.location.hash};
-  w.history.forward(); await sleep(1500);
+  const hashBack=w.location.hash;
+  w.history.forward();
+  await waitFor(()=>w.location.hash!==hashBack,10000);
+  await waitFor(()=>((d.querySelector('h1,h2')||{}).innerText||'').trim().length>0,10000);
   R.fwd={hash:decodeURIComponent(w.location.hash),
     head:((d.querySelector('h1,h2')||{}).innerText||'').trim()};
   return R;
@@ -3092,7 +3207,8 @@ const PROBE_Y_DS_OPEN = `async function(d,w){
 /* Y9 — хаягаар ШУУД орох (хуваалцсан холбоос / F5) */
 const PROBE_Y_DS_DIRECT = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  await sleep(6500);
+  /* Дэлгэрэнгүйн толгой гарч ирэхийг хүлээнэ (тогтмол хугацаа биш) */
+  for(let i=0;i<150&&!((d.querySelector('h1,h2')||{}).innerText||'').trim();i++) await sleep(100);
   return { hash:decodeURIComponent(w.location.hash),
     head:((d.querySelector('h1,h2')||{}).innerText||'').trim(),
     back:([...d.querySelectorAll('button,a')].filter(x=>/руу буцах/.test(x.textContent))[0]||{}).textContent||null };
@@ -3106,7 +3222,13 @@ const PROBE_Y_DS_STALE = `async function(d,w){
     if(d.body&&d.body.textContent.indexOf('Холбоосын датасэт олдсонгүй')>=0){ seen=true; break }
     await sleep(100);
   }
-  await sleep(800);
+  /* Toast харагдсаны дараа каталог руу шилжиж, каталог зурагдахыг хүлээнэ
+     (тогтмол 800 мс биш — ачаалалтай үед redirect-ээс түрүүлж уншигддаг байв).
+     Хугацаа дуусвал одоогийн төлөвийг буцаана → шалгалт ҮНЭНЭЭР унана. */
+  for(let i=0;i<100;i++){
+    if(w.location.hash==='#/browse'&&d.querySelector('input[placeholder=\\"Датасэт хайх…\\"]')) break;
+    await sleep(100);
+  }
   return { toast:seen, hash:w.location.hash,
     catalog:!!d.querySelector('input[placeholder=\\"Датасэт хайх…\\"]') };
 }`;
@@ -3942,7 +4064,8 @@ async function groupBE() {
     'status.rail_wagon_asof': 'Хоногийн мэдээ:', 'status.rail_wagon_stale': 'хоног шинэчлэгдээгүй',
     'ds_schema_rail_wagon.head.0': 'Станц', 'ds_schema_rail_wagon.head.1': 'Код',
     'ds_schema_rail_wagon.head.2': 'Ачсан (вагон)', 'ds_schema_rail_wagon.head.3': 'Буулгасан (вагон)',
-    'ds_schema_rail_wagon.head.4': 'Төлөв',
+    'ds_schema_rail_wagon.head.4': 'Нетто (вагон)', 'ds_schema_rail_wagon.head.5': 'Ачилтын эзлэх %',
+    'ds_schema_rail_wagon.head.6': 'Төлөв',
     'ds_schema_rail_wagon.st_loaded': 'Ачилттай', 'ds_schema_rail_wagon.st_none': 'Зөвхөн буулгалт',
     'sector_rank_rail_live': 'Станц тус бүрийн ачилт', 'sector_rank_rail_other': 'Бусад станц',
     'sector_chart2_rail_live': 'Ачилт ихтэй станц'
@@ -4143,12 +4266,15 @@ async function groupBE() {
   const B = runApply({ count: 200, unloadedCount: 335, stationCount: 4, date: '2026-09-17', byStation: BS });
   const bw = B.DSS.rail_wagon;
   check('BE18. 4 станц → 4 мөр', bw.rows.length === 4, JSON.stringify(bw.rows));
-  check('BE18. Мөр = [станц, код, ачсан, буулгасан, төлөв]',
-    JSON.stringify(bw.rows[0]) === JSON.stringify(['Ерөө', '32', 100, 10, 'ok:Ачилттай']), JSON.stringify(bw.rows[0]));
+  check('BE18. Мөр = [станц, код, ачсан, буулгасан, нетто, эзлэх %, төлөв]',
+    JSON.stringify(bw.rows[0]) === JSON.stringify(['Ерөө', '32', 100, 10, 90, 50, 'ok:Ачилттай']), JSON.stringify(bw.rows[0]));
   check('BE18. Ачилтгүй станц warn: шошготой (0-г ЗОХИОЖ ok болгохгүй)',
-    bw.rows[3][4] === 'warn:Зөвхөн буулгалт' && bw.rows[3][2] === 0, JSON.stringify(bw.rows[3]));
-  check('BE18. Баганын нэр content.json-оос (stxt) — 5 багана',
-    bw.head.length === 5 && bw.head[0] === 'Станц' && bw.head[2] === 'Ачсан (вагон)', JSON.stringify(bw.head));
+    bw.rows[3][6] === 'warn:Зөвхөн буулгалт' && bw.rows[3][2] === 0 && bw.rows[3][4] === -25, JSON.stringify(bw.rows[3]));
+  check('BE18. Эзлэх % нийлбэр = 100 (нийт ачилт 200: 50+30+20+0)',
+    bw.rows.reduce((t, r) => t + r[5], 0) === 100 && bw.rows[1][5] === 30, JSON.stringify(bw.rows.map(r => r[5])));
+  check('BE18. Баганын нэр content.json-оос (stxt) — 7 багана',
+    bw.head.length === 7 && bw.head[0] === 'Станц' && bw.head[2] === 'Ачсан (вагон)' && bw.head[4] === 'Нетто (вагон)',
+    JSON.stringify(bw.head));
   check('BE18. Зохиомол галт тэрэгний мөр ОРОХГҮЙ',
     !JSON.stringify(bw.rows).includes('271') && !JSON.stringify(bw.rows).includes('Замын-Үүд'));
   check('BE18. rank ачилтаар эрэмбэлэгдэж, хувь нь ГАРААР БОДОХТОЙ таарна',
@@ -4168,6 +4294,31 @@ async function groupBE() {
     JSON.stringify((toW({ status: 'ok', count: 5, by_station: BS }) || {}).byStation) === JSON.stringify(BS));
   check('BE18. by_station ирээгүй бол хоосон массив (undefined БИШ)',
     JSON.stringify((toW({ status: 'ok', count: 5 }) || {}).byStation) === '[]');
+
+  /* ── CH. Графикийн тэнхлэг — бүхэл алхам, шошгын нягтрал, дутуу сар ──
+     46 сар, хамгийн их багана 37,000 → алхам 10,000 (9,250 биш). */
+  const CH = dcScript().match(/function buildDualAxisChart\(barSeries,lineSeries,labels,opts\)\{([\s\S]*?)\n\}/);
+  if (!CH) { bad('CH0. buildDualAxisChart() олдсонгүй'); }
+  else {
+    /* opts (заавал биш) — өмнөх оны багана / өсөлтийн % (агаарын график).
+       Энд огт өгөхгүй: CH1–CH3 нь дутуу сарын дүрмийг л шалгана. */
+    /* Тэнхлэгийн туслах функцүүд (niceStep/niceAxis/fmtAxisNum) нь гадна
+       байдаг тул хамт бүтээнэ. */
+    const helpers = ['niceStep', 'niceAxis', 'fmtAxisNum'].map((nm) => {
+      const h = dcScript().match(new RegExp('function ' + nm + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}'));
+      return h ? h[0] : '';
+    }).join('\n');
+    const bdc = new Function('barSeries', 'lineSeries', 'labels', 'opts',
+      helpers + '\nreturn (function(barSeries,lineSeries,labels,opts){' + CH[1] + '\n})(barSeries,lineSeries,labels,opts);');
+    const labs = Array.from({ length: 46 }, (_, i) => 'L' + i); labs[45] = 'L45*';
+    const bars = Array.from({ length: 46 }, (_, i) => (i === 45 ? 37000 : i * 800));
+    const c = bdc(bars, bars.map(v => v / 2), labs, {});
+    check('CH1. Зүүн тэнхлэг бүхэл алхам: 0…40,000 (9,250-ийн алхам БИШ)',
+      c.yTicksLeft.map(t => t.label).join('|') === '0|10,000|20,000|30,000|40,000', c.yTicksLeft.map(t => t.label).join('|'));
+    check('CH2. 46 сарын шошго 3 сар тутам (16), давхцахгүй', c.xTicks.length === 16, String(c.xTicks.length));
+    check('CH3. Дутуу сар ("*") бүдэг (op .14), бүтэн сар .35',
+      c.barRects[45].op === '.14' && c.barRects[0].op === '.35', JSON.stringify([c.barRects[45].op, c.barRects[0].op]));
+  }
 
   /* ── WA. Вагоны анализын загвар — ГАРААР бодогдох фикстур ──
      2025-08 100/80 (дотоод 40) · 2025-09 200/150 (100) · 2026-08 150/90 (60)
@@ -4450,8 +4601,8 @@ async function groupBE() {
 
   /* ── BE23. Шинэ харагдах текст content.json-д бүртгэгдсэн ── */
   const cw = con14.site.ds_schema_rail_wagon || {};
-  check('BE23. ds_schema_rail_wagon.head 5 баганатай', (cw.head || []).length === 5, JSON.stringify(cw.head));
-  check('BE23. ds_schema_rail_wagon.notes 5 тайлбартай', (cw.notes || []).length === 5);
+  check('BE23. ds_schema_rail_wagon.head 7 баганатай', (cw.head || []).length === 7, JSON.stringify(cw.head));
+  check('BE23. ds_schema_rail_wagon.notes 7 тайлбартай', (cw.notes || []).length === 7);
   check('BE23. Төлөвийн 2 шошго бүртгэлтэй', !!cw.st_loaded && !!cw.st_none);
   check('BE23. Салбарын бүтэц/баганын амьд гарчиг бүртгэлтэй',
     !!con14.site.sector_rank_rail_live && !!con14.site.sector_rank_rail_other && !!con14.site.sector_chart2_rail_live);
@@ -5087,6 +5238,24 @@ async function groupBE() {
       RA(null, T33, same33, null, 8) === null && RA({ status: 'no_data', count: null }, T33, same33, null, 8) === null);
     check('BE33. Хэсгийн задаргаа алга → шалтгааны өгүүлбэр ГАРАХГҮЙ (0 гэж зохиохгүй)',
       (RA({ status: 'ok', count: 5, date: '2026-09-28', byDay: [] }, T33, same33, null, 8) || {}).catSum === 0);
+    /* MA7 ба хоорондын харьцуулалт — гараар бодсон: 09-01…09-07 = 100/хоног,
+       09-08…09-14 = 200/хоног. MA7[5] null (бүтэн 7 хоног биш), MA7[6] = 100,
+       MA7[13] = 200. Сүүлийн 7 хоног 200 vs өмнөх 100 → +100.0% (өсөх). */
+    const TT33 = { ...T33, s_trend_up: "UP|{cur}|{prev}|{pct}", s_trend_down: "DN|{cur}|{prev}|{pct}" };
+    const mkDays = (lo, hi) => Array.from({ length: 14 }, (_, i) => ({
+      date: "2026-09-" + String(i + 1).padStart(2, "0"), count: i < 7 ? lo : hi, failed: 0 }));
+    const up33 = RA({ status: "ok", count: 200, date: "2026-09-14", byDay: mkDays(100, 200) }, TT33, same33, null, 8);
+    check("BE33. MA7: эхний 6 өдөр null, 7 дэх = 100, сүүлийн = 200 (ГАРААР бодов)",
+      !!up33 && up33.ma7[5] === null && up33.ma7[6] === 100 && up33.ma7[13] === 200, up33 && JSON.stringify(up33.ma7));
+    check("BE33. Хандлага: 14 хоног → сүүлийн 7 (200) vs өмнөх 7 (100) = өсөлт +100.0%",
+      !!up33 && up33.trend && up33.trend.cur === 200 && up33.trend.prev === 100 && up33.trend.pct === 100 &&
+      up33.lines.includes("UP|200|100|100.0"), up33 && JSON.stringify(up33.lines));
+    const dn33 = RA({ status: "ok", count: 100, date: "2026-09-14", byDay: mkDays(200, 100) }, TT33, same33, null, 8);
+    check("BE33. Буурсан үед \"DN\" загвар сонгогдоно (өсөлт БИШ)",
+      !!dn33 && dn33.lines.some((l) => l.startsWith("DN|")) && !dn33.lines.some((l) => l.startsWith("UP|")), dn33 && JSON.stringify(dn33.lines));
+    check("BE33. 13 хоног (14-өөс бага) → хандлага ГАРАХГҮЙ (богино цуваа дээр таамаглахгүй)",
+      (() => { const r = RA({ status: "ok", count: 100, date: "2026-09-13", byDay: mkDays(100, 200).slice(1) }, TT33, same33, null, 8);
+        return !!r && r.trend === null && !r.lines.some((l) => /^(UP|DN)\|/.test(l)); })());
     check('BE33. fillTpl: үл мэдэгдэх нүд хэвээр үлдэнэ (хоосон болгохгүй)',
       fillTpl33('a {x} b {y}', { x: 1 }) === 'a 1 b {y}');
   }
@@ -5100,7 +5269,8 @@ async function groupBE() {
   check('BE33. Дүгнэлтийн бүх текст content.json → site.road_insp-д бүртгэгдсэн (шинэ хардкод текст алга)',
     ['summary_title', 'map_title', 'rank_title', 'daily_title', 'cats_title', 'week_title', 'kpi_total',
       's_total', 's_peak', 's_week_lower', 's_week_higher', 's_top', 's_cat', 's_stale', 'day_title',
-      'region_title', 'region_none', 'rank_rest', 'map_nogeo', 'no_data', 'wd_mon', 'wd_sun'].every((k) =>
+      'region_title', 'region_none', 'rank_rest', 'map_nogeo', 'no_data', 'wd_mon', 'wd_sun',
+      's_trend_up', 's_trend_down', 'ma_label'].every((k) =>
       readJson('content.json').site.road_insp && readJson('content.json').site.road_insp[k] != null));
   check('BE33. Гар утас: .eh-ri-row нэг багана (@640px)',
     /@media \(max-width:\s*640px\)[\s\S]*\.eh-ri-row\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*!important/.test(read('style.css')));
@@ -5142,8 +5312,9 @@ async function groupBE() {
     'sector_chart2_road_live': 'Аймаг тус бүрийн үзлэг',
     'chart.daily_trend': 'хоногийн чиг хандлага',
     'ds_schema_road_inspect.head.0': 'Аймаг, нийслэл', 'ds_schema_road_inspect.head.1': 'Үзлэг',
-    'ds_schema_road_inspect.head.2': 'Тэнцээгүй', 'ds_schema_road_inspect.head.3': 'Тэнцээгүй хувь',
-    'ds_schema_road_inspect.head.4': 'Төлөв',
+    'ds_schema_road_inspect.head.2': 'Тэнцсэн', 'ds_schema_road_inspect.head.3': 'Тэнцээгүй',
+    'ds_schema_road_inspect.head.4': 'Тэнцээгүй хувь', 'ds_schema_road_inspect.head.5': 'Эзлэх хувь',
+    'ds_schema_road_inspect.head.6': 'Төлөв',
     'ds_schema_road_inspect.st_fail': 'Тэнцээгүй бүртгэгдсэн',
     'ds_schema_road_inspect.st_clean': 'Бүгд тэнцсэн'
   };
@@ -5379,32 +5550,41 @@ async function groupBE() {
     /schema:'road_inspect',source:'roadInspect'/.test(dcScript()));
   check('BE33. DS_SCHEMA.road_inspect анхнаасаа ХООСОН мөртэй (зохиомол дата алга)',
     /road_inspect:\{head:\[[\s\S]*?rows:\[\]\}/.test(dcScript()));
+  /* Регресс: "Төлөв" шошго ("Тэнцээгүй бүртгэгдсэн") амьд сайтад 2 мөрөнд
+     хуваагдаж байв — 170px багана хэмжээс яг таарч sub-pixel-ээр багтаагүй.
+     Шошго ~170px шаардана, тиймээс сүүлийн баганы өргөн ≥ 190 байх ёстой. */
+  const wm = /road_inspect:\{head:\[[\s\S]*?widths:\[([\d,\s]+)\]/.exec(dcScript());
+  const wv = wm ? wm[1].split(',').map(Number) : [];
+  check('BE33. Схемийн widths нь баганын тоотой таарна (7) ба "Төлөв" ≥ 190px (шошго 2 мөр болохгүй)',
+    wv.length === 7 && wv[6] >= 190, JSON.stringify(wv));
   const ISch = I.DSS.road_inspect;
   check('BE33. by_aimag-ийн 3 мөр хүснэгтэд буув', ISch.rows.length === 3, JSON.stringify(ISch.rows.length));
-  check('BE33. Толгой content.json-оос (5 багана)',
-    ISch.head.length === 5 && ISch.head[0] === 'Аймаг, нийслэл' && ISch.head[1] === 'Үзлэг' &&
-    ISch.head[3] === 'Тэнцээгүй хувь', JSON.stringify(ISch.head));
-  check('BE33. Мөр 1 = Улаанбаатар · 1,621 · 120 · 7.4% (ГАРААР бодов)',
-    ISch.rows[0][0] === 'Улаанбаатар' && ISch.rows[0][1] === 1621 &&
-    ISch.rows[0][2] === 120 && ISch.rows[0][3] === 7.4, JSON.stringify(ISch.rows[0]));
-  check('BE33. Мөр 2 = Орхон · 131 · 9 · 6.9% (ГАРААР бодов)',
-    ISch.rows[1][0] === 'Орхон' && ISch.rows[1][3] === 6.9, JSON.stringify(ISch.rows[1]));
+  check('BE33. Толгой content.json-оос (7 багана: тэнцсэн/тэнцээгүй/хувь/эзлэх хувь нэмэгдсэн)',
+    ISch.head.length === 7 && ISch.head[0] === 'Аймаг, нийслэл' && ISch.head[1] === 'Үзлэг' &&
+    ISch.head[4] === 'Тэнцээгүй хувь' && ISch.head[5] === 'Эзлэх хувь', JSON.stringify(ISch.head));
+  check('BE33. Мөр 1 = Улаанбаатар · 1,621 · тэнцсэн 1,501 · тэнцээгүй 120 · 7.4% (ГАРААР бодов)',
+    ISch.rows[0][0] === 'Улаанбаатар' && ISch.rows[0][1] === 1621 && ISch.rows[0][2] === 1501 &&
+    ISch.rows[0][3] === 120 && ISch.rows[0][4] === 7.4, JSON.stringify(ISch.rows[0]));
+  check('BE33. Эзлэх хувь = үзлэг / бүх аймгийн нийлбэр (1621 / 1876 = 86.4%)',
+    ISch.rows[0][5] === 86.4, JSON.stringify(ISch.rows[0]));
+  check('BE33. Мөр 2 = Орхон · 131 · тэнцээгүй 9 · 6.9% (ГАРААР бодов)',
+    ISch.rows[1][0] === 'Орхон' && ISch.rows[1][3] === 9 && ISch.rows[1][4] === 6.9, JSON.stringify(ISch.rows[1]));
   check('BE33. Үзлэгийн тоогоор БУУРАХ эрэмбэтэй',
     ISch.rows[0][1] > ISch.rows[1][1] && ISch.rows[1][1] > ISch.rows[2][1]);
   check('BE33. Тэнцээгүйтэй аймаг "warn:", тайлбар нь content.json-оос',
-    ISch.rows[0][4] === 'warn:Тэнцээгүй бүртгэгдсэн', ISch.rows[0][4]);
+    ISch.rows[0][6] === 'warn:Тэнцээгүй бүртгэгдсэн', ISch.rows[0][6]);
   /* Бүгд тэнцсэн аймаг → "ok:" (хувь 0). Эсрэг тохиолдлыг ЗААВАЛ шалгана:
      эс тэгвэл status үргэлж "warn" байсан ч тест ногоон үлдэнэ. */
   const ICl = runInsp(toI({ ...INSP_LIVE,
     by_aimag: [{ aimag: 'Говьсүмбэр', count: 40, failed: 0 }] })).DSS.road_inspect;
   check('BE33. Тэнцээгүйгүй аймаг → "ok:Бүгд тэнцсэн" · хувь 0',
-    ICl.rows[0][3] === 0 && ICl.rows[0][4] === 'ok:Бүгд тэнцсэн', JSON.stringify(ICl.rows[0]));
+    ICl.rows[0][4] === 0 && ICl.rows[0][6] === 'ok:Бүгд тэнцсэн' && ICl.rows[0][2] === 40, JSON.stringify(ICl.rows[0]));
   /* by_aimag ирээгүй бол хүснэгтийг ОГТ ХӨНДӨХГҮЙ (хуучин байдал хэвээр) */
   const INo = runInsp(toI({ ...INSP_LIVE, by_aimag: [] })).DSS.road_inspect;
   check('BE33. by_aimag хоосон → мөр ҮҮСГЭХГҮЙ (тоо ЗОХИОХГҮЙ)', INo.rows.length === 0);
   check('BE33. Шинэ харагдах текст content.json-д бүртгэгдсэн',
     (() => { const d = readJson('content.json').site.ds_schema_road_inspect || {};
-      return (d.head || []).length === 5 && (d.notes || []).length === 5 &&
+      return (d.head || []).length === 7 && (d.notes || []).length === 7 &&
         d.st_fail === 'Тэнцээгүй бүртгэгдсэн' && d.st_clean === 'Бүгд тэнцсэн'; })());
 
   /* ── BE34. Hero ticker-ийн зорчигч — цэвэр "0" БИШ ──
@@ -6447,6 +6627,167 @@ async function groupAI() {
    (tests/layout-audit.js, дүрмүүд tests/lib/layout-audit-probe.js).
    Шалгагчийн selftest фикстурууд эхэлж ажиллана — тэр унавал хуудасны
    үр дүнд итгэхгүй. Дэлгэрэнгүй: node tests/layout-audit.js --html */
+/* ═════════════════════════════════════════════════════════════════
+   HV. Графикийн hover стандарт (нэр + нийт дүн хулганаар харагдана)
+
+   Яагаад энэ бүлэг байхгүй байсан бэ: өмнөх тестүүд "график зурагдсан,
+   тоо зөв, текст холбогдсон" гэдгийг шалгадаг байсан ч ХУЛГАНЫГ ЗАЛГАСАН
+   хэрэглэгчийн алхмыг (улсын цэг дээр очих) ХЭЗЭЭ Ч давтаагүй. Native SVG
+   <title> нь DOM-д байгаа тул "tooltip бий" гэж харагддаг ч Electron/
+   webview дээр огт гардаггүй, бусад хөтөч дээр ~1 сек хоцорч гардаг.
+
+     HV1. Tooltip-ийн задлал (нэр — утга) гараар бодогдох фикстур дээр
+     HV2. Статик: модуль ачаалагдсан, чимэглэлийн давхарга hover хаахгүй
+     HV3. Браузер: глобус/хавтгай/дотоод бүх тэмдэг дээр tooltip = нэр+тоо
+     HV4. Статистик нийцэл: нэг тоо хоёр газар өөр байж болохгүй
+   ═════════════════════════════════════════════════════════════════ */
+function hvClean(s) { return !/NaN|undefined|null|\[object|Infinity/.test(String(s)); }
+async function groupHV() {
+  group('HV. Графикийн hover стандарт (нэр + нийт дүн)');
+  const idx = read('index.html');
+
+  /* ── HV1. Модулийн задлал: гараар бодогдох фикстур ── */
+  const T = (() => { try { return require(path.join(ROOT, 'js', 'erthub-tip.js')); } catch (e) { return null; } })();
+  check('HV1. js/erthub-tip.js ачаалагдана (EHTip.parse)', !!T && typeof T.parse === 'function');
+  if (T) {
+    const a = T.parse('Хятад — 500,304 зорчигч');
+    check('HV1. "Нэр — утга" → нэр ба утга салгагдана',
+      a && a.name === 'Хятад' && a.value === '500,304 зорчигч', JSON.stringify(a));
+    const b = T.parse('  Улаанбаатар (эх цэг)  ');
+    check('HV1. Тусгаарлагчгүй текст → зөвхөн нэр',
+      b && b.name === 'Улаанбаатар (эх цэг)' && b.value === '', JSON.stringify(b));
+    check('HV1. Хоосон/null → tooltip ГАРАХГҮЙ (null)',
+      T.parse('') === null && T.parse(null) === null && T.parse('   ') === null);
+    const c = T.parse('Хонг Конг — 86,174 зорчигч — нэмэлт');
+    check('HV1. Олон тусгаарлагч → эхнийх дээр л хуваана',
+      c && c.name === 'Хонг Конг' && c.value === '86,174 зорчигч — нэмэлт', JSON.stringify(c));
+  }
+
+  /* ── HV2. Статик ── */
+  check('HV2. Сайт tooltip модулийг ачаална', idx.includes('<script src="js/erthub-tip.js"></script>'));
+  const a0 = idx.indexOf('<svg class="eh-fmap"');
+  const tplFlow = idx.slice(a0, idx.indexOf('<sc-if value="{{ detail.flowMap.detail }}">', a0));
+  [
+    ['ripples', /<circle cx="\{\{ rp\.cx \}\}"[^>]*pointer-events="none"/],
+    ['halos', /<circle cx="\{\{ ha\.cx \}\}"[^>]*pointer-events="none"/],
+    ['arcs', /<path d="\{\{ ar\.d \}\}"[^>]*pointer-events="none"/],
+    ['arcs dash', /<path d="\{\{ ar2\.d \}\}"[^>]*pointer-events="none"/],
+    ['flyDots', /<g style="\{\{ fd\.style \}\}"[^>]*pointer-events="none"/],
+    ['UB pulse', /r="15"[^>]*pointer-events="none"/]
+  ].forEach(([n, re]) => check('HV2. Чимэглэл давхарга hover-ийг ХААХГҮЙ (' + n + ')', re.test(tplFlow), n));
+  check('HV2. Улсын polygon нэр + дүн (title) агуулна',
+    /<path d="\{\{ cp\.d \}\}"[^>]*><title>\{\{ cp\.title \}\}<\/title><\/path>/.test(tplFlow));
+  check('HV2. Аймгийн polygon нэр + дүн (rg.title)', /<title>\{\{ rg\.title \}\}<\/title>/.test(tplFlow));
+  check('HV2. .eh-tip хэв маяг style.css-д', /\.eh-tip\s*\{[^}]*pointer-events:\s*none/.test(read('style.css')));
+
+  if (!CHROME) { skipped('HV3–HV4 (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
+  const conH = readJson('content.json');
+  const slugH = (d) => d.sector + '__' + String(d.name).toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  const air = (conH.site.datasets || []).find((x) => x.sector === 'air');
+  if (!air) { skipped('HV3–HV4', 'агаарын датасэт content.json-д алга'); return; }
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slugH(air));
+    const probeSrc = '(' + require(path.join(ROOT, 'tests', 'lib', 'hover-probe.js')).toString() + ')';
+    const R = await runProbe(probeSrc, 150000);
+    if (R.__err) { bad('HV3. Hover шалгагч ажиллав', R.__err); return; }
+    if (!R.ready) {
+      skipped('HV3–HV4', 'газрын зургийн feed ирсэнгүй (сүлжээ/эх сурвалж) — худал FAIL гаргахгүй');
+      return;
+    }
+
+    const num = (s) => { const m = String(s).replace(/,/g, '').match(/\d+(\.\d+)?/); return m ? +m[0] : NaN; };
+    [['intlGlobe', 'Бөмбөрцөг'], ['intlFlat', 'Хавтгай'], ['domestic', 'Дотоод']].forEach(([key, label]) => {
+      const P = R.phases[key];
+      if (!P) { bad('HV3. ' + label + ': газрын зураг зурагдсан', 'phase алга'); return; }
+      const nodes = P.rows.filter((r) => r.kind === 'node');
+      check('HV3. ' + label + ': бөмбөлөг/цэг байна (' + nodes.length + ')', nodes.length >= (key === 'domestic' ? 2 : 3));
+      const noTip = P.rows.filter((r) => !r.tip.vis).map((r) => r.title);
+      check('HV3. ' + label + ': ТЭМДЭГ БҮР дээр tooltip гарна (' + P.rows.length + ')',
+        noTip.length === 0, 'tooltip-гүй: ' + noTip.slice(0, 5).join(' | '));
+      const wrong = P.rows.filter((r) => r.tip.vis).filter((r) => {
+        const want = T.parse(r.title);
+        return !want || r.tip.name !== want.name || r.tip.value !== want.value;
+      }).map((r) => r.title + ' → ' + r.tip.name + '/' + r.tip.value);
+      check('HV3. ' + label + ': tooltip = нэр + дүн (title-тэй ЯГ ижил)', wrong.length === 0, wrong.slice(0, 4).join(' | '));
+      const noVal = nodes.filter((r) => !(num(r.tip.value) >= 0)).map((r) => r.title);
+      check('HV3. ' + label + ': бөмбөлөг бүр НЭР ба ТОО харуулна', noVal.length === 0, noVal.slice(0, 5).join(' | '));
+      const junk = P.rows.filter((r) => !hvClean(r.title) || !hvClean(r.tip.name + r.tip.value)).map((r) => r.title);
+      check('HV3. ' + label + ': NaN/undefined ил гарахгүй', junk.length === 0, junk.slice(0, 4).join(' | '));
+      /* Polygon нь бөмбөлөг/тууз ДООР байх нь хэвийн — зөвхөн бөмбөлөгт шаардана */
+      const blocked = nodes.filter((r) => !r.reach).map((r) => r.title);
+      check('HV3. ' + label + ': тэмдэг бүр ХҮРЭГДЭНЭ (нисэх цэг/цагираг дарахгүй)',
+        blocked.length === 0, blocked.slice(0, 5).join(' | '));
+      const dbl = P.rows.filter((r) => r.tip.vis && (r.tip.native || !r.tip.restored)).map((r) => r.title);
+      check('HV3. ' + label + ': native <title> давхцахгүй, hover дараа ЯГ буцна', dbl.length === 0, dbl.slice(0, 4).join(' | '));
+
+      /* HV4. Статистик нийцэл — нэг тоо хоёр өөр байж болохгүй */
+      const byName = {};
+      nodes.forEach((r) => { const p = T.parse(r.title); (byName[p.name] = byName[p.name] || []).push(p.value); });
+      const dup = Object.keys(byName).filter((k) => new Set(byName[k]).size > 1);
+      check('HV4. ' + label + ': нэг нэр хоёр өөр дүнтэй биш', dup.length === 0, dup.join(', '));
+      const polys = P.rows.filter((r) => r.kind === 'path');
+      const polyBad = polys.filter((r) => { const p = T.parse(r.title); return byName[p.name] && byName[p.name][0] !== p.value; })
+        .map((r) => r.title);
+      check('HV4. ' + label + ': polygon-ы дүн бөмбөлгийнхтэй ЯГ ижил (' + polys.length + ')',
+        polyBad.length === 0, polyBad.slice(0, 4).join(' | '));
+      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const legBad = nodes.filter((r) => {
+        const p = T.parse(r.title), v = p.value.replace(/\s*зорчигч.*$/, '');
+        const m = new RegExp(esc(p.name) + '\\s+(\\d[\\d,]*)').exec(P.cardText);
+        return m && m[1] !== v;
+      }).map((r) => r.title);
+      check('HV4. ' + label + ': легендийн тоо tooltip-тэй тэнцүү', legBad.length === 0, legBad.slice(0, 4).join(' | '));
+      if (key === 'domestic') {
+        /* Аймгийн дүнгийн нийлбэр = нисэх буудлуудын нийлбэр: нэг зорчигч
+           хоёр дахин тоологдох ч, алдагдах ч ёсгүй. */
+        const sum = (arr) => arr.reduce((t, r) => t + (num(T.parse(r.title).value) || 0), 0);
+        const nodeSum = sum(nodes), polySum = sum(polys.filter((r) => /[0-9]/.test(T.parse(r.title).value)));
+        check('HV4. Дотоод: аймгуудын нийлбэр (' + polySum + ') = нисэх буудлуудын нийлбэр (' + nodeSum + ')',
+          nodeSum === polySum, 'зөрүү ' + (nodeSum - polySum));
+      }
+      const vals = nodes.map((r) => num(r.tip.value));
+      check('HV4. ' + label + ': зорчигчийн дүн сөрөг/бутархай биш бүхэл тоо',
+        vals.every((v) => Number.isInteger(v) && v >= 0), vals.filter((v) => !(Number.isInteger(v) && v >= 0)).join(','));
+    });
+    check('HV3. "Хавтгай" ба "Дотоодын" товч олдлоо', R.hasProjTabs === true && R.hasDomestic === true,
+      JSON.stringify({ proj: R.hasProjTabs, dom: R.hasDomestic }));
+
+    /* Хуудасны бусад график (trend цэг, багана, ...) — ижил стандарт */
+    const pg = R.page || [];
+    const pgMiss = pg.filter((r) => !r.tip.vis).map((r) => r.title);
+    check('HV3. Хуудасны бусад графикийн тэмдэг бүрд tooltip гарна (' + pg.length + '/' + R.pageTotal + ')',
+      pgMiss.length === 0, pgMiss.slice(0, 5).join(' | '));
+    /* Статистикч: тэгээс их тоо "0.0%" гэж харагдвал "огт байхгүй" гэж
+       уншигдана (Европ — 589 зорчигч (0.0%) байсан). */
+    const zeroPct = pg.map((r) => r.title).filter((t) => /\(0\.0%\)/.test(t) && /[1-9]/.test(t.split('(0.0%)')[0].split(' — ')[1] || ''));
+    check('HV4. Тэгээс их дүн "0.0%" гэж харагдахгүй (<0.1%)', zeroPct.length === 0, zeroPct.slice(0, 4).join(' | '));
+    const pgJunk = pg.filter((r) => !hvClean(r.title)).map((r) => r.title);
+    check('HV3. Бусад графикийн tooltip-д NaN/undefined алга', pgJunk.length === 0, pgJunk.slice(0, 5).join(' | '));
+
+    /* HV5. Дата тэмдэгтэй боловч ГАНЦ ч tooltip-гүй график байж болохгүй.
+       Чимэглэл (hero дүрслэл, AI цөм, түүхийн шугам) нь жагсаалтад нэрээр
+       бүртгэлтэй — шинэ график нэмбэл tooltip өгөх ЭСВЭЛ энд шалтгаантай
+       нэмэх ёстой. */
+    const DECOR = ['ErtHub AI CORE', 'НЭЭЛТТЭЙ ӨГӨГДӨЛ', 'COMMUNITY', 'САЛБАРЫН ТҮҮХ', 'ШИНЭЧЛЭЛ', 'Монголын зам'];
+    const invOf = async (src) => {
+      PROBE_SRC = src;
+      return runProbe('(' + require(path.join(ROOT, 'tests', 'lib', 'hover-probe.js')).inventory.toString() + ')', 120000);
+    };
+    for (const [label, src] of [['нүүр', '/index.html#/'], ['агаарын датасэт', '/index.html#/browse/' + encodeURIComponent(slugH(air))]]) {
+      const I = await invOf(src);
+      if (I.__err) { bad('HV5. ' + label + ': инвентар ажиллав', I.__err); continue; }
+      const naked = (I.svgs || []).filter((x) => x.w > 60 && x.h > 50 && x.shapes >= 2 && x.tips === 0)
+        .filter((x) => !DECOR.some((k) => x.sec.indexOf(k) >= 0)).map((x) => x.sec + ' [' + x.shapes + ']');
+      check('HV5. ' + label + ': tooltip-гүй график алга (' + (I.svgs || []).length + ' svg)', naked.length === 0, naked.join(' | '));
+    }
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 async function groupVIS() {
   group('VIS. Дэлгэцийн харагдацын аудит (хуудас × өргөн)');
   if (!CHROME) { skipped('VIS. харагдацын аудит', 'Chrome олдсонгүй'); return; }
@@ -6745,6 +7086,51 @@ async function groupOD() {
     if (B.__err) bad('OD4. Зорчигчийн датасэтийн API цонх', B.__err);
     else check('OD4. Зорчигч: /api/sectors/rail/summary (өөр датасэтийн URL биш)',
       /portal\.mrt\.gov\.mn\/api\/sectors\/rail\/summary$/.test(B.ep), B.ep);
+
+    /* OD5. Регресс: "Төрөл → Дотоодын" сонгоход ОУ НИСЛЭГ / ОУ ЗОРЧИГЧ карт
+       "0 / 0.0%" гэж харагдаж өгөгдөл алга мэт төөрөгдүүлдэг байв. Одоо "—" +
+       шалтгаан; "Бүгд" руу буцахад тоо буцна. */
+    PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slugOf(air));
+    const E = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      const cards=()=>{ const out={};
+        [...d.querySelectorAll('span,div')].filter(e=>e.children.length===0&&/^(ОУ НИСЛЭГ|ОУ ЗОРЧИГЧ|ДОТООД ЗОРЧИГЧ)$/i.test(e.textContent.trim()))
+          .forEach(e=>{ const k=e.textContent.trim().toUpperCase();
+            /* {{ }} нь span-д ороогддог — шошгоны div биш КАРТ хүртэл дээш алхана */
+            let c=e.parentElement, t='';
+            for(let i=0;c&&i<4;i++,c=c.parentElement){ t=c.innerText.replace(/\\s+/g,' ').trim(); if(t.length>k.length+2) break; }
+            if(t.length>k.length+2&&t.length<400&&(!out[k]||t.length<out[k].length)) out[k]=t; });
+        return out; };
+      for(let t=0;t<60;t++){ const c=cards(); if(c['ОУ НИСЛЭГ']&&/\\d/.test(c['ОУ НИСЛЭГ'])) break; await sleep(300); }
+      await sleep(1500);
+      const R={all:cards()};
+      const fb=[...d.querySelectorAll('button')].find(b=>/Шүүлт/.test(b.textContent)&&b.getBoundingClientRect().top<500);
+      if(fb){ fb.click(); await sleep(800); }
+      const dom=[...d.querySelectorAll('span')].find(e=>e.children.length===0&&e.textContent.trim()==='Дотоодын'
+        &&e.getBoundingClientRect().top>0&&e.getBoundingClientRect().top<900);
+      /* "Бүгд" нь он/чиглэл/бүсийн мөрөнд ч бий — ЗӨВХӨН «Төрөл»-ийн мөрийнхийг */
+      const rowTop=dom?Math.round(dom.getBoundingClientRect().top):-1;
+      R.picked=!!dom; if(dom) dom.click(); await sleep(1500); R.dom=cards();
+      const all=[...d.querySelectorAll('span')].find(e=>e.children.length===0&&e.textContent.trim()==='Бүгд'
+        &&Math.abs(Math.round(e.getBoundingClientRect().top)-rowTop)<4);
+      if(all) all.click(); await sleep(1500); R.back=cards();
+      return R;
+    }`, 150000);
+    if (E.__err) bad('OD5. Төрлийн шүүлтийн KPI шалгагч', E.__err);
+    else if (!E.picked || !/\d/.test(E.all['ОУ НИСЛЭГ'] || '')) {
+      skipped('OD5', 'нислэгийн feed ирсэнгүй (сүлжээ) — худал FAIL гаргахгүй');
+    } else {
+      check('OD5. Дотоодын шүүлт: ОУ НИСЛЭГ карт "0" БИШ — "—" + шалтгаан',
+        /—/.test(E.dom['ОУ НИСЛЭГ']) && !/(^|\s)0(\s|$)/.test(E.dom['ОУ НИСЛЭГ']) && /шүүлтээр хасагдсан/.test(E.dom['ОУ НИСЛЭГ']),
+        E.dom['ОУ НИСЛЭГ']);
+      check('OD5. Дотоодын шүүлт: ОУ ЗОРЧИГЧ карт "—" + шалтгаан, "0.0%" алга',
+        /—/.test(E.dom['ОУ ЗОРЧИГЧ']) && /шүүлтээр хасагдсан/.test(E.dom['ОУ ЗОРЧИГЧ']) && !/0\.0%/.test(E.dom['ОУ ЗОРЧИГЧ']),
+        E.dom['ОУ ЗОРЧИГЧ']);
+      check('OD5. Дотоодын шүүлт: ДОТООД ЗОРЧИГЧ карт тоотой хэвээр', /\d/.test(E.dom['ДОТООД ЗОРЧИГЧ']) && !/—/.test(E.dom['ДОТООД ЗОРЧИГЧ']),
+        E.dom['ДОТООД ЗОРЧИГЧ']);
+      check('OD5. "Бүгд" руу буцахад ОУ НИСЛЭГ тоо буцна (зөвхөн шүүлтийн үед хасагдана)',
+        E.back['ОУ НИСЛЭГ'] === E.all['ОУ НИСЛЭГ'] && !/—/.test(E.back['ОУ НИСЛЭГ']), E.back['ОУ НИСЛЭГ']);
+    }
   } finally {
     PROBE_SRC = '/admin/index.html';
     srv.close();
@@ -6808,6 +7194,7 @@ console.log('ErtHub — систем тест');
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
   else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
+  else if (process.argv.includes('--only=HV')) { await groupHV(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
   else if (process.argv.includes('--only=FM')) { await groupFM(); }
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
@@ -6815,13 +7202,18 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
   else if (process.argv.includes('--only=VR')) { await groupVR(); }
   else if (process.argv.includes('--only=I')) { groupI(); }
+  else if (process.argv.includes('--only=AX')) { groupAX(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
+  else if (process.argv.includes('--only=Y')) { await groupY(); }
+  else if (process.argv.includes('--only=F')) { await groupF(); }
+  else if (process.argv.includes('--only=I2')) { await groupI2(); }
+  else if (process.argv.includes('--only=I3')) { await groupI3(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
