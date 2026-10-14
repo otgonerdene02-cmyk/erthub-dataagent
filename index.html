@@ -2622,6 +2622,7 @@
 
     <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dwp" data-eh-field="title">{{ detail.dwpTitle }}</span></div>
+      <sc-if value="{{ detail.wpHasData }}">
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
         <div>
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Энэ 7 хоногт</div>
@@ -2640,6 +2641,7 @@
           <div data-wp-val="yoy" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.yoyColor }};">{{ detail.wp.yoy }}</div>
         </div>
       </div>
+      </sc-if>
       <sc-if value="{{ detail.wp.hasPlan }}">
       <div data-wp-plan="1" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);">
         <div style="display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--ink2);margin-bottom:8px;">
@@ -2949,7 +2951,7 @@
     </div>
     </sc-if>
 
-    <sc-if value="{{ detail.notRoadInspect }}">
+    <sc-if value="{{ detail.showTrendRank }}">
     <div class="eh-trend-rank{{ detail.trendFill }}" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span>{{ detail.c1 }}</div>
@@ -6218,9 +6220,16 @@ function buildTrendChart(data,off,partial){
   /* Дутуу сарын цэг (partial) — шугам/прогнозд ОРОХГҮЙ, гэвч Y хүрээнд багтана. */
   const pv=(partial!=null&&isFinite(partial)&&partial>=0)?partial:null;
   const rawMax=Math.max.apply(null,hi.concat(pv!=null?[pv]:[])), rawMin=Math.min.apply(null,lo.concat(pv!=null?[pv]:[]));
-  const span=(rawMax-rawMin)||1;
-  const niceStep=Math.pow(10,Math.floor(Math.log10(span/4)));
-  const niceMax=Math.ceil(rawMax/niceStep)*niceStep, niceMin=Math.floor(rawMin/niceStep)*niceStep;
+  /* Тэнхлэг: "гоё" алхам (1/2/2.5/5·10^k, тэнцүү); хэмжигдэхүүн сөрөг биш бол
+     0-ээс доош бууж болохгүй (хоосон/хавтгай цуваанд -6…6 гарч байсан). */
+  const nonNeg=data.every(v=>v>=0)&&(pv==null||pv>=0);
+  /* Функц өөртөө бүрэн (тест функцийг тусад нь гаргаж ажиллуулдаг) —
+     niceAxis-ийн ижил дүрэм: алхам ∈ {1,2,2.5,5}·10^k, тэнцүү. */
+  const lo0=nonNeg?0:rawMin, hi0=(rawMax>lo0)?rawMax:lo0+1;
+  const rawStep=(hi0-lo0)/4, e10=Math.pow(10,Math.floor(Math.log10(rawStep))), fr=rawStep/e10;
+  const stepY=(fr<=1?1:fr<=2?2:fr<=2.5?2.5:fr<=5?5:10)*e10;
+  const niceMin=nonNeg?0:Math.floor(lo0/stepY+1e-9)*stepY, niceMax=Math.ceil(hi0/stepY-1e-9)*stepY;
+  const axTicks=[]; for(let v=niceMin;v<=niceMax+stepY*1e-6;v+=stepY) axTicks.push(v);
   const range=(niceMax-niceMin)||1;
   const stepX=(w-padL-padR)/(n+FC-1);
   const X=i=>padL+i*stepX, Y=v=>padT+(h-padT-padB)*(1-(v-niceMin)/range);
@@ -6235,9 +6244,9 @@ function buildTrendChart(data,off,partial){
   const lower=fcast.map((v,i)=>[X(n+i),Y(v-resid*1.9*(i+1))]).reverse().concat([[X(n-1),Y(data[n-1])]]);
   const band='M'+upper.concat(lower).map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L')+' Z';
 
-  const yTicks=[0,0.25,0.5,0.75,1].map(fr=>{
-    const val=niceMin+range*fr, y=Y(val);
-    return {y:y.toFixed(1),gy:y.toFixed(1),label:Math.round(val).toLocaleString(),fx:0,fy:(y-7).toFixed(1)};
+  const yTicks=axTicks.map(val=>{
+    const y=Y(val);
+    return {y:y.toFixed(1),gy:y.toFixed(1),label:(Math.round(val*10)/10).toLocaleString('en-US'),fx:0,fy:(y-7).toFixed(1)};
   });
   const every=data.length>8?2:1;
   const xTicks=data.map((v,i)=>({x:X(i).toFixed(1),label:MONTHS[i+off]||'',fx:(X(i)-19).toFixed(1),fy:(h-padB+6).toFixed(1)})).filter((_,i)=>i%every===0);
@@ -6245,7 +6254,7 @@ function buildTrendChart(data,off,partial){
      гар/скрин ридерт ч уншигдана). Өмнө нь график дээр тоо ОГТ харагддаггүй
      байсан тул "энэ цэг хэдийг заасан бэ" гэдгийг мэдэх аргагүй байв. */
   const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),
-    tip:(MONTHS[i+off]?MONTHS[i+off]+': ':'')+Math.round(data[i]).toLocaleString('en-US')}));
+    tip:(MONTHS[i+off]?MONTHS[i+off]+' — ':'')+Math.round(data[i]).toLocaleString('en-US')}));
 
   // peak annotation
   const pi=data.indexOf(Math.max.apply(null,data));
@@ -6258,7 +6267,7 @@ function buildTrendChart(data,off,partial){
   const avgVal=data.reduce((a,v)=>a+v,0)/data.length, avgY=Y(avgVal).toFixed(1);
   /* Дутуу сар: forecast-ын ЯГ ТЭР слот дээр (X(n)) hollow цэг. Шошгыг дээр нь. */
   const pY=pv!=null?Y(pv):0;
-  const partialLabel=pv!=null?(MONTHS[n+off]||'')+' · '+stxt('chart.partial_mark','дутуу')+': '+Math.round(pv).toLocaleString('en-US'):'';
+  const partialLabel=pv!=null?(MONTHS[n+off]||'')+' · '+stxt('chart.partial_mark','дутуу')+' — '+Math.round(pv).toLocaleString('en-US'):'';
   return {line,area,fline,band,yTicks,xTicks,dotPts,peak,fcLabel,
     hasPartial:pv!=null,partialCx:X(n).toFixed(1),partialCy:pY.toFixed(1),
     partialLy:Math.max(pY-9,padT+8).toFixed(1),partialLabel,
@@ -6346,7 +6355,7 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
   /* Hover-ийн тайлбар — багана/цэг дээр очиход ЯГ ТЭР тоо гарна. SVG-ийн
      төрөлх <title> ашигласнаар нэмэлт JS, санамсаргүй давхарга шаардахгүй
      бөгөөд гар/скрин ридерт ч уншигдана. */
-  const lbl=i=>(labels&&labels[i]?labels[i]+': ':'');
+  const lbl=i=>(labels&&labels[i]?labels[i]+' — ':'');
   const tipAt=(i,v,pre)=>lbl(i)+(pre?pre+' ':'')+Math.round(v).toLocaleString('en-US');
   const gap=prevBars?slot*0.02:0;
   /* Дутуу сар ("*" шошготой) — багана бүдэг, шошгонд "(дутуу сар)" гэж бичнэ
@@ -7724,11 +7733,12 @@ class Component extends DCLogic {
         nt('Тухайн хоногт ачилт хийгдсэн эсэх',6)];
       const stOk=stxt('ds_schema_rail_wagon.st_loaded','Ачилттай');
       const stNo=stxt('ds_schema_rail_wagon.st_none','Зөвхөн буулгалт');
+      const stIdle=stxt('ds_schema_rail_wagon.st_idle','Хөдөлгөөнгүй');
       /* Эзлэх % нь бүх станцын НИЙТ ачилтаас — нийлбэр нь 100-д тулгана */
       const totLd=bs.reduce((a,r)=>a+ld(r),0);
       const shr=r=>totLd>0?Math.round(ld(r)/totLd*1000)/10:0;
       DS_SCHEMA.rail_wagon.rows=bs.map(r=>[String(r.station||''),String(r.code||''),
-        ld(r),ul(r),ld(r)-ul(r),shr(r),(ld(r)>0?'ok:'+stOk:'warn:'+stNo)]);
+        ld(r),ul(r),ld(r)-ul(r),shr(r),(ld(r)>0?'ok:'+stOk:(ul(r)>0?'warn:'+stNo:stIdle))]);
       /* Салбарын бүтэц ба багана — ачилтаар эрэмбэлсэн бодит станцууд */
       const top=bs.slice().sort((a,b)=>ld(b)-ld(a));
       const tot=bs.reduce((a,r)=>a+ld(r),0);
@@ -9156,7 +9166,8 @@ class Component extends DCLogic {
       sub:fmt(s.unloaded)+' '+T('stations_unloaded','буулгасан'),
       width:(s.loaded/(stMax||1)*100).toFixed(0)+'%'}));
     const extra=Math.max(0,m.stations.length-10);
-    const chart=buildDualAxisChart(m.series.loaded,m.series.unloaded,m.series.labels);
+    const chart=buildDualAxisChart(m.series.loaded,m.series.unloaded,m.series.labels,
+      {barLabel:T('kpi_loaded','Ачсан вагон'),lineLabel:T('kpi_unloaded','Буулгасан вагон')});
     const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat((m.years||[]).map(y=>({label:String(y),y}))).map(c=>{
       const on=c.y===m.year;
       return {label:c.label,
@@ -10536,8 +10547,11 @@ class Component extends DCLogic {
     /* _liveSeriesDs — цуваа ЯМАР датасэтийнх. Rail-ийн зорчигчийн цуваа
        вагон ачилтын датасэтийн хуудсан дээр гарахгүй (өмнөх засвар яг
        ийм "САРЫН ЗОРЧИГЧ" муруйг арилгасан). Air-д тэмдэглээгүй тул хэвээр. */
-    const dsHasTrend=!dsSec._liveKpis||(!!dsSec._liveSeries&&
-      (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name));
+    /* Бодит (тэгээс их) цэггүй цувааг ЗУРАХГҮЙ — хоосон/тэг цуваа дээр
+       зохиомол тэнхлэг, таамаглал зурагдаж байсан. */
+    const hasRealSeries=Array.isArray(dsSec.c1d)&&dsSec.c1d.some(v=>v>0);
+    const dsHasTrend=hasRealSeries&&(!dsSec._liveKpis||(!!dsSec._liveSeries&&
+      (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name)));
     const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue):null;
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
@@ -10743,7 +10757,7 @@ class Component extends DCLogic {
     const detail={
       t:detailT,
       dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
-      isAirDetail,...airExtra,...wagonExtra,...paxExtra,trendFill:isAirDetail?' eh-fill':'',notRoadInspect:!isRoadInspect,...roadExtra,
+      isAirDetail,...airExtra,...wagonExtra,...paxExtra,trendFill:isAirDetail?' eh-fill':'',notRoadInspect:!isRoadInspect,showTrendRank:!isRoadInspect&&(dsHasTrend||datasetRank(SECTORS[dsel.sector],dsel).length>0),...roadExtra,
       /* Хүснэгтийн дотор талын төлөвийн шүүлт: нэгдсэн шүүлт (түүх ирсэн
          үед дээд талд) байгаа датасэтэд ДАВХАРДАХГҮЙ. */
       tableFilterOpen:!!this.state.pvFilterOpen&&!(roadExtra.riF&&roadExtra.riF.available),
@@ -10755,7 +10769,7 @@ class Component extends DCLogic {
          авто замын цэнхэр өнгөтэй, нүүрээс Агаар сонгож орвол ногоовтор —
          ижил хуудас хоёр өөр өнгөтэй харагддаг байв. */
       color:NEON[dsel.sector],tint:NEON[dsel.sector]+'1f',glyph:GLYPH[dsel.sector],sectorLabel:SECTORS[dsel.sector].label,
-      badgeList:dsel.badges.map(b=>({label:b})),wp,
+      badgeList:dsel.badges.map(b=>({label:b})),wp,wpHasData:!wp.wpNoData,
       dqKnown:dq.known,dqUnknown:!dq.known,dqTotal:dq.known?String(dq.total):'Тодорхойгүй',
       dqTier:dqTier.l,dqColor:dqTier.c,
       dqFreqLabel:dq.freqLabel||'Бүртгэгдээгүй',

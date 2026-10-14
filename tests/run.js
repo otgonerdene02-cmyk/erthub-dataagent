@@ -3754,7 +3754,7 @@ async function groupZ3() {
     if (D.__err) bad('Z9. Дэлгэрэнгүй хуудас ачаалагдав', D.__err);
     else {
       check('Z9. Дөрвөн утга "—" (зохиомол тоо алга)',
-        D.vals.length === 4 && D.vals.every((v) => v === '—'), JSON.stringify(D.vals));
+        D.vals.every((v) => v === '—'), JSON.stringify(D.vals));
       /* Z15 — эх сурвалжгүй үед "2025 оны төлөвлөгөө — —" гэсэн хоосон мөр гарахгүй */
       check('Z15. Эх сурвалжгүй үед төлөвлөгөөний мөр нуугдана', D.plan === false, String(D.plan));
       check('Z9. "Эх сурвалж холбогдоогүй" гэж ил хэлнэ', D.nodata === con.site.detail.wp_no_source, D.nodata);
@@ -5263,8 +5263,8 @@ async function groupBE() {
   const idxH = read('index.html');
   check('BE33. Хуудас road-ийн үзлэгт дүгнэлт/график, бусад датасэтэд trend-rank хэвээр',
     dcScript().includes("const roadExtra=(isRoadInspect&&this.state.page==='detail')?this.buildRoadInspectExtra():{};") &&
-    dcScript().includes("notRoadInspect:!isRoadInspect,...roadExtra,") &&
-    idxH.includes('<sc-if value="{{ detail.notRoadInspect }}">') &&
+    dcScript().includes("notRoadInspect:!isRoadInspect,showTrendRank:!isRoadInspect&&") &&
+    idxH.includes('<sc-if value="{{ detail.showTrendRank }}">') &&
     idxH.includes('<sc-if value="{{ detail.isRoadInspect }}">'));
   check('BE33. Дүгнэлтийн бүх текст content.json → site.road_insp-д бүртгэгдсэн (шинэ хардкод текст алга)',
     ['summary_title', 'map_title', 'rank_title', 'daily_title', 'cats_title', 'week_title', 'kpi_total',
@@ -5521,8 +5521,8 @@ async function groupBE() {
   /* ГАРААР: 12 тэг → налуу 0, resid = 0||0||1 = 1, прогнозын зурвас
      ±1.9·(1,2,3) = ±5.7 → niceStep 1 → тэнхлэг −6 … 6. Өөрөөр хэлбэл
      тэг цуваанаас ГАРАЛТАЙ тэнхлэг нь ҮРГЭЛЖ утгагүй сөрөг тоо гаргана. */
-  check('BE39. Тэг цувааны тэнхлэг УТГАГҮЙ сөрөг тоо гаргана (иймд нуух ЗӨВ)',
-    zeroCh.yTicks.map((t) => t.label).join(',') === '-6,-3,0,3,6',
+  check('BE39. Тэг цувааны тэнхлэг сөрөг тоо гаргахгүй (0-ээс эхэлнэ)',
+    zeroCh.yTicks.every((t) => Number(String(t.label).replace(/,/g, '')) >= 0),
     JSON.stringify(zeroCh.yTicks.map((t) => t.label)));
   check('BE39. Цуваатай үед тэнхлэг хэвийн (0-ээс дээш)',
     btc([100, 110, 120, 130], 0).yTicks.every((t) => Number(String(t.label).replace(/,/g, '')) >= 0),
@@ -6904,6 +6904,56 @@ async function groupHV() {
   }
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+   DS. Датасэтийн дэлгэрэнгүй хуудас — БҮХ датасэт × нэг стандарт.
+   Шинэ датасэт content.json-д нэмэгдэхэд энэ цикл АВТОМАТААР түүнийг
+   шалгана (жагсаалт нь site.datasets-ээс). Тусдаа тест бичих шаардлагагүй.
+   Шалгалт нь backend-гүй (feed хүрэхгүй) төлөвт хийгдэх тул хамгийн
+   муу тохиолдлыг — "хоосон датасэт"-ийг — барина (rail зорчигчийн
+   хуудас дээр -6…6 тэнхлэг, 4 хоосон "—" карт гарч байсан).
+   ────────────────────────────────────────────────────────────────────── */
+async function groupDS() {
+  group('DS. Датасэтийн хуудас × бүх датасэт (нэг стандарт)');
+  if (!CHROME) { skipped('DS. датасэтийн хуудас', 'Chrome олдсонгүй'); return; }
+  const con = readJson('content.json');
+  const list = con.site.datasets || [];
+  check('DS0. Датасэтийн жагсаалт хоосон биш (' + list.length + ')', list.length > 0);
+  const slug = (d) => d.sector + '__' + String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  const srv = serve();
+  try {
+    for (const d of list) {
+      PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slug(d));
+      const R = await runProbe(`async function(doc,w){
+        const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+        await sleep(5000);
+        const txt=doc.body.innerText;
+        const ticks=[...doc.querySelectorAll('svg text, svg foreignObject, svg foreignObject *')]
+          .map(e=>(e.textContent||'').trim()).filter(t=>/^-\\d[\\d,.]*$/.test(t));
+        const tips=[...doc.querySelectorAll('svg title')].map(e=>e.textContent.trim()).filter(Boolean);
+        const wpVals=[...doc.querySelectorAll('[data-wp-val]')].map(e=>e.textContent.trim());
+        const emptyCards=[...doc.querySelectorAll('[data-wp-nodata]')].length;
+        return {txt:txt, ticks:ticks, tips:tips, wpVals:wpVals, emptyCards:emptyCards,
+                hscroll:doc.documentElement.scrollWidth>w.innerWidth+1, len:txt.length};
+      }`, 90000);
+      const L = d.sector + '/' + d.name;
+      if (R.__err) { bad('DS1. ' + L + ': хуудас ачаалагдав', R.__err); continue; }
+      check('DS1. ' + L + ': хуудас хоосон биш (' + R.len + ' тэмдэгт)', R.len > 200);
+      const junk = (R.txt.match(/NaN|undefined|\[object|\bnull\b/g) || []);
+      check('DS2. ' + L + ': NaN/undefined/null ил гарахгүй', junk.length === 0, junk.slice(0, 3).join(','));
+      check('DS3. ' + L + ': графикийн тэнхлэгт сөрөг бүхэл тоо (-6…6) алга', R.ticks.length === 0, R.ticks.join(','));
+      /* Эх сурвалжгүй 7 хоногийн карт дөрвөн "—" ЗУРАХГҮЙ (нэг мөр тайлбар л) */
+      const dashOnly = R.wpVals.length > 0 && R.wpVals.every((v) => v === '—');
+      check('DS4. ' + L + ': бүгд "—" болсон хоосон үзүүлэлтийн карт зурагдахгүй', !dashOnly, JSON.stringify(R.wpVals));
+      const colon = R.tips.filter((t) => /^[^—]{1,40}: \d/.test(t));
+      check('DS5. ' + L + ': tooltip "Нэр — утга" (": " биш) (' + R.tips.length + ')', colon.length === 0, colon.slice(0, 3).join(' | '));
+      check('DS6. ' + L + ': хэвтээ гүйлт үүсэхгүй', R.hscroll === false);
+    }
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 async function groupVIS() {
   group('VIS. Дэлгэцийн харагдацын аудит (хуудас × өргөн)');
   if (!CHROME) { skipped('VIS. харагдацын аудит', 'Chrome олдсонгүй'); return; }
@@ -7311,6 +7361,7 @@ console.log('ErtHub — систем тест');
   if (process.argv.includes('--only=BE')) { await groupBE(); }
   else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
   else if (process.argv.includes('--only=HV')) { await groupHV(); }
+  else if (process.argv.includes('--only=DS')) { await groupDS(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
   else if (process.argv.includes('--only=FM')) { await groupFM(); }
   else if (process.argv.includes('--only=G')) { await groupG(); await groupG3(); await groupG4(); }
@@ -7329,7 +7380,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupHV(); await groupDS(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
