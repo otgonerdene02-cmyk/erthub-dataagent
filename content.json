@@ -1431,6 +1431,8 @@
       "f_reset": "Шүүлт арилгах",
       "f_active": "Шүүлт:",
       "f_full_range": "бүх сар",
+      "f_interval": "Интервал",
+      "f_by_month": "Сар",
       "table_title": "Сарын дэлгэрэнгүй",
       "total": "Нийт",
       "th_month": "Сар",

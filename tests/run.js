@@ -4552,6 +4552,14 @@ async function groupBE() {
     check('PA12. Самбар: шүүлтийн самбар KPI-ийн ӨМНӨ байрлана (шүүлт → KPI → график)',
       tplHtml.indexOf('detail.paxFilterUi.yearChips') > 0 &&
       tplHtml.indexOf('detail.paxFilterUi.yearChips') < tplHtml.indexOf('detail.paxKpis'));
+    const paxTpl = tplHtml.replace(/\s+/g, ' ');
+    check('PA12b. Шүүлт "Шүүлт" товчоор нээгдэнэ: самбар paxFilterUi.show-д ороосон, show = pvFilterOpen',
+      paxTpl.includes('<sc-if value="{{ detail.paxFilterUi.show }}"> <div data-pax-filter="1"') &&
+      tplHtml.includes('show:!!st.pvFilterOpen'));
+    check('PA12c. Нэгдсэн стандарт: сарын чип + "Бүгд" + интервалын оролт + setPaxMonths (вагон/үзлэгтэй адил)',
+      tplHtml.includes('detail.paxFilterUi.monthChips') && tplHtml.includes('detail.paxFilterUi.monthAllPick') &&
+      tplHtml.includes('detail.paxFilterUi.onMFrom') &&
+      /setPaxMonths\(from,to\)\{\s*this\.setState\(\{paxMFrom:from,paxMTo:to/.test(tplHtml));
     check('PA12. Сарын хүснэгт: мөрүүд paxRows-оос, нийлбэрийн мөр paxTotal-оос',
       /detail.paxRows }}" as="pr"/.test(tplHtml) && /detail.paxTotal.pax/.test(tplHtml));
     /* Регресс: хөтөч <x-dc>-ийг оршуулан parse хийхдээ жинхэнэ <tbody> доторх

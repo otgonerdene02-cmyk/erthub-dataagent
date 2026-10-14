@@ -2318,16 +2318,25 @@
         <div style="background:var(--surface2);border:1px dashed var(--line2);border-radius:14px;padding:18px 20px;font-size:13px;color:var(--ink2);line-height:1.5;">{{ detail.paxT.noData }}</div>
       </sc-if>
       <sc-if value="{{ detail.paxHasData }}">
-        <div style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
+        <sc-if value="{{ detail.paxFilterUi.show }}">
+        <div data-pax-filter="1" style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">{{ detail.paxT.filterTitle }}</div>
           <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;min-width:52px;">{{ detail.paxT.fYear }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.paxT.fYear }}</div>
             <sc-for list="{{ detail.paxFilterUi.yearChips }}" as="yc" hint-placeholder-count="3">
               <button sc-camel-on-click="{{ yc.pick }}" style="{{ yc.style }}">{{ yc.label }}</button>
             </sc-for>
           </div>
           <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
             <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.paxT.fMonth }}</div>
+            <button sc-camel-on-click="{{ detail.paxFilterUi.monthAllPick }}" style="{{ detail.paxFilterUi.monthAllStyle }}">{{ detail.paxFilterUi.allLabel }}</button>
+            <sc-for list="{{ detail.paxFilterUi.monthChips }}" as="pm" hint-placeholder-count="12">
+              <button sc-camel-on-click="{{ pm.pick }}" style="{{ pm.style }}">{{ pm.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding-top:2px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.paxT.fInterval }}</div>
+            <span style="font-size:11.5px;color:var(--ink2);white-space:nowrap;">{{ detail.paxT.fByMonth }}</span>
             <input type="number" value="{{ detail.paxFilterUi.mFrom }}" sc-camel-on-input="{{ detail.paxFilterUi.onMFrom }}" min="1" max="12" placeholder="1" style="{{ detail.paxFilterUi.inputStyle }}">
             <span style="font-size:11.5px;color:var(--ink3);">—</span>
             <input type="number" value="{{ detail.paxFilterUi.mTo }}" sc-camel-on-input="{{ detail.paxFilterUi.onMTo }}" min="1" max="12" placeholder="12" style="{{ detail.paxFilterUi.inputStyle }}">
@@ -2337,6 +2346,7 @@
             </sc-if>
           </div>
         </div>
+        </sc-if>
         <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px;">
           <sc-for list="{{ detail.paxKpis }}" as="wk" hint-placeholder-count="6">
             <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px;">
@@ -7200,6 +7210,10 @@ class Component extends DCLogic {
     const v=Math.min(12,Math.max(1,parseInt(raw,10)||1));
     this.setState({[key]:v,paxRoutesExpanded:false},()=>this.refetchPax());
   }
+  /* Сарын чип / "Бүгд" — хоёр захыг нэг дор тохируулж ганц удаа татна. */
+  setPaxMonths(from,to){
+    this.setState({paxMFrom:from,paxMTo:to,paxRoutesExpanded:false},()=>this.refetchPax());
+  }
   resetPaxFilter(){
     this.setState({paxYear:'all',paxMFrom:1,paxMTo:12,paxRoutesExpanded:false},()=>this.refetchPax());
   }
@@ -9298,7 +9312,7 @@ class Component extends DCLogic {
         channelsPending:T('channels_pending','Борлуулалтын сувгийн мэдээлэл хараахан ороогүй — шинэчлэл хүлээгдэж байна.'),
         filterTitle:T('f_title','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
         fYear:T('f_year','Жил'), fMonth:T('f_month','Сар'), fRange:T('f_range','хүрээ'),
-        fReset:T('f_reset','Шүүлт арилгах'), fActive:T('f_active','Шүүлт:'),
+        fReset:T('f_reset','Шүүлт арилгах'),fInterval:T('f_interval','Интервал'),fByMonth:T('f_by_month','Сар'), fActive:T('f_active','Шүүлт:'),
         tableTitle:T('table_title','Сарын дэлгэрэнгүй'), total:T('total','Нийт'),
         thMonth:T('th_month','Сар'), thPax:T('th_pax','Зорчигч'), thTrips:T('th_trips','Аялал'),
         thDom:T('th_dom','ОН'), thIntl:T('th_intl','ОУ'), thIntlPct:T('th_intl_pct','ОУ %'),
@@ -9314,7 +9328,13 @@ class Component extends DCLogic {
         style:'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
           +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);')};
     });
+    const chip=(on)=>'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
+      +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);');
+    const monthChips=[1,2,3,4,5,6,7,8,9,10,11,12].map(mo=>({label:String(mo),
+      pick:()=>this.setPaxMonths(mo,mo),style:chip(st.paxMFrom===mo&&st.paxMTo===mo)}));
     const filterUi={
+      show:!!st.pvFilterOpen,monthChips,allLabel:T('years_all','Бүгд'),
+      monthAllStyle:chip(st.paxMFrom===1&&st.paxMTo===12),monthAllPick:()=>this.setPaxMonths(1,12),
       yearChips,mFrom:String(st.paxMFrom),mTo:String(st.paxMTo),inputStyle,
       onMFrom:(e)=>this.setPaxRange('paxMFrom',e.target.value),
       onMTo:(e)=>this.setPaxRange('paxMTo',e.target.value),
