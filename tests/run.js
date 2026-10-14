@@ -4408,10 +4408,10 @@ async function groupBE() {
      2025-09 30/30 өдөр: 100 зорчигч (ОН 90 / ОУ 10), 20 аялал
      2026-09 30/30 өдөр: 120 (ОН 100 / ОУ 20), 25 аялал
      2026-10 10/31 өдөр (ДУТУУ): 30 (ОН 30 / ОУ 0), 8 аялал. Нийт 250/53. */
-  const pam = dcScript().match(/function paxAnalysisModel\(all,sel,year\)\{([\s\S]*?)\n\}/);
+  const pam = dcScript().match(/function paxAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   if (!pam) { bad('PA0. paxAnalysisModel() олдсонгүй'); }
   else {
-    const PA = new Function('all', 'sel', 'year', pam[1]);
+    const PA = new Function('all', 'sel', 'year', 'mr', pam[1]);
     const pm = (month, days, dim, trips, passengers, domestic, international) =>
       ({ month, days, days_in_month: dim, trips, passengers, domestic, international });
     const PALL = { status: 'ok', months: [pm('2025-09', 30, 30, 20, 100, 90, 10), pm('2026-09', 30, 30, 25, 120, 100, 20),
@@ -4460,6 +4460,64 @@ async function groupBE() {
       /async loadPaxHistory\(\)\{[\s\S]*?try\{[\s\S]*?catch\(e\)/.test(dcScript()));
     check('PA8. Самбар зөвхөн railPax датасэтэд, вагонтой холилдохгүй',
       /dsel\.source==='railPax'&&this\.state\.page==='detail'\)\?this\.buildPaxAnalysis/.test(dcScript()));
+    /* PA9–PA13: шүүлтийн хүрээ, сар бүрийн MoM/YoY, ОУ%, график (0-ээс эхлэх, өндөр). Гараар бодсон:
+       2025-08 80 (70/10, 15 аялал) · 2025-09 100 (90/10, 20) · 2026-08 110 (100/10, 22)
+       2026-09 120 (100/20, 25) · 2026-10 30 (30/0, 8; 10/31 дутуу). */
+    const pm2 = (month, days, dim, trips, passengers, domestic, international) =>
+      ({ month, days, days_in_month: dim, trips, passengers, domestic, international });
+    const PALL2 = { status: 'ok', months: [pm2('2026-09', 30, 30, 25, 120, 100, 20), pm2('2025-08', 31, 31, 15, 80, 70, 10),
+      pm2('2026-10', 10, 31, 8, 30, 30, 0), pm2('2025-09', 30, 30, 20, 100, 90, 10), pm2('2026-08', 31, 31, 22, 110, 100, 10)],
+      by_route: [{ route: 'А', trips: 33, passengers: 150 }, { route: 'Б', trips: 20, passengers: 100 }], by_type: [] };
+    const full = PA(PALL2, null, 'all');
+    const rowOf = (r, k) => r.rows.find(x => x.month === k);
+    check('PA9. Мөр бүр хугацааны дарааллаар (2025-08 → 2026-10), 5 мөр',
+      full.rows.length === 5 && full.rows[0].month === '2025-08' && full.rows[4].month === '2026-10');
+    check('PA9. MoM: 2026-09 = (120-110)/110 = 9.09%; 2025-09 = (100-80)/80 = 25%',
+      Math.abs(rowOf(full, '2026-09').mom - 100 / 11) < 1e-9 && Math.abs(rowOf(full, '2025-09').mom - 25) < 1e-9);
+    check('PA9. YoY: 2026-09 = (120-100)/100 = 20%; 2026-08 = (110-80)/80 = 37.5%; өмнөх оноос байхгүй → null',
+      Math.abs(rowOf(full, '2026-09').yoy - 20) < 1e-9 && Math.abs(rowOf(full, '2026-08').yoy - 37.5) < 1e-9 &&
+      rowOf(full, '2025-09').yoy === null);
+    check('PA9. Дутуу сар (2026-10) нь MoM/YoY-д ОРОХГҮЙ (null), шошго "*"',
+      rowOf(full, '2026-10').mom === null && rowOf(full, '2026-10').yoy === null && rowOf(full, '2026-10').label === '2026-10 *');
+    check('PA9. ОУ% = 20/120 = 16.67%; аяллын дундаж = 120/25 = 4.8',
+      Math.abs(rowOf(full, '2026-09').intlPct - 100 / 6) < 1e-9 && Math.abs(rowOf(full, '2026-09').perTrip - 4.8) < 1e-9);
+    check('PA9. Тэргүүлэгч чиглэлийн эзлэх хувь = 150/250 = 60%', Math.abs(full.topRouteShare - 60) < 1e-9);
+    const mon9 = PA(PALL2, null, 'all', { from: 9, to: 9 });
+    check('PA10. Сарын хүрээ 9–9: зөвхөн 9-р сар (2025-09, 2026-09) → нийт 220, fullRange=false',
+      mon9.rows.length === 2 && mon9.pax === 220 && mon9.fullRange === false && mon9.rangeFrom === 9);
+    const y26 = PA(PALL2, { status: 'ok', months: [], by_route: [{ route: 'А', trips: 33, passengers: 150 }], by_type: [] },
+      2026, { from: 8, to: 9 });
+    check('PA10. 2026 + 8–9: нийт 230; 2026-08 YoY = 37.5% (өмнөх оны 08 сар бүтэн байх ёстой)',
+      y26.pax === 230 && Math.abs(rowOf(y26, '2026-08').yoy - 37.5) < 1e-9 && y26.rows.length === 2);
+    check('PA10. Бүтэн хүрээ + бүх жил → чиглэл түүхээс (all); хязгаарлавал → sel (шүүлтэд таарсан татлага)',
+      PA(PALL2, null, 'all').routeTotal === 250 && PA(PALL2, { status: 'ok', months: [], by_route: [{ route: 'Х', trips: 1, passengers: 9 }], by_type: [] }, 'all', { from: 9, to: 9 }).routes[0].route === 'Х');
+    const W = (y, mr) => (new Function('all', 'year', 'mr', (dcScript().match(/function paxFetchWindow\(all,year,mr\)\{([\s\S]*?)\n\}/) || [, ''])[1]))(PALL2, y, mr);
+    check('PA10. paxFetchWindow: бүтэн түүх → null (татах хэрэггүй)', W('all', { from: 1, to: 12 }) === null);
+    check('PA10. paxFetchWindow: бүх жил + 9–10 сар → 2025-09-01 … 2026-10-31',
+      JSON.stringify(W('all', { from: 9, to: 10 })) === JSON.stringify({ from: '2025-09-01', to: '2026-10-31' }));
+    check('PA10. paxFetchWindow: 2026 бүтэн → 2026-01-01 … 2026-12-31; 2026 + 2 сар → 02-01 … 02-28',
+      JSON.stringify(W(2026, { from: 1, to: 12 })) === JSON.stringify({ from: '2026-01-01', to: '2026-12-31' }) &&
+      JSON.stringify(W(2026, { from: 2, to: 2 })) === JSON.stringify({ from: '2026-02-01', to: '2026-02-28' }));
+    const C = (dcScript().match(/function buildPaxStackedChart\(domSeries,intlSeries,tripSeries,labels\)\{([\s\S]*?)\n\}/) || [, ''])[1];
+    const chart = C ? (new Function('domSeries', 'intlSeries', 'tripSeries', 'labels', C))(
+      [70, 90, 100, 100, 30], [10, 10, 10, 20, 0], [15, 20, 22, 25, 8], ['a', 'b', 'c', 'd', 'e']) : {};
+    check('PA11. Багана: ОН + ОУ (ОУ>0 бүр 2 хэсэг) → 5 + 4 = 9 тэмдэг',
+      (chart.barRects || []).length === 9);
+    check('PA11. Зүүн тэнхлэг тэгээс эхэлнэ (шошго "0"), баруун тэнхлэг мөн тэгээс',
+      chart.yTicksLeft && chart.yTicksLeft[0].label === '0' && chart.yTicksRight[0].label === '0');
+    const d3 = chart.barRects ? chart.barRects.filter(b => b.tip.startsWith('d')) : [];
+    const hTot = d3.reduce((t, b) => t + parseFloat(b.h), 0);
+    check('PA11. Хамгийн өндөр багана (d=120) нийт өндөр = 120/200 × plotH(182) ≈ 109.2',
+      Math.abs(hTot - 109.2) < 0.3, String(hTot));
+    check('PA11. Тэмдэг бүрт "нэр — утга" tooltip (ОН/ОУ/нийт), шугамд аяллын тоо',
+      /ОН: 100 · ОУ: 20 · нийт: 120/.test(d3[0].tip) &&
+      chart.dotPts.every(p => /аялал: /.test(p.tip)));
+    const tplHtml = read('index.html');
+    check('PA12. Самбар: шүүлтийн самбар KPI-ийн ӨМНӨ байрлана (шүүлт → KPI → график)',
+      tplHtml.indexOf('detail.paxFilterUi.yearChips') > 0 &&
+      tplHtml.indexOf('detail.paxFilterUi.yearChips') < tplHtml.indexOf('detail.paxKpis'));
+    check('PA12. Сарын хүснэгт: мөрүүд paxRows-оос, нийлбэрийн мөр paxTotal-оос',
+      /detail.paxRows }}" as="pr"/.test(tplHtml) && /detail.paxTotal.pax/.test(tplHtml));
   }
 
   /* ── BE19. station_count: 0 нь мөрийг БҮРМӨСӨН алга болгодог байв ── */
