@@ -2290,10 +2290,24 @@
         <div style="background:var(--surface2);border:1px dashed var(--line2);border-radius:14px;padding:18px 20px;font-size:13px;color:var(--ink2);line-height:1.5;">{{ detail.paxT.noData }}</div>
       </sc-if>
       <sc-if value="{{ detail.paxHasData }}">
-        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px;">
-          <sc-for list="{{ detail.paxYearChips }}" as="wy" hint-placeholder-count="3">
-            <button sc-camel-on-click="{{ wy.pick }}" style="{{ wy.style }}">{{ wy.label }}</button>
-          </sc-for>
+        <div style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">{{ detail.paxT.filterTitle }}</div>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;min-width:52px;">{{ detail.paxT.fYear }}</div>
+            <sc-for list="{{ detail.paxFilterUi.yearChips }}" as="yc" hint-placeholder-count="3">
+              <button sc-camel-on-click="{{ yc.pick }}" style="{{ yc.style }}">{{ yc.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.paxT.fMonth }}</div>
+            <input type="number" value="{{ detail.paxFilterUi.mFrom }}" sc-camel-on-input="{{ detail.paxFilterUi.onMFrom }}" min="1" max="12" placeholder="1" style="{{ detail.paxFilterUi.inputStyle }}">
+            <span style="font-size:11.5px;color:var(--ink3);">—</span>
+            <input type="number" value="{{ detail.paxFilterUi.mTo }}" sc-camel-on-input="{{ detail.paxFilterUi.onMTo }}" min="1" max="12" placeholder="12" style="{{ detail.paxFilterUi.inputStyle }}">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;margin-left:4px;">{{ detail.paxFilterUi.summary }}</span>
+            <sc-if value="{{ detail.paxFilterUi.dirty }}">
+              <button sc-camel-on-click="{{ detail.paxFilterUi.reset }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.paxT.fReset }}</button>
+            </sc-if>
+          </div>
         </div>
         <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px;">
           <sc-for list="{{ detail.paxKpis }}" as="wk" hint-placeholder-count="6">
@@ -2353,7 +2367,7 @@
           <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
             <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.paxT.chartTitle }}</div>
             <div style="font-size:10.5px;color:var(--ink3);margin-bottom:12px;">{{ detail.paxT.chartLegend }}</div>
-            <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;display:block;">
+            <svg sc-camel-view-box="0 0 640 230" style="width:100%;height:auto;display:block;">
               <sc-for list="{{ detail.paxChart.yTicksLeft }}" as="yt" hint-placeholder-count="5">
                 <line x1="{{ detail.paxChart.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.paxChart.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
                 <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
@@ -2366,7 +2380,7 @@
                 </foreignObject>
               </sc-for>
               <sc-for list="{{ detail.paxChart.barRects }}" as="br" hint-placeholder-count="12">
-                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="var(--ink3)" opacity=".35" rx="2"><title>{{ br.tip }}</title></rect>
+                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="{{ br.fill }}" opacity=".85" rx="2"><title>{{ br.tip }}</title></rect>
               </sc-for>
               <path d="{{ detail.paxChart.line }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
               <sc-for list="{{ detail.paxChart.dotPts }}" as="dp" hint-placeholder-count="12">
@@ -2432,8 +2446,129 @@
             </sc-if>
           </div>
         </div>
+        <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.paxT.tableTitle }}</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;min-width:680px;">
+              <thead>
+                <tr style="color:var(--ink3);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">
+                  <th style="text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;">{{ detail.paxT.thMonth }}</th>
+                  <th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPax }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thTrips }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thDom }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntl }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntlPct }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPerTrip }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thMom }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thYoy }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ detail.paxRows }}" as="pr" hint-placeholder-count="12">
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <td style="text-align:left;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.month }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.pax }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.trips }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.dom }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intl }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intlPct }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.perTrip }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.mom }}</td>
+                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.yoy }}</td>
+                  </tr>
+                </sc-for>
+                <tr style="font-weight:700;border-top:1px solid var(--line2);">
+                  <td style="text-align:left;padding:9px 6px;font-size:12px;">{{ detail.paxT.total }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.pax }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.trips }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.dom }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intl }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intlPct }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.perTrip }}</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</td>
+                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </sc-if>
     </div>
+    </sc-if>
+
+    <!-- Техникийн үзлэг: нэгдсэн хугацааны шүүлт ба сонгосон хугацааны нэгтгэл — хуудасны ДЭЭД талд
+         (агаарын шүүлттэй ижил байршил), хүснэгтийн дээр. -->
+    <sc-if value="{{ detail.isRoadInspect }}">
+    <!-- Нэгдсэн хугацааны шүүлт — "Шүүлт" товч дарахад ДЭЭД талд нээгдэж, доорх
+         бүх үзүүлэлт (нэгтгэл, сарын график, аймаг, шалтгаан, гариг, хүснэгт)-д
+         хамаарна. Хүснэгтийн дотор биш (агаарын датасэттэй ижил стандарт).
+         Түүх ирээгүй үед панель харагдахгүй. -->
+    <sc-if value="{{ detail.riF.show }}">
+      <div data-ri-filter="1" style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">{{ detail.riF.head }}</div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.riF.lYear }}</div>
+          <sc-for list="{{ detail.riF.yearChips }}" as="ryc" hint-placeholder-count="3">
+            <button sc-camel-on-click="{{ ryc.pick }}" style="{{ ryc.style }}">{{ ryc.label }}</button>
+          </sc-for>
+          <sc-if value="{{ detail.riF.loading }}"><span style="font-size:11px;color:var(--ink3);white-space:nowrap;">{{ detail.riF.loadingLabel }}</span></sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.riF.lMonth }}</div>
+          <button sc-camel-on-click="{{ detail.riF.monthAllPick }}" style="{{ detail.riF.monthAllStyle }}">{{ detail.riF.monthAllLabel }}</button>
+          <sc-for list="{{ detail.riF.monthChips }}" as="rmc" hint-placeholder-count="12">
+            <button sc-camel-on-click="{{ rmc.pick }}" style="{{ rmc.style }}">{{ rmc.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding-top:2px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.riF.lInterval }}</div>
+          <span style="font-size:11.5px;color:var(--ink2);white-space:nowrap;">{{ detail.riF.lByYear }}</span>
+          <input type="number" value="{{ detail.riF.yFrom }}" sc-camel-on-input="{{ detail.riF.onYFrom }}" min="{{ detail.riF.yMin }}" max="{{ detail.riF.yMax }}" style="{{ detail.riF.inputStyle }}">
+          <span style="font-size:11.5px;color:var(--ink3);">—</span>
+          <input type="number" value="{{ detail.riF.yTo }}" sc-camel-on-input="{{ detail.riF.onYTo }}" min="{{ detail.riF.yMin }}" max="{{ detail.riF.yMax }}" style="{{ detail.riF.inputStyle }}">
+          <span style="font-size:11.5px;color:var(--ink2);white-space:nowrap;margin-left:8px;">{{ detail.riF.lByMonth }}</span>
+          <input type="number" value="{{ detail.riF.mFrom }}" sc-camel-on-input="{{ detail.riF.onMFrom }}" min="1" max="12" style="{{ detail.riF.inputStyle }}">
+          <span style="font-size:11.5px;color:var(--ink3);">—</span>
+          <input type="number" value="{{ detail.riF.mTo }}" sc-camel-on-input="{{ detail.riF.onMTo }}" min="1" max="12" style="{{ detail.riF.inputStyle }}">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;margin-left:4px;">{{ detail.riF.summary }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.riF.lStatus }}</div>
+          <sc-for list="{{ detail.riF.statusChips }}" as="rsc" hint-placeholder-count="3">
+            <button sc-camel-on-click="{{ rsc.pick }}" style="{{ rsc.style }}">{{ rsc.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ detail.ri.period.show }}">
+    <div data-ri-period="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.period.title }}</span></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">{{ detail.ri.period.scope }}</div>
+      </div>
+      <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px;">
+        <sc-for list="{{ detail.ri.period.kpis }}" as="pk" hint-placeholder-count="4">
+          <div style="background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:14px 15px;">
+            <div style="font-size:9.5px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ pk.label }}</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.02em;">{{ pk.value }}</div>
+            <sc-if value="{{ pk.hasSub }}"><div style="font-size:10.5px;color:var(--ink3);margin-top:5px;line-height:1.35;">{{ pk.sub }}</div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:12px;">{{ detail.ri.period.monthlyTitle }}</div>
+      <svg sc-camel-view-box="0 0 720 250" style="width:100%;height:auto;display:block;">
+        <sc-for list="{{ detail.ri.period.monthly.yTicks }}" as="pyt" hint-placeholder-count="3">
+          <line x1="44" y1="{{ pyt.y }}" x2="712" y2="{{ pyt.y }}" stroke="var(--line)" stroke-width="1"></line>
+          <foreignObject x="0" y="{{ pyt.fy }}" width="40" height="14" style="overflow:visible;"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;">{{ pyt.label }}</div></foreignObject>
+        </sc-for>
+        <sc-for list="{{ detail.ri.period.monthly.bars }}" as="pmb" hint-placeholder-count="12">
+          <rect x="{{ pmb.x }}" y="{{ pmb.yP }}" width="{{ pmb.w }}" height="{{ pmb.hP }}" fill="#2E7CF6" fill-opacity="{{ pmb.op }}" rx="2"><title>{{ pmb.title }}</title></rect>
+          <rect x="{{ pmb.x }}" y="{{ pmb.yF }}" width="{{ pmb.w }}" height="{{ pmb.hF }}" fill="#D2564A" fill-opacity="{{ pmb.op }}" rx="2"><title>{{ pmb.title }}</title></rect>
+        </sc-for>
+        <sc-for list="{{ detail.ri.period.monthly.xTicks }}" as="pxt" hint-placeholder-count="12">
+          <foreignObject x="{{ pxt.fx }}" y="{{ pxt.fy }}" width="48" height="14" style="overflow:visible;"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap;">{{ pxt.label }}</div></foreignObject>
+        </sc-for>
+      </svg>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--ink2);">
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:#2E7CF6;opacity:.6;"></span>{{ detail.ri.passedLabel }}</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:#D2564A;"></span>{{ detail.ri.failedLabel }}</span>
+      </div>
+      <sc-if value="{{ detail.ri.period.hasMonthlyNote }}"><div style="font-size:11.5px;color:var(--ink3);line-height:1.5;margin-top:10px;">{{ detail.ri.period.monthlyNote }}</div></sc-if>
+    </div>
+    </sc-if>
     </sc-if>
 
     <!-- Нэгдсэн шүүлт + KPI: эх veritech dashboard-той адил "Шүүлт" товч дарахад
@@ -2675,7 +2810,7 @@
               </sc-for>
         </div>
       </sc-if>
-      <sc-if value="{{ detail.pvFilterOpen }}">
+      <sc-if value="{{ detail.tableFilterOpen }}">
         <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;background:var(--surface2);border:1px solid var(--line);border-radius:11px;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.t.byStatus }}</div>
           <sc-for list="{{ detail.pvStatusFilters }}" as="sf" hint-placeholder-count="3">
@@ -2964,6 +3099,9 @@
         <sc-if value="{{ detail.ri.map.notReady }}">
           <div style="height:200px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ detail.ri.mapNoGeo }}</div>
         </sc-if>
+        <sc-if value="{{ detail.ri.hasScopeNote }}">
+          <div data-ri-scope="map" style="padding:24px 12px;text-align:center;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ detail.ri.scopeNote }}</div>
+        </sc-if>
       </div>
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.rankTitle }}</span></div>
@@ -2978,6 +3116,7 @@
             </div>
           </sc-for>
           <sc-if value="{{ detail.ri.hasRest }}"><div style="font-size:11.5px;color:var(--ink3);padding-top:2px;">{{ detail.ri.rankRest }}</div></sc-if>
+          <sc-if value="{{ detail.ri.hasScopeNote }}"><div data-ri-scope="rank" style="font-size:12px;color:var(--ink3);line-height:1.55;">{{ detail.ri.scopeNote }}</div></sc-if>
         </div>
       </div>
     </div>
@@ -3030,6 +3169,7 @@
             <foreignObject x="{{ wb.lfx }}" y="{{ wb.lfy }}" width="40" height="14" style="overflow:visible;"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap;line-height:14px;">{{ wb.label }}</div></foreignObject>
           </sc-for>
         </svg>
+        <sc-if value="{{ detail.ri.hasScopeNote }}"><div data-ri-scope="week" style="font-size:12px;color:var(--ink3);line-height:1.55;margin-top:8px;">{{ detail.ri.scopeNote }}</div></sc-if>
         <div style="font-size:11.5px;color:var(--ink3);margin-top:10px;display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:#F2A93B;opacity:.75;"></span>{{ detail.ri.weekendNote }}</div>
       </div>
     </div>
@@ -5954,6 +6094,96 @@ const WAGON_STALE_DAYS=2;
    гэж сэрэмжлүүлж, сэрэмжлүүлэг утгаа алдана. */
 const INSPECT_STALE_DAYS=8;
 
+/* ── Техникийн хяналтын үзлэгийн ТҮҮХ ба нэгдсэн хугацааны шүүлт ──────────
+   /api/sectors/road/inspections нь зөвхөн сүүлийн 30 хоног; он/сар/интервалаар
+   шүүхэд /history хэрэгтэй. Доорх дөрвөн функц цэвэр — tests/run.js BE35
+   гараар бодсон фикстураар шалгана.
+   ЖИЛ: бүртгэлтэй өдрийн нийлбэр нь INSPECT_MIN_YEAR_DAYS-аас бага жилийг
+   жилийн сонголтод ГАРГАХГҮЙ (эх сурвалжид 2019/2021/2024/2025-д нэг л өдөр,
+   1–2 мөр байгаа — санамсаргүй бичлэг; тэдгээрийг жил гэж харуулбал
+   хуурамч сонголт болно). Ийм сарууд "Бүгд" интервалд л орно. */
+const INSPECT_MIN_YEAR_DAYS=28;
+
+function roadInspectHistoryToValue(json){
+  if(!json||json.status!=='ok'||!Array.isArray(json.months)) return null;
+  const num=v=>{ if(v==null||String(v).trim()==='') return null;
+    const n=Number(v); return (!isFinite(n)||n<0)?null:n; };
+  const months=json.months.filter(m=>m&&/^\d{4}-\d{2}$/.test(String(m.month))&&num(m.total)!=null).map(m=>{
+    const c=m.failed_by_category||{};
+    return {month:String(m.month),year:Number(String(m.month).slice(0,4)),mon:Number(String(m.month).slice(5,7)),
+      days:num(m.days)||0,daysInMonth:num(m.days_in_month)||0,partial:!!m.partial,
+      total:num(m.total),failed:num(m.failed)||0,passed:num(m.passed)||0,
+      cats:{general:num(c.general),brake:num(c.brake),steering:num(c.steering),
+        light:num(c.light),emission:num(c.emission),noise:num(c.noise)}};
+  });
+  if(!months.length) return null;
+  return {months,
+    byAimag:(Array.isArray(json.by_aimag)?json.by_aimag:[]).filter(a=>a&&a.aimag&&num(a.total)>0)
+      .map(a=>({aimag:String(a.aimag),total:num(a.total),failed:num(a.failed)||0})),
+    byWeekday:(Array.isArray(json.by_weekday)?json.by_weekday:[]).map(w=>({
+      weekday:Number(w.weekday),days:num(w.days)||0,total:num(w.total)||0,avg:num(w.avg)}))};
+}
+
+function roadInspectYears(months,minDays){
+  const need=minDays==null?INSPECT_MIN_YEAR_DAYS:minDays;
+  const d={};
+  (months||[]).forEach(m=>{ d[m.year]=(d[m.year]||0)+(m.days||0); });
+  return Object.keys(d).map(Number).filter(y=>d[y]>=need).sort((a,b)=>a-b);
+}
+
+/* Сонголт {yFrom,yTo,mFrom,mTo} → сонгогдсон сарууд ба backend-ийн ТАСРАЛТГҮЙ
+   мужийн огноо. Аймаг/гаригийн задаргаа нь мужийн нэгтгэл тул муж тасралтгүй
+   (нэг оны сарууд, эсвэл бүтэн жилүүд) үед л тооцогдоно — бусад хослолд
+   contiguous:false (портал "тооцохгүй" гэж ил хэлнэ, таамаглахгүй). */
+function roadInspectPeriod(sel,months){
+  if(!sel) return null;
+  const vals=[sel.yFrom,sel.yTo,sel.mFrom,sel.mTo];
+  if(vals.some(v=>typeof v!=='number'||!isFinite(v))) return null;
+  const yF=Math.min(sel.yFrom,sel.yTo), yT=Math.max(sel.yFrom,sel.yTo);
+  const mF=Math.min(sel.mFrom,sel.mTo), mT=Math.max(sel.mFrom,sel.mTo);
+  const picked=(months||[]).filter(m=>m.year>=yF&&m.year<=yT&&m.mon>=mF&&m.mon<=mT);
+  const p2=x=>String(x).padStart(2,'0');
+  const lastDay=(y,m)=>new Date(Date.UTC(y,m,0)).getUTCDate();
+  const yOk=yF>=1900&&yT<=2999, mOk=mF>=1&&mT<=12;
+  let from=null,to=null;
+  if(yOk&&mOk){
+    if(yF===yT){ from=yF+'-'+p2(mF)+'-01'; to=yT+'-'+p2(mT)+'-'+p2(lastDay(yT,mT)); }
+    else if(mF===1&&mT===12){ from=yF+'-01-01'; to=yT+'-12-31'; }
+  }
+  return {months:picked,contiguous:from!=null,from,to,yFrom:yF,yTo:yT,mFrom:mF,mTo:mT};
+}
+
+/* Сонгосон хугацааны нэгтгэл. range — /history-ийн ЯГ тэр мужаар татсан
+   хариу (аймаг, гариг энэнээс). Нийлбэр нь сонгосон сарын нийлбэртэй
+   таарахгүй (хоцорсон/буруу хариу) бол аймаг, гаригийг ХАРУУЛАХГҮЙ. */
+function roadInspectPeriodModel(P,range){
+  if(!P||!P.months||!P.months.length) return null;
+  const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
+  const total=sum(P.months,m=>m.total), failed=sum(P.months,m=>m.failed);
+  const passed=sum(P.months,m=>m.passed), days=sum(P.months,m=>m.days);
+  const FK=['general','brake','steering','light','emission','noise'];
+  const cats=FK.map(k=>{
+    const have=P.months.filter(m=>m.cats[k]!=null);
+    return {key:k,n:have.length?sum(have,m=>m.cats[k]):null};
+  }).filter(c=>c.n!=null);
+  const catSum=sum(cats,c=>c.n);
+  cats.forEach(c=>{c.pct=catSum?c.n/catSum*100:0;});
+  const monthly=P.months.map(m=>({month:m.month,total:m.total,failed:m.failed,
+    passed:Math.max(0,m.total-m.failed),days:m.days,daysInMonth:m.daysInMonth,partial:m.partial,
+    rate:m.total?m.failed/m.total*100:null}));
+  let aimags=null,weekday=null;
+  if(P.contiguous&&range&&Array.isArray(range.months)&&sum(range.months,m=>m.total)===total){
+    const as=sum(range.byAimag,a=>a.total);
+    aimags=range.byAimag.slice().sort((a,b)=>b.total-a.total)
+      .map(a=>({name:a.aimag,count:a.total,failed:a.failed,share:as?a.total/as*100:0}));
+    weekday=range.byWeekday;
+  }
+  return {total,failed,passed,days,rate:total?failed/total*100:null,
+    avgPerDay:days?Math.round(total/days):null,
+    partialCount:P.months.filter(m=>m.partial).length,monthCount:P.months.length,
+    monthly,cats,catSum,aimags,weekday,contiguous:P.contiguous};
+}
+
 /* Датасэтийн хуудасны "Салбарын бүтэц" жагсаалт. SECTORS[k].rank нь
    САЛБАРЫН түвшнийх бөгөөд тухайн салбарын АЛЬ НЭГ эх сурвалж дүүргэдэг
    (rail: вагон ачилт). Өмнө нь датасэтийн хуудас түүнийг шууд уншдаг тул
@@ -6251,12 +6481,30 @@ function wagonAnalysisModel(all,sel,year){
     stationTotal:stations.reduce((t,x)=>t+x.loaded,0)};
 }
 
+/* Зорчигчийн галт тэрэгний шүүлтийн ЦОНХ — backend-ээс ямар хугацааны
+   хариу татахыг тодорхойлно. Бүтэн түүх + бүтэн хугацаа бол null (татах
+   шаардлагагүй, `all` ашиглана). Бусад тохиолдолд from/to (YYYY-MM-DD). */
+function paxFetchWindow(all,year,mr){
+  const mFrom=Math.min(12,Math.max(1,+(mr&&mr.from)||1)), mTo=Math.min(12,Math.max(1,+(mr&&mr.to)||12));
+  const allYears=year==='all'||year==null;
+  if(allYears&&mFrom===1&&mTo===12) return null;
+  const ys=(all&&Array.isArray(all.months)?all.months:[]).map(m=>+String(m.month).slice(0,4)).filter(y=>y>0);
+  const y0=allYears?(ys.length?Math.min.apply(null,ys):0):+year;
+  const y1=allYears?(ys.length?Math.max.apply(null,ys):0):+year;
+  if(!(y0>0)||!(y1>0)) return null;
+  const pad=n=>String(n).padStart(2,'0');
+  const last=new Date(Date.UTC(y1,mTo,0)).getUTCDate();
+  return {from:y0+'-'+pad(mFrom)+'-01',to:y1+'-'+pad(mTo)+'-'+pad(last)};
+}
+
 /* Зорчигчийн галт тэрэгний АНАЛИЗ — /rail/passengers/history хариуг
    самбарын хэлбэрт хөрвүүлнэ. ЦЭВЭР функц (tests/run.js PA*). Дутуу сар =
    календарийн өдрийн <90%-д өгөгдөлтэй сар (вагонтой ижил дүрэм). Түүх
    ирээгүй бол {hasData:false} — тоо ЗОХИОХГҮЙ. ОН = орон нутаг (дотоод),
-   ОУ = олон улс. YoY: хоёр оны ХОЁУЛАНД бүтэн байгаа сарууд л. */
-function paxAnalysisModel(all,sel,year){
+   ОУ = олон улс. YoY/MoM: хоёр сар ХОЁУЛАА бүтэн байвал л тооцно.
+   mr = {from,to} сарын хүрээ (1–12); бүтэн түүхийн чиглэл нь бүтэн хүрээ +
+   бүх жил үед л `all`-аас, бусад үед `sel`-ээс (шүүлтэд таарсан татлага). */
+function paxAnalysisModel(all,sel,year,mr){
   const ok=h=>h&&h.status==='ok'&&Array.isArray(h.months)&&h.months.length;
   if(!ok(all)) return {hasData:false};
   const isPartial=m=>{
@@ -6264,15 +6512,20 @@ function paxAnalysisModel(all,sel,year){
     const dim=+m.days_in_month||new Date(Date.UTC(y,mo,0)).getUTCDate();
     return !(dim>0)||(+m.days||0)<dim*0.9;
   };
-  const months=all.months.map(m=>({...m,partial:isPartial(m)}));
+  const months=all.months.map(m=>({...m,partial:isPartial(m)}))
+    .sort((a,b)=>String(a.month)<String(b.month)?-1:String(a.month)>String(b.month)?1:0);
   const years=[...new Set(months.map(m=>+String(m.month).slice(0,4)))].sort();
   const yr=(year==='all'||year==null)?'all':+year;
-  const ms=months.filter(m=>yr==='all'||+String(m.month).slice(0,4)===yr);
+  const mFrom=Math.min(12,Math.max(1,+(mr&&mr.from)||1)), mTo=Math.min(12,Math.max(1,+(mr&&mr.to)||12));
+  const fullRange=mFrom===1&&mTo===12;
+  const mNo=m=>+String(m.month).slice(5);
+  const ms=months.filter(m=>(yr==='all'||+String(m.month).slice(0,4)===yr)&&mNo(m)>=mFrom&&mNo(m)<=mTo);
   if(!ms.length) return {hasData:false};
   const sum=(a,k)=>a.reduce((t,m)=>t+(+m[k]||0),0);
   const pax=sum(ms,'passengers'), trips=sum(ms,'trips'), days=sum(ms,'days');
   const dom=sum(ms,'domestic'), intl=sum(ms,'international');
   const partialN=ms.filter(m=>m.partial).length;
+  const pct=(v,t)=>t>0?v/t*100:0;
   let yoy=null;
   if(yr!=='all'){
     const prev=new Map(months.filter(m=>+String(m.month).slice(0,4)===yr-1&&!m.partial)
@@ -6282,15 +6535,31 @@ function paxAnalysisModel(all,sel,year){
     if(pairs.length&&b>0) yoy={pct:(a-b)/b*100,months:pairs.length};
   }
   const yoyReason=yoy?'ok':(yr==='all'?'pick_year':'none');
-  const bd=(yr==='all'?all:sel);
+  /* Сар бүрийн мөр + өмнөх сартай (MoM) ба өмнөх оны ижил сартай (YoY) харьцуулалт.
+     Хоёул бүтэн сар байвал л тооцно — дутуу сарын тоо хэзээ ч өсөлт гэж гарахгүй. */
+  const byKey=new Map(months.map(m=>[String(m.month),m]));
+  const ymk=(y,mo)=>y+'-'+String(mo).padStart(2,'0');
+  const chg=(cur,prev)=>(cur&&prev&&!cur.partial&&!prev.partial&&(+prev.passengers||0)>0)
+    ?((+cur.passengers||0)-(+prev.passengers||0))/(+prev.passengers)*100:null;
+  const rows=ms.map(m=>{
+    const k=String(m.month), y=+k.slice(0,4), mo=+k.slice(5);
+    const prevM=byKey.get(mo===1?ymk(y-1,12):ymk(y,mo-1));
+    const yM=byKey.get(ymk(y-1,mo));
+    const p=+m.passengers||0, t=+m.trips||0, d=+m.domestic||0, i=+m.international||0;
+    return {month:k,label:k+(m.partial?' *':''),partial:m.partial,
+      passengers:p,trips:t,domestic:d,international:i,intlPct:pct(i,d+i),
+      perTrip:t>0?p/t:null,days:+m.days||0,mom:chg(m,prevM),yoy:chg(m,yM)};
+  });
+  const bd=(yr==='all'&&fullRange)?all:sel;
   const routes=(bd&&Array.isArray(bd.by_route)?bd.by_route:[])
     .map(r=>({route:r.route,trips:+r.trips||0,passengers:+r.passengers||0}))
     .sort((a,b)=>b.passengers-a.passengers);
   const hasBreakdown=routes.length>0;
-  const pct=(v,t)=>t>0?v/t*100:0;
-  /* Борлуулалтын суваг (backend by_channel; migration 019 + дахин боловсруулалтын
-     өмнө [] ирнэ → hasChannels:false, "мэдээлэл алга"). covered = бүх 6 суваг
-     бүрэн ирсэн мөрүүдийн зорчигч — хувийг сувгуудын НИЙЛБЭР дээр бодно. */
+  const routeTotal=routes.reduce((t,r)=>t+r.passengers,0);
+  /* Борлуулалтын суваг (backend by_channel; migration 019 + дахин
+     боловсруулалтын өмнө [] ирнэ → hasChannels:false, "мэдээлэл алга").
+     Он/сарын шүүлттэй үед ЯГ ТЭР хугацааны хариунаас (bd) — бүтэн түүхийнх БИШ.
+     covered = бүх 6 суваг бүрэн ирсэн мөрүүдийн зорчигч. */
   const channels=(bd&&Array.isArray(bd.by_channel)?bd.by_channel:[])
     .map(c=>({channel:c.channel,passengers:+c.passengers||0}))
     .sort((a,b)=>b.passengers-a.passengers);
@@ -6299,13 +6568,59 @@ function paxAnalysisModel(all,sel,year){
   /* Сараар эрэмбэлсэн жагсаалт — дутуу сар тусад нь тэмдэглэгдэнэ */
   const ranked=ms.map(m=>({month:String(m.month),passengers:+m.passengers||0,partial:m.partial}))
     .sort((a,b)=>b.passengers-a.passengers);
-  return {hasData:true,years,year:yr,monthCount:ms.length,days,partialN,
+  return {hasData:true,years,year:yr,fullRange,rangeFrom:mFrom,rangeTo:mTo,monthCount:ms.length,days,partialN,
     pax,trips,dom,intl,domPct:pct(dom,dom+intl),intlPct:pct(intl,dom+intl),
     perTrip:trips>0?pax/trips:null,perDay:days>0?pax/days:null,yoy,yoyReason,
     series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
-      pax:ms.map(m=>+m.passengers||0),trips:ms.map(m=>+m.trips||0)},
-    ranked,hasBreakdown,routes,routeTotal:routes.reduce((t,r)=>t+r.passengers,0),
-    channels,channelTotal,channelCovered,hasChannels:channelTotal>0};
+      dom:ms.map(m=>+m.domestic||0),intl:ms.map(m=>+m.international||0),trips:ms.map(m=>+m.trips||0)},
+    rows,ranked,hasBreakdown,routes,routeTotal,
+    channels,channelTotal,channelCovered,hasChannels:channelTotal>0,
+    topRouteShare:routeTotal>0&&routes.length?routes[0].passengers/routeTotal*100:null};
+}
+
+/* Зорчигчийн сарын график — ОН/ОУ-ийг ЭЭЛЖ харуулсан багана (нийт = өндөр)
+   + аяллын шугам (баруун тэнхлэг). Хоёр тэнхлэг БҮРД 0-ээс эхэлнэ; өмнөх
+   dual-axis нь шугамын тэнхлэгийг 0-ээс эхлүүлдэггүй байсан тул өсөлтийг
+   хэтрүүлж харуулдаг байв. Тоо бүр <title>-д (нэр — утга) гарна. */
+function buildPaxStackedChart(domSeries,intlSeries,tripSeries,labels){
+  const w=640,h=230,padL=58,padR=58,padT=16,padB=32;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const n=(domSeries&&domSeries.length)||0;
+  const base={w,h,padL,padR,padT,padB,axisX1:padL,axisX2:w-padR,axisYBottom:(padT+plotH).toFixed(1)};
+  if(!n) return {...base,barRects:[],line:'',dotPts:[],yTicksLeft:[],yTicksRight:[],xTicks:[]};
+  const dv=domSeries.map(v=>+v||0), iv=(intlSeries||[]).map(v=>+v||0), tv=(tripSeries||[]).map(v=>+v||0);
+  const totals=dv.map((v,i)=>v+(iv[i]||0));
+  /* "Ойлгомжтой" тэгш тэмдэглэгээ: 4 тэнцүү хэсэг, тоо нь 1/2/2.5/5 × 10^k */
+  const niceMax=v=>{
+    if(!(v>0)) return 1;
+    const mag=Math.pow(10,Math.floor(Math.log10(v))), f=v/mag;
+    return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*mag;
+  };
+  const barMax=niceMax(Math.max.apply(null,totals.concat([0]))*1.04);
+  const lineMax=niceMax(Math.max.apply(null,tv.concat([0]))*1.04);
+  const Y1=v=>padT+plotH*(1-v/barMax), Y2=v=>padT+plotH*(1-v/lineMax);
+  const slot=plotW/n, barW=Math.min(34,slot*0.62);
+  const X=i=>padL+i*slot+slot/2;
+  const fmt=v=>Math.round(v).toLocaleString('en-US');
+  const lbl=i=>(labels&&labels[i])||'';
+  const tipBar=i=>lbl(i)+' — ОН: '+fmt(dv[i])+' · ОУ: '+fmt(iv[i]||0)+' · нийт: '+fmt(totals[i]);
+  const barRects=[];
+  dv.forEach((d,i)=>{
+    const x=(padL+i*slot+(slot-barW)/2).toFixed(1), tip=tipBar(i);
+    const yDomTop=Y1(d), yIntlTop=Y1(d+(iv[i]||0)), yBase=padT+plotH;
+    barRects.push({x,y:yDomTop.toFixed(1),w:barW.toFixed(1),h:(yBase-yDomTop).toFixed(1),fill:'#2E7CF6',tip});
+    if(iv[i]>0) barRects.push({x,y:yIntlTop.toFixed(1),w:barW.toFixed(1),h:(yDomTop-yIntlTop).toFixed(1),fill:'#0FA37F',tip});
+  });
+  const xy=tv.map((v,i)=>[X(i),Y2(v)]);
+  const line=xy.length?'M'+xy.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L'):'';
+  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),tip:lbl(i)+' — аялал: '+fmt(tv[i])}));
+  const fr=[0,0.25,0.5,0.75,1];
+  const yTicksLeft=fr.map(f=>{const val=barMax*f,y=Y1(val);return {y:y.toFixed(1),label:fmt(val),fx:0,fy:(y-7).toFixed(1)};});
+  const yTicksRight=fr.map(f=>{const val=lineMax*f,y=Y2(val);return {y:y.toFixed(1),label:fmt(val),fx:(w-padR+4).toFixed(1),fy:(y-7).toFixed(1)};});
+  const every=Math.max(1,Math.ceil(n/12));
+  const xTicks=Array.from({length:n},(_,i)=>({x:X(i).toFixed(1),label:lbl(i),fx:(X(i)-20).toFixed(1),fy:(h-padB+8).toFixed(1)}))
+    .filter((_,i)=>i%every===0);
+  return {...base,barRects,line,dotPts,yTicksLeft,yTicksRight,xTicks};
 }
 
 /* miniSpark() УСТГАВ (2026-09-18): чиглэлээс (up/down) синус муруй ЗОХИОЖ
@@ -6359,7 +6674,7 @@ class Component extends DCLogic {
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12', airTreemapRegion:null,
     airRankExpanded:false, airCountryExpanded:false, airCargoExpanded:false,
     wagonYear:'all', wagonStationsExpanded:false, wagonHistVer:0,
-    paxYear:'all', paxRoutesExpanded:false, paxHistVer:0,
+    paxYear:'all', paxMFrom:1, paxMTo:12, paxRoutesExpanded:false, paxHistVer:0,
     airAiThread:null, airAiInput:'',
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
@@ -6841,13 +7156,30 @@ class Component extends DCLogic {
       console.info('[ErtHub] passengers/history уншигдсангүй:',e.message);
     }
   }
+  /* Шүүлт (он + сарын хүрээ) нэг урсгалаар: сонголт өөрчлөгдөх бүрт
+     backend-ээс зөвхөн шаардлагатай хүрээг (paxFetchWindow) дахин татна.
+     Хоцорсон хариуг token-оор үл тооно. */
   setPaxYear(y){
-    this.setState({paxYear:y,paxRoutesExpanded:false});
+    this.setState({paxYear:y,paxRoutesExpanded:false},()=>this.refetchPax());
+  }
+  setPaxRange(key,raw){
+    const v=Math.min(12,Math.max(1,parseInt(raw,10)||1));
+    this.setState({[key]:v,paxRoutesExpanded:false},()=>this.refetchPax());
+  }
+  resetPaxFilter(){
+    this.setState({paxYear:'all',paxMFrom:1,paxMTo:12,paxRoutesExpanded:false},()=>this.refetchPax());
+  }
+  refetchPax(){
+    const st=this.state;
+    const win=paxFetchWindow(this._paxHistAll,st.paxYear,{from:st.paxMFrom,to:st.paxMTo});
     this._paxHistSel=null;
-    if(y==='all'||typeof EHBackend==='undefined'||!EHBackend.fetchRailPassengersHistory) return;
     const tok=this._paxSelTok=(this._paxSelTok||0)+1;
-    EHBackend.fetchRailPassengersHistory(y+'-01-01',y+'-12-31').then(d=>{
-      if(tok!==this._paxSelTok||this.state.paxYear!==y) return;
+    if(!win||typeof EHBackend==='undefined'||!EHBackend.fetchRailPassengersHistory){
+      this.setState(s=>({paxHistVer:s.paxHistVer+1}));
+      return;
+    }
+    EHBackend.fetchRailPassengersHistory(win.from,win.to).then(d=>{
+      if(tok!==this._paxSelTok) return;
       this._paxHistSel=d;
       this.setState(s=>({paxHistVer:s.paxHistVer+1}));
     });
@@ -6875,6 +7207,96 @@ class Component extends DCLogic {
       this.applyRoadInspectionData();
     }catch(e){
       console.info('[ErtHub] road/inspections уншигдсангүй:',e.message);
+    }
+    /* Түүх нь /inspections-ээс ТУСДАА: нэг нь унасан нь нөгөөг хөндөхгүй. */
+    this.loadRoadInspectionsHistory();
+  }
+  /* ── Үзлэгийн түүх ба нэгдсэн хугацааны шүүлт ─────────────────────────
+     _riHistAll — шүүлтгүй БҮТЭН түүх (жилийн сонголт, сарын цуваа).
+     _riRange   — сонгосон ТАСРАЛТГҮЙ мужаар татсан хариу (аймаг, гариг).
+     Endpoint deploy болоогүй/унтарсан бол _riHistAll=null → шүүлтийн
+     панель харагдахгүй, хуудас өмнөх шигээ (сүүлийн 30 хоног) ажиллана. */
+  async loadRoadInspectionsHistory(){
+    if(typeof EHBackend==='undefined'||!EHBackend.enabled) return;
+    if(!EHBackend.fetchRoadInspectionsHistory) return;   // хуучин кэштэй js файл
+    try{
+      const d=await EHBackend.fetchRoadInspectionsHistory();
+      this._riHistAll=roadInspectHistoryToValue(d);
+      this._riRangeCache={};
+      this.refreshRoadInspectRange();
+    }catch(e){
+      console.info('[ErtHub] road/inspections/history уншигдсангүй:',e.message);
+    }
+  }
+  /* Одоогийн сонголт. Хэрэглэгч юу ч сонгоогүй бол ХАНГАЛТТАЙ өгөгдөлтэй
+     хамгийн сүүлийн он, 1–12 сар (эх сурвалжийн санамсаргүй нэг мөртэй
+     оныг анхдагч болгохгүй). */
+  roadInspectSel(){
+    const h=this._riHistAll;
+    if(!h) return null;
+    const ys=roadInspectYears(h.months);
+    const last=ys.length?ys[ys.length-1]:h.months[h.months.length-1].year;
+    const st=this.state;
+    const num=(v,d)=>{ const n=parseInt(v,10); return isFinite(n)?n:d; };
+    return {years:ys,
+      yFrom:num(st.riYFrom,last),yTo:num(st.riYTo,last),
+      mFrom:num(st.riMFrom,1),mTo:num(st.riMTo,12)};
+  }
+  /* Сонголт өөрчлөгдөх бүрд: сонгосон мужийн аймаг/гаригийн задаргааг татна
+     (тасралтгүй муж л). Хоцорсон хариуг токеноор үл тооно. */
+  refreshRoadInspectRange(){
+    const bump=()=>this.setState(s=>({riVer:(s.riVer||0)+1}));
+    const h=this._riHistAll, sel=this.roadInspectSel();
+    this._riRange=null;
+    const P=(h&&sel)?roadInspectPeriod(sel,h.months):null;
+    if(!P||!P.contiguous||typeof EHBackend==='undefined'||!EHBackend.fetchRoadInspectionsHistory){
+      this._riTok=(this._riTok||0)+1;
+      this.applyRoadInspectPeriodTable();
+      bump();
+      return;
+    }
+    const cache=this._riRangeCache||(this._riRangeCache={});
+    const key=P.from+'|'+P.to;
+    if(cache[key]){
+      this._riRange=cache[key];
+      this.applyRoadInspectPeriodTable();
+      bump();
+      return;
+    }
+    const tok=this._riTok=(this._riTok||0)+1;
+    this.setState({riLoading:true});
+    EHBackend.fetchRoadInspectionsHistory(P.from,P.to).then(d=>{
+      if(tok!==this._riTok) return;
+      const v=roadInspectHistoryToValue(d);
+      if(v) cache[key]=v;
+      this._riRange=v;
+      this.applyRoadInspectPeriodTable();
+      this.setState(s=>({riVer:(s.riVer||0)+1,riLoading:false}));
+    });
+  }
+  setRoadInspectSel(patch){
+    this.setState(Object.assign({dsPage:0},patch),()=>this.refreshRoadInspectRange());
+  }
+  /* Датасэтийн ХҮСНЭГТ (DS_SCHEMA.road_inspect) шүүлтийн хугацаатай ТААРНА.
+     Өмнө нь зөвхөн сүүлийн хоногийн аймгийн мөр байв. Аймгийн задаргаа
+     тооцогдох боломжгүй (тасралтгүй биш муж / хариу ирээгүй) бол мөр ХООСОН —
+     өөр хугацааны тоог үзүүлж "шүүлт ажиллаагүй" мэт харагдуулахгүй. */
+  applyRoadInspectPeriodTable(){
+    const h=this._riHistAll, sel=this.roadInspectSel();
+    if(!h||!sel) return;
+    const P=roadInspectPeriod(sel,h.months);
+    const PM=P?roadInspectPeriodModel(P,this._riRange):null;
+    if(!PM) return;
+    const S=DS_SCHEMA.road_inspect;
+    if(!PM.aimags){ S.rows=[]; return; }
+    const stBad=stxt('ds_schema_road_inspect.st_fail','Тэнцээгүй бүртгэгдсэн');
+    const stOkA=stxt('ds_schema_road_inspect.st_clean','Бүгд тэнцсэн');
+    S.rows=PM.aimags.map(r=>[r.name,r.count,r.count-r.failed,r.failed,
+      r.count?Number((r.failed/r.count*100).toFixed(1)):0,Number(r.share.toFixed(1)),
+      (r.failed>0?'warn:'+stBad:'ok:'+stOkA)]);
+    if(Array.isArray(S.notes)&&S.notes.length>1){
+      S.notes=S.notes.slice();
+      S.notes[1]=stxt('ds_schema_road_inspect.note_period','Шүүлтээр сонгосон хугацаанд бүртгэгдсэн үзлэгийн тоо');
     }
   }
   /* Тээврийн хэрэгслийн бүртгэл. loadRoadInspections()-тэй ЯГ ИЖИЛ зарчим:
@@ -7013,6 +7435,10 @@ class Component extends DCLogic {
           (f>0?'warn:'+stBad:'ok:'+stOkA)];
       });
     }
+    /* Шүүлтийн хугацаатай хүснэгт — дээрх мөрүүд сүүлийн хоногийнх тул
+       түүхийг дахин давхарлана (reapplyLiveText-ээр дуудагдахад алдагдахгүй).
+       Тестийн harness энэ аргыг тусад нь ажиллуулдаг тул байхгүй бол алгасна. */
+    if(typeof this.applyRoadInspectPeriodTable==='function') this.applyRoadInspectPeriodTable();
     this.setState({roadInspectDate:w.date||''});
   }
   /* Техникийн хяналтын үзлэгийн ДЭЛГЭРЭНГҮЙ дүгнэлт ба графикууд (датасэтийн
@@ -7041,9 +7467,18 @@ class Component extends DCLogic {
       maLabel:stxt('road_insp.ma_label','7 хоногийн дундаж'),
       mapNoGeo:stxt('road_insp.map_nogeo',''),noData:stxt('road_insp.no_data','Үзлэгийн өгөгдөл ачаалагдаагүй байна.')
     };
+    /* Нэгдсэн хугацааны шүүлт: түүх ирсэн үед л. Шүүлтийн сонголт нь
+       хугацааны нэгтгэл, аймаг/гариг/шалтгаан, хүснэгтийг ХАМТ удирдана. */
+    const hist=this._riHistAll, selR=this.roadInspectSel();
+    const P=(hist&&selR)?roadInspectPeriod(selR,hist.months):null;
+    const PM=P?roadInspectPeriodModel(P,this._riRange):null;
+    const FU=this.buildRoadInspectFilter(hist,selR,P,PM,fmt);
+    ri.period=FU.period;
+    ri.scopeNote=FU.scopeNote;
+    ri.hasScopeNote=!!FU.scopeNote;
     /* Өгөгдөл алга — шаардлагатай бүх хэсгийг хоосон хэлбэрээр өгнө (шаблон
        хоосон массив/объект дээр унахгүй; мэдээлэл алга гэдгийг ri.noData харуулна). */
-    if(!A) return {isRoadInspect:true,ri:{...ri,lines:[],kpis:[],rank:[],cats:[],hasRest:false,rankRest:'',
+    if(!A) return {isRoadInspect:true,riF:FU.riF,ri:{...ri,lines:[],kpis:[],rank:[],cats:[],hasRest:false,rankRest:'',
       daily:{yTicks:[],bars:[],xTicks:[]},week:{bars:[]},
       map:{ready:false,notReady:false}}};
 
@@ -7082,38 +7517,50 @@ class Component extends DCLogic {
 
     /* Гаригийн задаргаа: амралтын өдрүүд (Бя, Ня) өөр өнгөөр. */
     const WW=360,WH=200,wl=34,wt=14,wb=28,WHh=WH-wt-wb,wy0=WH-wb;
-    const wmax=Math.max(1,...A.weekday.map(x=>x.avg));
+    /* Шүүлт (PM) байвал аймаг/гариг/шалтгаан түүнээс; үгүй бол сүүлийн хоног/
+       30 хоногийн (A) өмнөх байдал. Аймаг/гаригийн задаргаа тооцогдохгүй
+       (тасралтгүй биш муж, эсвэл ачаалж байна) үед ХООСОН — өөр хугацааны
+       тоог харуулж шүүлт ажиллаагүй мэт болгохгүй. */
+    const FKS=['general','brake','steering','light','emission','noise'];
+    const wdList=PM
+      ?(PM.weekday||[]).map(w=>({label:T.wd[w.weekday]||'',avg:w.avg==null?0:w.avg,none:w.avg==null}))
+      :A.weekday.map(x=>({label:x.label,avg:x.avg,none:false}));
+    const wmax=Math.max(1,...wdList.map(x=>x.avg));
     const wslot=(WW-wl-6)/7, wbw=wslot*0.62;
-    ri.week={bars:A.weekday.map((x,k)=>{
+    ri.week={bars:wdList.map((x,k)=>{
       const h=x.avg/wmax*WHh, bx=wl+k*wslot+(wslot-wbw)/2;
       return {x:bx.toFixed(1),w:wbw.toFixed(1),y:(wy0-h).toFixed(1),h:h.toFixed(1),
         vfx:(bx+wbw/2-20).toFixed(1),vfy:(wy0-h-18).toFixed(1),
         lfx:(bx+wbw/2-20).toFixed(1),lfy:(WH-22).toFixed(1),
-        label:x.label,value:fmt(x.avg),color:k>=5?NEON.public:NEON.road};
+        label:x.label,value:x.none?'—':fmt(x.avg),color:k>=5?NEON.public:NEON.road};
     })};
 
     /* Аймгийн жагсаалт (топ 10) — үргэлж харагдана, газрын зураг ачаалаагүй ч. */
-    const amax=A.aimags.length?A.aimags[0].count:1;
-    ri.rank=A.aimags.slice(0,10).map(r=>({name:r.name,value:fmt(r.count)+' · '+r.share.toFixed(1)+'%',
+    const aim=PM?(PM.aimags||[]):A.aimags;
+    const amax=aim.length?aim[0].count:1;
+    ri.rank=aim.slice(0,10).map(r=>({name:r.name,value:fmt(r.count)+' · '+r.share.toFixed(1)+'%',
       width:(r.count/amax*100).toFixed(1)+'%'}));
-    const rest=A.aimags.length-10;
+    const rest=aim.length-10;
     ri.hasRest=rest>0;
     ri.rankRest=rest>0?fillTpl(stxt('road_insp.rank_rest',''),{n:rest}):'';
 
     /* Тэнцээгүйн шалтгаан — хэсгийн нийлбэрт эзлэх хувь (нийлбэр 100%). */
-    const cmax=A.cats.length?A.cats[0].n:1;
-    ri.cats=A.cats.map(c=>({name:c.name,value:fmt(c.n),pct:c.pct.toFixed(1)+'%',
+    const catList=PM
+      ?PM.cats.map(c=>({name:T.cats[FKS.indexOf(c.key)]||c.key,n:c.n,pct:c.pct})).sort((a,b)=>b.n-a.n)
+      :A.cats;
+    const cmax=catList.length?catList[0].n:1;
+    ri.cats=catList.map(c=>({name:c.name,value:fmt(c.n),pct:c.pct.toFixed(1)+'%',
       width:(c.n/cmax*100).toFixed(1)+'%'}));
 
     /* Аймгийн choropleth — air-ийн хэв маягтай ИЖИЛ (d3.geoMercator, geojson). */
     const map={ready:false,notReady:!this.mongoliaAimags};
-    if(this.mongoliaAimags&&typeof d3!=='undefined'&&A.aimags.length){
+    if(this.mongoliaAimags&&typeof d3!=='undefined'&&aim.length){
       const W=520,HM=360;
       const proj=d3.geoMercator().fitExtent([[12,12],[W-12,HM-12]],this.mongoliaAimags);
       const pathGen=d3.geoPath(proj);
       const byName={};
-      A.aimags.forEach(r=>{byName[aimagKey(r.name)]=r;});
-      const cmx=A.aimags[0].count;
+      aim.forEach(r=>{byName[aimagKey(r.name)]=r;});
+      const cmx=aim[0].count;
       /* Нэг hue дээр гүнзгийрнэ; sqrt тул их аймаг бусдыг цайруулахгүй. */
       const fillOf=c=>{
         if(!c) return dark?'#1C2537':'#E8ECF2';
@@ -7129,7 +7576,7 @@ class Component extends DCLogic {
       });
       /* Гурван том аймгийг л нэрлэнэ — бусад нь топ жагсаалтад байгаа; таван
          нэр нь бие биедээ давхцаж уншигдахгүй байсан. */
-      map.labels=A.aimags.slice(0,3).map(r=>{
+      map.labels=aim.slice(0,3).map(r=>{
         const f=this.mongoliaAimags.features.find(x=>x.properties.name===aimagKey(r.name));
         const c=f&&pathGen.centroid(f);
         return c&&isFinite(c[0])?{fx:(c[0]-60).toFixed(1),fy:(c[1]-9).toFixed(1),text:r.name}:null;
@@ -7139,7 +7586,110 @@ class Component extends DCLogic {
       map.ready=true;
     }
     ri.map=map;
-    return {isRoadInspect:true,ri};
+    return {isRoadInspect:true,riF:FU.riF,ri};
+  }
+  /* Нэгдсэн хугацааны шүүлтийн панель + сонгосон хугацааны нэгтгэлийн карт.
+     Бүгд цэвэр өгөгдлөөс (hist/PM) — тоо зохиохгүй. Түүх ирээгүй (hist=null)
+     бол панель нуугдаж, хуудас өмнөх шигээ. ЭНЭ нь "стандарт шүүлт"-ийн
+     загвар: хугацаа-цувааны датасэт бүр ижил panel + period model ашиглана. */
+  buildRoadInspectFilter(hist,sel,P,PM,fmt){
+    const none={riF:{available:false,show:false},period:{show:false,kpis:[],monthly:{bars:[],yTicks:[],xTicks:[]}},scopeNote:''};
+    if(!hist||!sel||!P) return none;
+    const st=this.state;
+    const chipStyle=(on)=>'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
+      +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);');
+    const busy=st.riLoading?'opacity:.5;pointer-events:none;':'';
+    const ys=sel.years, minY=hist.months[0].year, maxY=hist.months[hist.months.length-1].year;
+    const yFrom=P.yFrom, yTo=P.yTo;
+    const allYears=yFrom<=minY&&yTo>=maxY;
+    const single=yFrom===yTo?yFrom:null;
+    const yearChips=[{label:stxt('road_insp.f_all','Бүгд'),
+      pick:()=>this.setRoadInspectSel({riYFrom:String(minY),riYTo:String(maxY)}),
+      style:chipStyle(!!allYears&&single==null)+busy}].concat(ys.map(y=>({
+        label:String(y),pick:()=>this.setRoadInspectSel({riYFrom:String(y),riYTo:String(y)}),
+        style:chipStyle(single===y)+busy})));
+    const monthAll=P.mFrom===1&&P.mTo===12;
+    const monthChips=[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>({label:String(m),
+      pick:()=>this.setRoadInspectSel({riMFrom:String(m),riMTo:String(m)}),
+      style:chipStyle(!monthAll&&P.mFrom===m&&P.mTo===m)+busy}));
+    const inStyle='width:66px;height:32px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);font-family:'+"'JetBrains Mono',monospace"+';font-size:12px;color:var(--ink);text-align:center;outline:none;padding:0 4px;box-sizing:border-box;';
+    const sf=st.pvStatusFilter||'all';
+    const statusChips=[['all',stxt('road_insp.f_all','Бүгд')],
+      ['warn',stxt('ds_schema_road_inspect.st_fail','Тэнцээгүй бүртгэгдсэн')],
+      ['ok',stxt('ds_schema_road_inspect.st_clean','Бүгд тэнцсэн')]].map(x=>({label:x[1],
+        pick:()=>this.setState({pvStatusFilter:x[0],dsPage:0}),style:chipStyle(sf===x[0])}));
+    const scopeYears=yFrom===yTo?String(yFrom):yFrom+'–'+yTo;
+    const scopeMonths=P.mFrom===P.mTo?String(P.mFrom):P.mFrom+'–'+P.mTo;
+    const riF={available:true,show:!!st.pvFilterOpen,
+      head:stxt('road_insp.f_head','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
+      lYear:stxt('road_insp.f_year','Он'),lMonth:stxt('road_insp.f_month','Сар'),
+      lInterval:stxt('road_insp.f_interval','Интервал'),lByYear:stxt('road_insp.f_by_year','Он'),
+      lByMonth:stxt('road_insp.f_by_month','Сар'),lStatus:stxt('road_insp.f_status','Төлөв'),
+      loadingLabel:stxt('road_insp.f_loading','ачаалж байна…'),loading:!!st.riLoading,
+      yearChips,monthChips,statusChips,
+      monthAllLabel:stxt('road_insp.f_all','Бүгд'),
+      monthAllStyle:chipStyle(monthAll)+busy,
+      monthAllPick:()=>this.setRoadInspectSel({riMFrom:'1',riMTo:'12'}),
+      inputStyle:inStyle,
+      yFrom:st.riYFrom==null||st.riYFrom===''?String(yFrom):String(st.riYFrom),
+      yTo:st.riYTo==null||st.riYTo===''?String(yTo):String(st.riYTo),
+      mFrom:st.riMFrom==null||st.riMFrom===''?String(P.mFrom):String(st.riMFrom),
+      mTo:st.riMTo==null||st.riMTo===''?String(P.mTo):String(st.riMTo),
+      yMin:String(minY),yMax:String(maxY),
+      onYFrom:(e)=>this.setRoadInspectSel({riYFrom:e.target.value}),
+      onYTo:(e)=>this.setRoadInspectSel({riYTo:e.target.value}),
+      onMFrom:(e)=>this.setRoadInspectSel({riMFrom:e.target.value}),
+      onMTo:(e)=>this.setRoadInspectSel({riMTo:e.target.value}),
+      summary:scopeYears+' '+stxt('road_insp.f_year_unit','он')+' · '+scopeMonths+' '+stxt('road_insp.f_month_unit','сар')};
+    if(!PM){
+      return {riF,period:{show:false,kpis:[],monthly:{bars:[],yTicks:[],xTicks:[]},
+        emptyTitle:stxt('road_insp.period_title','Сонгосон хугацааны нэгтгэл'),
+        empty:true,emptyText:stxt('road_insp.period_empty','Сонгосон хугацаанд үзлэгийн бүртгэл алга.')},scopeNote:''};
+    }
+    const kpis=[
+      {label:stxt('road_insp.period_kpi_total','Нийт үзлэг'),value:fmt(PM.total),
+        sub:fillTpl(stxt('road_insp.period_kpi_total_note','{days} бүртгэлтэй өдөр'),{days:fmt(PM.days)})},
+      {label:stxt('road_insp.period_kpi_failed','Тэнцээгүй'),value:fmt(PM.failed),
+        sub:PM.rate==null?'':fillTpl(stxt('road_insp.period_kpi_failed_note','{rate}% — үзлэгийн тооноос'),{rate:PM.rate.toFixed(1)})},
+      {label:stxt('road_insp.period_kpi_avg','Өдрийн дундаж'),value:PM.avgPerDay==null?'—':fmt(PM.avgPerDay),
+        sub:stxt('road_insp.period_kpi_avg_note','үзлэг / бүртгэлтэй өдөр')},
+      {label:stxt('road_insp.period_kpi_partial','Дутуу сар'),value:fmt(PM.partialCount),
+        sub:fillTpl(stxt('road_insp.period_kpi_partial_note','{n} сарын {p} нь дутуу (*)'),{n:PM.monthCount,p:PM.partialCount})}
+    ].map(k=>({...k,hasSub:!!k.sub}));
+    /* Сарын задарсан багана — хоногийнхтой ижил хэв: тэнцсэн доор, тэнцээгүй
+       дээр. Дутуу сар цайвар + "*" (жилийн харьцуулалтад бүү ашигла). */
+    const DW=720,DH=250,pl=44,pr=8,pt=14,pb=30,H=DH-pt-pb,y0=DH-pb;
+    const n=Math.max(1,PM.monthly.length);
+    const maxC=Math.max(1,...PM.monthly.map(m=>m.total));
+    const slot=(DW-pl-pr)/n, bw=Math.min(slot*0.62,56);
+    const monthly={
+      yTicks:[0,Math.round(maxC/2),maxC].map(v=>({y:(y0-v/maxC*H).toFixed(1),fy:(y0-v/maxC*H-7).toFixed(1),label:fmt(v)})),
+      bars:PM.monthly.map((m,i)=>{
+        const hT=m.total/maxC*H, hF=m.failed/maxC*H, hP=Math.max(0,hT-hF);
+        const x=pl+i*slot+(slot-bw)/2;
+        return {x:x.toFixed(1),w:bw.toFixed(1),yP:(y0-hP).toFixed(1),hP:hP.toFixed(1),
+          yF:(y0-hP-hF).toFixed(1),hF:hF.toFixed(1),op:m.partial?'.32':'.6',
+          title:fillTpl(stxt('road_insp.month_title','{month}{star} — {count} үзлэг · тэнцээгүй {failed} ({rate}%) · {days}/{dim} өдөр'),
+            {month:m.month,star:m.partial?'*':'',count:fmt(m.total),failed:fmt(m.failed),
+             rate:m.rate==null?'—':m.rate.toFixed(1),days:m.days,dim:m.daysInMonth})};
+      }),
+      xTicks:PM.monthly.map((m,i)=>({fx:(pl+i*slot+slot/2-24).toFixed(1),fy:(DH-21).toFixed(1),
+        label:m.month.slice(2)+(m.partial?'*':'')}))
+        .filter((t,i)=>n<=14||i%Math.ceil(n/12)===0)
+    };
+    let scopeNote='';
+    if(!PM.aimags){
+      scopeNote=!P.contiguous?stxt('road_insp.scope_noncontig','Нэг оны сар эсвэл бүтэн жилүүдийг сонгоход л аймаг, гаригийн задаргааг тооцно.')
+        :(st.riLoading?stxt('road_insp.scope_loading','Аймаг, гаригийн задаргааг ачаалж байна…')
+          :stxt('road_insp.scope_none','Аймаг, гаригийн задаргаа ачаалагдсангүй.'));
+    }
+    return {riF,scopeNote,period:{show:true,kpis,monthly,
+      title:stxt('road_insp.period_title','Сонгосон хугацааны нэгтгэл'),
+      scope:fillTpl(stxt('road_insp.period_scope','{years} он · {months} сар · {n} сарын мэдээ'),
+        {years:scopeYears,months:scopeMonths,n:PM.monthCount}),
+      monthlyTitle:stxt('road_insp.monthly_title','Сарын үзлэг — тэнцсэн ба тэнцээгүй'),
+      monthlyNote:PM.partialCount>0?stxt('road_insp.monthly_note','* — тухайн сард бүртгэлтэй өдөр сарын өдрөөс цөөн; дутуу сарыг сар хоорондын харьцуулалтад бүү ашигла.'):'',
+      hasMonthlyNote:PM.partialCount>0}};
   }
   // ── УБТЗ · вагон ачилтын хоногийн мэдээ → SECTORS.rail ────────────────
   // Агаарын applyRealFlightsData()-тай ЯГ ИЖИЛ зарчим: бодит дата ирмэгц
@@ -8642,7 +9192,7 @@ class Component extends DCLogic {
       width:(s.loaded/(stMax||1)*100).toFixed(0)+'%'}));
     const extra=Math.max(0,m.stations.length-10);
     const chart=buildDualAxisChart(m.series.loaded,m.series.unloaded,m.series.labels);
-    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat(m.years.map(y=>({label:String(y),y}))).map(c=>{
+    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat((m.years||[]).map(y=>({label:String(y),y}))).map(c=>{
       const on=c.y===m.year;
       return {label:c.label,
         pick:()=>this.setWagonYear(c.y),
@@ -8662,32 +9212,62 @@ class Component extends DCLogic {
       wagonScope:m.monthCount+' '+T('scope_months','сар')+' · '+fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')};
   }
   /* Зорчигчийн датасэтийн анализын самбар — paxAnalysisModel() үр дүнг
-     темплейтийн хэлбэрт хөрвүүлнэ. Текст: content.json → site.pax_an. */
+     темплейтийн хэлбэрт хөрвүүлнэ. Текст: content.json → site.pax_an.
+     Шүүлт (он + сарын хүрээ) нь KPI/донут/график/хүснэгт бүгдэд нэгэн зэрэг
+     хамаарна — агаарын хуудасны "Нэгдсэн шүүлт" загвартай адил. */
   buildPaxAnalysis(){
     const T=(k,fb)=>stxt('pax_an.'+k,fb);
-    const m=paxAnalysisModel(this._paxHistAll,this._paxHistSel,this.state.paxYear);
+    const st=this.state;
+    const m=paxAnalysisModel(this._paxHistAll,this._paxHistSel,st.paxYear,{from:st.paxMFrom,to:st.paxMTo});
     const fmt=v=>Math.round(v).toLocaleString('en-US');
+    const dash=T('dash','—');
+    const pctTxt=v=>v==null?dash:((v>0?'+':'')+v.toFixed(1)+'%');
     const base={isPaxDetail:true,paxHasData:m.hasData,paxNoData:!m.hasData,
       paxT:{head:T('head','Зорчигчийн галт тэрэгний анализ'),
         noData:T('no_data','Түүхийн мэдээлэл холбогдоогүй — сарын анализ харуулах боломжгүй.'),
         donutTitle:T('donut_title','Орон нутаг / олон улсын харьцаа'),
         monthsTitle:T('months_title','Сараар эрэмбэлсэн зорчигч'),
         routesTitle:T('routes_title','Чиглэлээр зорчигч'),
-        chartTitle:T('chart_title','Сараар зорчигч ба аялал'),
-        chartLegend:T('chart_legend','Багана — зорчигч (зүүн тэнхлэг) · шугам — аялал (баруун тэнхлэг)'),
+        chartTitle:T('chart_title','Сараар: орон нутаг / олон улс ба аялал'),
+        chartLegend:T('chart_legend','Багана — ОН (цэнхэр) + ОУ (ногоон), зүүн тэнхлэг · шугам — аялал, баруун тэнхлэг. Хоёр тэнхлэг тэгээс эхэлнэ.'),
+        pending:T('breakdown_pending','Чиглэлийн задаргаа ачаалж байна…'),
         channelsTitle:T('channels_title','Борлуулалтын суваг'),
         channelsPending:T('channels_pending','Борлуулалтын сувгийн мэдээлэл хараахан ороогүй — шинэчлэл хүлээгдэж байна.'),
-        pending:T('breakdown_pending','Чиглэлийн задаргаа ачаалж байна…')}};
-    if(!m.hasData) return base;
+        filterTitle:T('f_title','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
+        fYear:T('f_year','Жил'), fMonth:T('f_month','Сар'), fRange:T('f_range','хүрээ'),
+        fReset:T('f_reset','Шүүлт арилгах'), fActive:T('f_active','Шүүлт:'),
+        tableTitle:T('table_title','Сарын дэлгэрэнгүй'), total:T('total','Нийт'),
+        thMonth:T('th_month','Сар'), thPax:T('th_pax','Зорчигч'), thTrips:T('th_trips','Аялал'),
+        thDom:T('th_dom','ОН'), thIntl:T('th_intl','ОУ'), thIntlPct:T('th_intl_pct','ОУ %'),
+        thPerTrip:T('th_per_trip','Аяллын дундаж'), thMom:T('th_mom','Өмнөх сараас'), thYoy:T('th_yoy','Өмнөх оноос')}};
+    /* Шүүлтийн самбар — хоосон түүхэд харагдахгүй */
+    const yrOn=m.year==='all'?T('years_all','Бүгд'):String(m.year);
+    const rangeOn=m.fullRange?T('f_full_range','бүх сар'):(m.rangeFrom===m.rangeTo?String(m.rangeFrom):m.rangeFrom+'–'+m.rangeTo)+' '+T('scope_months','сар');
+    const inputStyle='width:64px;font-family:\'JetBrains Mono\',monospace;font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);';
+    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat((m.years||[]).map(y=>({label:String(y),y}))).map(c=>{
+      const on=c.y===m.year;
+      return {label:c.label,
+        pick:()=>this.setPaxYear(c.y),
+        style:'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
+          +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);')};
+    });
+    const filterUi={
+      yearChips,mFrom:String(st.paxMFrom),mTo:String(st.paxMTo),inputStyle,
+      onMFrom:(e)=>this.setPaxRange('paxMFrom',e.target.value),
+      onMTo:(e)=>this.setPaxRange('paxMTo',e.target.value),
+      summary:T('f_active','Шүүлт:')+' '+yrOn+' · '+rangeOn,
+      dirty:!(m.year==='all'&&m.fullRange),
+      reset:()=>this.resetPaxFilter()
+    };
+    if(!m.hasData) return {...base,paxFilterUi:filterUi};
     const unit=T('unit','зорчигч');
-    const dash=T('dash','—');
     const kpis=[
       {label:T('kpi_pax','Нийт зорчигч'),value:fmt(m.pax),sub:unit},
       {label:T('kpi_trips','Аялал'),value:fmt(m.trips),sub:T('kpi_trips_sub','галт тэрэг × чиглэл × өдөр')},
       {label:T('kpi_per_trip','Аялал бүрийн дундаж'),value:m.perTrip==null?dash:fmt(m.perTrip),sub:unit},
       {label:T('kpi_intl','Олон улсын (ОУ)'),value:m.intlPct.toFixed(1)+'%',sub:T('kpi_intl_sub','нийт зорчигчийн')},
       {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:unit},
-      {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?((m.yoy.pct>0?'+':'')+m.yoy.pct.toFixed(1)+'%'):dash,
+      {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?pctTxt(m.yoy.pct):dash,
         sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):(m.yoyReason==='pick_year'?T('kpi_yoy_pick','жил сонгож харьцуулна'):T('kpi_yoy_none','өмнөх оны өгөгдөл алга'))}
     ];
     const circ=2*Math.PI*40;
@@ -8700,38 +9280,38 @@ class Component extends DCLogic {
     const months=m.ranked.map(r=>({name:r.month+(r.partial?' *':''),value:fmt(r.passengers),
       width:(r.passengers/(top||1)*100).toFixed(0)+'%',
       pct:m.pax>0?(r.passengers/m.pax*100).toFixed(1)+'%':''}));
-    const expanded=!!this.state.paxRoutesExpanded;
+    const expanded=!!st.paxRoutesExpanded;
     const rMax=m.routes.length?m.routes[0].passengers:1;
     const rows=(expanded?m.routes:m.routes.slice(0,10)).map(r=>({name:r.route,value:fmt(r.passengers),
-      sub:fmt(r.trips)+' '+T('routes_trips','аялал'),
+      sub:fmt(r.trips)+' '+T('routes_trips','аялал')+' · '+(m.routeTotal>0?(r.passengers/m.routeTotal*100).toFixed(1):'0.0')+'%',
       width:(r.passengers/(rMax||1)*100).toFixed(0)+'%'}));
     const extra=Math.max(0,m.routes.length-10);
-    const chart=buildDualAxisChart(m.series.pax,m.series.trips,m.series.labels);
-    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat(m.years.map(y=>({label:String(y),y}))).map(c=>{
-      const on=c.y===m.year;
-      return {label:c.label,
-        pick:()=>this.setPaxYear(c.y),
-        style:'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
-          +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);')};
-    });
+    const chart=buildPaxStackedChart(m.series.dom,m.series.intl,m.series.trips,m.series.labels);
+    const table=m.rows.map(r=>({month:r.label,pax:fmt(r.passengers),trips:fmt(r.trips),dom:fmt(r.domestic),
+      intl:fmt(r.international),intlPct:r.intlPct.toFixed(1)+'%',perTrip:r.perTrip==null?dash:fmt(r.perTrip),
+      mom:pctTxt(r.mom),yoy:pctTxt(r.yoy)}));
     const partialNote=m.partialN>0?(m.partialN+' '+T('partial_note','сар дутуу өгөгдөлтэй (* тэмдэглэгээ) — жилийн харьцуулалтад ороогүй')):'';
     const chTop=m.channels.length?m.channels[0].passengers:1;
     const chRows=m.channels.map(c=>({name:T('channels.'+c.channel,c.channel),value:fmt(c.passengers),
       width:(c.passengers/(chTop||1)*100).toFixed(0)+'%',
       pct:m.channelTotal>0?(c.passengers/m.channelTotal*100).toFixed(1)+'%':''}));
-    /* Суваг бүрэн ирсэн мөрүүд нийт зорчигчийн <99% бол ил хэлнэ (хувь зөвхөн
-       тэр хэсгийнх) — зохиомлоор 100% гэж үзүүлэхгүй. */
+    /* Суваг бүрэн ирсэн мөрүүд нийт зорчигчийн <99% бол ил хэлнэ — хувь зөвхөн
+       тэдгээрийнх; зохиомлоор 100% гэж үзүүлэхгүй. */
     const chCov=m.pax>0?m.channelCovered/m.pax*100:0;
     const chNote=(m.hasChannels&&chCov<99)?(chCov.toFixed(1)+'% '+T('channels_partial','зорчигчийн мөрд суваг бүрэн бүртгэгдсэн — хувь зөвхөн тэдгээрийнх')):'';
+    const topShare=m.topRouteShare==null?'':(' · '+T('top_share','тэргүүлэгч чиглэл')+' '+m.topRouteShare.toFixed(1)+'%');
     return {...base,paxChannels:chRows,paxHasChannels:m.hasChannels,paxNoChannels:!m.hasChannels,
       paxChannelsNote:chNote,paxHasChannelsNote:!!chNote,
-      paxChannelsTotal:T('channels_total','Нийт')+': '+fmt(m.channelTotal),paxKpis:kpis,paxDonut:donut,paxMonths:months,paxHasMonths:months.length>0,
+      paxChannelsTotal:T('channels_total','Нийт')+': '+fmt(m.channelTotal),
+      paxFilterUi:filterUi,paxKpis:kpis,paxDonut:donut,paxMonths:months,paxHasMonths:months.length>0,
+      paxRows:table,paxTotal:{pax:fmt(m.pax),trips:fmt(m.trips),dom:fmt(m.dom),intl:fmt(m.intl),
+        intlPct:m.intlPct.toFixed(1)+'%',perTrip:m.perTrip==null?dash:fmt(m.perTrip)},
       paxRoutes:rows,paxHasRoutes:rows.length>0,paxBreakdownPending:!m.hasBreakdown,
       paxRoutesMore:{show:extra>0,expanded,
         label:expanded?stxt('rank.collapse','△ Хураах'):('↕ '+extra+' '+stxt('rank.more_rows','нэмэлт мөр')),
         toggle:()=>this.setState(s=>({paxRoutesExpanded:!s.paxRoutesExpanded}))},
-      paxRoutesTotal:T('routes_total','Нийт')+': '+fmt(m.routeTotal),
-      paxChart:chart,paxYearChips:yearChips,
+      paxRoutesTotal:T('routes_total','Нийт')+': '+fmt(m.routeTotal)+topShare,
+      paxChart:chart,
       paxPartialNote:partialNote,paxHasPartial:!!partialNote,
       paxScope:m.monthCount+' '+T('scope_months','сар')+' · '+fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')};
   }
@@ -10212,6 +10792,9 @@ class Component extends DCLogic {
       t:detailT,
       dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
       isAirDetail,...airExtra,...wagonExtra,...paxExtra,trendFill:isAirDetail?' eh-fill':'',notRoadInspect:!isRoadInspect,...roadExtra,
+      /* Хүснэгтийн дотор талын төлөвийн шүүлт: нэгдсэн шүүлт (түүх ирсэн
+         үед дээд талд) байгаа датасэтэд ДАВХАРДАХГҮЙ. */
+      tableFilterOpen:!!this.state.pvFilterOpen&&!(roadExtra.riF&&roadExtra.riF.available),
       freqCard,useCard,
       name:dsel.name,desc:dsel.desc,agency:dsel.agency,fmt:dsel.fmt,freq:dsel.freq,use:dsel.use,
       /* Датасэтийн хуудасны өнгө нь ДАТАСЭТИЙН салбарынх. Өмнө нь нүүрний

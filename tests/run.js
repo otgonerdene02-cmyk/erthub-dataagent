@@ -4408,10 +4408,10 @@ async function groupBE() {
      2025-09 30/30 өдөр: 100 зорчигч (ОН 90 / ОУ 10), 20 аялал
      2026-09 30/30 өдөр: 120 (ОН 100 / ОУ 20), 25 аялал
      2026-10 10/31 өдөр (ДУТУУ): 30 (ОН 30 / ОУ 0), 8 аялал. Нийт 250/53. */
-  const pam = dcScript().match(/function paxAnalysisModel\(all,sel,year\)\{([\s\S]*?)\n\}/);
+  const pam = dcScript().match(/function paxAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   if (!pam) { bad('PA0. paxAnalysisModel() олдсонгүй'); }
   else {
-    const PA = new Function('all', 'sel', 'year', pam[1]);
+    const PA = new Function('all', 'sel', 'year', 'mr', pam[1]);
     const pm = (month, days, dim, trips, passengers, domestic, international) =>
       ({ month, days, days_in_month: dim, trips, passengers, domestic, international });
     const PALL = { status: 'ok', months: [pm('2025-09', 30, 30, 20, 100, 90, 10), pm('2026-09', 30, 30, 25, 120, 100, 20),
@@ -4444,26 +4444,26 @@ async function groupBE() {
     check('PA6. Аялал 0 бол дундаж null (хуваалтын алдаа БИШ)',
       PA({ status: 'ok', months: [pm('2026-01', 31, 31, 0, 0, 0, 0)], by_route: [], by_type: [] }, null, 'all').perTrip === null);
 
-    /* PA9. Борлуулалтын суваг — гараар бодсон: kass 100, web 50, sms 30, phone 20,
+    /* PA14. Борлуулалтын суваг — гараар бодсон: kass 100, web 50, sms 30, phone 20,
        tapa 0, kiosk 0 → нийлбэр 200 (web 25%); covered 180 (нийт 250-ийн 72%) */
     const CH = { status: 'ok', months: PALL.months, by_route: [], by_type: [],
       by_channel: [{ channel: 'kass', passengers: 100 }, { channel: 'kiosk', passengers: 0 }, { channel: 'web', passengers: 50 },
         { channel: 'sms', passengers: 30 }, { channel: 'phone', passengers: 20 }, { channel: 'tapa', passengers: 0 }],
       channel_covered: 180 };
     const c = PA(CH, null, 'all');
-    check('PA9. Суваг: нийлбэр 200, ачсанаар эрэмбэ (kass, web, sms, phone), hasChannels',
+    check('PA14. Суваг: нийлбэр 200, ачсанаар эрэмбэ (kass, web, sms, phone), hasChannels',
       c.hasChannels && c.channelTotal === 200 && c.channels.map(x => x.channel).slice(0, 4).join(',') === 'kass,web,sms,phone',
       JSON.stringify(c.channels));
-    check('PA9. covered 180 дамжина (нийт 250-аас бага → самбар ил хэлнэ)', c.channelCovered === 180 && c.pax === 250);
-    check('PA9. by_channel [] / байхгүй → hasChannels:false (тоо ЗОХИОХГҮЙ)',
+    check('PA14. covered 180 дамжина (нийт 250-аас бага → самбар ил хэлнэ)', c.channelCovered === 180 && c.pax === 250);
+    check('PA14. by_channel [] / байхгүй → hasChannels:false (тоо ЗОХИОХГҮЙ)',
       PA({ ...CH, by_channel: [] }, null, 'all').hasChannels === false &&
       PA({ status: 'ok', months: PALL.months, by_route: [], by_type: [] }, null, 'all').hasChannels === false);
-    check('PA9. Он сонгоход суваг нь sel-ийн хариунаас (бүтэн түүхийнх БИШ)',
+    check('PA14. Он сонгоход суваг нь sel-ийн хариунаас (бүтэн түүхийнх БИШ)',
       PA(CH, null, 2026).hasChannels === false &&
       PA(CH, { status: 'ok', months: [], by_route: [], by_type: [], by_channel: [{ channel: 'web', passengers: 7 }], channel_covered: 7 }, 2026).channelTotal === 7);
     {
       const PACc = (readJson('content.json').site || {}).pax_an || {};
-      check('PA9. 6 суваг бүрийн шошго content.json-д',
+      check('PA14. 6 суваг бүрийн шошго content.json-д',
         ['kass', 'kiosk', 'web', 'sms', 'phone', 'tapa'].every(k => PACc.channels && PACc.channels[k]));
     }
 
@@ -4483,6 +4483,64 @@ async function groupBE() {
       /async loadPaxHistory\(\)\{[\s\S]*?try\{[\s\S]*?catch\(e\)/.test(dcScript()));
     check('PA8. Самбар зөвхөн railPax датасэтэд, вагонтой холилдохгүй',
       /dsel\.source==='railPax'&&this\.state\.page==='detail'\)\?this\.buildPaxAnalysis/.test(dcScript()));
+    /* PA9–PA13: шүүлтийн хүрээ, сар бүрийн MoM/YoY, ОУ%, график (0-ээс эхлэх, өндөр). Гараар бодсон:
+       2025-08 80 (70/10, 15 аялал) · 2025-09 100 (90/10, 20) · 2026-08 110 (100/10, 22)
+       2026-09 120 (100/20, 25) · 2026-10 30 (30/0, 8; 10/31 дутуу). */
+    const pm2 = (month, days, dim, trips, passengers, domestic, international) =>
+      ({ month, days, days_in_month: dim, trips, passengers, domestic, international });
+    const PALL2 = { status: 'ok', months: [pm2('2026-09', 30, 30, 25, 120, 100, 20), pm2('2025-08', 31, 31, 15, 80, 70, 10),
+      pm2('2026-10', 10, 31, 8, 30, 30, 0), pm2('2025-09', 30, 30, 20, 100, 90, 10), pm2('2026-08', 31, 31, 22, 110, 100, 10)],
+      by_route: [{ route: 'А', trips: 33, passengers: 150 }, { route: 'Б', trips: 20, passengers: 100 }], by_type: [] };
+    const full = PA(PALL2, null, 'all');
+    const rowOf = (r, k) => r.rows.find(x => x.month === k);
+    check('PA9. Мөр бүр хугацааны дарааллаар (2025-08 → 2026-10), 5 мөр',
+      full.rows.length === 5 && full.rows[0].month === '2025-08' && full.rows[4].month === '2026-10');
+    check('PA9. MoM: 2026-09 = (120-110)/110 = 9.09%; 2025-09 = (100-80)/80 = 25%',
+      Math.abs(rowOf(full, '2026-09').mom - 100 / 11) < 1e-9 && Math.abs(rowOf(full, '2025-09').mom - 25) < 1e-9);
+    check('PA9. YoY: 2026-09 = (120-100)/100 = 20%; 2026-08 = (110-80)/80 = 37.5%; өмнөх оноос байхгүй → null',
+      Math.abs(rowOf(full, '2026-09').yoy - 20) < 1e-9 && Math.abs(rowOf(full, '2026-08').yoy - 37.5) < 1e-9 &&
+      rowOf(full, '2025-09').yoy === null);
+    check('PA9. Дутуу сар (2026-10) нь MoM/YoY-д ОРОХГҮЙ (null), шошго "*"',
+      rowOf(full, '2026-10').mom === null && rowOf(full, '2026-10').yoy === null && rowOf(full, '2026-10').label === '2026-10 *');
+    check('PA9. ОУ% = 20/120 = 16.67%; аяллын дундаж = 120/25 = 4.8',
+      Math.abs(rowOf(full, '2026-09').intlPct - 100 / 6) < 1e-9 && Math.abs(rowOf(full, '2026-09').perTrip - 4.8) < 1e-9);
+    check('PA9. Тэргүүлэгч чиглэлийн эзлэх хувь = 150/250 = 60%', Math.abs(full.topRouteShare - 60) < 1e-9);
+    const mon9 = PA(PALL2, null, 'all', { from: 9, to: 9 });
+    check('PA10. Сарын хүрээ 9–9: зөвхөн 9-р сар (2025-09, 2026-09) → нийт 220, fullRange=false',
+      mon9.rows.length === 2 && mon9.pax === 220 && mon9.fullRange === false && mon9.rangeFrom === 9);
+    const y26 = PA(PALL2, { status: 'ok', months: [], by_route: [{ route: 'А', trips: 33, passengers: 150 }], by_type: [] },
+      2026, { from: 8, to: 9 });
+    check('PA10. 2026 + 8–9: нийт 230; 2026-08 YoY = 37.5% (өмнөх оны 08 сар бүтэн байх ёстой)',
+      y26.pax === 230 && Math.abs(rowOf(y26, '2026-08').yoy - 37.5) < 1e-9 && y26.rows.length === 2);
+    check('PA10. Бүтэн хүрээ + бүх жил → чиглэл түүхээс (all); хязгаарлавал → sel (шүүлтэд таарсан татлага)',
+      PA(PALL2, null, 'all').routeTotal === 250 && PA(PALL2, { status: 'ok', months: [], by_route: [{ route: 'Х', trips: 1, passengers: 9 }], by_type: [] }, 'all', { from: 9, to: 9 }).routes[0].route === 'Х');
+    const W = (y, mr) => (new Function('all', 'year', 'mr', (dcScript().match(/function paxFetchWindow\(all,year,mr\)\{([\s\S]*?)\n\}/) || [, ''])[1]))(PALL2, y, mr);
+    check('PA10. paxFetchWindow: бүтэн түүх → null (татах хэрэггүй)', W('all', { from: 1, to: 12 }) === null);
+    check('PA10. paxFetchWindow: бүх жил + 9–10 сар → 2025-09-01 … 2026-10-31',
+      JSON.stringify(W('all', { from: 9, to: 10 })) === JSON.stringify({ from: '2025-09-01', to: '2026-10-31' }));
+    check('PA10. paxFetchWindow: 2026 бүтэн → 2026-01-01 … 2026-12-31; 2026 + 2 сар → 02-01 … 02-28',
+      JSON.stringify(W(2026, { from: 1, to: 12 })) === JSON.stringify({ from: '2026-01-01', to: '2026-12-31' }) &&
+      JSON.stringify(W(2026, { from: 2, to: 2 })) === JSON.stringify({ from: '2026-02-01', to: '2026-02-28' }));
+    const C = (dcScript().match(/function buildPaxStackedChart\(domSeries,intlSeries,tripSeries,labels\)\{([\s\S]*?)\n\}/) || [, ''])[1];
+    const chart = C ? (new Function('domSeries', 'intlSeries', 'tripSeries', 'labels', C))(
+      [70, 90, 100, 100, 30], [10, 10, 10, 20, 0], [15, 20, 22, 25, 8], ['a', 'b', 'c', 'd', 'e']) : {};
+    check('PA11. Багана: ОН + ОУ (ОУ>0 бүр 2 хэсэг) → 5 + 4 = 9 тэмдэг',
+      (chart.barRects || []).length === 9);
+    check('PA11. Зүүн тэнхлэг тэгээс эхэлнэ (шошго "0"), баруун тэнхлэг мөн тэгээс',
+      chart.yTicksLeft && chart.yTicksLeft[0].label === '0' && chart.yTicksRight[0].label === '0');
+    const d3 = chart.barRects ? chart.barRects.filter(b => b.tip.startsWith('d')) : [];
+    const hTot = d3.reduce((t, b) => t + parseFloat(b.h), 0);
+    check('PA11. Хамгийн өндөр багана (d=120) нийт өндөр = 120/200 × plotH(182) ≈ 109.2',
+      Math.abs(hTot - 109.2) < 0.3, String(hTot));
+    check('PA11. Тэмдэг бүрт "нэр — утга" tooltip (ОН/ОУ/нийт), шугамд аяллын тоо',
+      /ОН: 100 · ОУ: 20 · нийт: 120/.test(d3[0].tip) &&
+      chart.dotPts.every(p => /аялал: /.test(p.tip)));
+    const tplHtml = read('index.html');
+    check('PA12. Самбар: шүүлтийн самбар KPI-ийн ӨМНӨ байрлана (шүүлт → KPI → график)',
+      tplHtml.indexOf('detail.paxFilterUi.yearChips') > 0 &&
+      tplHtml.indexOf('detail.paxFilterUi.yearChips') < tplHtml.indexOf('detail.paxKpis'));
+    check('PA12. Сарын хүснэгт: мөрүүд paxRows-оос, нийлбэрийн мөр paxTotal-оос',
+      /detail.paxRows }}" as="pr"/.test(tplHtml) && /detail.paxTotal.pax/.test(tplHtml));
   }
 
   /* ── BE19. station_count: 0 нь мөрийг БҮРМӨСӨН алга болгодог байв ── */
@@ -5551,6 +5609,122 @@ async function groupBE() {
     (() => { const d = readJson('content.json').site.ds_schema_road_inspect || {};
       return (d.head || []).length === 7 && (d.notes || []).length === 7 &&
         d.st_fail === 'Тэнцээгүй бүртгэгдсэн' && d.st_clean === 'Бүгд тэнцсэн'; })());
+
+  /* ══ BE35. Үзлэгийн ТҮҮХ ба нэгдсэн хугацааны шүүлт ══
+     Гараар бодсон фикстур. Сарууд (өдөр/сарын өдөр · үзлэг · тэнцээгүй):
+       2019-07  1/31 ·    1 ·   0   (эх сурвалжийн санамсаргүй нэг мөр)
+       2025-12  1/31 ·    1 ·   0
+       2026-01 31/31 · 1000 · 100   хэсэг: ерөнхий 60 тоормос 30 жол.мех 20
+       2026-02 20/28 ·  400 ·  40   (дутуу)  ерөнхий 20 тоормос 10 жол.мех 10
+       2026-03 31/31 · 1200 ·  60   ерөнхий 30 тоормос 15 жол.мех 10 гэрэл 5
+     2026 I–III: нийт 2,600 · тэнцээгүй 200 (7.7%) · тэнцсэн 2,400 · 82 өдөр
+     → өдрийн дундаж 2600/82 = 31.7 → 32 · дутуу сар 1 · хэсгийн нийлбэр 210. */
+  {
+    const src35 = dcScript();
+    const grab35 = (name, args) => {
+      const m = src35.match(new RegExp('function ' + name + '\\(' + args + '\\)\\{([\\s\\S]*?)\\n\\}'));
+      return m ? m[1] : null;
+    };
+    const hb = grab35('roadInspectHistoryToValue', 'json');
+    const yb = grab35('roadInspectYears', 'months,minDays');
+    const pb = grab35('roadInspectPeriod', 'sel,months');
+    const mb = grab35('roadInspectPeriodModel', 'P,range');
+    if (!hb || !yb || !pb || !mb) { bad('BE35. түүхийн функцүүд олдсонгүй'); }
+    else {
+      const toVal = new Function('json', hb);
+      const years = new Function('INSPECT_MIN_YEAR_DAYS', 'return function(months,minDays){' + yb + '\n};')(28);
+      const period = new Function('sel', 'months', pb);
+      const model = new Function('P', 'range', mb);
+      const mk = (month, days, dim, total, failed, passed, c) => ({ month, days, days_in_month: dim,
+        partial: days < dim, total, failed, passed, passed_minor: 0, unknown_result: 0,
+        failed_by_category: Object.assign({ general: 0, brake: 0, steering: 0, light: 0, emission: 0, noise: 0 }, c || {}) });
+      const MONTHS35 = [
+        mk('2019-07', 1, 31, 1, 0, 1), mk('2025-12', 1, 31, 1, 0, 1),
+        mk('2026-01', 31, 31, 1000, 100, 900, { general: 60, brake: 30, steering: 20 }),
+        mk('2026-02', 20, 28, 400, 40, 360, { general: 20, brake: 10, steering: 10 }),
+        mk('2026-03', 31, 31, 1200, 60, 1140, { general: 30, brake: 15, steering: 10, light: 5 })];
+      const RES35 = { status: 'ok', months: MONTHS35,
+        by_aimag: [{ aimag: 'Улаанбаатар', total: 1800, failed: 120 }, { aimag: 'Орхон', total: 600, failed: 40 }],
+        by_weekday: [0, 1, 2, 3, 4, 5, 6].map((k) => ({ weekday: k, days: 10, total: 100 * (k + 1), avg: 10 * (k + 1) })) };
+      const H35 = toVal(RES35);
+      check('BE35. Түүх задлагдана: 5 сар, 2019-07 → жил 2019 сар 7, аймаг 2, гариг 7',
+        !!H35 && H35.months.length === 5 && H35.months[0].year === 2019 && H35.months[0].mon === 7 &&
+        H35.byAimag.length === 2 && H35.byWeekday.length === 7, H35 && JSON.stringify(H35.months[0]));
+      check('BE35. no_data / null / сарын массивгүй → null (шүүлт нуугдана, тоо зохиохгүй)',
+        toVal(null) === null && toVal({ status: 'no_data' }) === null && toVal({ status: 'ok' }) === null);
+      check('BE35. Нийт нь тоон биш сар хасагдана (NaN гаргахгүй)',
+        toVal({ status: 'ok', months: [mk('2026-01', 1, 31, 'x', 0, 0), mk('2026-02', 1, 28, 5, 0, 5)] }).months.length === 1);
+      check('BE35. Жил: бүртгэлтэй өдөр ≥ 28 → зөвхөн 2026 (2019/2025 нэг мөртэй = жил БИШ)',
+        JSON.stringify(years(H35.months)) === '[2026]', JSON.stringify(years(H35.months)));
+      check('BE35. minDays=1 үед гурван жил (босго үнэхээр ажиллаж байгааг батална)',
+        JSON.stringify(years(H35.months, 1)) === '[2019,2025,2026]', JSON.stringify(years(H35.months, 1)));
+      const P1 = period({ yFrom: 2026, yTo: 2026, mFrom: 1, mTo: 3 }, H35.months);
+      check('BE35. 2026 I–III → 3 сар, тасралтгүй, 2026-01-01 … 2026-03-31',
+        P1.months.length === 3 && P1.contiguous && P1.from === '2026-01-01' && P1.to === '2026-03-31', JSON.stringify(P1));
+      const P2 = period({ yFrom: 2026, yTo: 2026, mFrom: 2, mTo: 2 }, H35.months);
+      check('BE35. 2026-02 → to = 2026-02-28 (сарын сүүлийн өдөр)', P2.to === '2026-02-28', P2.to);
+      check('BE35. 2024-02 → to = 2024-02-29 (хоёр дахь жилийн нэмэлт өдөр)',
+        period({ yFrom: 2024, yTo: 2024, mFrom: 2, mTo: 2 }, []).to === '2024-02-29');
+      check('BE35. Олон жил + хэсэгчилсэн сар → тасралтгүй БИШ (аймаг/гариг тооцохгүй)',
+        period({ yFrom: 2025, yTo: 2026, mFrom: 1, mTo: 3 }, H35.months).contiguous === false);
+      const PA = period({ yFrom: 2019, yTo: 2026, mFrom: 1, mTo: 12 }, H35.months);
+      check('BE35. Бүх жил + 1–12 сар → тасралтгүй, 5 сар, 2019-01-01 … 2026-12-31',
+        PA.contiguous && PA.months.length === 5 && PA.from === '2019-01-01' && PA.to === '2026-12-31', JSON.stringify(PA));
+      check('BE35. Хагас бичсэн он (2) / сар (13) / NaN → хүчингүй (backend-д 400 явуулахгүй)',
+        period({ yFrom: 2, yTo: 2026, mFrom: 1, mTo: 12 }, H35.months).contiguous === false &&
+        period({ yFrom: 2026, yTo: 2026, mFrom: 1, mTo: 13 }, H35.months).contiguous === false &&
+        period({ yFrom: NaN, yTo: 2026, mFrom: 1, mTo: 12 }, H35.months) === null);
+      check('BE35. Эхлэл > төгсгөл үед солигдоно (3–1 сар = 1–3 сар)',
+        period({ yFrom: 2026, yTo: 2026, mFrom: 3, mTo: 1 }, H35.months).months.length === 3);
+      const RANGE35 = toVal({ status: 'ok', months: MONTHS35.slice(2), by_aimag: RES35.by_aimag, by_weekday: RES35.by_weekday });
+      const M = model(P1, RANGE35);
+      check('BE35. Нэгтгэл: 2,600 үзлэг · тэнцээгүй 200 · тэнцсэн 2,400 · 82 өдөр',
+        M.total === 2600 && M.failed === 200 && M.passed === 2400 && M.days === 82, JSON.stringify([M.total, M.failed, M.passed, M.days]));
+      check('BE35. Тэнцээгүй хувь 7.7% · өдрийн дундаж 32 (2600/82)',
+        M.rate.toFixed(1) === '7.7' && M.avgPerDay === 32, JSON.stringify([M.rate, M.avgPerDay]));
+      check('BE35. Дутуу сар 1 / 3 (2026-02 → 20/28 өдөр)', M.partialCount === 1 && M.monthCount === 3);
+      check('BE35. Хэсэг: ерөнхий 110 · тоормос 55 · жол.мех 40 · гэрэл 5, нийлбэр 210, ерөнхий 52.4%',
+        M.catSum === 210 && M.cats.find((c) => c.key === 'general').n === 110 &&
+        M.cats.find((c) => c.key === 'brake').n === 55 && M.cats.find((c) => c.key === 'light').n === 5 &&
+        M.cats.find((c) => c.key === 'general').pct.toFixed(1) === '52.4', JSON.stringify(M.cats));
+      check('BE35. Сарын цуваа: 3 мөр, дутуу сар partial:true, 2026-03 хувь 5.0%',
+        M.monthly.length === 3 && M.monthly[1].partial === true && M.monthly[2].rate.toFixed(1) === '5.0', JSON.stringify(M.monthly));
+      check('BE35. Аймаг: Улаанбаатар 1,800 → 75.0% (аймагтай 2,400-д), Орхон 25.0%',
+        M.aimags && M.aimags[0].name === 'Улаанбаатар' && M.aimags[0].share === 75 && M.aimags[1].share === 25,
+        JSON.stringify(M.aimags));
+      check('BE35. Гариг 7 мөр range-ээс', M.weekday && M.weekday.length === 7);
+      const MBAD = model(P1, toVal({ status: 'ok', months: MONTHS35.slice(2, 4), by_aimag: RES35.by_aimag, by_weekday: [] }));
+      check('BE35. Мужийн нийлбэр сонголттой таарахгүй (хоцорсон/буруу хариу) → аймаг/гариг ХАРУУЛАХГҮЙ',
+        MBAD.aimags === null && MBAD.weekday === null && MBAD.total === 2600);
+      const MNC = model(period({ yFrom: 2025, yTo: 2026, mFrom: 1, mTo: 3 }, H35.months), RANGE35);
+      check('BE35. Тасралтгүй биш сонголт → аймаг/гариг null, гэхдээ сарын нэгтгэл тооцогдоно',
+        MNC.aimags === null && MNC.weekday === null && MNC.total === 2600);
+      check('BE35. Сонгосон сар алга → null (хоосон нэгтгэл зохиохгүй)',
+        model(period({ yFrom: 2020, yTo: 2020, mFrom: 1, mTo: 12 }, H35.months), RANGE35) === null);
+    }
+    const idx35 = read('index.html');
+    check('BE35. Шүүлт ДЭЭД талд (detail.riF.show) — хүснэгтийн дотор БИШ',
+      idx35.includes('<sc-if value="{{ detail.riF.show }}">') &&
+      idx35.includes('<sc-if value="{{ detail.ri.period.show }}">') &&
+      idx35.includes('<sc-if value="{{ detail.tableFilterOpen }}">') &&
+      !idx35.includes('<sc-if value="{{ detail.pvFilterOpen }}">'));
+    check('BE35. Нэгдсэн шүүлт байхад хүснэгтийн дотор талын шүүлт ДАВХАРДАХГҮЙ (түүх ирээгүй үед хэвээр)',
+      src35.includes("tableFilterOpen:!!this.state.pvFilterOpen&&!(roadExtra.riF&&roadExtra.riF.available)"));
+    check('BE35. Түүх ирээгүй (null) → панель нуугдана, хуудас өмнөх шигээ',
+      src35.includes("const none={riF:{available:false,show:false}") &&
+      src35.includes('if(!hist||!sel||!P) return none;'));
+    check('BE35. Түүхийн таталт: from/to-г ЗӨВХӨН тасралтгүй мужид, токеноор хоцорсон хариуг үл тооно',
+      src35.includes('if(!P||!P.contiguous||typeof EHBackend===') && src35.includes('if(tok!==this._riTok) return;'));
+    check('BE35. Backend клиент history endpoint-той',
+      read('js/erthub-backend.js').includes("'/api/sectors/road/inspections/history'") &&
+      read('js/erthub-backend.js').includes('fetchRoadInspectionsHistory: fetchRoadInspectionsHistory'));
+    check('BE35. Шинэ харагдах текст бүр content.json site.road_insp-д бүртгэгдсэн',
+      ['f_head', 'f_year', 'f_month', 'f_interval', 'f_by_year', 'f_by_month', 'f_status', 'f_all', 'f_loading',
+        'period_title', 'period_scope', 'period_kpi_total', 'period_kpi_failed', 'period_kpi_avg', 'period_kpi_partial',
+        'monthly_title', 'month_title', 'monthly_note', 'scope_noncontig', 'scope_loading', 'scope_none'].every((k) =>
+        (readJson('content.json').site.road_insp || {})[k] != null) &&
+      (readJson('content.json').site.ds_schema_road_inspect || {}).note_period != null);
+  }
 
   /* ── BE34. Hero ticker-ийн зорчигч — цэвэр "0" БИШ ──
      "0 ЗОРЧИГЧ / ӨДӨР" нь "өнөөдөр зорчигч байхгүй" гэж уншигдаж, 04-р
