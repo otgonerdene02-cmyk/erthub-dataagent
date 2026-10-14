@@ -4324,10 +4324,10 @@ async function groupBE() {
      2025-08 100/80 (дотоод 40) · 2025-09 200/150 (100) · 2026-08 150/90 (60)
      · 2026-09 50/40 (20, ДУТУУ сар, 10 өдөр). Нийт: ачсан 500, буулгасан 360,
      дотоод 220 (44%), харьцаа 500/360, өдөр 102 (31+30+31+10). */
-  const wam = dcScript().match(/function wagonAnalysisModel\(all,sel,year\)\{([\s\S]*?)\n\}/);
+  const wam = dcScript().match(/function wagonAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   if (!wam) { bad('WA0. wagonAnalysisModel() олдсонгүй'); }
   else {
-    const WA = new Function('all', 'sel', 'year', wam[1]);
+    const WA = new Function('all', 'sel', 'year', 'mr', wam[1]);
     const mo = (month, loaded, unloaded, dom, days, partial) => ({ month, loaded, unloaded,
       loaded_domestic: dom, loaded_foreign: loaded - dom, days, complete_days: days, partial });
     const ALL = { status: 'ok', months: [
@@ -4336,11 +4336,24 @@ async function groupBE() {
       by_station: [{ station: 'B', code: '2', loaded: 200, unloaded: 160 }, { station: 'A', code: '1', loaded: 300, unloaded: 200 }],
       by_wagon_type: [{ type: 'covered', loaded: 300, unloaded: 200 }, { type: 'tank', loaded: 200, unloaded: 160 },
         { type: 'reefer', loaded: 0, unloaded: 0 }] };
-    const a = WA(ALL, null, 'all');
+    const a = WA(ALL, null, 'all', null);
     check('WA1. Нийт ачсан 500, буулгасан 360', a.hasData && a.loaded === 500 && a.unloaded === 360, JSON.stringify(a.loaded));
     check('WA1. Дотоод 220 → 44%, гадаад 56%', a.dom === 220 && Math.abs(a.domPct - 44) < 1e-9 && Math.abs(a.frnPct - 56) < 1e-9);
     check('WA1. Харьцаа 500/360, өдрийн дундаж 500/102',
       Math.abs(a.ratio - 500 / 360) < 1e-9 && a.days === 102 && Math.abs(a.perDay - 500 / 102) < 1e-9);
+    /* Сарын хүрээ (нэгдсэн шүүлт): 1–12 биш бол задаргаа ХААГДСАН, сар л шүүгдэнэ.
+       Гараар бодов: 2025-09 (200/150) + 2026-09 (50/40, дутуу) → ачсан 250, буулгасан 190. */
+    const a9 = WA(ALL, null, 'all', { from: 9, to: 9 });
+    check('WA-M1. Сар 9: 2 сарын мэдээ, ачсан 250 · буулгасан 190 (ГААРАР бодов)',
+      a9.hasData && a9.monthCount === 2 && a9.loaded === 250 && a9.unloaded === 190, JSON.stringify([a9.monthCount, a9.loaded, a9.unloaded]));
+    check('WA-M2. Сарын хүрээ 9–9 → станц/төрөл ХАРУУЛАХГҮЙ (бүтэн жил биш)',
+      a9.monthFull === false && a9.hasBreakdown === false && a9.stations.length === 0 && a9.types.length === 0);
+    const aFull = WA(ALL, null, 'all', { from: 1, to: 12 });
+    check('WA-M3. 1–12 сар = өмнөх үр дүн (станц, төрөл хэвээр)',
+      aFull.monthFull === true && aFull.hasBreakdown === true && aFull.loaded === 500 && aFull.stations.length === 2);
+    const a26 = WA(ALL, { by_station: [], by_wagon_type: [] }, 2026, { from: 8, to: 8 });
+    check('WA-M4. 2026 + 8-р сар → ачсан 150 · YoY +50.0% (2025-08 = 100)',
+      a26.loaded === 150 && a26.yoy && Math.abs(a26.yoy.pct - 50) < 1e-9, JSON.stringify([a26.loaded, a26.yoy]));
     check('WA2. Дутуу сар 1 тоологдоно, шошго "*"-тай',
       a.partialN === 1 && a.series.labels.join(',') === '25-08,25-09,26-08,26-09*');
     check('WA2. Жилүүд [2025,2026]; "Бүгд" дээр YoY ЗОХИОХГҮЙ (null)',
