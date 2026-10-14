@@ -2138,6 +2138,37 @@
       </div>
     </div>
 
+    <!-- Вагоны нэгдсэн шүүлт (жил + сарын хүрээ) — "Шүүлт" товчоор нээгдэж,
+         доорх KPI/донут/график/станцын бүх үзүүлэлтэд хамаарна (техникийн
+         үзлэгтэй ижил стандарт). Түүх ирээгүй бол харагдахгүй. -->
+    <sc-if value="{{ detail.isWagonDetail }}">
+    <sc-if value="{{ detail.wagonF.show }}">
+      <div data-wagon-filter="1" style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">{{ detail.wagonF.head }}</div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.wagonF.lYear }}</div>
+          <sc-for list="{{ detail.wagonF.yearChips }}" as="wfy" hint-placeholder-count="5">
+            <button sc-camel-on-click="{{ wfy.pick }}" style="{{ wfy.style }}">{{ wfy.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.wagonF.lMonth }}</div>
+          <button sc-camel-on-click="{{ detail.wagonF.monthAllPick }}" style="{{ detail.wagonF.monthAllStyle }}">{{ detail.wagonF.allLabel }}</button>
+          <sc-for list="{{ detail.wagonF.monthChips }}" as="wfm" hint-placeholder-count="12">
+            <button sc-camel-on-click="{{ wfm.pick }}" style="{{ wfm.style }}">{{ wfm.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding-top:2px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.wagonF.lInterval }}</div>
+          <span style="font-size:11.5px;color:var(--ink2);white-space:nowrap;">{{ detail.wagonF.lByMonth }}</span>
+          <input type="number" value="{{ detail.wagonF.mFrom }}" sc-camel-on-input="{{ detail.wagonF.onMFrom }}" min="1" max="12" style="width:66px;height:32px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink);text-align:center;outline:none;padding:0 4px;box-sizing:border-box;">
+          <span style="font-size:11.5px;color:var(--ink3);">—</span>
+          <input type="number" value="{{ detail.wagonF.mTo }}" sc-camel-on-input="{{ detail.wagonF.onMTo }}" min="1" max="12" style="width:66px;height:32px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink);text-align:center;outline:none;padding:0 4px;box-sizing:border-box;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;margin-left:4px;">{{ detail.wagonF.summary }}</span>
+        </div>
+      </div>
+    </sc-if>
+    </sc-if>
     <!-- Вагоны датасэтийн АНАЛИЗ — агаарын хуудасны зохион байгуулалттай адил
          (KPI → харьцааны donut + төрөл → сарын график + станцын эрэмбэ).
          Эх сурвалж: /api/sectors/rail/wagon-loading/history. Түүх ирээгүй бол
@@ -2154,12 +2185,9 @@
         <div style="background:var(--surface2);border:1px dashed var(--line2);border-radius:14px;padding:18px 20px;font-size:13px;color:var(--ink2);line-height:1.5;">{{ detail.wagonT.noData }}</div>
       </sc-if>
       <sc-if value="{{ detail.wagonHasData }}">
-        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px;">
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);">{{ detail.wagonT.yearLabel }}</span>
-          <sc-for list="{{ detail.wagonYearChips }}" as="wy" hint-placeholder-count="3">
-            <button sc-camel-on-click="{{ wy.pick }}" style="{{ wy.style }}">{{ wy.label }}</button>
-          </sc-for>
-        </div>
+        <sc-if value="{{ detail.wagonHasScopeNote }}">
+          <div data-wagon-scope="1" style="font-size:12px;color:var(--ink3);line-height:1.55;margin-bottom:14px;">{{ detail.wagonScopeNote }}</div>
+        </sc-if>
         <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px;">
           <sc-for list="{{ detail.wagonKpis }}" as="wk" hint-placeholder-count="6">
             <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px;">
@@ -6426,8 +6454,13 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
    ЦЭВЭР функц: DOM/state хөндөхгүй тул tests/run.js-д гараар бодох
    фикстур дээр шалгана. Тоо ЗОХИОХГҮЙ — түүх ирээгүй бол {hasData:false}.
    Дутуу сар (partial) графикт "*" шошготой, YoY-д ОРОХГҮЙ. */
-function wagonAnalysisModel(all,sel,year){
+function wagonAnalysisModel(all,sel,year,mr){
   const ok=h=>h&&h.status==='ok'&&Array.isArray(h.months)&&h.months.length;
+  /* Сарын хүрээ (1–12). Бүтэн 1–12 биш бол станц/төрлийн задаргаа тооцохгүй:
+     backend-ийн задаргаа бүтэн жил/бүх түүхээр татагддаг тул сарын хүрээнд
+     таарахгүй (хуурамч тоо гаргахгүй). */
+  const mFrom=Math.min(12,Math.max(1,+(mr&&mr.from)||1)), mTo=Math.min(12,Math.max(1,+(mr&&mr.to)||12));
+  const monthFull=mFrom===1&&mTo===12;
   if(!ok(all)) return {hasData:false};
   /* "Дутуу сар" = календарийн өдрийн <90%-д л өгөгдөлтэй сар (эсвэл
      үргэлжилж буй сар). backend-ийн `partial`/complete_days-ийг ЭНД
@@ -6441,7 +6474,8 @@ function wagonAnalysisModel(all,sel,year){
   const months=all.months.map(m=>({...m,partial:isPartial(m)}));
   const years=[...new Set(months.map(m=>+String(m.month).slice(0,4)))].sort();
   const yr=(year==='all'||year==null)?'all':+year;
-  const inScope=m=>yr==='all'||+String(m.month).slice(0,4)===yr;
+  const inScope=m=>(yr==='all'||+String(m.month).slice(0,4)===yr)
+    &&(+String(m.month).slice(5,7)>=mFrom&&+String(m.month).slice(5,7)<=mTo);
   const ms=months.filter(inScope);
   if(!ms.length) return {hasData:false};
   const sum=(a,k)=>a.reduce((t,m)=>t+(+m[k]||0),0);
@@ -6458,8 +6492,8 @@ function wagonAnalysisModel(all,sel,year){
     const a=sum(pairs,'loaded'), b=pairs.reduce((t,m)=>t+(+prev.get(String(m.month).slice(5)).loaded||0),0);
     if(pairs.length&&b>0) yoy={pct:(a-b)/b*100,months:pairs.length};
   }
-  const bd=(yr==='all'?all:sel);
-  const hasBreakdown=!!(bd&&Array.isArray(bd.by_station)&&bd.by_station.length);
+  const bd=monthFull?(yr==='all'?all:sel):null;
+  const hasBreakdown=monthFull&&!!(bd&&Array.isArray(bd.by_station)&&bd.by_station.length);
   const pct=(v,t)=>t>0?v/t*100:0;
   const types=(bd&&Array.isArray(bd.by_wagon_type)?bd.by_wagon_type:[])
     .filter(t=>(+t.loaded||0)>0||(+t.unloaded||0)>0)
@@ -6471,7 +6505,7 @@ function wagonAnalysisModel(all,sel,year){
     .map(s=>({station:s.station,code:s.code,loaded:+s.loaded||0,unloaded:+s.unloaded||0}))
     .sort((a,b)=>b.loaded-a.loaded);
   const yoyReason=yoy?'ok':(yr==='all'?'pick_year':'none');
-  return {hasData:true,years,year:yr,monthCount:ms.length,days,partialN,yoyReason,
+  return {hasData:true,years,year:yr,mFrom,mTo,monthFull,monthCount:ms.length,days,partialN,yoyReason,
     loaded,unloaded,dom,frn,domPct:pct(dom,dom+frn),frnPct:pct(frn,dom+frn),
     ratio:unloaded>0?loaded/unloaded:null,perDay:days>0?loaded/days:null,yoy,
     series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
@@ -6673,7 +6707,7 @@ class Component extends DCLogic {
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12', airTreemapRegion:null,
     airRankExpanded:false, airCountryExpanded:false, airCargoExpanded:false,
-    wagonYear:'all', wagonStationsExpanded:false, wagonHistVer:0,
+    wagonYear:'all', wagonMFrom:1, wagonMTo:12, wagonStationsExpanded:false, wagonHistVer:0,
     paxYear:'all', paxMFrom:1, paxMTo:12, paxRoutesExpanded:false, paxHistVer:0,
     airAiThread:null, airAiInput:'',
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
@@ -7183,6 +7217,16 @@ class Component extends DCLogic {
       this._paxHistSel=d;
       this.setState(s=>({paxHistVer:s.paxHistVer+1}));
     });
+  }
+  /* Сарын хүрээ — түүх бүтнээрээ татагдсан тул дахин татахгүй. Оролт тоо биш
+     эсвэл хоосон бол алгасна; from>to бол солино (хоосон мужийг хэзээ ч үүсгэхгүй). */
+  setWagonMonths(p){
+    const c={};
+    Object.keys(p).forEach(k=>{ const n=parseInt(p[k],10); if(isFinite(n)) c[k]=Math.min(12,Math.max(1,n)); });
+    const f=c.wagonMFrom!=null?c.wagonMFrom:this.state.wagonMFrom;
+    const t=c.wagonMTo!=null?c.wagonMTo:this.state.wagonMTo;
+    c.wagonMFrom=Math.min(f,t); c.wagonMTo=Math.max(f,t);
+    this.setState(c);
   }
   setWagonYear(y){
     this.setState({wagonYear:y,wagonStationsExpanded:false});
@@ -9151,7 +9195,8 @@ class Component extends DCLogic {
      site.wagon_an. Түүх ирээгүй бол ЗӨВХӨН "мэдээлэл алга" харагдана. */
   buildWagonAnalysis(){
     const T=(k,fb)=>stxt('wagon_an.'+k,fb);
-    const m=wagonAnalysisModel(this._wagonHistAll,this._wagonHistSel,this.state.wagonYear);
+    const st=this.state;
+    const m=wagonAnalysisModel(this._wagonHistAll,this._wagonHistSel,st.wagonYear,{from:st.wagonMFrom,to:st.wagonMTo});
     const fmt=v=>Math.round(v).toLocaleString('en-US');
     const base={isWagonDetail:true,wagonHasData:m.hasData,wagonNoData:!m.hasData,
       wagonT:{head:T('head','Вагон ачилтын анализ'),
@@ -9192,22 +9237,40 @@ class Component extends DCLogic {
       width:(s.loaded/(stMax||1)*100).toFixed(0)+'%'}));
     const extra=Math.max(0,m.stations.length-10);
     const chart=buildDualAxisChart(m.series.loaded,m.series.unloaded,m.series.labels);
-    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat((m.years||[]).map(y=>({label:String(y),y}))).map(c=>{
-      const on=c.y===m.year;
-      return {label:c.label,
-        pick:()=>this.setWagonYear(c.y),
-        style:'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
-          +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);')};
-    });
+    /* Нэгдсэн шүүлтийн панель (техникийн үзлэгтэй ижил стандарт): жил + сарын
+       хүрээ. Жил нь backend-ийн хариунаас, сар нь сарын мөрөөс — дахин татахгүй. */
+    const chip=(on)=>'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
+      +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);');
+    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat((m.years||[]).map(y=>({label:String(y),y}))).map(c=>({
+      label:c.label,pick:()=>this.setWagonYear(c.y),style:chip(c.y===m.year)}));
+    const mFrom=m.mFrom||1, mTo=m.mTo||12;
+    const monthChips=[1,2,3,4,5,6,7,8,9,10,11,12].map(mo=>({label:String(mo),
+      pick:()=>this.setWagonMonths({wagonMFrom:mo,wagonMTo:mo}),style:chip(mFrom===mo&&mTo===mo)}));
+    const wagonF={show:!!m.hasData&&!!st.pvFilterOpen,
+      head:T('f_head','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
+      lYear:T('f_year','Жил'),lMonth:T('f_month','Сар'),lInterval:T('f_interval','Интервал'),
+      lByMonth:T('f_by_month','Сар'),
+      yearChips,monthChips,monthAllStyle:chip(mFrom===1&&mTo===12),allLabel:T('years_all','Бүгд'),
+      monthAllPick:()=>this.setWagonMonths({wagonMFrom:1,wagonMTo:12}),
+      yFrom:m.year==='all'?'':String(m.year),
+      mFrom:String(mFrom),mTo:String(mTo),
+      onMFrom:(e)=>this.setWagonMonths({wagonMFrom:e.target.value}),
+      onMTo:(e)=>this.setWagonMonths({wagonMTo:e.target.value}),
+      summary:(m.year==='all'?T('f_all_years','бүх жил'):String(m.year))+' · '+
+        (mFrom===mTo?String(mFrom):mFrom+'–'+mTo)+' '+T('f_month_unit','сар')};
     const partialNote=m.partialN>0?(m.partialN+' '+T('partial_note','сар дутуу өгөгдөлтэй (* тэмдэглэгээ) — жилийн харьцуулалтад ороогүй')):'';
-    return {...base,wagonKpis:kpis,wagonDonut:donut,wagonTypes:types,wagonHasTypes:types.length>0,
+    /* Станц/төрлийн задаргаа зөвхөн бүтэн 1–12 сарын хүрээнд. Бусдад хүлээлгийн
+       текст биш, шалтгааныг ил харуулна (хоцрохгүй). */
+    const scopeNote=m.hasData&&!m.monthFull?T('scope_partial_month','Станц ба төрлийн задаргаа зөвхөн бүтэн жил (1–12 сар) сонгосон үед харагдана.'):'';
+    return {...base,wagonF,wagonScopeNote:scopeNote,wagonHasScopeNote:!!scopeNote,
+      wagonKpis:kpis,wagonDonut:donut,wagonTypes:types,wagonHasTypes:types.length>0,
       wagonStations:rows,wagonHasStations:rows.length>0,
-      wagonBreakdownPending:!m.hasBreakdown,
+      wagonBreakdownPending:!!m.monthFull&&!m.hasBreakdown,
       wagonStationsMore:{show:extra>0,expanded,
         label:expanded?stxt('rank.collapse','△ Хураах'):('↕ '+extra+' '+stxt('rank.more_rows','нэмэлт мөр')),
         toggle:()=>this.setState(s=>({wagonStationsExpanded:!s.wagonStationsExpanded}))},
       wagonStationsTotal:T('stations_total','Нийт')+': '+fmt(m.stationTotal),
-      wagonChart:chart,wagonYearChips:yearChips,
+      wagonChart:chart,
       wagonPartialNote:partialNote,wagonHasPartial:!!partialNote,
       wagonScope:m.monthCount+' '+T('scope_months','сар')+' · '+fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')};
   }
