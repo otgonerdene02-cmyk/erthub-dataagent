@@ -4444,9 +4444,32 @@ async function groupBE() {
     check('PA6. Аялал 0 бол дундаж null (хуваалтын алдаа БИШ)',
       PA({ status: 'ok', months: [pm('2026-01', 31, 31, 0, 0, 0, 0)], by_route: [], by_type: [] }, null, 'all').perTrip === null);
 
+    /* PA9. Борлуулалтын суваг — гараар бодсон: kass 100, web 50, sms 30, phone 20,
+       tapa 0, kiosk 0 → нийлбэр 200 (web 25%); covered 180 (нийт 250-ийн 72%) */
+    const CH = { status: 'ok', months: PALL.months, by_route: [], by_type: [],
+      by_channel: [{ channel: 'kass', passengers: 100 }, { channel: 'kiosk', passengers: 0 }, { channel: 'web', passengers: 50 },
+        { channel: 'sms', passengers: 30 }, { channel: 'phone', passengers: 20 }, { channel: 'tapa', passengers: 0 }],
+      channel_covered: 180 };
+    const c = PA(CH, null, 'all');
+    check('PA9. Суваг: нийлбэр 200, ачсанаар эрэмбэ (kass, web, sms, phone), hasChannels',
+      c.hasChannels && c.channelTotal === 200 && c.channels.map(x => x.channel).slice(0, 4).join(',') === 'kass,web,sms,phone',
+      JSON.stringify(c.channels));
+    check('PA9. covered 180 дамжина (нийт 250-аас бага → самбар ил хэлнэ)', c.channelCovered === 180 && c.pax === 250);
+    check('PA9. by_channel [] / байхгүй → hasChannels:false (тоо ЗОХИОХГҮЙ)',
+      PA({ ...CH, by_channel: [] }, null, 'all').hasChannels === false &&
+      PA({ status: 'ok', months: PALL.months, by_route: [], by_type: [] }, null, 'all').hasChannels === false);
+    check('PA9. Он сонгоход суваг нь sel-ийн хариунаас (бүтэн түүхийнх БИШ)',
+      PA(CH, null, 2026).hasChannels === false &&
+      PA(CH, { status: 'ok', months: [], by_route: [], by_type: [], by_channel: [{ channel: 'web', passengers: 7 }], channel_covered: 7 }, 2026).channelTotal === 7);
+    {
+      const PACc = (readJson('content.json').site || {}).pax_an || {};
+      check('PA9. 6 суваг бүрийн шошго content.json-д',
+        ['kass', 'kiosk', 'web', 'sms', 'phone', 'tapa'].every(k => PACc.channels && PACc.channels[k]));
+    }
+
     const bp = dcScript().match(/buildPaxAnalysis\(\)\{([\s\S]*?)\n  \}\n  buildDocDetail/);
     const PAC = (readJson('content.json').site || {}).pax_an || {};
-    const pkeys = bp ? [...bp[1].matchAll(/T\('([a-z_.]+)'/g)].map(m => m[1]) : [];
+    const pkeys = bp ? [...bp[1].matchAll(/T\('([a-z_.]+)'/g)].map(m => m[1]).filter(k => !k.endsWith('.')) : [];
     const pmiss = pkeys.filter(k => k.split('.').reduce((o, x) => (o == null ? o : o[x]), PAC) == null);
     check('PA7. buildPaxAnalysis-ийн текст бүр content.json site.pax_an-д', pkeys.length > 20 && pmiss.length === 0, pmiss.join(','));
     const wk = (readJson('content.json').site.wagon_an || {});
