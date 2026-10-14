@@ -4518,6 +4518,14 @@ async function groupBE() {
       tplHtml.indexOf('detail.paxFilterUi.yearChips') < tplHtml.indexOf('detail.paxKpis'));
     check('PA12. Сарын хүснэгт: мөрүүд paxRows-оос, нийлбэрийн мөр paxTotal-оос',
       /detail.paxRows }}" as="pr"/.test(tplHtml) && /detail.paxTotal.pax/.test(tplHtml));
+    /* Регресс: хөтөч <x-dc>-ийг оршуулан parse хийхдээ жинхэнэ <tbody> доторх
+       <sc-for>-ийг хүснэгтээс гадагш гаргадаг (foster parenting) → мөр нэг хоосон
+       мөр болж, сарын хүснэгт хоосон гарсан. sc-raw-* alias хэрэглэнэ. */
+    const forIdx = tplHtml.indexOf('detail.paxRows }}" as="pr"');
+    const tblStart = tplHtml.lastIndexOf('<sc-raw-table', forIdx);
+    const tblSlice = tblStart < 0 ? '' : tplHtml.slice(tblStart, tplHtml.indexOf('</sc-raw-table>', forIdx));
+    check('PA13. Сарын хүснэгт: sc-for нь жинхэнэ <table>/<tbody> дотор БИШ (sc-raw-* alias)',
+      tblStart > 0 && tblSlice.length > 0 && !/<(table|thead|tbody|tfoot|tr|td|th)[\s>]/i.test(tblSlice));
   }
 
   /* ── BE19. station_count: 0 нь мөрийг БҮРМӨСӨН алга болгодог байв ── */
