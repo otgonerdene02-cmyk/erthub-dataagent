@@ -5529,6 +5529,122 @@ async function groupBE() {
       return (d.head || []).length === 7 && (d.notes || []).length === 7 &&
         d.st_fail === 'Тэнцээгүй бүртгэгдсэн' && d.st_clean === 'Бүгд тэнцсэн'; })());
 
+  /* ══ BE35. Үзлэгийн ТҮҮХ ба нэгдсэн хугацааны шүүлт ══
+     Гараар бодсон фикстур. Сарууд (өдөр/сарын өдөр · үзлэг · тэнцээгүй):
+       2019-07  1/31 ·    1 ·   0   (эх сурвалжийн санамсаргүй нэг мөр)
+       2025-12  1/31 ·    1 ·   0
+       2026-01 31/31 · 1000 · 100   хэсэг: ерөнхий 60 тоормос 30 жол.мех 20
+       2026-02 20/28 ·  400 ·  40   (дутуу)  ерөнхий 20 тоормос 10 жол.мех 10
+       2026-03 31/31 · 1200 ·  60   ерөнхий 30 тоормос 15 жол.мех 10 гэрэл 5
+     2026 I–III: нийт 2,600 · тэнцээгүй 200 (7.7%) · тэнцсэн 2,400 · 82 өдөр
+     → өдрийн дундаж 2600/82 = 31.7 → 32 · дутуу сар 1 · хэсгийн нийлбэр 210. */
+  {
+    const src35 = dcScript();
+    const grab35 = (name, args) => {
+      const m = src35.match(new RegExp('function ' + name + '\\(' + args + '\\)\\{([\\s\\S]*?)\\n\\}'));
+      return m ? m[1] : null;
+    };
+    const hb = grab35('roadInspectHistoryToValue', 'json');
+    const yb = grab35('roadInspectYears', 'months,minDays');
+    const pb = grab35('roadInspectPeriod', 'sel,months');
+    const mb = grab35('roadInspectPeriodModel', 'P,range');
+    if (!hb || !yb || !pb || !mb) { bad('BE35. түүхийн функцүүд олдсонгүй'); }
+    else {
+      const toVal = new Function('json', hb);
+      const years = new Function('INSPECT_MIN_YEAR_DAYS', 'return function(months,minDays){' + yb + '\n};')(28);
+      const period = new Function('sel', 'months', pb);
+      const model = new Function('P', 'range', mb);
+      const mk = (month, days, dim, total, failed, passed, c) => ({ month, days, days_in_month: dim,
+        partial: days < dim, total, failed, passed, passed_minor: 0, unknown_result: 0,
+        failed_by_category: Object.assign({ general: 0, brake: 0, steering: 0, light: 0, emission: 0, noise: 0 }, c || {}) });
+      const MONTHS35 = [
+        mk('2019-07', 1, 31, 1, 0, 1), mk('2025-12', 1, 31, 1, 0, 1),
+        mk('2026-01', 31, 31, 1000, 100, 900, { general: 60, brake: 30, steering: 20 }),
+        mk('2026-02', 20, 28, 400, 40, 360, { general: 20, brake: 10, steering: 10 }),
+        mk('2026-03', 31, 31, 1200, 60, 1140, { general: 30, brake: 15, steering: 10, light: 5 })];
+      const RES35 = { status: 'ok', months: MONTHS35,
+        by_aimag: [{ aimag: 'Улаанбаатар', total: 1800, failed: 120 }, { aimag: 'Орхон', total: 600, failed: 40 }],
+        by_weekday: [0, 1, 2, 3, 4, 5, 6].map((k) => ({ weekday: k, days: 10, total: 100 * (k + 1), avg: 10 * (k + 1) })) };
+      const H35 = toVal(RES35);
+      check('BE35. Түүх задлагдана: 5 сар, 2019-07 → жил 2019 сар 7, аймаг 2, гариг 7',
+        !!H35 && H35.months.length === 5 && H35.months[0].year === 2019 && H35.months[0].mon === 7 &&
+        H35.byAimag.length === 2 && H35.byWeekday.length === 7, H35 && JSON.stringify(H35.months[0]));
+      check('BE35. no_data / null / сарын массивгүй → null (шүүлт нуугдана, тоо зохиохгүй)',
+        toVal(null) === null && toVal({ status: 'no_data' }) === null && toVal({ status: 'ok' }) === null);
+      check('BE35. Нийт нь тоон биш сар хасагдана (NaN гаргахгүй)',
+        toVal({ status: 'ok', months: [mk('2026-01', 1, 31, 'x', 0, 0), mk('2026-02', 1, 28, 5, 0, 5)] }).months.length === 1);
+      check('BE35. Жил: бүртгэлтэй өдөр ≥ 28 → зөвхөн 2026 (2019/2025 нэг мөртэй = жил БИШ)',
+        JSON.stringify(years(H35.months)) === '[2026]', JSON.stringify(years(H35.months)));
+      check('BE35. minDays=1 үед гурван жил (босго үнэхээр ажиллаж байгааг батална)',
+        JSON.stringify(years(H35.months, 1)) === '[2019,2025,2026]', JSON.stringify(years(H35.months, 1)));
+      const P1 = period({ yFrom: 2026, yTo: 2026, mFrom: 1, mTo: 3 }, H35.months);
+      check('BE35. 2026 I–III → 3 сар, тасралтгүй, 2026-01-01 … 2026-03-31',
+        P1.months.length === 3 && P1.contiguous && P1.from === '2026-01-01' && P1.to === '2026-03-31', JSON.stringify(P1));
+      const P2 = period({ yFrom: 2026, yTo: 2026, mFrom: 2, mTo: 2 }, H35.months);
+      check('BE35. 2026-02 → to = 2026-02-28 (сарын сүүлийн өдөр)', P2.to === '2026-02-28', P2.to);
+      check('BE35. 2024-02 → to = 2024-02-29 (хоёр дахь жилийн нэмэлт өдөр)',
+        period({ yFrom: 2024, yTo: 2024, mFrom: 2, mTo: 2 }, []).to === '2024-02-29');
+      check('BE35. Олон жил + хэсэгчилсэн сар → тасралтгүй БИШ (аймаг/гариг тооцохгүй)',
+        period({ yFrom: 2025, yTo: 2026, mFrom: 1, mTo: 3 }, H35.months).contiguous === false);
+      const PA = period({ yFrom: 2019, yTo: 2026, mFrom: 1, mTo: 12 }, H35.months);
+      check('BE35. Бүх жил + 1–12 сар → тасралтгүй, 5 сар, 2019-01-01 … 2026-12-31',
+        PA.contiguous && PA.months.length === 5 && PA.from === '2019-01-01' && PA.to === '2026-12-31', JSON.stringify(PA));
+      check('BE35. Хагас бичсэн он (2) / сар (13) / NaN → хүчингүй (backend-д 400 явуулахгүй)',
+        period({ yFrom: 2, yTo: 2026, mFrom: 1, mTo: 12 }, H35.months).contiguous === false &&
+        period({ yFrom: 2026, yTo: 2026, mFrom: 1, mTo: 13 }, H35.months).contiguous === false &&
+        period({ yFrom: NaN, yTo: 2026, mFrom: 1, mTo: 12 }, H35.months) === null);
+      check('BE35. Эхлэл > төгсгөл үед солигдоно (3–1 сар = 1–3 сар)',
+        period({ yFrom: 2026, yTo: 2026, mFrom: 3, mTo: 1 }, H35.months).months.length === 3);
+      const RANGE35 = toVal({ status: 'ok', months: MONTHS35.slice(2), by_aimag: RES35.by_aimag, by_weekday: RES35.by_weekday });
+      const M = model(P1, RANGE35);
+      check('BE35. Нэгтгэл: 2,600 үзлэг · тэнцээгүй 200 · тэнцсэн 2,400 · 82 өдөр',
+        M.total === 2600 && M.failed === 200 && M.passed === 2400 && M.days === 82, JSON.stringify([M.total, M.failed, M.passed, M.days]));
+      check('BE35. Тэнцээгүй хувь 7.7% · өдрийн дундаж 32 (2600/82)',
+        M.rate.toFixed(1) === '7.7' && M.avgPerDay === 32, JSON.stringify([M.rate, M.avgPerDay]));
+      check('BE35. Дутуу сар 1 / 3 (2026-02 → 20/28 өдөр)', M.partialCount === 1 && M.monthCount === 3);
+      check('BE35. Хэсэг: ерөнхий 110 · тоормос 55 · жол.мех 40 · гэрэл 5, нийлбэр 210, ерөнхий 52.4%',
+        M.catSum === 210 && M.cats.find((c) => c.key === 'general').n === 110 &&
+        M.cats.find((c) => c.key === 'brake').n === 55 && M.cats.find((c) => c.key === 'light').n === 5 &&
+        M.cats.find((c) => c.key === 'general').pct.toFixed(1) === '52.4', JSON.stringify(M.cats));
+      check('BE35. Сарын цуваа: 3 мөр, дутуу сар partial:true, 2026-03 хувь 5.0%',
+        M.monthly.length === 3 && M.monthly[1].partial === true && M.monthly[2].rate.toFixed(1) === '5.0', JSON.stringify(M.monthly));
+      check('BE35. Аймаг: Улаанбаатар 1,800 → 75.0% (аймагтай 2,400-д), Орхон 25.0%',
+        M.aimags && M.aimags[0].name === 'Улаанбаатар' && M.aimags[0].share === 75 && M.aimags[1].share === 25,
+        JSON.stringify(M.aimags));
+      check('BE35. Гариг 7 мөр range-ээс', M.weekday && M.weekday.length === 7);
+      const MBAD = model(P1, toVal({ status: 'ok', months: MONTHS35.slice(2, 4), by_aimag: RES35.by_aimag, by_weekday: [] }));
+      check('BE35. Мужийн нийлбэр сонголттой таарахгүй (хоцорсон/буруу хариу) → аймаг/гариг ХАРУУЛАХГҮЙ',
+        MBAD.aimags === null && MBAD.weekday === null && MBAD.total === 2600);
+      const MNC = model(period({ yFrom: 2025, yTo: 2026, mFrom: 1, mTo: 3 }, H35.months), RANGE35);
+      check('BE35. Тасралтгүй биш сонголт → аймаг/гариг null, гэхдээ сарын нэгтгэл тооцогдоно',
+        MNC.aimags === null && MNC.weekday === null && MNC.total === 2600);
+      check('BE35. Сонгосон сар алга → null (хоосон нэгтгэл зохиохгүй)',
+        model(period({ yFrom: 2020, yTo: 2020, mFrom: 1, mTo: 12 }, H35.months), RANGE35) === null);
+    }
+    const idx35 = read('index.html');
+    check('BE35. Шүүлт ДЭЭД талд (detail.riF.show) — хүснэгтийн дотор БИШ',
+      idx35.includes('<sc-if value="{{ detail.riF.show }}">') &&
+      idx35.includes('<sc-if value="{{ detail.ri.period.show }}">') &&
+      idx35.includes('<sc-if value="{{ detail.tableFilterOpen }}">') &&
+      !idx35.includes('<sc-if value="{{ detail.pvFilterOpen }}">'));
+    check('BE35. Нэгдсэн шүүлт байхад хүснэгтийн дотор талын шүүлт ДАВХАРДАХГҮЙ (түүх ирээгүй үед хэвээр)',
+      src35.includes("tableFilterOpen:!!this.state.pvFilterOpen&&!(roadExtra.riF&&roadExtra.riF.available)"));
+    check('BE35. Түүх ирээгүй (null) → панель нуугдана, хуудас өмнөх шигээ',
+      src35.includes("const none={riF:{available:false,show:false}") &&
+      src35.includes('if(!hist||!sel||!P) return none;'));
+    check('BE35. Түүхийн таталт: from/to-г ЗӨВХӨН тасралтгүй мужид, токеноор хоцорсон хариуг үл тооно',
+      src35.includes('if(!P||!P.contiguous||typeof EHBackend===') && src35.includes('if(tok!==this._riTok) return;'));
+    check('BE35. Backend клиент history endpoint-той',
+      read('js/erthub-backend.js').includes("'/api/sectors/road/inspections/history'") &&
+      read('js/erthub-backend.js').includes('fetchRoadInspectionsHistory: fetchRoadInspectionsHistory'));
+    check('BE35. Шинэ харагдах текст бүр content.json site.road_insp-д бүртгэгдсэн',
+      ['f_head', 'f_year', 'f_month', 'f_interval', 'f_by_year', 'f_by_month', 'f_status', 'f_all', 'f_loading',
+        'period_title', 'period_scope', 'period_kpi_total', 'period_kpi_failed', 'period_kpi_avg', 'period_kpi_partial',
+        'monthly_title', 'month_title', 'monthly_note', 'scope_noncontig', 'scope_loading', 'scope_none'].every((k) =>
+        (readJson('content.json').site.road_insp || {})[k] != null) &&
+      (readJson('content.json').site.ds_schema_road_inspect || {}).note_period != null);
+  }
+
   /* ── BE34. Hero ticker-ийн зорчигч — цэвэр "0" БИШ ──
      "0 ЗОРЧИГЧ / ӨДӨР" нь "өнөөдөр зорчигч байхгүй" гэж уншигдаж, 04-р
      хэсгийн амьд "148,470 зорчигч/сар"-тай зөрчилдөж байв. */

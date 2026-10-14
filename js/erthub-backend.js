@@ -109,6 +109,22 @@
       });
   }
 
+  /* Техникийн хяналтын үзлэгийн ТҮҮХ — сарын нэгтгэл, аймгийн дүн, гаригийн
+     дундаж. from/to (YYYY-MM-DD) заавал биш. Хариу: {status,months[],
+     by_aimag[],by_weekday[7]} эсвэл {status:'no_data'}. Endpoint deploy
+     болоогүй (404) бол null → шүүлт нуугдаж, самбар өмнөх шигээ ажиллана. */
+  function fetchRoadInspectionsHistory(from, to) {
+    if (!BASE) return Promise.resolve(null);
+    var q = [];
+    if (from) q.push('from=' + encodeURIComponent(from));
+    if (to) q.push('to=' + encodeURIComponent(to));
+    return fetchJson(BASE + '/api/sectors/road/inspections/history' + (q.length ? '?' + q.join('&') : ''))
+      .catch(function (e) {
+        console.info('[ErtHub] backend (road/inspections/history) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
 
   /* Тээврийн хэрэгслийн бүртгэл — ТУСДАА endpoint. road-ийн summary нь
      замын хөдөлгөөний ачаалал, inspections нь техникийн ҮЗЛЭГ — гуравдугаар
@@ -135,6 +151,7 @@
     fetchRailWagonHistory: fetchRailWagonHistory,
     fetchRailPassengersHistory: fetchRailPassengersHistory,
     fetchRoadInspections: fetchRoadInspections,
+    fetchRoadInspectionsHistory: fetchRoadInspectionsHistory,
     fetchVehicleRegistry: fetchVehicleRegistry
   };
 })();
