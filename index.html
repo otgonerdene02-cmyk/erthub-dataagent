@@ -2421,6 +2421,31 @@
           </div>
         </div>
 
+        <div class="eh-g-1c" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-bottom:16px;">
+          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.paxT.channelsTitle }}</div>
+            <sc-if value="{{ detail.paxHasChannels }}">
+              <div style="display:flex;flex-direction:column;gap:11px;">
+                <sc-for list="{{ detail.paxChannels }}" as="pc" hint-placeholder-count="6">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ pc.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ pc.value }} · {{ pc.pct }}</span>
+                    </div>
+                    <div style="height:7px;border-radius:4px;background:var(--surface2);"><div style="height:100%;width:{{ pc.width }};border-radius:4px;background:{{ activeColor }};opacity:.8;"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.paxChannelsTotal }}</div>
+              <sc-if value="{{ detail.paxHasChannelsNote }}">
+                <div style="font-size:11.5px;color:var(--ink3);margin-top:8px;">{{ detail.paxChannelsNote }}</div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ detail.paxNoChannels }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.channelsPending }}</div>
+            </sc-if>
+          </div>
+        </div>
         <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
           <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.paxT.tableTitle }}</div>
           <div style="overflow-x:auto;">
@@ -6531,6 +6556,15 @@ function paxAnalysisModel(all,sel,year,mr){
     .sort((a,b)=>b.passengers-a.passengers);
   const hasBreakdown=routes.length>0;
   const routeTotal=routes.reduce((t,r)=>t+r.passengers,0);
+  /* Борлуулалтын суваг (backend by_channel; migration 019 + дахин
+     боловсруулалтын өмнө [] ирнэ → hasChannels:false, "мэдээлэл алга").
+     Он/сарын шүүлттэй үед ЯГ ТЭР хугацааны хариунаас (bd) — бүтэн түүхийнх БИШ.
+     covered = бүх 6 суваг бүрэн ирсэн мөрүүдийн зорчигч. */
+  const channels=(bd&&Array.isArray(bd.by_channel)?bd.by_channel:[])
+    .map(c=>({channel:c.channel,passengers:+c.passengers||0}))
+    .sort((a,b)=>b.passengers-a.passengers);
+  const channelTotal=channels.reduce((t,c)=>t+c.passengers,0);
+  const channelCovered=bd?(+bd.channel_covered||0):0;
   /* Сараар эрэмбэлсэн жагсаалт — дутуу сар тусад нь тэмдэглэгдэнэ */
   const ranked=ms.map(m=>({month:String(m.month),passengers:+m.passengers||0,partial:m.partial}))
     .sort((a,b)=>b.passengers-a.passengers);
@@ -6540,6 +6574,7 @@ function paxAnalysisModel(all,sel,year,mr){
     series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
       dom:ms.map(m=>+m.domestic||0),intl:ms.map(m=>+m.international||0),trips:ms.map(m=>+m.trips||0)},
     rows,ranked,hasBreakdown,routes,routeTotal,
+    channels,channelTotal,channelCovered,hasChannels:channelTotal>0,
     topRouteShare:routeTotal>0&&routes.length?routes[0].passengers/routeTotal*100:null};
 }
 
@@ -9196,6 +9231,8 @@ class Component extends DCLogic {
         chartTitle:T('chart_title','Сараар: орон нутаг / олон улс ба аялал'),
         chartLegend:T('chart_legend','Багана — ОН (цэнхэр) + ОУ (ногоон), зүүн тэнхлэг · шугам — аялал, баруун тэнхлэг. Хоёр тэнхлэг тэгээс эхэлнэ.'),
         pending:T('breakdown_pending','Чиглэлийн задаргаа ачаалж байна…'),
+        channelsTitle:T('channels_title','Борлуулалтын суваг'),
+        channelsPending:T('channels_pending','Борлуулалтын сувгийн мэдээлэл хараахан ороогүй — шинэчлэл хүлээгдэж байна.'),
         filterTitle:T('f_title','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
         fYear:T('f_year','Жил'), fMonth:T('f_month','Сар'), fRange:T('f_range','хүрээ'),
         fReset:T('f_reset','Шүүлт арилгах'), fActive:T('f_active','Шүүлт:'),
@@ -9254,8 +9291,19 @@ class Component extends DCLogic {
       intl:fmt(r.international),intlPct:r.intlPct.toFixed(1)+'%',perTrip:r.perTrip==null?dash:fmt(r.perTrip),
       mom:pctTxt(r.mom),yoy:pctTxt(r.yoy)}));
     const partialNote=m.partialN>0?(m.partialN+' '+T('partial_note','сар дутуу өгөгдөлтэй (* тэмдэглэгээ) — жилийн харьцуулалтад ороогүй')):'';
+    const chTop=m.channels.length?m.channels[0].passengers:1;
+    const chRows=m.channels.map(c=>({name:T('channels.'+c.channel,c.channel),value:fmt(c.passengers),
+      width:(c.passengers/(chTop||1)*100).toFixed(0)+'%',
+      pct:m.channelTotal>0?(c.passengers/m.channelTotal*100).toFixed(1)+'%':''}));
+    /* Суваг бүрэн ирсэн мөрүүд нийт зорчигчийн <99% бол ил хэлнэ — хувь зөвхөн
+       тэдгээрийнх; зохиомлоор 100% гэж үзүүлэхгүй. */
+    const chCov=m.pax>0?m.channelCovered/m.pax*100:0;
+    const chNote=(m.hasChannels&&chCov<99)?(chCov.toFixed(1)+'% '+T('channels_partial','зорчигчийн мөрд суваг бүрэн бүртгэгдсэн — хувь зөвхөн тэдгээрийнх')):'';
     const topShare=m.topRouteShare==null?'':(' · '+T('top_share','тэргүүлэгч чиглэл')+' '+m.topRouteShare.toFixed(1)+'%');
-    return {...base,paxFilterUi:filterUi,paxKpis:kpis,paxDonut:donut,paxMonths:months,paxHasMonths:months.length>0,
+    return {...base,paxChannels:chRows,paxHasChannels:m.hasChannels,paxNoChannels:!m.hasChannels,
+      paxChannelsNote:chNote,paxHasChannelsNote:!!chNote,
+      paxChannelsTotal:T('channels_total','Нийт')+': '+fmt(m.channelTotal),
+      paxFilterUi:filterUi,paxKpis:kpis,paxDonut:donut,paxMonths:months,paxHasMonths:months.length>0,
       paxRows:table,paxTotal:{pax:fmt(m.pax),trips:fmt(m.trips),dom:fmt(m.dom),intl:fmt(m.intl),
         intlPct:m.intlPct.toFixed(1)+'%',perTrip:m.perTrip==null?dash:fmt(m.perTrip)},
       paxRoutes:rows,paxHasRoutes:rows.length>0,paxBreakdownPending:!m.hasBreakdown,
