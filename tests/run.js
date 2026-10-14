@@ -7147,6 +7147,9 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=AX')) { groupAX(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=Y')) { await groupY(); }
+  else if (process.argv.includes('--only=F')) { await groupF(); }
+  else if (process.argv.includes('--only=I2')) { await groupI2(); }
+  else if (process.argv.includes('--only=I3')) { await groupI3(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
