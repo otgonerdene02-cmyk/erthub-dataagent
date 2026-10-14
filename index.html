@@ -2449,40 +2449,40 @@
         <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
           <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.paxT.tableTitle }}</div>
           <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;min-width:680px;">
-              <thead>
-                <tr style="color:var(--ink3);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">
-                  <th style="text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;">{{ detail.paxT.thMonth }}</th>
-                  <th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPax }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thTrips }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thDom }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntl }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntlPct }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPerTrip }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thMom }}</th><th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thYoy }}</th>
-                </tr>
-              </thead>
-              <tbody>
+            <sc-raw-table style="width:100%;border-collapse:collapse;min-width:680px;">
+              <sc-raw-thead>
+                <sc-raw-tr style="color:var(--ink3);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">
+                  <sc-raw-th style="text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;">{{ detail.paxT.thMonth }}</sc-raw-th>
+                  <sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPax }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thTrips }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thDom }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntl }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntlPct }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPerTrip }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thMom }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thYoy }}</sc-raw-th>
+                </sc-raw-tr>
+              </sc-raw-thead>
+              <sc-raw-tbody>
                 <sc-for list="{{ detail.paxRows }}" as="pr" hint-placeholder-count="12">
-                  <tr style="border-bottom:1px solid var(--line);">
-                    <td style="text-align:left;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.month }}</td>
-                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.pax }}</td>
-                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.trips }}</td>
-                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.dom }}</td>
-                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intl }}</td>
-                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intlPct }}</td>
-                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.perTrip }}</td>
-                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.mom }}</td>
-                    <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.yoy }}</td>
-                  </tr>
+                  <sc-raw-tr style="border-bottom:1px solid var(--line);">
+                    <sc-raw-td style="text-align:left;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.month }}</sc-raw-td>
+                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.pax }}</sc-raw-td>
+                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.trips }}</sc-raw-td>
+                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.dom }}</sc-raw-td>
+                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intl }}</sc-raw-td>
+                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intlPct }}</sc-raw-td>
+                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.perTrip }}</sc-raw-td>
+                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.mom }}</sc-raw-td>
+                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.yoy }}</sc-raw-td>
+                  </sc-raw-tr>
                 </sc-for>
-                <tr style="font-weight:700;border-top:1px solid var(--line2);">
-                  <td style="text-align:left;padding:9px 6px;font-size:12px;">{{ detail.paxT.total }}</td>
-                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.pax }}</td>
-                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.trips }}</td>
-                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.dom }}</td>
-                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intl }}</td>
-                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intlPct }}</td>
-                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.perTrip }}</td>
-                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</td>
-                  <td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</td>
-                </tr>
-              </tbody>
-            </table>
+                <sc-raw-tr style="font-weight:700;border-top:1px solid var(--line2);">
+                  <sc-raw-td style="text-align:left;padding:9px 6px;font-size:12px;">{{ detail.paxT.total }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.pax }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.trips }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.dom }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intl }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intlPct }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.perTrip }}</sc-raw-td>
+                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</sc-raw-td>
+                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</sc-raw-td>
+                </sc-raw-tr>
+              </sc-raw-tbody>
+            </sc-raw-table>
           </div>
         </div>
       </sc-if>
