@@ -2373,7 +2373,7 @@
             <div style="display:flex;align-items:center;gap:20px;flex:1 1 auto;">
               <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
                 <sc-for list="{{ detail.paxDonut }}" as="wd" hint-placeholder-count="2">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ wd.color }}" stroke-width="13" stroke-dasharray="{{ wd.dash }}" stroke-dashoffset="{{ wd.offset }}" transform="rotate(-90 50 50)"></circle>
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ wd.color }}" stroke-width="13" stroke-dasharray="{{ wd.dash }}" stroke-dashoffset="{{ wd.offset }}" transform="rotate(-90 50 50)"><title>{{ wd.tip }}</title></circle>
                 </sc-for>
               </svg>
               <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
@@ -2402,6 +2402,11 @@
                   </div>
                 </sc-for>
               </div>
+              <sc-if value="{{ detail.paxMonthsMore.show }}">
+                <div style="display:flex;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+                  <button sc-camel-on-click="{{ detail.paxMonthsMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.paxMonthsMore.label }}</button>
+                </div>
+              </sc-if>
             </sc-if>
             <sc-if value="{{ detail.paxBreakdownPending }}">
               <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.pending }}</div>
@@ -4880,8 +4885,8 @@ const DS_SCHEMA={
      DS_SCHEMA.rail буюу ачааны галт тэрэгний ЗОХИОМОЛ мөрүүдийг өөрийн
      дата мэт харуулдаг байв. */
   rail_pax:{head:['Сар','Зорчигч','Төлөв'],
-    types:['string','int','enum'],
-    notes:['Тайлант сар (YYYY-MM) — явагдаж буй сар ДУУСААГҮЙ тул ордоггүй',
+    types:['string','int','enum'], fmtInt:true,
+    notes:['Тайлант сар (YYYY-MM) — өгөгдөл дутуу сар «Дутуу сар» гэж тэмдэглэгдэнэ',
       'Тухайн сард бүртгэгдсэн зорчигчийн тоо','Сарын дүн бүрэн бүртгэгдсэн эсэх'],
     rows:[]}
 };
@@ -5145,7 +5150,7 @@ const DATASETS=[
      салбарын нэр ('rail') болж, DS_SCHEMA.rail буюу галт тэрэгний
      хуваарийн ЗОХИОМОЛ мөрүүдийг өөрийн дата мэт үзүүлж, Excel татах
      товч түүнийг файлаар гаргаж байв. */
-  {sector:'rail',name:'Зорчигчийн галт тэрэгний мэдээ',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Сар бүр',use:'Нийтийн API нээлттэй',desc:'Зорчигчийн галт тэрэгний сарын зорчигчийн тоо. Явагдаж буй сар ДУУСААГҮЙ тул цуваанаас хасагдаж, сүүлийн БҮТЭН сар харагдана.',
+  {sector:'rail',name:'Зорчигчийн галт тэрэгний мэдээ',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Сар бүр',use:'Нийтийн API нээлттэй',desc:'Зорчигчийн галт тэрэгний сарын зорчигчийн тоо. Дуусаагүй сар «дутуу сар» (*) гэж тэмдэглэгдэж, жилийн харьцуулалтад ордоггүй.',
    schema:'rail_pax',source:'railPax',bind:{freq:'lastRecord'}}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
@@ -5915,10 +5920,11 @@ const SECTOR_SERIES={
     schemaText:()=>({
       headMonth:stxt('ds_schema_rail_pax.head_month','Сар'),
       headStatus:stxt('ds_schema_rail_pax.head_status','Төлөв'),
-      noteMonth:stxt('ds_schema_rail_pax.note_month','Тайлант сар (YYYY-MM) — явагдаж буй сар ДУУСААГҮЙ тул ордоггүй'),
+      noteMonth:stxt('ds_schema_rail_pax.note_month','Тайлант сар (YYYY-MM) — өгөгдөл дутуу сар «Дутуу сар» гэж тэмдэглэгдэнэ'),
       noteValue:stxt('ds_schema_rail_pax.note_value','Тухайн сард бүртгэгдсэн {unit}-ийн тоо'),
       noteStatus:stxt('ds_schema_rail_pax.note_status','Сарын дүн бүрэн бүртгэгдсэн эсэх'),
-      stFull:stxt('ds_schema_rail_pax.st_full','Бүтэн сар')}),
+      stFull:stxt('ds_schema_rail_pax.st_full','Бүтэн сар'),
+      stPartial:stxt('ds_schema_rail_pax.st_partial','Дутуу сар')}),
     labels:()=>({chart:stxt('sector_chart_rail_live','Сарын зорчигч'),
       kpi:stxt('sector_kpi_rail_live.3','ЗОРЧИГЧ / САР'),unit:stxt('unit.passenger','зорчигч')})}
 };
@@ -6281,7 +6287,7 @@ function weekAxis(vals){
   return {base,top,step};
 }
 
-function buildTrendChart(data,off,partial){
+function buildTrendChart(data,off,partial,noForecast){
   /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
      хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
      Math.max.apply(null,[]) = -Infinity, data[-1] = undefined болж график
@@ -6359,8 +6365,10 @@ function buildTrendChart(data,off,partial){
   /* Тайлбар (legend) — зөвхөн графикт ЗУРАГДСАН цувааг нэрлэнэ. */
   const legend=[{key:'actual',label:stxt('chart.legend_actual','Бодит (бүтэн сар)'),lineStyle:'solid'}]
     .concat(pv!=null?[{key:'partial',label:stxt('chart.legend_partial','Хэсэгчилсэн (одоогийн сар)'),lineStyle:'dotted'}]:[])
-    .concat([{key:'forecast',label:stxt('chart.legend_forecast','Таамаг'),lineStyle:'dashed'}]);
-  return {line,area,fline,band,yTicks,xTicks,dotPts,peak,fcLabel,legend,
+    .concat(noForecast?[]:[{key:'forecast',label:stxt('chart.legend_forecast','Таамаг'),lineStyle:'dashed'}]);
+  /* noForecast — датасэтийн дэлгэрэнгүй: прогнозын шугам/зурвас шошгогүй
+     тул загварын таамгийг бодит дата мэт харуулахгүй. */
+  return {line,area,fline:noForecast?'':fline,band:noForecast?'':band,yTicks,xTicks,dotPts,peak,fcLabel,legend,
     hasPartial:pv!=null,partialCx:X(n).toFixed(1),partialCy:pY.toFixed(1),
     partialLy:Math.max(pY-9,padT+8).toFixed(1),partialLabel,partialShort,
     // SVG <text> дотор {{ }} харагдахгүй тул шошгыг foreignObject-ээр зурна:
@@ -6438,7 +6446,7 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
   let lMin=lv.length?Math.min.apply(null,lv):0, lMax=lv.length?Math.max.apply(null,lv):1;
   /* Өсөлтийн % дээр 0 ЗААВАЛ тэнхлэгт багтана — өсөлт/бууралтыг
      ялгах лавлах шугам. */
-  if(linePct){ lMin=Math.min(lMin,0); lMax=Math.max(lMax,0); }
+  if(linePct||opts.lineZero){ lMin=Math.min(lMin,0); lMax=Math.max(lMax,0); }
   const ax2=niceAxis(lMin,lMax);
   const lineRange=(ax2.hi-ax2.lo)||1;
   const Y2=v=>padT+plotH*(1-(v-ax2.lo)/lineRange);
@@ -6447,8 +6455,9 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
   /* Hover-ийн тайлбар — багана/цэг дээр очиход ЯГ ТЭР тоо гарна. SVG-ийн
      төрөлх <title> ашигласнаар нэмэлт JS, санамсаргүй давхарга шаардахгүй
      бөгөөд гар/скрин ридерт ч уншигдана. */
-  const lbl=i=>(labels&&labels[i]?labels[i]+': ':'');
-  const tipAt=(i,v,pre)=>lbl(i)+(pre?pre+' ':'')+Math.round(v).toLocaleString('en-US');
+  /* opts.hv — HV стандарт: "26-06 — Зорчигч: 160,319" (нэр + дүн) */
+  const lbl=i=>(labels&&labels[i]?labels[i]+(opts.hv?' — ':': '):'');
+  const tipAt=(i,v,pre)=>lbl(i)+(pre?pre+(opts.hv?': ':' '):'')+Math.round(v).toLocaleString('en-US');
   const gap=prevBars?slot*0.02:0;
   /* Дутуу сар ("*" шошготой) — багана бүдэг, шошгонд "(дутуу сар)" гэж бичнэ
      (wagon/pax графикийн дүрэм: бүтэн сартай андуурахгүйн тулд). */
@@ -6470,10 +6479,15 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
   lineSeries.forEach((v,i)=>{
     if(v==null||!isFinite(v)){ pen=false; return; }
     const x=X(i).toFixed(1), y=Y2(v).toFixed(1);
-    line+=(pen?' L':(line?' M':'M'))+x+','+y; pen=true;
-    const tip=linePct
+    /* Дутуу сар ("*") — шугамд ХОЛБОХГҮЙ: өдрийн тал нь л орсон тоо бүтэн
+       сартай зэрэгцэж "нуралт" мэт харагдана; цэг нь тусдаа, tooltip-д тэмдэг. */
+    const part=opts.hv&&String(labels[i]||'').slice(-1)==='*';
+    if(part) pen=false;
+    else { line+=(pen?' L':(line?' M':'M'))+x+','+y; pen=true; }
+    let tip=linePct
       ?lbl(i)+(opts.lineLabel?opts.lineLabel+' ':'')+(v>0?'+':'')+v.toFixed(1)+'%'
       :tipAt(i,v,opts.lineLabel);
+    if(part) tip+=' (дутуу сар)';
     dotPts.push({cx:x,cy:y,tip,
       color:linePct?(v>0?'#2FA37B':(v<0?'#D2564A':'#828EA8')):''});
   });
@@ -6491,6 +6505,13 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
      давхцдаггүй. Жижиг цувааны хувьд бүгдийг харуулна. */
   const every=n>24?3:n>12?2:1;
   const xTicks=labels.map((lb,i)=>({x:X(i).toFixed(1),label:lb||'',fx:(X(i)-19).toFixed(1),fy:(h-padB+6).toFixed(1)})).filter((_,i)=>i%every===0);
+  /* Сүүлийн цэг (ихэвчлэн "*" дутуу сар) ҮРГЭЛЖ шошготой — давхцах
+     өмнөх шошгыг орлоно. */
+  if(opts.hv&&n>0&&(n-1)%every!==0){
+    const lastTick={x:X(n-1).toFixed(1),label:labels[n-1]||'',fx:(X(n-1)-19).toFixed(1),fy:(h-padB+6).toFixed(1)};
+    if(xTicks.length&&(n-1)-((xTicks.length-1)*every)<every) xTicks.pop();
+    xTicks.push(lastTick);
+  }
 
   return {barRects,prevRects,hasPrev:!!prevBars,line,dotPts,yTicksLeft,yTicksRight,xTicks,
     hasZeroLine:!!zeroLineY,zeroLineY,linePct,
@@ -6694,8 +6715,15 @@ function buildPaxStackedChart(domSeries,intlSeries,tripSeries,labels){
     if(iv[i]>0) barRects.push({x,y:yIntlTop.toFixed(1),w:barW.toFixed(1),h:(yDomTop-yIntlTop).toFixed(1),fill:'#0FA37F',tip});
   });
   const xy=tv.map((v,i)=>[X(i),Y2(v)]);
-  const line=xy.length?'M'+xy.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L'):'';
-  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),tip:lbl(i)+' — аялал: '+fmt(tv[i])}));
+  /* Дутуу сар ("*" шошготой) шугамд ХОЛБОГДОХГҮЙ — өдрийн тал нь л орсон тоо
+     бүтэн сартай зэрэгцэж "нуралт" мэт харагдана; цэг нь тусдаа, tooltip-д тэмдэг. */
+  const isPart=i=>String(lbl(i)).slice(-1)==='*';
+  let line='', pen=false;
+  xy.forEach((p,i)=>{
+    if(isPart(i)){ pen=false; return; }
+    line+=(pen?' L':(line?' M':'M'))+p[0].toFixed(1)+','+p[1].toFixed(1); pen=true;
+  });
+  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),tip:lbl(i)+' — аялал: '+fmt(tv[i])+(isPart(i)?' (дутуу сар)':'')}));
   const fr=[0,0.25,0.5,0.75,1];
   const yTicksLeft=fr.map(f=>{const val=barMax*f,y=Y1(val);return {y:y.toFixed(1),label:fmt(val),fx:0,fy:(y-7).toFixed(1)};});
   const yTicksRight=fr.map(f=>{const val=lineMax*f,y=Y2(val);return {y:y.toFixed(1),label:fmt(val),fx:(w-padR+4).toFixed(1),fy:(y-7).toFixed(1)};});
@@ -6756,7 +6784,7 @@ class Component extends DCLogic {
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12', airTreemapRegion:null,
     airRankExpanded:false, airCountryExpanded:false, airCargoExpanded:false,
     wagonYear:'all', wagonMFrom:1, wagonMTo:12, wagonStationsExpanded:false, wagonHistVer:0,
-    paxYear:'all', paxMFrom:1, paxMTo:12, paxRoutesExpanded:false, paxHistVer:0,
+    paxYear:'all', paxMFrom:1, paxMTo:12, paxRoutesExpanded:false, paxMonthsExpanded:false, paxHistVer:0,
     airAiThread:null, airAiInput:'',
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
@@ -7242,18 +7270,18 @@ class Component extends DCLogic {
      backend-ээс зөвхөн шаардлагатай хүрээг (paxFetchWindow) дахин татна.
      Хоцорсон хариуг token-оор үл тооно. */
   setPaxYear(y){
-    this.setState({paxYear:y,paxRoutesExpanded:false},()=>this.refetchPax());
+    this.setState({paxYear:y,paxRoutesExpanded:false,paxMonthsExpanded:false},()=>this.refetchPax());
   }
   setPaxRange(key,raw){
     const v=Math.min(12,Math.max(1,parseInt(raw,10)||1));
-    this.setState({[key]:v,paxRoutesExpanded:false},()=>this.refetchPax());
+    this.setState({[key]:v,paxRoutesExpanded:false,paxMonthsExpanded:false},()=>this.refetchPax());
   }
   /* Сарын чип / "Бүгд" — хоёр захыг нэг дор тохируулж ганц удаа татна. */
   setPaxMonths(from,to){
-    this.setState({paxMFrom:from,paxMTo:to,paxRoutesExpanded:false},()=>this.refetchPax());
+    this.setState({paxMFrom:from,paxMTo:to,paxRoutesExpanded:false,paxMonthsExpanded:false},()=>this.refetchPax());
   }
   resetPaxFilter(){
-    this.setState({paxYear:'all',paxMFrom:1,paxMTo:12,paxRoutesExpanded:false},()=>this.refetchPax());
+    this.setState({paxYear:'all',paxMFrom:1,paxMTo:12,paxRoutesExpanded:false,paxMonthsExpanded:false},()=>this.refetchPax());
   }
   refetchPax(){
     const st=this.state;
@@ -9153,7 +9181,7 @@ class Component extends DCLogic {
           +(isNum(ci)?'right':'left')+';color:'+(sort===ci?'var(--ink)':'var(--ink3)')+';font-weight:'+(sort===ci?'700':'500')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
           +(isNum(ci)?'justify-self:end;':'')})),
       pvRows:rows.slice(pg*PER,(pg+1)*PER).map(r=>({
-        cells:r.slice(0,-1).map((c,ci)=>({v:c,
+        cells:r.slice(0,-1).map((c,ci)=>({v:(sc.fmtInt&&typeof c==='number'&&isFinite(c))?c.toLocaleString('en-US'):c,
           style:'font-size:14.5px;color:'+(types[ci]==='date'?'var(--ink2)':'var(--ink)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
             +(isMono(ci)?'font-family:\'JetBrains Mono\',monospace;font-size:13.5px;':'')
             +(isNum(ci)?'text-align:right;justify-self:end;font-weight:600;':'')})),
@@ -9169,7 +9197,7 @@ class Component extends DCLogic {
       pvNext:()=>this.setState({dsPage:Math.min(pages-1,pg+1)}),
       pvEmpty:rows.length===0,
       pvTotal:dsRows,
-      pvTitle:dsel.name+'-ийн жагсаалт',
+      pvTitle:dsel.name+' — жагсаалт',
       pvExport:()=>{
         const XLSX=window.XLSX;
         if(!XLSX){ this.setState({toast:'Excel сан ачаалагдаж байна, түр хүлээгээд дахин оролдоно уу.'}); this.fadeToast&&this.fadeToast(); return; }
@@ -9338,6 +9366,23 @@ class Component extends DCLogic {
       wagonPartialNote:partialNote,wagonHasPartial:!!partialNote,
       wagonScope:m.monthCount+' '+T('scope_months','сар')+' · '+fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')};
   }
+  /* Хүснэгт нь анализтай ЯГ ИЖИЛ эх сурвалж (түүх) ба ИЖИЛ жил/сарын
+     шүүлтээс уншина — өмнө нь хүснэгт summary-гийн сүүлийн оноор тогтмол
+     байсан тул "2025" чип дээр доорх хүснэгт 2026 хэвээр үлдэж, "Бүгд" дээр
+     2025-ийг нууж, дутуу сарыг орхидог байв. Түүх ирээгүй бол summary-ийн
+     мөрүүд хэвээр. Мөр нь сүүлийн сараас эхэлнэ. */
+  syncPaxTable(){
+    const sch=DS_SCHEMA.rail_pax, cfg=SECTOR_SERIES.rail;
+    if(!sch||!cfg||!cfg.schemaText) return;
+    const m=paxAnalysisModel(this._paxHistAll,this._paxHistSel,this.state.paxYear,{from:this.state.paxMFrom,to:this.state.paxMTo});
+    if(!m.hasData) return;
+    const T=cfg.schemaText();
+    const key=this.state.paxYear+'|'+this.state.paxMFrom+'-'+this.state.paxMTo+'|'+m.ranked.map(r=>r.month+':'+r.passengers+(r.partial?'p':'')).join(',')+'|'+T.stFull+'|'+T.stPartial;
+    if(this._paxTblKey===key&&sch.rows&&sch.rows.length) return;
+    this._paxTblKey=key;
+    sch.rows=m.ranked.slice().sort((a,b)=>a.month<b.month?1:-1).map(r=>
+      [r.month,r.passengers,(r.partial?'warn:'+T.stPartial:'ok:'+T.stFull)]);
+  }
   /* Зорчигчийн датасэтийн анализын самбар — paxAnalysisModel() үр дүнг
      темплейтийн хэлбэрт хөрвүүлнэ. Текст: content.json → site.pax_an.
      Шүүлт (он + сарын хүрээ) нь KPI/донут/график/хүснэгт бүгдэд нэгэн зэрэг
@@ -9397,24 +9442,27 @@ class Component extends DCLogic {
     const kpis=[
       {label:T('kpi_pax','Нийт зорчигч'),value:fmt(m.pax),sub:unit},
       {label:T('kpi_trips','Аялал'),value:fmt(m.trips),sub:T('kpi_trips_sub','галт тэрэг × чиглэл × өдөр')},
-      {label:T('kpi_per_trip','Аялал бүрийн дундаж'),value:m.perTrip==null?dash:fmt(m.perTrip),sub:unit},
+      {label:T('kpi_per_trip','Аялал бүрийн дундаж'),value:m.perTrip==null?dash:fmt(m.perTrip),sub:T('kpi_per_trip_sub','зорчигч / аялал')},
       {label:T('kpi_intl','Олон улсын (ОУ)'),value:m.intlPct.toFixed(1)+'%',sub:T('kpi_intl_sub','нийт зорчигчийн')},
-      {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:unit},
+      {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:T('kpi_per_day_sub','зорчигч / өдөр')},
       {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?pctTxt(m.yoy.pct):dash,
         sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):(m.yoyReason==='pick_year'?T('kpi_yoy_pick','жил сонгож харьцуулна'):T('kpi_yoy_none','өмнөх оны өгөгдөл алга'))}
     ];
     const circ=2*Math.PI*40;
-    const segs=[{label:T('dom_label','Орон нутаг (ОН)'),pct:m.domPct,color:'#2E7CF6'},
-                {label:T('intl_label','Олон улс (ОУ)'),pct:m.intlPct,color:'#0FA37F'}];
+    const segs=[{label:T('dom_label','Орон нутаг (ОН)'),pct:m.domPct,color:'#2E7CF6',cnt:m.dom},
+                {label:T('intl_label','Олон улс (ОУ)'),pct:m.intlPct,color:'#0FA37F',cnt:m.intl}];
     let acc=0;
     const donut=segs.map(s=>{const o={...s,pctLabel:s.pct.toFixed(1)+'%',
+      tip:s.label+' — '+fmt(s.cnt)+' '+unit+' · '+s.pct.toFixed(1)+'%',
       dash:(s.pct/100*circ).toFixed(1)+' '+circ.toFixed(1),offset:(-acc/100*circ).toFixed(1)};acc+=s.pct;return o;});
     const donutNote=(typeof EHGlossary!=='undefined')?EHGlossary.ratioSanity(
       [{key:'dom',label:segs[0].label,value:m.dom},{key:'intl',label:segs[1].label,value:m.intl}],{expected:2}).issues.map(i=>i.msg).join(' '):'';
     const top=m.ranked.length?m.ranked[0].passengers:1;
-    const months=m.ranked.map(r=>({name:r.month+(r.partial?' *':''),value:fmt(r.passengers),
+    const mExpanded=!!this.state.paxMonthsExpanded;
+    const months=(mExpanded?m.ranked:m.ranked.slice(0,10)).map(r=>({name:r.month+(r.partial?' *':''),value:fmt(r.passengers),
       width:(r.passengers/(top||1)*100).toFixed(0)+'%',
       pct:m.pax>0?(r.passengers/m.pax*100).toFixed(1)+'%':''}));
+    const mExtra=Math.max(0,m.ranked.length-10);
     const expanded=!!st.paxRoutesExpanded;
     const rMax=m.routes.length?m.routes[0].passengers:1;
     const rows=(expanded?m.routes:m.routes.slice(0,10)).map(r=>({name:r.route,value:fmt(r.passengers),
@@ -9439,6 +9487,9 @@ class Component extends DCLogic {
       paxChannelsNote:chNote,paxHasChannelsNote:!!chNote,
       paxChannelsTotal:T('channels_total','Нийт')+': '+fmt(m.channelTotal),
       paxFilterUi:filterUi,paxKpis:kpis,paxDonut:donut,paxDonutNote:donutNote,paxDonutHasNote:!!donutNote,paxMonths:months,paxHasMonths:months.length>0,
+      paxMonthsMore:{show:mExtra>0,
+        label:mExpanded?stxt('rank.collapse','△ Хураах'):('↕ '+mExtra+' '+stxt('rank.more_rows','нэмэлт мөр')),
+        toggle:()=>this.setState(s=>({paxMonthsExpanded:!s.paxMonthsExpanded}))},
       paxRows:table,paxTotal:{pax:fmt(m.pax),trips:fmt(m.trips),dom:fmt(m.dom),intl:fmt(m.intl),
         intlPct:m.intlPct.toFixed(1)+'%',perTrip:m.perTrip==null?dash:fmt(m.perTrip)},
       paxRoutes:rows,paxHasRoutes:rows.length>0,paxBreakdownPending:!m.hasBreakdown,
@@ -10680,6 +10731,7 @@ class Component extends DCLogic {
     /* Мөрийн тоо датасэт тус бүрээр ИРДЭГГҮЙ — өмнө нь нэрийн уртаас
        зохиодог байв ("Тоо ЗОХИОХГҮЙ" дүрэм). Эх сурвалж өгөх хүртэл null. */
     const dsRows=null;
+    if(dsel.source==='railPax') this.syncPaxTable();
     const dsEp=datasetEndpoint(dsel);
     const dsLang=this.state.dsApiLang||'curl';
     const dsMeta=this.sourceData(dsel.source).meta||null;
@@ -10721,7 +10773,7 @@ class Component extends DCLogic {
        ийм "САРЫН ЗОРЧИГЧ" муруйг арилгасан). Air-д тэмдэглээгүй тул хэвээр. */
     const dsHasTrend=!dsSec._liveKpis||(!!dsSec._liveSeries&&
       (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name));
-    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue):null;
+    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue,dsel.source==='railPax'):null;
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
@@ -10977,7 +11029,7 @@ class Component extends DCLogic {
           color:it.on?'#0E8F63':'var(--ink3)',
           mark:it.on?'✓':'✕'}))
       })),
-      c1:dsHasTrend?SECTORS[dsel.sector].c1:stxt('detail.no_series_title','ЧИГ ХАНДЛАГА'),
+      c1:dsHasTrend?(SECTORS[dsel.sector].c1+((dsel.source==='railPax'&&dsSec.c1dYear)?' · '+dsSec.c1dYear:'')):stxt('detail.no_series_title','ЧИГ ХАНДЛАГА'),
       hasTrend:dsHasTrend,noTrend:!dsHasTrend,
       noTrendNote:stxt('status.no_series','чиг хандлагын цуваа алга'),
       trend:dsTrend||{yTicks:[],xTicks:[]},
