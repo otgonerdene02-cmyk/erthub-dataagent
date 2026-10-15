@@ -9431,8 +9431,8 @@ class Component extends DCLogic {
           T('th_intl','Олон улс (ОУ)'),T('th_intl_pct','ОУ %'),T('th_per_trip','Аяллын дундаж'),T('th_days','Өдөр'),
           T('th_mom','Өмнөх сараас'),T('th_yoy','Өмнөх оноос'),stxt('ds_schema_rail_pax.head_status','Төлөв')],
         types:['month','int','int','int','int','pct','float','int','pctchg','pctchg','enum'],
-        /* 11 багана 1186px картад хэвтээ гүйлгээгүй багтана (доод хэмжээ; илүү зай нь 1fr-ээр тэнцүү хуваагдана) */
-        widths:[92,100,76,108,108,72,108,64,108,108,104],
+        /* 11 багана 1186px картад хэвтээ гүйлгээгүй багтана (бодит өгөгдөл дээр 1195/1186 болж 9px гүйлгэдэг байв) (доод хэмжээ; илүү зай нь 1fr-ээр тэнцүү хуваагдана) */
+        widths:[88,96,72,100,100,68,100,60,100,100,100],
         notes:[stxt('ds_schema_rail_pax.note_month_hist','Тайлант сар (YYYY-MM) — явагдаж буй сар «Дутуу сар» гэж тэмдэглэгдэнэ'),
           stxt('ds_schema_rail_pax.note_pax','Тухайн сард зорчсон нийт зорчигч'),stxt('ds_schema_rail_pax.note_trips','Галт тэрэг × чиглэл × өдрийн аяллын тоо'),
           stxt('ds_schema_rail_pax.note_dom','Дотоод (орон нутгийн) чиглэлийн зорчигч'),stxt('ds_schema_rail_pax.note_intl','Олон улсын чиглэлийн зорчигч'),
