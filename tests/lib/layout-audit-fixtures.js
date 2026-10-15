@@ -30,7 +30,9 @@ const FIXTURES = {
   'chart-fills-width': { expect: [], html:
     '<div style="' + CARD + 'width:760px"><svg viewBox="0 0 600 170" style="width:100%;height:auto;display:block">' +
     '<path d="M0 150 L600 20" stroke="#09f" fill="none"/><text x="10" y="165">1-р сар</text></svg></div>' },
-  'start-aligned-pair': { expect: [], html:
+  /* 2026-10-15-аас ХОРИОТОЙ (UI стандарт ROW): өмнө нь «start-aligned хос зөвшөөрөгдөнө»
+     гэж үздэг байсан нь галт тэрэг/вагон/үзлэгийн тэгш бус мөрүүдийг аудитаас нуусан. */
+  'start-aligned-pair': { expect: ['row-height-mismatch'], html:
     '<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start;width:960px">' +
     '<div style="' + CARD + '"><svg viewBox="0 0 600 170" style="width:100%;height:auto;display:block"><path d="M0 150 L600 20" stroke="#09f" fill="none"/></svg></div>' +
     '<div style="' + CARD + '">' + rows(12) + '</div></div>' },
@@ -73,6 +75,21 @@ const FIXTURES = {
   'row-height-mismatch': { expect: ['row-height-mismatch'], html:
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;width:700px">' +
     '<div style="' + CARD + '">' + rows(12) + '</div><div style="' + CARD + '">' + rows(40) + '</div></div>' },
+  /* Жижиг (198px) donut карт + урт жагсаалт — хуучин дүрэм (≥220px карт) мултраадаг байсан
+     ЯГ зорчигчийн галт тэрэгний алдаа (2026-10-15) */
+  'row-height-mismatch-small-card': { expect: ['row-height-mismatch'], html:
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;width:700px">' +
+    '<div style="' + CARD + 'height:120px">Донут</div><div style="' + CARD + '">' + rows(30) + '</div></div>' },
+  /* Бага зөрүү (60px) ч мөр тэгш бус харагдана — үзлэгийн 360 | 420 */
+  'row-height-mismatch-60px': { expect: ['row-height-mismatch'], html:
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;width:700px">' +
+    '<div style="' + CARD + 'height:300px">А</div><div style="' + CARD + 'height:360px">Б</div></div>' },
+  'table-underfill': { expect: ['table-underfill'], html:
+    '<div style="' + CARD + 'width:700px"><div style="overflow-x:auto"><div data-eh-table="1" style="width:fit-content">' +
+    '<div style="display:grid;grid-template-columns:120px 120px 120px;gap:12px"><div>Сар</div><div>Зорчигч</div><div>Төлөв</div></div></div></div></div>' },
+  'table-fill-is-fine': { expect: [], html:
+    '<div style="' + CARD + 'width:700px"><div style="overflow-x:auto"><div data-eh-table="1" style="min-width:100%;width:fit-content">' +
+    '<div style="display:grid;grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr);gap:12px"><div>Сар</div><div>Зорчигч</div><div>Төлөв</div></div></div></div></div>' },
   'row-stretch-is-fine': { expect: [], html:
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;width:700px">' +
     '<div style="' + CARD + '">' + rows(12) + '</div>' +

@@ -841,7 +841,7 @@
           </sc-if>
         </div>
       </div>
-      <div class="eh-g-1c" style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px;align-items:start;">
+      <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px;align-items:stretch;">
         <div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;margin-bottom:7px;">
             <sc-for list="{{ weekPaxBars }}" as="wb" hint-placeholder-count="6">
@@ -932,7 +932,7 @@
           </sc-if>
         </div>
       </div>
-      <div class="eh-g-1c" style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px;align-items:start;">
+      <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px;align-items:stretch;">
         <div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;margin-bottom:7px;">
             <sc-for list="{{ weekCargoBars }}" as="wb" hint-placeholder-count="6">
@@ -2207,105 +2207,6 @@
           <div style="font-size:11.5px;color:var(--ink3);margin:-6px 0 14px;">* {{ detail.wagonPartialNote }}</div>
         </sc-if>
 
-        <div class="eh-g-1c" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
-          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
-            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.wagonT.donutTitle }}</div>
-            <div style="display:flex;align-items:center;gap:20px;flex:1 1 auto;">
-              <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
-                <sc-for list="{{ detail.wagonDonut }}" as="wd" hint-placeholder-count="2">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ wd.color }}" stroke-width="13" stroke-dasharray="{{ wd.dash }}" stroke-dashoffset="{{ wd.offset }}" transform="rotate(-90 50 50)"></circle>
-                </sc-for>
-              </svg>
-              <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
-                <sc-for list="{{ detail.wagonDonut }}" as="wd" hint-placeholder-count="2">
-                  <div style="display:flex;align-items:center;gap:9px;">
-                    <div style="width:9px;height:9px;border-radius:3px;background:{{ wd.color }};flex-shrink:0;"></div>
-                    <div style="font-size:13px;color:var(--ink2);flex:1;">{{ wd.label }}</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink);">{{ wd.pctLabel }}</div>
-                  </div>
-                </sc-for>
-              </div>
-            </div>
-            <sc-if value="{{ detail.wagonDonutHasNote }}"><div style="margin-top:12px;font-size:11.5px;line-height:1.5;color:var(--ink3);">ⓘ {{ detail.wagonDonutNote }}</div></sc-if>
-          </div>
-          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
-            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.wagonT.typesTitle }}</div>
-            <sc-if value="{{ detail.wagonHasTypes }}">
-              <div style="display:flex;flex-direction:column;gap:11px;">
-                <sc-for list="{{ detail.wagonTypes }}" as="wt" hint-placeholder-count="6">
-                  <div>
-                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
-                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ wt.name }}</span>
-                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ wt.value }} · {{ wt.pct }}</span>
-                    </div>
-                    <div style="height:7px;border-radius:4px;background:var(--surface2);"><div style="height:100%;width:{{ wt.width }};border-radius:4px;background:{{ detail.color }};opacity:.8;"></div></div>
-                  </div>
-                </sc-for>
-              </div>
-            </sc-if>
-            <sc-if value="{{ detail.wagonBreakdownPending }}">
-              <div style="font-size:12px;color:var(--ink3);">{{ detail.wagonT.pending }}</div>
-            </sc-if>
-          </div>
-        </div>
-
-        <div class="eh-g-1c" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
-          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
-            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.wagonT.chartTitle }}</div>
-            <div style="font-size:10.5px;color:var(--ink3);margin-bottom:12px;">{{ detail.wagonT.chartLegend }}</div>
-            <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;display:block;">
-              <sc-for list="{{ detail.wagonChart.yTicksLeft }}" as="yt" hint-placeholder-count="5">
-                <line x1="{{ detail.wagonChart.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.wagonChart.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
-                <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
-                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
-                </foreignObject>
-              </sc-for>
-              <sc-for list="{{ detail.wagonChart.yTicksRight }}" as="yt2" hint-placeholder-count="5">
-                <foreignObject x="{{ yt2.fx }}" y="{{ yt2.fy }}" width="42" height="14">
-                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:{{ detail.color }};font-family:'JetBrains Mono',monospace;text-align:left;padding-left:6px;">{{ yt2.label }}</div>
-                </foreignObject>
-              </sc-for>
-              <sc-for list="{{ detail.wagonChart.barRects }}" as="br" hint-placeholder-count="12">
-                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="var(--ink3)" opacity="{{ br.op }}" rx="2"><title>{{ br.tip }}</title></rect>
-              </sc-for>
-              <path d="{{ detail.wagonChart.line }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
-              <sc-for list="{{ detail.wagonChart.dotPts }}" as="dp" hint-placeholder-count="12">
-                <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ detail.color }}"><title>{{ dp.tip }}</title></circle>
-              </sc-for>
-              <sc-for list="{{ detail.wagonChart.xTicks }}" as="xt" hint-placeholder-count="6">
-                <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
-                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
-                </foreignObject>
-              </sc-for>
-            </svg>
-          </div>
-          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
-            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.wagonT.stationsTitle }}</div>
-            <sc-if value="{{ detail.wagonHasStations }}">
-              <div style="display:flex;flex-direction:column;gap:10px;">
-                <sc-for list="{{ detail.wagonStations }}" as="ws" hint-placeholder-count="10">
-                  <div>
-                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
-                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ws.name }}</span>
-                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ ws.value }}</span>
-                    </div>
-                    <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ ws.width }};border-radius:3px;background:{{ detail.color }};opacity:.8;"></div></div>
-                    <div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ ws.sub }}</div>
-                  </div>
-                </sc-for>
-              </div>
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
-                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.wagonStationsTotal }}</span>
-                <sc-if value="{{ detail.wagonStationsMore.show }}">
-                  <button sc-camel-on-click="{{ detail.wagonStationsMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.wagonStationsMore.label }}</button>
-                </sc-if>
-              </div>
-            </sc-if>
-            <sc-if value="{{ detail.wagonBreakdownPending }}">
-              <div style="font-size:12px;color:var(--ink3);">{{ detail.wagonT.pending }}</div>
-            </sc-if>
-          </div>
-        </div>
       </sc-if>
     </div>
     </sc-if>
@@ -2367,170 +2268,6 @@
           <div style="font-size:11.5px;color:var(--ink3);margin:-6px 0 14px;">* {{ detail.paxPartialNote }}</div>
         </sc-if>
 
-        <div class="eh-g-1c" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
-          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
-            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.paxT.donutTitle }}</div>
-            <div style="display:flex;align-items:center;gap:20px;flex:1 1 auto;">
-              <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
-                <sc-for list="{{ detail.paxDonut }}" as="wd" hint-placeholder-count="2">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ wd.color }}" stroke-width="13" stroke-dasharray="{{ wd.dash }}" stroke-dashoffset="{{ wd.offset }}" transform="rotate(-90 50 50)"></circle>
-                </sc-for>
-              </svg>
-              <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
-                <sc-for list="{{ detail.paxDonut }}" as="wd" hint-placeholder-count="2">
-                  <div style="display:flex;align-items:center;gap:9px;">
-                    <div style="width:9px;height:9px;border-radius:3px;background:{{ wd.color }};flex-shrink:0;"></div>
-                    <div style="font-size:13px;color:var(--ink2);flex:1;">{{ wd.label }}</div>
-                    <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink);">{{ wd.pctLabel }}</div>
-                  </div>
-                </sc-for>
-              </div>
-            </div>
-            <sc-if value="{{ detail.paxDonutHasNote }}"><div style="margin-top:12px;font-size:11.5px;line-height:1.5;color:var(--ink3);">ⓘ {{ detail.paxDonutNote }}</div></sc-if>
-          </div>
-          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
-            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.paxT.monthsTitle }}</div>
-            <sc-if value="{{ detail.paxHasMonths }}">
-              <div style="display:flex;flex-direction:column;gap:11px;">
-                <sc-for list="{{ detail.paxMonths }}" as="wt" hint-placeholder-count="6">
-                  <div>
-                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
-                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ wt.name }}</span>
-                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ wt.value }} · {{ wt.pct }}</span>
-                    </div>
-                    <div style="height:7px;border-radius:4px;background:var(--surface2);"><div style="height:100%;width:{{ wt.width }};border-radius:4px;background:{{ detail.color }};opacity:.8;"></div></div>
-                  </div>
-                </sc-for>
-              </div>
-            </sc-if>
-            <sc-if value="{{ detail.paxBreakdownPending }}">
-              <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.pending }}</div>
-            </sc-if>
-          </div>
-        </div>
-
-        <div class="eh-g-1c" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
-          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
-            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.paxT.chartTitle }}</div>
-            <div style="font-size:10.5px;color:var(--ink3);margin-bottom:12px;">{{ detail.paxT.chartLegend }}</div>
-            <svg sc-camel-view-box="0 0 640 230" style="width:100%;height:auto;display:block;">
-              <sc-for list="{{ detail.paxChart.yTicksLeft }}" as="yt" hint-placeholder-count="5">
-                <line x1="{{ detail.paxChart.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.paxChart.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
-                <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
-                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
-                </foreignObject>
-              </sc-for>
-              <sc-for list="{{ detail.paxChart.yTicksRight }}" as="yt2" hint-placeholder-count="5">
-                <foreignObject x="{{ yt2.fx }}" y="{{ yt2.fy }}" width="42" height="14">
-                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:{{ detail.color }};font-family:'JetBrains Mono',monospace;text-align:left;padding-left:6px;">{{ yt2.label }}</div>
-                </foreignObject>
-              </sc-for>
-              <sc-for list="{{ detail.paxChart.barRects }}" as="br" hint-placeholder-count="12">
-                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="{{ br.fill }}" opacity=".85" rx="2"><title>{{ br.tip }}</title></rect>
-              </sc-for>
-              <path d="{{ detail.paxChart.line }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
-              <sc-for list="{{ detail.paxChart.dotPts }}" as="dp" hint-placeholder-count="12">
-                <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ detail.color }}"><title>{{ dp.tip }}</title></circle>
-              </sc-for>
-              <sc-for list="{{ detail.paxChart.xTicks }}" as="xt" hint-placeholder-count="6">
-                <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
-                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
-                </foreignObject>
-              </sc-for>
-            </svg>
-          </div>
-          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
-            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.paxT.routesTitle }}</div>
-            <sc-if value="{{ detail.paxHasRoutes }}">
-              <div style="display:flex;flex-direction:column;gap:10px;">
-                <sc-for list="{{ detail.paxRoutes }}" as="ws" hint-placeholder-count="10">
-                  <div>
-                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
-                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ws.name }}</span>
-                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ ws.value }}</span>
-                    </div>
-                    <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ ws.width }};border-radius:3px;background:{{ detail.color }};opacity:.8;"></div></div>
-                    <div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ ws.sub }}</div>
-                  </div>
-                </sc-for>
-              </div>
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
-                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.paxRoutesTotal }}</span>
-                <sc-if value="{{ detail.paxRoutesMore.show }}">
-                  <button sc-camel-on-click="{{ detail.paxRoutesMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.paxRoutesMore.label }}</button>
-                </sc-if>
-              </div>
-            </sc-if>
-            <sc-if value="{{ detail.paxBreakdownPending }}">
-              <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.pending }}</div>
-            </sc-if>
-          </div>
-        </div>
-
-        <div class="eh-g-1c" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-bottom:16px;">
-          <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
-            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.paxT.channelsTitle }}</div>
-            <sc-if value="{{ detail.paxHasChannels }}">
-              <div style="display:flex;flex-direction:column;gap:11px;">
-                <sc-for list="{{ detail.paxChannels }}" as="pc" hint-placeholder-count="6">
-                  <div>
-                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
-                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ pc.name }}</span>
-                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ pc.value }} · {{ pc.pct }}</span>
-                    </div>
-                    <div style="height:7px;border-radius:4px;background:var(--surface2);"><div style="height:100%;width:{{ pc.width }};border-radius:4px;background:{{ activeColor }};opacity:.8;"></div></div>
-                  </div>
-                </sc-for>
-              </div>
-              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.paxChannelsTotal }}</div>
-              <sc-if value="{{ detail.paxHasChannelsNote }}">
-                <div style="font-size:11.5px;color:var(--ink3);margin-top:8px;">{{ detail.paxChannelsNote }}</div>
-              </sc-if>
-            </sc-if>
-            <sc-if value="{{ detail.paxNoChannels }}">
-              <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.channelsPending }}</div>
-            </sc-if>
-          </div>
-        </div>
-        <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
-          <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.paxT.tableTitle }}</div>
-          <div style="overflow-x:auto;">
-            <sc-raw-table style="width:100%;border-collapse:collapse;min-width:680px;">
-              <sc-raw-thead>
-                <sc-raw-tr style="color:var(--ink3);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">
-                  <sc-raw-th style="text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;">{{ detail.paxT.thMonth }}</sc-raw-th>
-                  <sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPax }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thTrips }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thDom }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntl }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thIntlPct }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thPerTrip }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thMom }}</sc-raw-th><sc-raw-th style="text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;">{{ detail.paxT.thYoy }}</sc-raw-th>
-                </sc-raw-tr>
-              </sc-raw-thead>
-              <sc-raw-tbody>
-                <sc-for list="{{ detail.paxRows }}" as="pr" hint-placeholder-count="12">
-                  <sc-raw-tr style="border-bottom:1px solid var(--line);">
-                    <sc-raw-td style="text-align:left;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.month }}</sc-raw-td>
-                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.pax }}</sc-raw-td>
-                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.trips }}</sc-raw-td>
-                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.dom }}</sc-raw-td>
-                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intl }}</sc-raw-td>
-                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.intlPct }}</sc-raw-td>
-                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.perTrip }}</sc-raw-td>
-                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.mom }}</sc-raw-td>
-                    <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ pr.yoy }}</sc-raw-td>
-                  </sc-raw-tr>
-                </sc-for>
-                <sc-raw-tr style="font-weight:700;border-top:1px solid var(--line2);">
-                  <sc-raw-td style="text-align:left;padding:9px 6px;font-size:12px;">{{ detail.paxT.total }}</sc-raw-td>
-                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.pax }}</sc-raw-td>
-                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.trips }}</sc-raw-td>
-                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.dom }}</sc-raw-td>
-                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intl }}</sc-raw-td>
-                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.intlPct }}</sc-raw-td>
-                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">{{ detail.paxTotal.perTrip }}</sc-raw-td>
-                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</sc-raw-td>
-                  <sc-raw-td style="text-align:right;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;">—</sc-raw-td>
-                </sc-raw-tr>
-              </sc-raw-tbody>
-            </sc-raw-table>
-          </div>
-        </div>
       </sc-if>
     </div>
     </sc-if>
@@ -2693,6 +2430,8 @@
 
     <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dwp" data-eh-field="title">{{ detail.dwpTitle }}</span></div>
+      <!-- UI стандарт: эх сурвалжгүй үед 4 том "—" нүд зурахгүй — нэг мөр тайлбар л үлдэнэ -->
+      <sc-if value="{{ detail.wp.hasData }}">
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
         <div>
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Энэ 7 хоногт</div>
@@ -2711,6 +2450,7 @@
           <div data-wp-val="yoy" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.yoyColor }};">{{ detail.wp.yoy }}</div>
         </div>
       </div>
+      </sc-if>
       <sc-if value="{{ detail.wp.hasPlan }}">
       <div data-wp-plan="1" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);">
         <div style="display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--ink2);margin-bottom:8px;">
@@ -2722,7 +2462,7 @@
         </div>
       </div>
       </sc-if>
-      <sc-if value="{{ detail.wp.wpNoData }}"><div data-wp-nodata="1" style="margin-top:12px;font-size:11.5px;color:var(--ink3);line-height:1.45;">{{ detail.wp.note }}</div></sc-if>
+      <sc-if value="{{ detail.wp.wpNoData }}"><div data-wp-nodata="1" style="margin-top:-6px;font-size:11.5px;color:var(--ink3);line-height:1.45;">{{ detail.wp.note }}</div></sc-if>
     </div>
 
     <sc-if value="{{ detail.act }}">
@@ -2865,7 +2605,7 @@
         </div>
       </sc-if>
       <div style="overflow-x:auto;">
-      <div style="min-width:560px;width:fit-content;">
+      <div data-eh-table="1" style="min-width:100%;width:fit-content;">
       <div style="{{ detail.pvGrid }}padding:0 2px 11px;border-bottom:1px solid var(--line2);align-items:end;">
         <sc-for list="{{ detail.pvHead }}" as="ph" hint-placeholder-count="5">
           <button sc-camel-on-click="{{ ph.sortIt }}" style="{{ ph.style }}">{{ ph.label }} {{ ph.arrow }}<div sc-camel-on-mouse-down="{{ ph.startResize }}" style="position:absolute;top:-6px;right:-8px;bottom:-6px;width:13px;cursor:col-resize;"></div></button>
@@ -2896,6 +2636,231 @@
       </div>
     </div>
 
+
+    <!-- UI стандарт (ORD): датасэт БҮР ижил дараалалтай — KPI → «…-ийн жагсаалт» хүснэгт → график.
+         Агаарын хуудас эталон. Өмнө нь вагон/зорчигчийн графикууд хүснэгтийн ДЭЭР байрлаж,
+         хүснэгт хуудасны доод хэсэгт "алга болж" байв. -->
+    <sc-if value="{{ detail.isWagonDetail }}"><sc-if value="{{ detail.wagonHasData }}">
+      <div data-wagon-charts="1">
+        <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.wagonT.donutTitle }}</div>
+            <div style="display:flex;align-items:center;gap:20px;flex:1 1 auto;">
+              <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
+                <sc-for list="{{ detail.wagonDonut }}" as="wd" hint-placeholder-count="2">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ wd.color }}" stroke-width="13" stroke-dasharray="{{ wd.dash }}" stroke-dashoffset="{{ wd.offset }}" transform="rotate(-90 50 50)"></circle>
+                </sc-for>
+              </svg>
+              <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
+                <sc-for list="{{ detail.wagonDonut }}" as="wd" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <div style="width:9px;height:9px;border-radius:3px;background:{{ wd.color }};flex-shrink:0;"></div>
+                    <div style="font-size:13px;color:var(--ink2);flex:1;">{{ wd.label }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink);">{{ wd.pctLabel }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ detail.wagonDonutHasNote }}"><div style="margin-top:12px;font-size:11.5px;line-height:1.5;color:var(--ink3);">ⓘ {{ detail.wagonDonutNote }}</div></sc-if>
+          </div>
+          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.wagonT.typesTitle }}</div>
+            <div class="eh-fill-list"><div class="eh-fill-scroll">
+            <sc-if value="{{ detail.wagonHasTypes }}">
+              <div style="display:flex;flex-direction:column;gap:11px;">
+                <sc-for list="{{ detail.wagonTypes }}" as="wt" hint-placeholder-count="6">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ wt.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ wt.value }} · {{ wt.pct }}</span>
+                    </div>
+                    <div style="height:7px;border-radius:4px;background:var(--surface2);"><div style="height:100%;width:{{ wt.width }};border-radius:4px;background:{{ detail.color }};opacity:.8;"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.wagonBreakdownPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.wagonT.pending }}</div>
+            </sc-if>
+                      </div></div>
+          </div>
+        </div>
+
+        <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.wagonT.chartTitle }}</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-bottom:12px;">{{ detail.wagonT.chartLegend }}</div>
+            <svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;display:block;">
+              <sc-for list="{{ detail.wagonChart.yTicksLeft }}" as="yt" hint-placeholder-count="5">
+                <line x1="{{ detail.wagonChart.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.wagonChart.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
+                <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.wagonChart.yTicksRight }}" as="yt2" hint-placeholder-count="5">
+                <foreignObject x="{{ yt2.fx }}" y="{{ yt2.fy }}" width="42" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:{{ detail.color }};font-family:'JetBrains Mono',monospace;text-align:left;padding-left:6px;">{{ yt2.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.wagonChart.barRects }}" as="br" hint-placeholder-count="12">
+                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="var(--ink3)" opacity="{{ br.op }}" rx="2"><title>{{ br.tip }}</title></rect>
+              </sc-for>
+              <path d="{{ detail.wagonChart.line }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+              <sc-for list="{{ detail.wagonChart.dotPts }}" as="dp" hint-placeholder-count="12">
+                <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ detail.color }}"><title>{{ dp.tip }}</title></circle>
+              </sc-for>
+              <sc-for list="{{ detail.wagonChart.xTicks }}" as="xt" hint-placeholder-count="6">
+                <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
+                </foreignObject>
+              </sc-for>
+            </svg>
+          </div>
+          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.wagonT.stationsTitle }}</div>
+            <div class="eh-fill-list"><div class="eh-fill-scroll">
+            <sc-if value="{{ detail.wagonHasStations }}">
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <sc-for list="{{ detail.wagonStations }}" as="ws" hint-placeholder-count="10">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ws.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ ws.value }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ ws.width }};border-radius:3px;background:{{ detail.color }};opacity:.8;"></div></div>
+                    <div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ ws.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.wagonStationsTotal }}</span>
+                <sc-if value="{{ detail.wagonStationsMore.show }}">
+                  <button sc-camel-on-click="{{ detail.wagonStationsMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.wagonStationsMore.label }}</button>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.wagonBreakdownPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.wagonT.pending }}</div>
+            </sc-if>
+                      </div></div>
+          </div>
+        </div>
+      </div>
+    </sc-if></sc-if>
+    <sc-if value="{{ detail.isPaxDetail }}"><sc-if value="{{ detail.paxHasData }}">
+      <div data-pax-charts="1">
+        <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.paxT.donutTitle }}</div>
+            <div style="display:flex;align-items:center;gap:20px;flex:1 1 auto;">
+              <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
+                <sc-for list="{{ detail.paxDonut }}" as="wd" hint-placeholder-count="2">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ wd.color }}" stroke-width="13" stroke-dasharray="{{ wd.dash }}" stroke-dashoffset="{{ wd.offset }}" transform="rotate(-90 50 50)"><title>{{ wd.tip }}</title></circle>
+                </sc-for>
+              </svg>
+              <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
+                <sc-for list="{{ detail.paxDonut }}" as="wd" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <div style="width:9px;height:9px;border-radius:3px;background:{{ wd.color }};flex-shrink:0;"></div>
+                    <div style="font-size:13px;color:var(--ink2);flex:1;">{{ wd.label }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink);">{{ wd.pctLabel }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ detail.paxDonutHasNote }}"><div style="margin-top:12px;font-size:11.5px;line-height:1.5;color:var(--ink3);">ⓘ {{ detail.paxDonutNote }}</div></sc-if>
+          </div>
+          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.paxT.monthsTitle }}</div>
+            <div class="eh-fill-list"><div class="eh-fill-scroll">
+            <sc-if value="{{ detail.paxHasMonths }}">
+              <div style="display:flex;flex-direction:column;gap:11px;">
+                <sc-for list="{{ detail.paxMonths }}" as="wt" hint-placeholder-count="6">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ wt.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ wt.value }} · {{ wt.pct }}</span>
+                    </div>
+                    <div style="height:7px;border-radius:4px;background:var(--surface2);"><div style="height:100%;width:{{ wt.width }};border-radius:4px;background:{{ detail.color }};opacity:.8;"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.paxBreakdownPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.pending }}</div>
+            </sc-if>
+                      </div></div>
+            <sc-if value="{{ detail.paxMonthsMore.show }}">
+              <div style="display:flex;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+                <button sc-camel-on-click="{{ detail.paxMonthsMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.paxMonthsMore.label }}</button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.paxT.chartTitle }}</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-bottom:12px;">{{ detail.paxT.chartLegend }}</div>
+            <svg sc-camel-view-box="0 0 640 230" style="width:100%;height:auto;display:block;">
+              <sc-for list="{{ detail.paxChart.yTicksLeft }}" as="yt" hint-placeholder-count="5">
+                <line x1="{{ detail.paxChart.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.paxChart.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
+                <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.paxChart.yTicksRight }}" as="yt2" hint-placeholder-count="5">
+                <foreignObject x="{{ yt2.fx }}" y="{{ yt2.fy }}" width="42" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:{{ detail.color }};font-family:'JetBrains Mono',monospace;text-align:left;padding-left:6px;">{{ yt2.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.paxChart.barRects }}" as="br" hint-placeholder-count="12">
+                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="{{ br.fill }}" opacity=".85" rx="2"><title>{{ br.tip }}</title></rect>
+              </sc-for>
+              <path d="{{ detail.paxChart.line }}" fill="none" stroke="{{ detail.color }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+              <sc-for list="{{ detail.paxChart.dotPts }}" as="dp" hint-placeholder-count="12">
+                <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.6" fill="{{ detail.color }}"><title>{{ dp.tip }}</title></circle>
+              </sc-for>
+              <sc-for list="{{ detail.paxChart.xTicks }}" as="xt" hint-placeholder-count="6">
+                <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
+                </foreignObject>
+              </sc-for>
+            </svg>
+          </div>
+          <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.paxT.routesTitle }}</div>
+            <div class="eh-fill-list"><div class="eh-fill-scroll">
+            <sc-if value="{{ detail.paxHasRoutes }}">
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <sc-for list="{{ detail.paxRoutes }}" as="ws" hint-placeholder-count="10">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ws.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ ws.value }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ ws.width }};border-radius:3px;background:{{ detail.color }};opacity:.8;"></div></div>
+                    <div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ ws.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.paxRoutesTotal }}</span>
+                <sc-if value="{{ detail.paxRoutesMore.show }}">
+                  <button sc-camel-on-click="{{ detail.paxRoutesMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.paxRoutesMore.label }}</button>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.paxBreakdownPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.pending }}</div>
+            </sc-if>
+                      </div></div>
+          </div>
+        </div>
+
+        
+      </div>
+    </sc-if></sc-if>
     <sc-if value="{{ detail.isAirDetail }}">
     <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div class="eh-wrap-row" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">
@@ -3021,7 +2986,7 @@
     </sc-if>
 
     <sc-if value="{{ detail.notRoadInspect }}">
-    <div class="eh-trend-rank{{ detail.trendFill }}" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+    <div class="eh-trend-rank eh-fill eh-row" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span>{{ detail.c1 }}</div>
         <sc-if value="{{ detail.noTrend }}">
@@ -3072,6 +3037,7 @@
         </div>
         </sc-if>
       </div>
+      <sc-if value="{{ detail.showRank }}">
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dstr" data-eh-field="title">{{ detail.dstrTitle }}</span></div>
         <div class="eh-fill-list"><div class="eh-fill-scroll" style="display:flex;flex-direction:column;gap:13px;">
@@ -3090,7 +3056,7 @@
             </div>
           </sc-for>
           <sc-if value="{{ detail.rankEmpty }}">
-            <div style="font-size:12.5px;color:var(--ink3);">{{ detail.noData }}</div>
+            <div style="flex:1 1 auto;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12.5px;color:var(--ink3);">{{ detail.noData }}</div>
           </sc-if>
           <sc-if value="{{ detail.rankTotal.show }}">
             <div style="display:flex;justify-content:space-between;gap:10px;padding-top:10px;margin-top:2px;border-top:1px solid var(--line2);font-size:12.5px;font-weight:700;color:var(--ink);">
@@ -3102,6 +3068,34 @@
           </sc-if>
         </div></div>
       </div>
+      </sc-if>
+      <!-- Зорчигчийн галт тэрэг: «Салбарын бүтэц» (вагоны станц) энэ датасэтэд хамаарахгүй →
+           баруун талын үүрэнд борлуулалтын сувгийг тавина (мөр хоосон үлдэхгүй, график бүтэн өргөнд сунахгүй). -->
+      <sc-if value="{{ detail.showRankAlt }}">
+      <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.paxT.channelsTitle }}</div>
+            <sc-if value="{{ detail.paxHasChannels }}">
+              <div style="display:flex;flex-direction:column;gap:11px;">
+                <sc-for list="{{ detail.paxChannels }}" as="pc" hint-placeholder-count="6">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ pc.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ pc.value }} · {{ pc.pct }}</span>
+                    </div>
+                    <div style="height:7px;border-radius:4px;background:var(--surface2);"><div style="height:100%;width:{{ pc.width }};border-radius:4px;background:{{ activeColor }};opacity:.8;"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.paxChannelsTotal }}</div>
+              <sc-if value="{{ detail.paxHasChannelsNote }}">
+                <div style="font-size:11.5px;color:var(--ink3);margin-top:8px;">{{ detail.paxChannelsNote }}</div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ detail.paxNoChannels }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.paxT.channelsPending }}</div>
+            </sc-if>
+          </div>
+      </sc-if>
     </div>
 
     </sc-if>
@@ -3154,9 +3148,9 @@
           <div data-ri-scope="map" style="padding:24px 12px;text-align:center;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ detail.ri.scopeNote }}</div>
         </sc-if>
       </div>
-      <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+      <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fit-card">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.rankTitle }}</span></div>
-        <div style="display:flex;flex-direction:column;gap:11px;">
+        <div class="eh-fit-body" style="display:flex;flex-direction:column;gap:11px;">
           <sc-for list="{{ detail.ri.rank }}" as="ra" hint-placeholder-count="10">
             <div>
               <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2);margin-bottom:5px;">
@@ -3167,7 +3161,7 @@
             </div>
           </sc-for>
           <sc-if value="{{ detail.ri.hasRest }}"><div style="font-size:11.5px;color:var(--ink3);padding-top:2px;">{{ detail.ri.rankRest }}</div></sc-if>
-          <sc-if value="{{ detail.ri.hasScopeNote }}"><div data-ri-scope="rank" style="font-size:12px;color:var(--ink3);line-height:1.55;">{{ detail.ri.scopeNote }}</div></sc-if>
+          <sc-if value="{{ detail.ri.hasScopeNote }}"><div data-ri-scope="rank" style="flex:1 1 auto;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--ink3);line-height:1.55;">{{ detail.ri.scopeNote }}</div></sc-if>
         </div>
       </div>
     </div>
@@ -3195,10 +3189,10 @@
       </div>
     </div>
 
-    <div class="eh-ri-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
-      <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+    <div class="eh-ri-row eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+      <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fit-card">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.catsTitle }}</span></div>
-        <div style="display:flex;flex-direction:column;gap:11px;">
+        <div class="eh-fit-body" style="display:flex;flex-direction:column;gap:11px;">
           <sc-for list="{{ detail.ri.cats }}" as="rc" hint-placeholder-count="6">
             <div>
               <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2);margin-bottom:5px;">
@@ -3587,7 +3581,7 @@
         </div>
       </sc-if>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(182px,1fr));gap:13px;margin-bottom:16px;">
+      <div class="eh-fx" style="--fx:182px;display:grid;grid-template-columns:repeat(auto-fit,minmax(182px,1fr));gap:13px;margin-bottom:16px;">
         <sc-for list="{{ vehreg.kpis }}" as="vk" hint-placeholder-count="6">
           <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:18px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:17px 18px;display:flex;flex-direction:column;">
             <div style="font-size:10px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;line-height:1.4;text-wrap:pretty;">{{ vk.label }}</div>
@@ -3733,7 +3727,7 @@
           </div>
         </sc-if>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(252px,1fr));gap:13px;margin-bottom:16px;">
+        <div class="eh-fx" style="--fx:252px;display:grid;grid-template-columns:repeat(auto-fit,minmax(252px,1fr));gap:13px;margin-bottom:16px;">
           <sc-for list="{{ vehreg.fuel.kpis }}" as="fk" hint-placeholder-count="4">
             <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:18px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:17px 18px;display:flex;flex-direction:column;">
               <div style="font-size:10px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;line-height:1.4;text-wrap:pretty;">{{ fk.label }}</div>
@@ -4880,8 +4874,8 @@ const DS_SCHEMA={
      DS_SCHEMA.rail буюу ачааны галт тэрэгний ЗОХИОМОЛ мөрүүдийг өөрийн
      дата мэт харуулдаг байв. */
   rail_pax:{head:['Сар','Зорчигч','Төлөв'],
-    types:['string','int','enum'],
-    notes:['Тайлант сар (YYYY-MM) — явагдаж буй сар ДУУСААГҮЙ тул ордоггүй',
+    types:['month','int','enum'], fmtInt:true,
+    notes:['Тайлант сар (YYYY-MM) — өгөгдөл дутуу сар «Дутуу сар» гэж тэмдэглэгдэнэ',
       'Тухайн сард бүртгэгдсэн зорчигчийн тоо','Сарын дүн бүрэн бүртгэгдсэн эсэх'],
     rows:[]}
 };
@@ -4997,6 +4991,23 @@ const SERVICES=[
 ];
 // Датасэтийн тогтвортой түлхүүр (үзэлтийн тоолуурын баримтын нэр). Нэр нь
 // өөрчлөгдвөл тоо тэглэгдэх тул салбар+нэрээс гаргаж, ASCII-д буулгана.
+/* ── ДАТАСЭТИЙН ХҮСНЭГТИЙН СТАНДАРТ (TBL) ─────────────────────────────────
+   Бүх датасэтийн "…-ийн жагсаалт" хүснэгт НЭГ бүрэлдэхүүнээр (buildPreview →
+   detail.pv*) зурагдана — агаарын тээврийн хүснэгт бол эталон. Баганын төрөл
+   харагдацыг шийднэ: тоон төрөл баруун зэрэгцүүлэлттэй, мянгатын
+   тусгаарлагчтай (104,092 — 104092 биш), огноо/сар mono фонттой.
+   Утга нь ТҮҮХИЙ хэвээр мөрөнд хадгалагдана (эрэмбэ, Excel татах түүхий
+   тоогоор) — форматыг зөвхөн зурах агшинд өгнө. */
+const TABLE_NUM_TYPES=['int','float','pct','pctchg'];
+function fmtTableCell(v,type){
+  if(TABLE_NUM_TYPES.indexOf(type)<0) return v;
+  if(v==null||v===''||(typeof v==='number'&&!isFinite(v))) return '—';
+  if(typeof v!=='number') return v;
+  if(type==='pct') return v.toFixed(1)+'%';
+  if(type==='pctchg') return (v>0?'+':'')+v.toFixed(1)+'%';
+  if(type==='float') return v.toLocaleString('en-US',{maximumFractionDigits:1});
+  return Math.round(v).toLocaleString('en-US');
+}
 function datasetSlug(d){
   return d.sector+'__'+String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');
 }
@@ -5145,7 +5156,7 @@ const DATASETS=[
      салбарын нэр ('rail') болж, DS_SCHEMA.rail буюу галт тэрэгний
      хуваарийн ЗОХИОМОЛ мөрүүдийг өөрийн дата мэт үзүүлж, Excel татах
      товч түүнийг файлаар гаргаж байв. */
-  {sector:'rail',name:'Зорчигчийн галт тэрэгний мэдээ',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Сар бүр',use:'Нийтийн API нээлттэй',desc:'Зорчигчийн галт тэрэгний сарын зорчигчийн тоо. Явагдаж буй сар ДУУСААГҮЙ тул цуваанаас хасагдаж, сүүлийн БҮТЭН сар харагдана.',
+  {sector:'rail',name:'Зорчигчийн галт тэрэгний мэдээ',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Сар бүр',use:'Нийтийн API нээлттэй',desc:'Зорчигчийн галт тэрэгний сарын зорчигчийн тоо. Дуусаагүй сар «дутуу сар» (*) гэж тэмдэглэгдэж, жилийн харьцуулалтад ордоггүй.',
    schema:'rail_pax',source:'railPax',bind:{freq:'lastRecord'}}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
@@ -5915,10 +5926,11 @@ const SECTOR_SERIES={
     schemaText:()=>({
       headMonth:stxt('ds_schema_rail_pax.head_month','Сар'),
       headStatus:stxt('ds_schema_rail_pax.head_status','Төлөв'),
-      noteMonth:stxt('ds_schema_rail_pax.note_month','Тайлант сар (YYYY-MM) — явагдаж буй сар ДУУСААГҮЙ тул ордоггүй'),
+      noteMonth:stxt('ds_schema_rail_pax.note_month','Тайлант сар (YYYY-MM) — өгөгдөл дутуу сар «Дутуу сар» гэж тэмдэглэгдэнэ'),
       noteValue:stxt('ds_schema_rail_pax.note_value','Тухайн сард бүртгэгдсэн {unit}-ийн тоо'),
       noteStatus:stxt('ds_schema_rail_pax.note_status','Сарын дүн бүрэн бүртгэгдсэн эсэх'),
-      stFull:stxt('ds_schema_rail_pax.st_full','Бүтэн сар')}),
+      stFull:stxt('ds_schema_rail_pax.st_full','Бүтэн сар'),
+      stPartial:stxt('ds_schema_rail_pax.st_partial','Дутуу сар')}),
     labels:()=>({chart:stxt('sector_chart_rail_live','Сарын зорчигч'),
       kpi:stxt('sector_kpi_rail_live.3','ЗОРЧИГЧ / САР'),unit:stxt('unit.passenger','зорчигч')})}
 };
@@ -6281,7 +6293,7 @@ function weekAxis(vals){
   return {base,top,step};
 }
 
-function buildTrendChart(data,off,partial){
+function buildTrendChart(data,off,partial,noForecast){
   /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
      хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
      Math.max.apply(null,[]) = -Infinity, data[-1] = undefined болж график
@@ -6302,7 +6314,9 @@ function buildTrendChart(data,off,partial){
 
   const all=data.concat(fcast);
   const hi=all.map((v,i)=>i<n?v:v+resid*1.9*(i-n+1));
-  const lo=all.map((v,i)=>i<n?v:v-resid*1.9*(i-n+1));
+  /* Тоо сөрөг байж чадахгүй (нислэг, зорчигч, вагон) — таамгийн доод хязгаар 0-оос
+     доош орохгүй; өмнө нь хавтгай 0 цувааны тэнхлэг −6…6 болж байв (DG: Y тэнхлэг 0-ээс). */
+  const lo=all.map((v,i)=>Math.max(0,i<n?v:v-resid*1.9*(i-n+1)));
   /* Дутуу сарын цэг (partial) — шугам/прогнозд ОРОХГҮЙ, гэвч Y хүрээнд багтана. */
   const pv=(partial!=null&&isFinite(partial)&&partial>=0)?partial:null;
   const rawMax=Math.max.apply(null,hi.concat(pv!=null?[pv]:[])), rawMin=Math.min.apply(null,lo.concat(pv!=null?[pv]:[]));
@@ -6359,8 +6373,10 @@ function buildTrendChart(data,off,partial){
   /* Тайлбар (legend) — зөвхөн графикт ЗУРАГДСАН цувааг нэрлэнэ. */
   const legend=[{key:'actual',label:stxt('chart.legend_actual','Бодит (бүтэн сар)'),lineStyle:'solid'}]
     .concat(pv!=null?[{key:'partial',label:stxt('chart.legend_partial','Хэсэгчилсэн (одоогийн сар)'),lineStyle:'dotted'}]:[])
-    .concat([{key:'forecast',label:stxt('chart.legend_forecast','Таамаг'),lineStyle:'dashed'}]);
-  return {line,area,fline,band,yTicks,xTicks,dotPts,peak,fcLabel,legend,
+    .concat(noForecast?[]:[{key:'forecast',label:stxt('chart.legend_forecast','Таамаг'),lineStyle:'dashed'}]);
+  /* noForecast — датасэтийн дэлгэрэнгүй: прогнозын шугам/зурвас шошгогүй
+     тул загварын таамгийг бодит дата мэт харуулахгүй. */
+  return {line,area,fline:noForecast?'':fline,band:noForecast?'':band,yTicks,xTicks,dotPts,peak,fcLabel,legend,
     hasPartial:pv!=null,partialCx:X(n).toFixed(1),partialCy:pY.toFixed(1),
     partialLy:Math.max(pY-9,padT+8).toFixed(1),partialLabel,partialShort,
     // SVG <text> дотор {{ }} харагдахгүй тул шошгыг foreignObject-ээр зурна:
@@ -6438,7 +6454,7 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
   let lMin=lv.length?Math.min.apply(null,lv):0, lMax=lv.length?Math.max.apply(null,lv):1;
   /* Өсөлтийн % дээр 0 ЗААВАЛ тэнхлэгт багтана — өсөлт/бууралтыг
      ялгах лавлах шугам. */
-  if(linePct){ lMin=Math.min(lMin,0); lMax=Math.max(lMax,0); }
+  if(linePct||opts.lineZero){ lMin=Math.min(lMin,0); lMax=Math.max(lMax,0); }
   const ax2=niceAxis(lMin,lMax);
   const lineRange=(ax2.hi-ax2.lo)||1;
   const Y2=v=>padT+plotH*(1-(v-ax2.lo)/lineRange);
@@ -6447,8 +6463,9 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
   /* Hover-ийн тайлбар — багана/цэг дээр очиход ЯГ ТЭР тоо гарна. SVG-ийн
      төрөлх <title> ашигласнаар нэмэлт JS, санамсаргүй давхарга шаардахгүй
      бөгөөд гар/скрин ридерт ч уншигдана. */
-  const lbl=i=>(labels&&labels[i]?labels[i]+': ':'');
-  const tipAt=(i,v,pre)=>lbl(i)+(pre?pre+' ':'')+Math.round(v).toLocaleString('en-US');
+  /* opts.hv — HV стандарт: "26-06 — Зорчигч: 160,319" (нэр + дүн) */
+  const lbl=i=>(labels&&labels[i]?labels[i]+(opts.hv?' — ':': '):'');
+  const tipAt=(i,v,pre)=>lbl(i)+(pre?pre+(opts.hv?': ':' '):'')+Math.round(v).toLocaleString('en-US');
   const gap=prevBars?slot*0.02:0;
   /* Дутуу сар ("*" шошготой) — багана бүдэг, шошгонд "(дутуу сар)" гэж бичнэ
      (wagon/pax графикийн дүрэм: бүтэн сартай андуурахгүйн тулд). */
@@ -6470,10 +6487,15 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
   lineSeries.forEach((v,i)=>{
     if(v==null||!isFinite(v)){ pen=false; return; }
     const x=X(i).toFixed(1), y=Y2(v).toFixed(1);
-    line+=(pen?' L':(line?' M':'M'))+x+','+y; pen=true;
-    const tip=linePct
+    /* Дутуу сар ("*") — шугамд ХОЛБОХГҮЙ: өдрийн тал нь л орсон тоо бүтэн
+       сартай зэрэгцэж "нуралт" мэт харагдана; цэг нь тусдаа, tooltip-д тэмдэг. */
+    const part=opts.hv&&String(labels[i]||'').slice(-1)==='*';
+    if(part) pen=false;
+    else { line+=(pen?' L':(line?' M':'M'))+x+','+y; pen=true; }
+    let tip=linePct
       ?lbl(i)+(opts.lineLabel?opts.lineLabel+' ':'')+(v>0?'+':'')+v.toFixed(1)+'%'
       :tipAt(i,v,opts.lineLabel);
+    if(part) tip+=' (дутуу сар)';
     dotPts.push({cx:x,cy:y,tip,
       color:linePct?(v>0?'#2FA37B':(v<0?'#D2564A':'#828EA8')):''});
   });
@@ -6491,6 +6513,13 @@ function buildDualAxisChart(barSeries,lineSeries,labels,opts){
      давхцдаггүй. Жижиг цувааны хувьд бүгдийг харуулна. */
   const every=n>24?3:n>12?2:1;
   const xTicks=labels.map((lb,i)=>({x:X(i).toFixed(1),label:lb||'',fx:(X(i)-19).toFixed(1),fy:(h-padB+6).toFixed(1)})).filter((_,i)=>i%every===0);
+  /* Сүүлийн цэг (ихэвчлэн "*" дутуу сар) ҮРГЭЛЖ шошготой — давхцах
+     өмнөх шошгыг орлоно. */
+  if(opts.hv&&n>0&&(n-1)%every!==0){
+    const lastTick={x:X(n-1).toFixed(1),label:labels[n-1]||'',fx:(X(n-1)-19).toFixed(1),fy:(h-padB+6).toFixed(1)};
+    if(xTicks.length&&(n-1)-((xTicks.length-1)*every)<every) xTicks.pop();
+    xTicks.push(lastTick);
+  }
 
   return {barRects,prevRects,hasPrev:!!prevBars,line,dotPts,yTicksLeft,yTicksRight,xTicks,
     hasZeroLine:!!zeroLineY,zeroLineY,linePct,
@@ -6694,8 +6723,15 @@ function buildPaxStackedChart(domSeries,intlSeries,tripSeries,labels){
     if(iv[i]>0) barRects.push({x,y:yIntlTop.toFixed(1),w:barW.toFixed(1),h:(yDomTop-yIntlTop).toFixed(1),fill:'#0FA37F',tip});
   });
   const xy=tv.map((v,i)=>[X(i),Y2(v)]);
-  const line=xy.length?'M'+xy.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L'):'';
-  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),tip:lbl(i)+' — аялал: '+fmt(tv[i])}));
+  /* Дутуу сар ("*" шошготой) шугамд ХОЛБОГДОХГҮЙ — өдрийн тал нь л орсон тоо
+     бүтэн сартай зэрэгцэж "нуралт" мэт харагдана; цэг нь тусдаа, tooltip-д тэмдэг. */
+  const isPart=i=>String(lbl(i)).slice(-1)==='*';
+  let line='', pen=false;
+  xy.forEach((p,i)=>{
+    if(isPart(i)){ pen=false; return; }
+    line+=(pen?' L':(line?' M':'M'))+p[0].toFixed(1)+','+p[1].toFixed(1); pen=true;
+  });
+  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),tip:lbl(i)+' — аялал: '+fmt(tv[i])+(isPart(i)?' (дутуу сар)':'')}));
   const fr=[0,0.25,0.5,0.75,1];
   const yTicksLeft=fr.map(f=>{const val=barMax*f,y=Y1(val);return {y:y.toFixed(1),label:fmt(val),fx:0,fy:(y-7).toFixed(1)};});
   const yTicksRight=fr.map(f=>{const val=lineMax*f,y=Y2(val);return {y:y.toFixed(1),label:fmt(val),fx:(w-padR+4).toFixed(1),fy:(y-7).toFixed(1)};});
@@ -6756,7 +6792,7 @@ class Component extends DCLogic {
     airYFrom:'', airYTo:'', airMFrom:'1', airMTo:'12', airTreemapRegion:null,
     airRankExpanded:false, airCountryExpanded:false, airCargoExpanded:false,
     wagonYear:'all', wagonMFrom:1, wagonMTo:12, wagonStationsExpanded:false, wagonHistVer:0,
-    paxYear:'all', paxMFrom:1, paxMTo:12, paxRoutesExpanded:false, paxHistVer:0,
+    paxYear:'all', paxMFrom:1, paxMTo:12, paxRoutesExpanded:false, paxMonthsExpanded:false, paxHistVer:0,
     airAiThread:null, airAiInput:'',
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
@@ -7242,18 +7278,18 @@ class Component extends DCLogic {
      backend-ээс зөвхөн шаардлагатай хүрээг (paxFetchWindow) дахин татна.
      Хоцорсон хариуг token-оор үл тооно. */
   setPaxYear(y){
-    this.setState({paxYear:y,paxRoutesExpanded:false},()=>this.refetchPax());
+    this.setState({paxYear:y,paxRoutesExpanded:false,paxMonthsExpanded:false},()=>this.refetchPax());
   }
   setPaxRange(key,raw){
     const v=Math.min(12,Math.max(1,parseInt(raw,10)||1));
-    this.setState({[key]:v,paxRoutesExpanded:false},()=>this.refetchPax());
+    this.setState({[key]:v,paxRoutesExpanded:false,paxMonthsExpanded:false},()=>this.refetchPax());
   }
   /* Сарын чип / "Бүгд" — хоёр захыг нэг дор тохируулж ганц удаа татна. */
   setPaxMonths(from,to){
-    this.setState({paxMFrom:from,paxMTo:to,paxRoutesExpanded:false},()=>this.refetchPax());
+    this.setState({paxMFrom:from,paxMTo:to,paxRoutesExpanded:false,paxMonthsExpanded:false},()=>this.refetchPax());
   }
   resetPaxFilter(){
-    this.setState({paxYear:'all',paxMFrom:1,paxMTo:12,paxRoutesExpanded:false},()=>this.refetchPax());
+    this.setState({paxYear:'all',paxMFrom:1,paxMTo:12,paxRoutesExpanded:false,paxMonthsExpanded:false},()=>this.refetchPax());
   }
   refetchPax(){
     const st=this.state;
@@ -7612,7 +7648,8 @@ class Component extends DCLogic {
     };
 
     /* Гаригийн задаргаа: амралтын өдрүүд (Бя, Ня) өөр өнгөөр. */
-    const WW=360,WH=200,wl=34,wt=14,wb=28,WHh=WH-wt-wb,wy0=WH-wb;
+    /* wt ≥ 18+2: хамгийн өндөр баганын утгын шошго (bar−18px) svg-ийн дээд ирмэгээс гарахгүй */
+    const WW=360,WH=200,wl=34,wt=20,wb=28,WHh=WH-wt-wb,wy0=WH-wb;
     /* Шүүлт (PM) байвал аймаг/гариг/шалтгаан түүнээс; үгүй бол сүүлийн хоног/
        30 хоногийн (A) өмнөх байдал. Аймаг/гаригийн задаргаа тооцогдохгүй
        (тасралтгүй биш муж, эсвэл ачаалж байна) үед ХООСОН — өөр хугацааны
@@ -9092,7 +9129,7 @@ class Component extends DCLogic {
        харуулж байв. `schema` зарлаагүй датасэт урьдын адил салбарынхаа
        схемийг хэвээр ашиглана. */
     const schemaKey=dsel.schema||dsel.sector;
-    const sc=DS_SCHEMA[schemaKey];
+    const sc=this.tableSchema(dsel,schemaKey);
     const q=(this.state.dsQ||'').toLowerCase().trim();
     const sf=this.state.pvStatusFilter||'all';
     const sort=this.state.dsSort||0, dir=this.state.dsDir||-1;
@@ -9126,18 +9163,23 @@ class Component extends DCLogic {
     // its position, so a schema of any width (the air feed ships 31 columns)
     // lays out sensibly without per-sector tuning.
     const types=sc.types||[];
-    const isNum=(ci)=>types[ci]==='int'||types[ci]==='float';
-    const isMono=(ci)=>isNum(ci)||types[ci]==='date';
+    const isNum=(ci)=>TABLE_NUM_TYPES.indexOf(types[ci])>=0;
+    const isMono=(ci)=>isNum(ci)||types[ci]==='date'||types[ci]==='month';
     const defaultW=(ci)=>{
       if(sc.widths&&sc.widths[ci]) return sc.widths[ci];
       if(types[ci]==='date') return 106;
+      if(types[ci]==='month') return 96;
       if(isNum(ci)) return Math.max(84,Math.min(130,(sc.head[ci]||'').length*8+30));
       if(types[ci]==='enum') return 124;
       return Math.max(104,Math.min(190,(sc.head[ci]||'').length*8.5+40));
     };
     const savedW=(this.state.pvColWidths&&this.state.pvColWidths[schemaKey])||[];
     const colWidths=Array.from({length:cols},(_,i)=>savedW[i]||defaultW(i));
-    const grid='display:grid;grid-template-columns:'+colWidths.map(w=>w+'px').join(' ')+';gap:12px;';
+    /* UI стандарт (TBL1): хүснэгт картын өргөнийг ҮРГЭЛЖ дүүргэнэ. Багана нь
+       px доод хэмжээтэй (minmax(Npx,1fr)) — цөөн баганатай датасэт (зорчигчийн
+       галт тэрэг 3 багана → 560/1240px) хагас өргөнтэй "унжиж" харагдаж байсныг
+       засна; олон баганатай (агаар 31) нь доод хэмжээгээрээ хэвтээ гүйлгэнэ. */
+    const grid='display:grid;grid-template-columns:'+colWidths.map(w=>'minmax('+w+'px,1fr)').join(' ')+';gap:12px;';
     const startResize=(ci)=>(e)=>{
       e.preventDefault(); e.stopPropagation();
       this._colDrag={sector:schemaKey,index:ci,startX:e.clientX,startWidths:colWidths.slice()};
@@ -9153,8 +9195,8 @@ class Component extends DCLogic {
           +(isNum(ci)?'right':'left')+';color:'+(sort===ci?'var(--ink)':'var(--ink3)')+';font-weight:'+(sort===ci?'700':'500')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
           +(isNum(ci)?'justify-self:end;':'')})),
       pvRows:rows.slice(pg*PER,(pg+1)*PER).map(r=>({
-        cells:r.slice(0,-1).map((c,ci)=>({v:c,
-          style:'font-size:14.5px;color:'+(types[ci]==='date'?'var(--ink2)':'var(--ink)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
+        cells:r.slice(0,-1).map((c,ci)=>({v:fmtTableCell(c,types[ci]),
+          style:'font-size:14.5px;color:'+(types[ci]==='date'||types[ci]==='month'?'var(--ink2)':'var(--ink)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
             +(isMono(ci)?'font-family:\'JetBrains Mono\',monospace;font-size:13.5px;':'')
             +(isNum(ci)?'text-align:right;justify-self:end;font-weight:600;':'')})),
         status:{label:String(r[r.length-1]).split(':')[1]||'',
@@ -9169,7 +9211,7 @@ class Component extends DCLogic {
       pvNext:()=>this.setState({dsPage:Math.min(pages-1,pg+1)}),
       pvEmpty:rows.length===0,
       pvTotal:dsRows,
-      pvTitle:dsel.name+'-ийн жагсаалт',
+      pvTitle:dsel.name+' — жагсаалт',
       pvExport:()=>{
         const XLSX=window.XLSX;
         if(!XLSX){ this.setState({toast:'Excel сан ачаалагдаж байна, түр хүлээгээд дахин оролдоно уу.'}); this.fadeToast&&this.fadeToast(); return; }
@@ -9339,10 +9381,71 @@ class Component extends DCLogic {
       wagonPartialNote:partialNote,wagonHasPartial:!!partialNote,
       wagonScope:m.monthCount+' '+T('scope_months','сар')+' · '+fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')};
   }
+  /* Хүснэгт нь анализтай ЯГ ИЖИЛ эх сурвалж (түүх) ба ИЖИЛ жил/сарын
+     шүүлтээс уншина — өмнө нь хүснэгт summary-гийн сүүлийн оноор тогтмол
+     байсан тул "2025" чип дээр доорх хүснэгт 2026 хэвээр үлдэж, "Бүгд" дээр
+     2025-ийг нууж, дутуу сарыг орхидог байв. Түүх ирээгүй бол summary-ийн
+     мөрүүд хэвээр. Мөр нь сүүлийн сараас эхэлнэ. */
+  syncPaxTable(){
+    const sch=DS_SCHEMA.rail_pax, cfg=SECTOR_SERIES.rail;
+    if(!sch||!cfg||!cfg.schemaText) return;
+    const m=paxAnalysisModel(this._paxHistAll,this._paxHistSel,this.state.paxYear,{from:this.state.paxMFrom,to:this.state.paxMTo});
+    if(!m.hasData) return;
+    const T=cfg.schemaText();
+    const key=this.state.paxYear+'|'+this.state.paxMFrom+'-'+this.state.paxMTo+'|'+m.ranked.map(r=>r.month+':'+r.passengers+(r.partial?'p':'')).join(',')+'|'+T.stFull+'|'+T.stPartial;
+    if(this._paxTblKey===key&&sch.rows&&sch.rows.length) return;
+    this._paxTblKey=key;
+    sch.rows=m.ranked.slice().sort((a,b)=>a.month<b.month?1:-1).map(r=>
+      [r.month,r.passengers,(r.partial?'warn:'+T.stPartial:'ok:'+T.stFull)]);
+  }
   /* Зорчигчийн датасэтийн анализын самбар — paxAnalysisModel() үр дүнг
      темплейтийн хэлбэрт хөрвүүлнэ. Текст: content.json → site.pax_an.
      Шүүлт (он + сарын хүрээ) нь KPI/донут/график/хүснэгт бүгдэд нэгэн зэрэг
      хамаарна — агаарын хуудасны "Нэгдсэн шүүлт" загвартай адил. */
+  /* Датасэтийн хүснэгтийн схем. Ихэнх нь DS_SCHEMA[schemaKey]; зорчигчийн
+     галт тэрэг /rail/passengers/history ирсэн бол ТҮҮХИЙН БҮХ баганаар
+     (зорчигч, аялал, дотоод/олон улс, өдөр, MoM/YoY) — өмнө нь ердөө 3
+     багана (сар · зорчигч · төлөв), зөвхөн тухайн оны сарууд харагдаж, бүх
+     багана нь доорх тусдаа "Сарын дэлгэрэнгүй" гар хүснэгтэд байв (хоёр өөр
+     стандарт). Одоо НЭГ хүснэгт, мөрүүд нь анализын шүүлтийг (жил/сар) дагана. */
+  tableSchema(dsel,schemaKey){
+    if(dsel&&dsel.source==='railPax'){
+      const px=this.paxTableSchema();
+      if(px) return px;
+    }
+    return DS_SCHEMA[schemaKey];
+  }
+  paxTableSchema(){
+    const st=this.state;
+    const all=this._paxHistAll, sel=this._paxHistSel;
+    const c=this._paxTblCache;
+    /* Текстийн хувилбар — админаас нийтлэгдсэн шошго кэшийг хүчингүй болгоно */
+    const rev=stxt('pax_an.th_pax','Зорчигч')+'|'+stxt('pax_an.th_dom','Дотоод (ОН)')+'|'+stxt('ds_schema_rail_pax.st_full','Бүтэн сар');
+    if(c&&c.all===all&&c.sel===sel&&c.y===st.paxYear&&c.f===st.paxMFrom&&c.t===st.paxMTo&&c.rev===rev) return c.sc;
+    const m=paxAnalysisModel(all,sel,st.paxYear,{from:st.paxMFrom,to:st.paxMTo});
+    let sc=null;
+    if(m.hasData){
+      const T=(k,fb)=>stxt('pax_an.'+k,fb);
+      const r1=v=>v==null?null:Math.round(v*10)/10;
+      const stFull=stxt('ds_schema_rail_pax.st_full','Бүтэн сар'), stPart=stxt('ds_schema_rail_pax.st_partial','Дутуу сар');
+      sc={head:[T('th_month','Сар'),T('th_pax','Зорчигч'),T('th_trips','Аялал'),T('th_dom','Дотоод (ОН)'),
+          T('th_intl','Олон улс (ОУ)'),T('th_intl_pct','ОУ %'),T('th_per_trip','Аяллын дундаж'),T('th_days','Өдөр'),
+          T('th_mom','Өмнөх сараас'),T('th_yoy','Өмнөх оноос'),stxt('ds_schema_rail_pax.head_status','Төлөв')],
+        types:['month','int','int','int','int','pct','float','int','pctchg','pctchg','enum'],
+        /* 11 багана 1186px картад хэвтээ гүйлгээгүй багтана (доод хэмжээ; илүү зай нь 1fr-ээр тэнцүү хуваагдана) */
+        widths:[92,100,76,108,108,72,108,64,108,108,104],
+        notes:[stxt('ds_schema_rail_pax.note_month_hist','Тайлант сар (YYYY-MM) — явагдаж буй сар «Дутуу сар» гэж тэмдэглэгдэнэ'),
+          stxt('ds_schema_rail_pax.note_pax','Тухайн сард зорчсон нийт зорчигч'),stxt('ds_schema_rail_pax.note_trips','Галт тэрэг × чиглэл × өдрийн аяллын тоо'),
+          stxt('ds_schema_rail_pax.note_dom','Дотоод (орон нутгийн) чиглэлийн зорчигч'),stxt('ds_schema_rail_pax.note_intl','Олон улсын чиглэлийн зорчигч'),
+          stxt('ds_schema_rail_pax.note_intl_pct','Олон улсын зорчигчийн эзлэх хувь'),stxt('ds_schema_rail_pax.note_per_trip','Нэг аялалд ногдох дундаж зорчигч'),
+          stxt('ds_schema_rail_pax.note_days','Өгөгдөлтэй өдрийн тоо'),stxt('ds_schema_rail_pax.note_mom','Өмнөх сартай харьцуулсан өөрчлөлт (хоёул бүтэн сар бол)'),
+          stxt('ds_schema_rail_pax.note_yoy','Өмнөх оны ижил сартай харьцуулсан өөрчлөлт (хоёул бүтэн сар бол)'),stxt('ds_schema_rail_pax.note_status','Сарын дүн бүрэн бүртгэгдсэн эсэх')],
+        rows:m.rows.slice().reverse().map(r=>[r.month,r.passengers,r.trips,r.domestic,r.international,r1(r.intlPct),
+          r1(r.perTrip),r.days,r1(r.mom),r1(r.yoy),r.partial?'warn:'+stPart:'ok:'+stFull])};
+    }
+    this._paxTblCache={all,sel,y:st.paxYear,f:st.paxMFrom,t:st.paxMTo,rev,sc};
+    return sc;
+  }
   buildPaxAnalysis(){
     const T=(k,fb)=>stxt('pax_an.'+k,fb);
     const st=this.state;
@@ -9398,24 +9501,27 @@ class Component extends DCLogic {
     const kpis=[
       {label:T('kpi_pax','Нийт зорчигч'),value:fmt(m.pax),sub:unit},
       {label:T('kpi_trips','Аялал'),value:fmt(m.trips),sub:T('kpi_trips_sub','галт тэрэг × чиглэл × өдөр')},
-      {label:T('kpi_per_trip','Аялал бүрийн дундаж'),value:m.perTrip==null?dash:fmt(m.perTrip),sub:unit},
+      {label:T('kpi_per_trip','Аялал бүрийн дундаж'),value:m.perTrip==null?dash:fmt(m.perTrip),sub:T('kpi_per_trip_sub','зорчигч / аялал')},
       {label:T('kpi_intl','Олон улсын (ОУ)'),value:m.intlPct.toFixed(1)+'%',sub:T('kpi_intl_sub','нийт зорчигчийн')},
-      {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:unit},
+      {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:T('kpi_per_day_sub','зорчигч / өдөр')},
       {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?pctTxt(m.yoy.pct):dash,
         sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):(m.yoyReason==='pick_year'?T('kpi_yoy_pick','жил сонгож харьцуулна'):T('kpi_yoy_none','өмнөх оны өгөгдөл алга'))}
     ];
     const circ=2*Math.PI*40;
-    const segs=[{label:T('dom_label','Орон нутаг (ОН)'),pct:m.domPct,color:'#2E7CF6'},
-                {label:T('intl_label','Олон улс (ОУ)'),pct:m.intlPct,color:'#0FA37F'}];
+    const segs=[{label:T('dom_label','Орон нутаг (ОН)'),pct:m.domPct,color:'#2E7CF6',cnt:m.dom},
+                {label:T('intl_label','Олон улс (ОУ)'),pct:m.intlPct,color:'#0FA37F',cnt:m.intl}];
     let acc=0;
     const donut=segs.map(s=>{const o={...s,pctLabel:s.pct.toFixed(1)+'%',
+      tip:s.label+' — '+fmt(s.cnt)+' '+unit+' · '+s.pct.toFixed(1)+'%',
       dash:(s.pct/100*circ).toFixed(1)+' '+circ.toFixed(1),offset:(-acc/100*circ).toFixed(1)};acc+=s.pct;return o;});
     const donutNote=(typeof EHGlossary!=='undefined')?EHGlossary.ratioSanity(
       [{key:'dom',label:segs[0].label,value:m.dom},{key:'intl',label:segs[1].label,value:m.intl}],{expected:2}).issues.map(i=>i.msg).join(' '):'';
     const top=m.ranked.length?m.ranked[0].passengers:1;
-    const months=m.ranked.map(r=>({name:r.month+(r.partial?' *':''),value:fmt(r.passengers),
+    const mExpanded=!!this.state.paxMonthsExpanded;
+    const months=(mExpanded?m.ranked:m.ranked.slice(0,10)).map(r=>({name:r.month+(r.partial?' *':''),value:fmt(r.passengers),
       width:(r.passengers/(top||1)*100).toFixed(0)+'%',
       pct:m.pax>0?(r.passengers/m.pax*100).toFixed(1)+'%':''}));
+    const mExtra=Math.max(0,m.ranked.length-10);
     const expanded=!!st.paxRoutesExpanded;
     const rMax=m.routes.length?m.routes[0].passengers:1;
     const rows=(expanded?m.routes:m.routes.slice(0,10)).map(r=>({name:r.route,value:fmt(r.passengers),
@@ -9423,9 +9529,7 @@ class Component extends DCLogic {
       width:(r.passengers/(rMax||1)*100).toFixed(0)+'%'}));
     const extra=Math.max(0,m.routes.length-10);
     const chart=buildPaxStackedChart(m.series.dom,m.series.intl,m.series.trips,m.series.labels);
-    const table=m.rows.map(r=>({month:r.label,pax:fmt(r.passengers),trips:fmt(r.trips),dom:fmt(r.domestic),
-      intl:fmt(r.international),intlPct:r.intlPct.toFixed(1)+'%',perTrip:r.perTrip==null?dash:fmt(r.perTrip),
-      mom:pctTxt(r.mom),yoy:pctTxt(r.yoy)}));
+    /* Сарын мөрүүд — датасэтийн СТАНДАРТ хүснэгтэд (paxTableSchema), тусдаа гар хүснэгт алга */
     const partialNote=m.partialN>0?(m.partialN+' '+T('partial_note','сар дутуу өгөгдөлтэй (* тэмдэглэгээ) — жилийн харьцуулалтад ороогүй')):'';
     const chTop=m.channels.length?m.channels[0].passengers:1;
     const chRows=m.channels.map(c=>({name:T('channels.'+c.channel,c.channel),value:fmt(c.passengers),
@@ -9440,8 +9544,9 @@ class Component extends DCLogic {
       paxChannelsNote:chNote,paxHasChannelsNote:!!chNote,
       paxChannelsTotal:T('channels_total','Нийт')+': '+fmt(m.channelTotal),
       paxFilterUi:filterUi,paxKpis:kpis,paxDonut:donut,paxDonutNote:donutNote,paxDonutHasNote:!!donutNote,paxMonths:months,paxHasMonths:months.length>0,
-      paxRows:table,paxTotal:{pax:fmt(m.pax),trips:fmt(m.trips),dom:fmt(m.dom),intl:fmt(m.intl),
-        intlPct:m.intlPct.toFixed(1)+'%',perTrip:m.perTrip==null?dash:fmt(m.perTrip)},
+      paxMonthsMore:{show:mExtra>0,
+        label:mExpanded?stxt('rank.collapse','△ Хураах'):('↕ '+mExtra+' '+stxt('rank.more_rows','нэмэлт мөр')),
+        toggle:()=>this.setState(s=>({paxMonthsExpanded:!s.paxMonthsExpanded}))},
       paxRoutes:rows,paxHasRoutes:rows.length>0,paxBreakdownPending:!m.hasBreakdown,
       paxRoutesMore:{show:extra>0,expanded,
         label:expanded?stxt('rank.collapse','△ Хураах'):('↕ '+extra+' '+stxt('rank.more_rows','нэмэлт мөр')),
@@ -10681,6 +10786,7 @@ class Component extends DCLogic {
     /* Мөрийн тоо датасэт тус бүрээр ИРДЭГГҮЙ — өмнө нь нэрийн уртаас
        зохиодог байв ("Тоо ЗОХИОХГҮЙ" дүрэм). Эх сурвалж өгөх хүртэл null. */
     const dsRows=null;
+    if(dsel.source==='railPax') this.syncPaxTable();
     const dsEp=datasetEndpoint(dsel);
     const dsLang=this.state.dsApiLang||'curl';
     const dsMeta=this.sourceData(dsel.source).meta||null;
@@ -10692,7 +10798,9 @@ class Component extends DCLogic {
        датасэтийн хуудас нээлттэй үед тооцно. Эс тэгвэл нүүр/админы preview
        шүүлт солих бүрд удааширч, админы preview "0" харуулдаг байв
        (F1/I5/I7/J4 унасан). Мөрийн массивын адилтгалаар кэшлэнэ. */
-    const dsSc=DS_SCHEMA[dsel.schema||dsel.sector]||{head:[],rows:[]};
+    /* Хүснэгтэд ХАРАГДАЖ буй схемтэй ижил (tableSchema) — эс тэгвэл чанарын
+       "мөр/багана" нь хүснэгтээс зөрнө (зорчигч: хүснэгт 22×11, профайл 9×3 байв). */
+    const dsSc=this.tableSchema(dsel,dsel.schema||dsel.sector)||{head:[],rows:[]};
     let dsProfile=null;
     if(this.state.page==='detail'){
       if(!this._dsProfCache||this._dsProfCache.src!==dsSc.rows)
@@ -10720,14 +10828,17 @@ class Component extends DCLogic {
     /* _liveSeriesDs — цуваа ЯМАР датасэтийнх. Rail-ийн зорчигчийн цуваа
        вагон ачилтын датасэтийн хуудсан дээр гарахгүй (өмнөх засвар яг
        ийм "САРЫН ЗОРЧИГЧ" муруйг арилгасан). Air-д тэмдэглээгүй тул хэвээр. */
-    const dsHasTrend=!dsSec._liveKpis||(!!dsSec._liveSeries&&
-      (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name));
-    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue):null;
+    /* Цуваа бүхэлдээ 0/хоосон бол (feed ирээгүй) хавтгай "0" шугам ЗУРАХГҮЙ — тэр нь
+       "0 нислэг" гэсэн ЗОХИОМОЛ тоо болно; "мэдээлэл алга" төлөв гарна. */
+    const dsHasTrend=(!dsSec._liveKpis||(!!dsSec._liveSeries&&
+      (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name)))&&
+      Array.isArray(dsSec.c1d)&&dsSec.c1d.some(v=>+v>0);
+    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue,dsel.source==='railPax'):null;
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
        Эх сурвалж холбогдох хүртэл "—" + шалтгааныг ил хэлнэ. */
-    const wp={wpNoData:true,hasPlan:false,total:'—',ytd:'—',wow:'—',wowColor:'var(--ink3)',
+    const wp={wpNoData:true,hasData:false,hasPlan:false,total:'—',ytd:'—',wow:'—',wowColor:'var(--ink3)',
       yoy:'—',yoyColor:'var(--ink3)',planLabel:'—',planPctLabel:'—',planWidth:'0%',
       note:stxt('detail.wp_no_source','Энэ датасэтийн 7 хоногийн гүйцэтгэлийн эх сурвалж холбогдоогүй — тоо харуулахгүй.')};
     const isRoadInspect=dsel.source==='roadInspect';
@@ -10737,6 +10848,8 @@ class Component extends DCLogic {
     const isAirDetail=dsel.sector==='air';
     const wagonExtra=(dsel.source==='railWagon'&&this.state.page==='detail')?this.buildWagonAnalysis():{};
     const paxExtra=(dsel.source==='railPax'&&this.state.page==='detail')?this.buildPaxAnalysis():{};
+    const rankEmptyNow=datasetRank(SECTORS[dsel.sector],dsel).length===0;
+    const paxChannelsNow=!!paxExtra.paxHasChannels;
     let airExtra={};
     if(isAirDetail){
       const sAir=SECTORS.air;
@@ -10940,7 +11053,10 @@ class Component extends DCLogic {
     const detail={
       t:detailT,
       dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
-      isAirDetail,...airExtra,...wagonExtra,...paxExtra,trendFill:isAirDetail?' eh-fill':'',notRoadInspect:!isRoadInspect,...roadExtra,
+      isAirDetail,...airExtra,...wagonExtra,...paxExtra,/* UI стандарт (ROW): «Салбарын бүтэц» хоосон бол хоосон картыг графикийн хажууд
+         БҮҮ зур (296px график | 99px «мэдээлэл алга» — зорчигчийн галт тэрэг) — график
+         бүтэн мөрийг эзэлнэ. */
+      showRank:!(rankEmptyNow&&paxChannelsNow),showRankAlt:rankEmptyNow&&paxChannelsNow,notRoadInspect:!isRoadInspect,...roadExtra,
       /* Хүснэгтийн дотор талын төлөвийн шүүлт: нэгдсэн шүүлт (түүх ирсэн
          үед дээд талд) байгаа датасэтэд ДАВХАРДАХГҮЙ. */
       tableFilterOpen:!!this.state.pvFilterOpen&&!(roadExtra.riF&&roadExtra.riF.available),
@@ -10979,7 +11095,7 @@ class Component extends DCLogic {
           color:it.on?'#0E8F63':'var(--ink3)',
           mark:it.on?'✓':'✕'}))
       })),
-      c1:dsHasTrend?SECTORS[dsel.sector].c1:stxt('detail.no_series_title','ЧИГ ХАНДЛАГА'),
+      c1:dsHasTrend?(SECTORS[dsel.sector].c1+((dsel.source==='railPax'&&dsSec.c1dYear)?' · '+dsSec.c1dYear:'')):stxt('detail.no_series_title','ЧИГ ХАНДЛАГА'),
       hasTrend:dsHasTrend,noTrend:!dsHasTrend,
       noTrendNote:stxt('status.no_series','чиг хандлагын цуваа алга'),
       trend:dsTrend||{yTicks:[],xTicks:[]},
@@ -11074,12 +11190,12 @@ class Component extends DCLogic {
           ?datasetRank({rank:SECTORS.air.rankAll||SECTORS.air.rank,_rankSource:SECTORS.air._rankSource},dsel)
           :datasetRank(SECTORS[dsel.sector],dsel))
         .map(r=>({name:r[0],value:r[1],pct:r[2],width:r[2],sub:r[3]||'',hasSub:!!r[3]})),
-      rankEmpty:datasetRank(SECTORS[dsel.sector],dsel).length===0,
+      rankEmpty:rankEmptyNow,
       rankTotal:(()=>{
         if(!isAirDetail) return {show:false,totalLabel:'',totalValue:'',extraCount:0,hasExtra:false,expanded:false,collapsed:true,toggleLabel:'',toggle:()=>{}};
         const meta=SECTORS.air.rankMeta||{total10Label:'',total10Value:'',totalAllLabel:'',totalAllValue:'',extraCount:0};
         const expanded=!!this.state.airRankExpanded;
-        return {show:true,totalLabel:expanded?meta.totalAllLabel:meta.total10Label,totalValue:expanded?meta.totalAllValue:meta.total10Value,
+        return {show:!rankEmptyNow,totalLabel:expanded?meta.totalAllLabel:meta.total10Label,totalValue:expanded?meta.totalAllValue:meta.total10Value,
           extraCount:meta.extraCount,hasExtra:meta.extraCount>0,expanded,collapsed:!expanded,
           toggleLabel:expanded?stxt('rank.collapse','△ Хураах'):('↕ '+meta.extraCount+' '+stxt('rank.more_rows','нэмэлт мөр')),
           toggle:()=>this.setState(s=>({airRankExpanded:!s.airRankExpanded}))};

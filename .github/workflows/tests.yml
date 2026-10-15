@@ -35,7 +35,7 @@ jobs:
   # Хурдан шалгуур (секундын) — тусдаа job болгосноор DOM suite-ийг
   # хүлээлгүй шууд хариу өгнө.
   checks:
-    name: Кирилл · registry
+    name: Кирилл · registry · UI стандарт
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -52,6 +52,11 @@ jobs:
       # Виджет бүр metric_registry.json-д бүртгэлтэй эсэх
       - name: check-registry
         run: node scripts/check-registry.js
+
+      # UI стандарт (CLAUDE.md → "UI стандарт (UI)"): гар хүснэгт, хагас өргөнтэй
+      # хүснэгт, start-aligned картын мөр, хүснэгтийн өмнөх график — commit бүрд унагана
+      - name: check-ui-standard
+        run: node scripts/check-ui-standard.js
 
   suites:
     name: run.js · text-coverage (DOM)

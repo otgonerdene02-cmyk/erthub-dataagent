@@ -439,25 +439,55 @@ function auditLayout(doc, win, opts) {
       detail: all.length + ' нүд · ' + rows.map((r) => r.length).join('+') + ' — сүүлийн мөрт ганц нүд (өргөн ' + Math.round(o.width) + 'px, баруун талд ' + Math.round(cr.right - o.right) + 'px хоосон)' });
   });
 
-  /* 9. row-height-mismatch — ЗЭРЭГЦЭЭ (нэг мөрөнд, нэг эцэгтэй) байрласан хоёр картын
-        өндөр ихээр зөрвөл богино карт нь урт картын доор ХООСОН зай үлдээнэ — жиш. сарын
-        график 305px, тээвэрлэгчийн жагсаалт 1000px. card-empty үүнийг барьдаггүй (богино
-        карт өөрийн агуулгаараа дүүрсэн байдаг). Засвар: grid-ийн align-items:stretch, эсвэл
-        урт агуулгыг гүйлгэх (style.css → eh-fill-*). Зориудын зөрүү → data-audit-ignore. */
+  /* 9. row-height-mismatch — НЭГ МӨРӨНД (нэг grid/flex эцэгтэй, ижил дээд ирмэгтэй)
+        байрласан картууд ИЖИЛ өндөртэй байх ЁСТОЙ (UI стандарт ROW). Өмнө нь зөвхөн
+        ≥220px карт, ≥200px ба 1.5× зөрүүг барьдаг байсан тул 198px donut | 964px
+        жагсаалт (зорчигчийн галт тэрэг), 256 | 693 (вагон), 360 | 420 (үзлэг) бүгд
+        мултарч байв. Одоо: ≥60px өндөр, ≥200px өргөн карт бүрийг, 16px-ээс их зөрүүг.
+        Засвар: grid-д class="eh-row" (align-items:stretch), урт жагсаалтыг
+        .eh-fill-card › .eh-fill-list › .eh-fill-scroll-д. Зориудын зөрүү → data-audit-ignore. */
   const rowSeen = new Set();
-  cards.forEach((a) => {
-    cards.forEach((b) => {
-      if (a === b || a.el.parentElement !== b.el.parentElement) return;
-      if (Math.abs(a.r.top - b.r.top) > 12) return;
-      const diff = b.r.height - a.r.height;
-      if (diff < 200 || b.r.height < 1.5 * a.r.height) return;
-      const key = describe(a.el) + '|' + Math.round(a.r.left) + '|' + Math.round(a.r.top);
+  doc.querySelectorAll('body *').forEach((par) => {
+    if (ignored(par) || !visible(par)) return;
+    const pst = cs(par);
+    if (pst.display !== 'grid' && pst.display !== 'flex' && pst.display !== 'inline-grid') return;
+    if (pst.display === 'flex' && pst.flexDirection.indexOf('column') === 0) return;
+    const kids = Array.from(par.children).map((el) => ({ el, r: rectOf(el), st: cs(el) }))
+      .filter((k) => !ignored(k.el) && visible(k.el) && k.r.height >= 60 && k.r.width >= 200 && isCard(k.el, k.st) &&
+        k.st.position !== 'absolute' && k.st.position !== 'fixed');
+    if (kids.length < 2) return;
+    const lines = [];
+    kids.forEach((k) => {
+      const ln = lines.find((l) => Math.abs(l[0].r.top - k.r.top) <= 12);
+      if (ln) ln.push(k); else lines.push([k]);
+    });
+    lines.forEach((ln) => {
+      if (ln.length < 2) return;
+      const hs = ln.map((k) => k.r.height);
+      const diff = Math.max.apply(null, hs) - Math.min.apply(null, hs);
+      if (diff <= 16) return;
+      const lo = ln[hs.indexOf(Math.min.apply(null, hs))];
+      const key = describe(par) + '|' + Math.round(lo.r.left) + '|' + Math.round(lo.r.top);
       if (rowSeen.has(key)) return;
       rowSeen.add(key);
-      out.push({ rule: 'row-height-mismatch', where: describe(a.el), text: cardTitle(a.el),
-        detail: 'карт ' + Math.round(a.r.height) + 'px · зэргэлдээ карт ' + Math.round(b.r.height) + 'px — доор ' +
-          Math.round(diff) + 'px хоосон зай (grid align-items:stretch эсвэл гүйлгэх)' });
+      out.push({ rule: 'row-height-mismatch', where: describe(lo.el), text: cardTitle(lo.el),
+        detail: 'нэг мөрийн картууд ' + hs.map((h) => Math.round(h) + 'px').join(' | ') + ' — ' + Math.round(diff) +
+          'px зөрүү (grid-д class="eh-row" + урт жагсаалтыг eh-fill-scroll-д)' });
     });
+  });
+
+  /* 10. table-underfill — датасэтийн «…-ийн жагсаалт» хүснэгт ([data-eh-table]) картын
+         өргөнийг ДҮҮРГЭХ ЁСТОЙ (UI стандарт TBL1). Цөөн баганатай хүснэгт 560/1240px
+         болж хагас өргөнд "унждаг" байв. */
+  doc.querySelectorAll('[data-eh-table]').forEach((t) => {
+    if (ignored(t) || !visible(t)) return;
+    const box = t.parentElement ? rectOf(t.parentElement) : null;
+    const r = rectOf(t);
+    if (!box || box.width < 200) return;
+    if (r.width + 4 < box.width) {
+      out.push({ rule: 'table-underfill', where: describe(t), text: '',
+        detail: 'хүснэгт ' + Math.round(r.width) + 'px / карт ' + Math.round(box.width) + 'px — өргөнийг дүүргэхгүй байна (minmax(Npx,1fr) багана)' });
+    }
   });
 
   return out;
