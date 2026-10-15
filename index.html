@@ -2624,17 +2624,17 @@
     <sc-if value="{{ detail.isAirDetail }}">
     <sc-if value="{{ detail.showAirFilters }}">
       <div style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">{{ sSec01 }}</div>
         <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.t.year }}</div>
           <sc-for list="{{ detail.airYearChips }}" as="yc" hint-placeholder-count="3">
             <button sc-camel-on-click="{{ yc.pick }}" style="{{ yc.style }}">{{ yc.label }}</button>
           </sc-for>
-          <sc-if value="{{ detail.airYearLoading }}"><span style="font-size:11px;color:var(--ink3);white-space:nowrap;">ачаалж байна…</span></sc-if>
+          <sc-if value="{{ detail.airYearLoading }}"><span style="font-size:11px;color:var(--ink3);white-space:nowrap;">{{ detail.t.loading }}</span></sc-if>
         </div>
         <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.t.month }}</div>
-          <button sc-camel-on-click="{{ detail.airRangeUi.monthAllPick }}" style="{{ detail.airRangeUi.monthAllStyle }}">Бүгд</button>
+          <button sc-camel-on-click="{{ detail.airRangeUi.monthAllPick }}" style="{{ detail.airRangeUi.monthAllStyle }}">{{ detail.t.all }}</button>
           <sc-for list="{{ detail.airMonthChips }}" as="mc" hint-placeholder-count="12">
             <button sc-camel-on-click="{{ mc.pick }}" style="{{ mc.style }}">{{ mc.label }}</button>
           </sc-for>
@@ -9208,7 +9208,7 @@ class Component extends DCLogic {
     // эхлэх/дуусах хоёулаа тэр он болно. Гар оролттой ижил төлөвийг хуваана.
     const singleYear=r&&r.yFrom===r.yTo?r.yFrom:null;
     const airYearChips=[{
-      label:'Бүгд',on:!!(r&&r.allYears),
+      label:stxt('detail.all','Бүгд'),on:!!(r&&r.allYears),
       pick:()=>this.setAirYearRange(r.avail[0],r.avail[r.avail.length-1]),
       style:chipStyle(!!(r&&r.allYears))+busy
     }].concat(this._flightsYears.map(y=>({
@@ -9229,8 +9229,8 @@ class Component extends DCLogic {
       inputStyle:rangeInputStyle,
       monthAllStyle:chipStyle(monthAll),
       monthAllPick:()=>this.setState({airMFrom:'1',airMTo:'12',mapSelectedNode:null,airTreemapRegion:null},()=>this.applyAirRange()),
-      summary:r?(r.yFrom===r.yTo?String(r.yFrom):r.yFrom+'–'+r.yTo)+' он · '
-        +(r.mFrom===r.mTo?String(r.mFrom):r.mFrom+'–'+r.mTo)+' сар':''
+      summary:r?(r.yFrom===r.yTo?String(r.yFrom):r.yFrom+'–'+r.yTo)+' '+stxt('detail.air_year_word','он')+' · '
+        +(r.mFrom===r.mTo?String(r.mFrom):r.mFrom+'–'+r.mTo)+' '+stxt('detail.air_month_word','сар'):''
     };
     const airMonthChips=[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{
       const on=!!(r&&m>=r.mFrom&&m<=r.mTo);
@@ -9238,14 +9238,15 @@ class Component extends DCLogic {
         pick:()=>this.setState({airMFrom:String(m),airMTo:String(m),mapSelectedNode:null,airTreemapRegion:null},()=>this.applyAirRange()),
         style:chipStyle(on)+busy};
     });
-    const typeOpts=[['all','Бүгд'],['intl','Олон улсын'],['domestic','Дотоодын']];
+    const allLbl=stxt('detail.all','Бүгд');
+    const typeOpts=[['all',allLbl],['intl',stxt('chart.intl','Олон улсын')],['domestic',stxt('detail.air_type_dom','Дотоодын')]];
     const airTypeChips=typeOpts.map(o=>({label:o[1],on:this.state.airType===o[0],
       pick:()=>this.setAirFilter('airType',o[0]),style:chipStyle(this.state.airType===o[0])}));
-    const dirOpts=[['all','Бүгд'],['dep','Явсан'],['arr','Ирсэн']];
+    const dirOpts=[['all',allLbl],['dep',stxt('detail.air_dir_dep','Явсан')],['arr',stxt('detail.air_dir_arr','Ирсэн')]];
     const airDirChips=dirOpts.map(o=>({label:o[1],on:this.state.airDir===o[0],
       pick:()=>this.setAirFilter('airDir',o[0]),style:chipStyle(this.state.airDir===o[0])}));
     const regions=['all'].concat(this._airRegions||[]);
-    const airRegionChips=regions.map(r=>({label:r==='all'?'Бүгд':r,on:this.state.airRegion===r,
+    const airRegionChips=regions.map(r=>({label:r==='all'?allLbl:r,on:this.state.airRegion===r,
       pick:()=>this.setAirFilter('airRegion',r),style:chipStyle(this.state.airRegion===r)}));
     return {isAirLive:true,showAirFilters:!!this.state.pvFilterOpen,
       airYearChips,airTypeChips,airDirChips,airRegionChips,airMonthChips,airRangeUi,
@@ -10905,6 +10906,7 @@ class Component extends DCLogic {
        detail.t.* гэж холбоно — тус бүрд нь тусдаа холбоос
        үүсгэвэл темплейт уншигдахааргүй болно. */
     const detailT={
+      all:stxt('detail.all','Бүгд'), loading:stxt('detail.loading','ачаалж байна…'),
       year:stxt('detail.year','Жил:'), month:stxt('detail.month','Сар:'),
       interval:stxt('detail.interval','Интервал:'), kind:stxt('detail.kind','Төрөл:'),
       route:stxt('detail.route','Чиглэл:'), region:stxt('detail.region','Бүс нутгаар:'),
