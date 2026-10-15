@@ -65,9 +65,15 @@ function datasetRoutes() {
 
 const CASES = [];
 if (!SELFTEST_ONLY) {
-  ['', 'eservices', 'browse', 'community', 'history', 'news'].concat(datasetRoutes())
+  ['', 'eservices', 'browse', 'vehreg/structure', 'vehreg/ops', 'vehreg/fuel', 'vehreg/plate', 'community', 'history', 'news'].concat(datasetRoutes())
     .filter((r) => !ONLY || (ONLY === 'home' ? r === '' : decodeURIComponent(r).indexOf(ONLY) >= 0))
     .forEach((r) => VIEWPORTS.forEach((v) => CASES.push({ kind: 'page', route: r, url: '/index.html' + (r ? '#/' + r : ''), w: v.w, h: v.h })));
+  /* Датасэт бүрийг ӨГӨГДӨЛТЭЙ төлөвөөр ч шалгана (tests/lib/feed-fixtures.js).
+     Өгөгдөлгүй үед график/хүснэгтийн мөр үүсдэггүй тул "тэгш бус өндөр",
+     "хагас өргөнтэй хүснэгт" зэрэг алдаа аудитаас мултардаг байв (UI стандарт). */
+  datasetRoutes()
+    .filter((r) => !ONLY || decodeURIComponent(r).indexOf(ONLY) >= 0 || ONLY === 'fx')
+    .forEach((r) => VIEWPORTS.forEach((v) => CASES.push({ kind: 'page', route: r + '+fx', url: '/index.html?fx=1#/' + r, w: v.w, h: v.h })));
 }
 /* Админы виджет бүрийн засварын дэлгэцийн PREVIEW — сайттай ХОЁУЛАНГ шалгах нь төслийн дүрэм */
 const ADMIN_SEC = { hero_fl: 'hero', hero_px: 'hero', uk: 'portal-kpi', ls: 'sec-01', w2p: 'sec-02', w2pb: 'sec-02', w2px: 'sec-02', w2c: 'sec-02', w2cb: 'sec-02', w2cx: 'sec-02', k04: 'sec-04', t05: 'sec-05', d05: 'sec-05', i06: 'sec-06', r06: 'sec-06', u07: 'sec-07' };
@@ -86,6 +92,13 @@ let allow = [];
 try { allow = JSON.parse(fs.readFileSync(path.join(__dirname, 'layout-audit-allow.json'), 'utf8')); } catch (e) { /* байхгүй бол хоосон */ }
 const allowed = (route, f) => allow.some((a) => (a.route === '*' || decodeURIComponent(route).indexOf(a.route) === 0) &&
   a.rule === f.rule && (!a.where || f.where.indexOf(a.where) >= 0) && (!a.text || String(f.text).indexOf(a.text) >= 0));
+
+/* ?fx=1 — feed-ийн фикстурыг хуудасны бүх скриптээс ӨМНӨ тарина */
+function injectFixtures(buf) {
+  const h = buf.toString('utf8');
+  const i = h.indexOf('<head>');
+  return i < 0 ? buf : Buffer.from(h.slice(0, i + 6) + '<script src="/tests/lib/feed-fixtures.js"></script>' + h.slice(i + 6), 'utf8');
+}
 
 let RESULT = null;
 const srv = http.createServer((req, res) => {
@@ -164,8 +177,10 @@ async function run(c){
     return;
   }
   const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.svg': 'image/svg+xml' };
+  const fx = /[?&]fx=1/.test(req.url) && (p === '/' || p === '/index.html');
   fs.readFile(path.join(ROOT, p === '/' ? '/index.html' : p), (err, data) => {
     if (err) { res.writeHead(404); res.end('404'); return; }
+    if (fx) data = injectFixtures(data);
     res.writeHead(200, { 'Content-Type': MIME[path.extname(p).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(data);
   });
