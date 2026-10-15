@@ -4568,6 +4568,16 @@ async function groupBE() {
     const forIdx = tplHtml.indexOf('detail.paxRows }}" as="pr"');
     const tblStart = tplHtml.lastIndexOf('<sc-raw-table', forIdx);
     const tblSlice = tblStart < 0 ? '' : tplHtml.slice(tblStart, tplHtml.indexOf('</sc-raw-table>', forIdx));
+    check('PA16. Датасэтийн хүснэгт анализтай ИЖИЛ шүүлт/эх сурвалж (syncPaxTable), дутуу сар, тоо таслалтай',
+      dcScript().includes('syncPaxTable(){') &&
+      /paxAnalysisModel\(this\._paxHistAll,this\._paxHistSel,st\.paxYear,\{from:st\.paxMFrom,to:st\.paxMTo\}\)[\s\S]*?'warn:'\+T\.stPartial/.test(dcScript()) &&
+      dcScript().includes("if(dsel.source==='railPax') this.syncPaxTable();") &&
+      /rail_pax:\{[^}]*fmtInt:true/.test(dcScript()) && dcScript().includes('(sc.fmtInt&&typeof c===\'number\''));
+    check('PA17. Датасэтийн трендэд AI прогноз/легенд зурахгүй (noForecast), гарчигт он',
+      dcScript().includes('function buildTrendChart(data,off,partial,noForecast)') &&
+      dcScript().includes("noForecast?[]:[{key:'forecast'") &&
+      dcScript().includes("buildTrendChart(dsSec.c1d,0,dsSec._partialValue,dsel.source==='railPax')") &&
+      dcScript().includes("dsSec.c1dYear)?' · '+dsSec.c1dYear"));
     check('PA13. Сарын хүснэгт: sc-for нь жинхэнэ <table>/<tbody> дотор БИШ (sc-raw-* alias)',
       tblStart > 0 && tblSlice.length > 0 && !/<(table|thead|tbody|tfoot|tr|td|th)[\s>]/i.test(tblSlice));
   }
@@ -4826,11 +4836,11 @@ async function groupBE() {
   check('BE42. "48,210" мөр утга болж кодод ч content.json-д ч үлдээгүй',
     !/'48,210/.test(dcScript()) && !/48,210/.test(fs.readFileSync(path.join(ROOT, 'content.json'), 'utf8')));
   /* Хоосон цуваа график бүтээгчийг нураахгүй (Math.max([]) = -Infinity) */
-  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial)?\)\{([\s\S]*?)\n\}\n/);
+  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast)?)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
   let btcOk = false, btcErr = '';
   try {
-    const f = new Function('data', 'off', 'partial', 'MONTHS', 'stxt', btc42[1]);
-    const r = f([], 0, undefined, MONTHS25, (p, x) => x);
+    const f = new Function('data', 'off', 'partial', 'noForecast', 'MONTHS', 'stxt', btc42[1]);
+    const r = f([], 0, undefined, false, MONTHS25, (p, x) => x);
     btcOk = !!r && /^M/.test(r.line) && !/NaN|Infinity/.test(r.line + r.peak.value);
   } catch (e) { btcErr = e.message; }
   check('BE42. buildTrendChart([]) нурахгүй, хавтгай шугам зурна', btcOk, btcErr);
@@ -4860,7 +4870,7 @@ async function groupBE() {
   }
   if (btc42) {
     const mk44 = new Function('MONTHS', 'stxt',
-      'return function buildTrendChart(data,off,partial){' + btc42[1] + '}')(MONTHS25, (p, x) => x);
+      'return function buildTrendChart(data,off,partial,noForecast){' + btc42[1] + '}')(MONTHS25, (p, x) => x);
     const d9 = v44.slice(0, 9);
     const a44 = mk44(d9, 0), b44 = mk44(d9, 0, 654);
     check('BE44. Дутуу сарын цэг график дээр гарна ("дутуу: 654")',
@@ -5563,10 +5573,10 @@ async function groupBE() {
      АЧААЛАЛ (МЯНГА) · мэдээлэл алга" гэсэн гарчгийн доор ХАВТГАЙ муруй
      зурагдаж, Y тэнхлэг "-6 -3 0 3 6" (сөрөг "мянган" ачаалал!), X
      тэнхлэг "1-р сар … 11-р сар" гэж бичигдэж байв. */
-  const btm = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
+  const btm = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast)?)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
   if (!btm) { bad('BE39. buildTrendChart() олдсонгүй'); return; }
   const btc = new Function('MONTHS', 'stxt',
-    'return function buildTrendChart(data,off,partial){' + btm[1] + '}')(
+    'return function buildTrendChart(data,off,partial,noForecast){' + btm[1] + '}')(
     ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар',
       '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'], sx);
   const zeroCh = btc(new Array(12).fill(0), 0);
@@ -7420,11 +7430,11 @@ function groupDG() {
 
   /* DG6. Trend график: Y тэнхлэг 0-ээс, legend, дутуу цэгийн tooltip */
   const src = dcScript();
-  const mt = src.match(/\nfunction buildTrendChart\(data,off(?:,partial)?\)\{([\s\S]*?)\n\}\n/);
+  const mt = src.match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast)?)?\)\{([\s\S]*?)\n\}\n/);
   if (!mt) { bad('DG6. buildTrendChart() задарсангүй'); }
   else {
     const MONTHS = ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар', '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'];
-    const mk = new Function('MONTHS', 'stxt', 'return function buildTrendChart(data,off,partial){' + mt[1] + '}')(MONTHS, (p, x) => x);
+    const mk = new Function('MONTHS', 'stxt', 'return function buildTrendChart(data,off,partial,noForecast){' + mt[1] + '}')(MONTHS, (p, x) => x);
     const d9 = [1343, 900, 1043, 1028, 1213, 1555, 1860, 1871, 1433];
     const withP = mk(d9, 0, 559), noP = mk(d9, 0);
     check('DG6. Y тэнхлэг 0-ээс эхэлнэ (дутуу сар 559 багтсан ч 500 биш)',

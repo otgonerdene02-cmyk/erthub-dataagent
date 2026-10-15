@@ -4880,8 +4880,8 @@ const DS_SCHEMA={
      DS_SCHEMA.rail буюу ачааны галт тэрэгний ЗОХИОМОЛ мөрүүдийг өөрийн
      дата мэт харуулдаг байв. */
   rail_pax:{head:['Сар','Зорчигч','Төлөв'],
-    types:['string','int','enum'],
-    notes:['Тайлант сар (YYYY-MM) — явагдаж буй сар ДУУСААГҮЙ тул ордоггүй',
+    types:['string','int','enum'], fmtInt:true,
+    notes:['Тайлант сар (YYYY-MM) — өгөгдөл дутуу сар «Дутуу сар» гэж тэмдэглэгдэнэ',
       'Тухайн сард бүртгэгдсэн зорчигчийн тоо','Сарын дүн бүрэн бүртгэгдсэн эсэх'],
     rows:[]}
 };
@@ -5145,7 +5145,7 @@ const DATASETS=[
      салбарын нэр ('rail') болж, DS_SCHEMA.rail буюу галт тэрэгний
      хуваарийн ЗОХИОМОЛ мөрүүдийг өөрийн дата мэт үзүүлж, Excel татах
      товч түүнийг файлаар гаргаж байв. */
-  {sector:'rail',name:'Зорчигчийн галт тэрэгний мэдээ',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Сар бүр',use:'Нийтийн API нээлттэй',desc:'Зорчигчийн галт тэрэгний сарын зорчигчийн тоо. Явагдаж буй сар ДУУСААГҮЙ тул цуваанаас хасагдаж, сүүлийн БҮТЭН сар харагдана.',
+  {sector:'rail',name:'Зорчигчийн галт тэрэгний мэдээ',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Сар бүр',use:'Нийтийн API нээлттэй',desc:'Зорчигчийн галт тэрэгний сарын зорчигчийн тоо. Дуусаагүй сар «дутуу сар» (*) гэж тэмдэглэгдэж, жилийн харьцуулалтад ордоггүй.',
    schema:'rail_pax',source:'railPax',bind:{freq:'lastRecord'}}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
@@ -5915,10 +5915,11 @@ const SECTOR_SERIES={
     schemaText:()=>({
       headMonth:stxt('ds_schema_rail_pax.head_month','Сар'),
       headStatus:stxt('ds_schema_rail_pax.head_status','Төлөв'),
-      noteMonth:stxt('ds_schema_rail_pax.note_month','Тайлант сар (YYYY-MM) — явагдаж буй сар ДУУСААГҮЙ тул ордоггүй'),
+      noteMonth:stxt('ds_schema_rail_pax.note_month','Тайлант сар (YYYY-MM) — өгөгдөл дутуу сар «Дутуу сар» гэж тэмдэглэгдэнэ'),
       noteValue:stxt('ds_schema_rail_pax.note_value','Тухайн сард бүртгэгдсэн {unit}-ийн тоо'),
       noteStatus:stxt('ds_schema_rail_pax.note_status','Сарын дүн бүрэн бүртгэгдсэн эсэх'),
-      stFull:stxt('ds_schema_rail_pax.st_full','Бүтэн сар')}),
+      stFull:stxt('ds_schema_rail_pax.st_full','Бүтэн сар'),
+      stPartial:stxt('ds_schema_rail_pax.st_partial','Дутуу сар')}),
     labels:()=>({chart:stxt('sector_chart_rail_live','Сарын зорчигч'),
       kpi:stxt('sector_kpi_rail_live.3','ЗОРЧИГЧ / САР'),unit:stxt('unit.passenger','зорчигч')})}
 };
@@ -6281,7 +6282,7 @@ function weekAxis(vals){
   return {base,top,step};
 }
 
-function buildTrendChart(data,off,partial){
+function buildTrendChart(data,off,partial,noForecast){
   /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
      хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
      Math.max.apply(null,[]) = -Infinity, data[-1] = undefined болж график
@@ -6359,8 +6360,10 @@ function buildTrendChart(data,off,partial){
   /* Тайлбар (legend) — зөвхөн графикт ЗУРАГДСАН цувааг нэрлэнэ. */
   const legend=[{key:'actual',label:stxt('chart.legend_actual','Бодит (бүтэн сар)'),lineStyle:'solid'}]
     .concat(pv!=null?[{key:'partial',label:stxt('chart.legend_partial','Хэсэгчилсэн (одоогийн сар)'),lineStyle:'dotted'}]:[])
-    .concat([{key:'forecast',label:stxt('chart.legend_forecast','Таамаг'),lineStyle:'dashed'}]);
-  return {line,area,fline,band,yTicks,xTicks,dotPts,peak,fcLabel,legend,
+    .concat(noForecast?[]:[{key:'forecast',label:stxt('chart.legend_forecast','Таамаг'),lineStyle:'dashed'}]);
+  /* noForecast — датасэтийн дэлгэрэнгүй: загварын таамгийг бодит дата мэт
+     харуулахгүй тул прогнозын шугам/зурвас/легендгүй. */
+  return {line,area,fline:noForecast?'':fline,band:noForecast?'':band,yTicks,xTicks,dotPts,peak,fcLabel,legend,
     hasPartial:pv!=null,partialCx:X(n).toFixed(1),partialCy:pY.toFixed(1),
     partialLy:Math.max(pY-9,padT+8).toFixed(1),partialLabel,partialShort,
     // SVG <text> дотор {{ }} харагдахгүй тул шошгыг foreignObject-ээр зурна:
@@ -9153,7 +9156,7 @@ class Component extends DCLogic {
           +(isNum(ci)?'right':'left')+';color:'+(sort===ci?'var(--ink)':'var(--ink3)')+';font-weight:'+(sort===ci?'700':'500')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
           +(isNum(ci)?'justify-self:end;':'')})),
       pvRows:rows.slice(pg*PER,(pg+1)*PER).map(r=>({
-        cells:r.slice(0,-1).map((c,ci)=>({v:c,
+        cells:r.slice(0,-1).map((c,ci)=>({v:(sc.fmtInt&&typeof c==='number'&&isFinite(c))?c.toLocaleString('en-US'):c,
           style:'font-size:14.5px;color:'+(types[ci]==='date'?'var(--ink2)':'var(--ink)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
             +(isMono(ci)?'font-family:\'JetBrains Mono\',monospace;font-size:13.5px;':'')
             +(isNum(ci)?'text-align:right;justify-self:end;font-weight:600;':'')})),
@@ -9342,6 +9345,22 @@ class Component extends DCLogic {
      темплейтийн хэлбэрт хөрвүүлнэ. Текст: content.json → site.pax_an.
      Шүүлт (он + сарын хүрээ) нь KPI/донут/график/хүснэгт бүгдэд нэгэн зэрэг
      хамаарна — агаарын хуудасны "Нэгдсэн шүүлт" загвартай адил. */
+  /* Хүснэгт нь анализын самбартай ЯГ ИЖИЛ эх сурвалж (түүх) ба ИЖИЛ шүүлтээс
+     (он + сарын хүрээ) уншина — өмнө нь хүснэгт summary-гийн сүүлийн оноор
+     тогтмол байж, чип солиход үл хөдөлж, дутуу сарыг орхидог байв. Түүх
+     ирээгүй бол summary-ийн мөрүүд хэвээр. Мөр нь сүүлийн сараас эхэлнэ. */
+  syncPaxTable(){
+    const sch=DS_SCHEMA.rail_pax, cfg=SECTOR_SERIES.rail, st=this.state;
+    if(!sch||!cfg||!cfg.schemaText) return;
+    const m=paxAnalysisModel(this._paxHistAll,this._paxHistSel,st.paxYear,{from:st.paxMFrom,to:st.paxMTo});
+    if(!m.hasData) return;
+    const T=cfg.schemaText();
+    const key=st.paxYear+'|'+st.paxMFrom+'-'+st.paxMTo+'|'+m.ranked.map(r=>r.month+':'+r.passengers+(r.partial?'p':'')).join(',')+'|'+T.stFull+'|'+T.stPartial;
+    if(this._paxTblKey===key&&sch.rows&&sch.rows.length) return;
+    this._paxTblKey=key;
+    sch.rows=m.ranked.slice().sort((a,b)=>a.month<b.month?1:-1).map(r=>
+      [r.month,r.passengers,(r.partial?'warn:'+T.stPartial:'ok:'+T.stFull)]);
+  }
   buildPaxAnalysis(){
     const T=(k,fb)=>stxt('pax_an.'+k,fb);
     const st=this.state;
@@ -10680,6 +10699,7 @@ class Component extends DCLogic {
     /* Мөрийн тоо датасэт тус бүрээр ИРДЭГГҮЙ — өмнө нь нэрийн уртаас
        зохиодог байв ("Тоо ЗОХИОХГҮЙ" дүрэм). Эх сурвалж өгөх хүртэл null. */
     const dsRows=null;
+    if(dsel.source==='railPax') this.syncPaxTable();
     const dsEp=datasetEndpoint(dsel);
     const dsLang=this.state.dsApiLang||'curl';
     const dsMeta=this.sourceData(dsel.source).meta||null;
@@ -10721,7 +10741,7 @@ class Component extends DCLogic {
        ийм "САРЫН ЗОРЧИГЧ" муруйг арилгасан). Air-д тэмдэглээгүй тул хэвээр. */
     const dsHasTrend=!dsSec._liveKpis||(!!dsSec._liveSeries&&
       (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name));
-    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue):null;
+    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue,dsel.source==='railPax'):null;
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
@@ -10977,7 +10997,7 @@ class Component extends DCLogic {
           color:it.on?'#0E8F63':'var(--ink3)',
           mark:it.on?'✓':'✕'}))
       })),
-      c1:dsHasTrend?SECTORS[dsel.sector].c1:stxt('detail.no_series_title','ЧИГ ХАНДЛАГА'),
+      c1:dsHasTrend?(SECTORS[dsel.sector].c1+((dsel.source==='railPax'&&dsSec.c1dYear)?' · '+dsSec.c1dYear:'')):stxt('detail.no_series_title','ЧИГ ХАНДЛАГА'),
       hasTrend:dsHasTrend,noTrend:!dsHasTrend,
       noTrendNote:stxt('status.no_series','чиг хандлагын цуваа алга'),
       trend:dsTrend||{yTicks:[],xTicks:[]},
