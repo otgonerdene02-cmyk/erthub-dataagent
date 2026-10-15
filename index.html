@@ -2693,6 +2693,7 @@
 
     <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dwp" data-eh-field="title">{{ detail.dwpTitle }}</span></div>
+      <sc-if value="{{ detail.wp.hasWp }}">
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
         <div>
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Энэ 7 хоногт</div>
@@ -2721,6 +2722,7 @@
           <div style="height:100%;border-radius:5px;background:{{ detail.color }};width:{{ detail.wp.planWidth }};"></div>
         </div>
       </div>
+      </sc-if>
       </sc-if>
       <sc-if value="{{ detail.wp.wpNoData }}"><div data-wp-nodata="1" style="margin-top:12px;font-size:11.5px;color:var(--ink3);line-height:1.45;">{{ detail.wp.note }}</div></sc-if>
     </div>
@@ -7928,7 +7930,8 @@ class Component extends DCLogic {
        сар хасагдсан) — хоногийн огноо ЗОХИОХГҮЙ. */
     if(cfg.source){
       const mLbl=s.year+'-'+String(s.lastMonth).padStart(2,'0');
-      this.setSourceMeta(cfg.source,{updatedAt:mLbl,updatedAtFull:mLbl,lastRecord:mLbl});
+      const lastRec=s.partial?(mLbl+' · '+s.partial+' '+stxt('feed.partial_tag','дутуу')):mLbl;
+      this.setSourceMeta(cfg.source,{updatedAt:mLbl,updatedAtFull:mLbl,lastRecord:lastRec});
     }
     /* Датасэтийн дэлгэрэнгүй хуудасны ХҮСНЭГТ — вагон/үзлэгтэй ижил
        зарчим: DS_SCHEMA дахь мөр ХООСОН эхэлдэг тул цуваа ирээгүй бол
@@ -10746,7 +10749,7 @@ class Component extends DCLogic {
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
        Эх сурвалж холбогдох хүртэл "—" + шалтгааныг ил хэлнэ. */
-    const wp={wpNoData:true,hasPlan:false,total:'—',ytd:'—',wow:'—',wowColor:'var(--ink3)',
+    const wp={wpNoData:true,hasWp:false,hasPlan:false,total:'—',ytd:'—',wow:'—',wowColor:'var(--ink3)',
       yoy:'—',yoyColor:'var(--ink3)',planLabel:'—',planPctLabel:'—',planWidth:'0%',
       note:stxt('detail.wp_no_source','Энэ датасэтийн 7 хоногийн гүйцэтгэлийн эх сурвалж холбогдоогүй — тоо харуулахгүй.')};
     const isRoadInspect=dsel.source==='roadInspect';
