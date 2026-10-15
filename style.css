@@ -194,3 +194,8 @@ body{margin:0;}
 }
 .eh-tip-n { overflow-wrap: anywhere; }
 .eh-tip-v { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #9cc4ff; }
+
+/* Агаарын дэлгэрэнгүй, 2-р мөр: улсын жагсаалт (зүүн, 1.5fr) + ОУ/дотоодын харьцаа (баруун, 1fr)
+   — 1-р мөртэй ИЖИЛ багана тул босоо хил нэг шугаманд. Урт жагсаалт өндрөө хязгаарлаж дотроо
+   гүйлгэнэ; хажуугийн богино карт мөрийн өндрийг дүүргэж агуулгаа босоо төвд барина. */
+.eh-cap-list { max-height: 400px; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }
