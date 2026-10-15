@@ -3776,8 +3776,11 @@ async function groupZ3() {
     }`, 120000);
     if (D.__err) bad('Z9. Дэлгэрэнгүй хуудас ачаалагдав', D.__err);
     else {
-      check('Z9. Дөрвөн утга "—" (зохиомол тоо алга)',
-        D.vals.length === 4 && D.vals.every((v) => v === '—'), JSON.stringify(D.vals));
+      /* UI стандарт: эх сурвалжгүй үед 4 том "—" нүд ЗУРАХГҮЙ (хэрэглэгч "аймшигтай
+         муухай" гэж тэмдэглэсэн) — утгын нүд огт байхгүй, нэг мөр тайлбар үлдэнэ.
+         Утга гарвал заавал "—" (зохиомол тоо хориотой) хэвээр. */
+      check('Z9. Эх сурвалжгүй → утгын нүд зурагдахгүй (зохиомол тоо алга)',
+        D.vals.length === 0 || D.vals.every((v) => v === '—'), JSON.stringify(D.vals));
       /* Z15 — эх сурвалжгүй үед "2025 оны төлөвлөгөө — —" гэсэн хоосон мөр гарахгүй */
       check('Z15. Эх сурвалжгүй үед төлөвлөгөөний мөр нуугдана', D.plan === false, String(D.plan));
       check('Z9. "Эх сурвалж холбогдоогүй" гэж ил хэлнэ', D.nodata === con.site.detail.wp_no_source, D.nodata);
@@ -4583,16 +4586,14 @@ async function groupBE() {
       tplHtml.includes('detail.paxFilterUi.monthChips') && tplHtml.includes('detail.paxFilterUi.monthAllPick') &&
       tplHtml.includes('detail.paxFilterUi.onMFrom') &&
       /setPaxMonths\(from,to\)\{\s*this\.setState\(\{paxMFrom:from,paxMTo:to/.test(tplHtml));
-    check('PA12. Сарын хүснэгт: мөрүүд paxRows-оос, нийлбэрийн мөр paxTotal-оос',
-      /detail.paxRows }}" as="pr"/.test(tplHtml) && /detail.paxTotal.pax/.test(tplHtml));
-    /* Регресс: хөтөч <x-dc>-ийг оршуулан parse хийхдээ жинхэнэ <tbody> доторх
-       <sc-for>-ийг хүснэгтээс гадагш гаргадаг (foster parenting) → мөр нэг хоосон
-       мөр болж, сарын хүснэгт хоосон гарсан. sc-raw-* alias хэрэглэнэ. */
-    const forIdx = tplHtml.indexOf('detail.paxRows }}" as="pr"');
-    const tblStart = tplHtml.lastIndexOf('<sc-raw-table', forIdx);
-    const tblSlice = tblStart < 0 ? '' : tplHtml.slice(tblStart, tplHtml.indexOf('</sc-raw-table>', forIdx));
-    check('PA13. Сарын хүснэгт: sc-for нь жинхэнэ <table>/<tbody> дотор БИШ (sc-raw-* alias)',
-      tblStart > 0 && tblSlice.length > 0 && !/<(table|thead|tbody|tfoot|tr|td|th)[\s>]/i.test(tblSlice));
+    /* UI стандарт (2026-10-15): тусдаа "Сарын дэлгэрэнгүй" гар хүснэгт (sc-raw-table)
+       ба 3 баганатай жагсаалт хоёр ӨӨР стандарттай байсныг НЭГ стандарт хүснэгт
+       болгосон — мөрүүд нь paxTableSchema()-аас, анализын шүүлтийг дагана. */
+    check('PA12. Сарын мөрүүд стандарт хүснэгтэд: гар хүснэгт (paxRows/sc-raw-table) алга',
+      !/detail\.paxRows/.test(tplHtml) && tplHtml.indexOf('<sc-raw-table') < 0);
+    check('PA13. railPax хүснэгт paxTableSchema()-аас — history-ийн бүх багана (11)',
+      /tableSchema\(dsel,schemaKey\)\{\s*if\(dsel&&dsel\.source==='railPax'\)/.test(tplHtml) &&
+      /types:\['month','int','int','int','int','pct','float','int','pctchg','pctchg','enum'\]/.test(tplHtml));
     check('PA9. Хүснэгт анализтай ИЖИЛ эх сурвалж/жилийн шүүлт (syncPaxTable), чип солиход дутуу сарыг оруулна',
       /syncPaxTable\(\)\{[\s\S]*?paxAnalysisModel\([^)]*this\.state\.paxYear[\s\S]*?'warn:'\+T\.stPartial/.test(dcScript()) &&
       /dsel\.source==='railPax'\) this\.syncPaxTable\(\)/.test(dcScript()));
@@ -4654,7 +4655,10 @@ async function groupBE() {
   /* ── BE22. Схем нь ДАТАСЭТЭЭР сонгогдоно (салбараар БИШ) ── */
   check('BE22. buildPreview схемийг dsel.schema-аар сонгоно',
     /const schemaKey=dsel\.schema\|\|dsel\.sector;/.test(dcScript()) &&
-    /const sc=DS_SCHEMA\[schemaKey\];/.test(dcScript()) &&
+    /* UI стандарт: схемийг tableSchema()-аар (зорчигчийн галт тэрэг history-ийн бүх багана),
+       бусад нь DS_SCHEMA[schemaKey] хэвээр — түлхүүр нь датасэтийнх */
+    /const sc=this\.tableSchema\(dsel,schemaKey\);/.test(dcScript()) &&
+    /return DS_SCHEMA\[schemaKey\];/.test(dcScript()) &&
     !/const sc=DS_SCHEMA\[dsel\.sector\];/.test(dcScript()));
   check('BE22. Багана өргөн/эрэмбийн кэш ч ижил түлхүүрээр (датасэт хооронд холилдохгүй)',
     /const cacheKey=schemaKey\+/.test(dcScript()) &&
@@ -5599,8 +5603,12 @@ async function groupBE() {
   /* ГАРААР: 12 тэг → налуу 0, resid = 0||0||1 = 1, прогнозын зурвас
      ±1.9·(1,2,3) = ±5.7 → niceStep 1 → тэнхлэг −6 … 6. Өөрөөр хэлбэл
      тэг цуваанаас ГАРАЛТАЙ тэнхлэг нь ҮРГЭЛЖ утгагүй сөрөг тоо гаргана. */
-  check('BE39. Тэг цувааны тэнхлэг УТГАГҮЙ сөрөг тоо гаргана (иймд нуух ЗӨВ)',
-    zeroCh.yTicks.map((t) => t.label).join(',') === '-6,-3,0,3,6',
+  /* 2026-10-15: таамгийн доод хязгаарыг 0-оор хязгаарласан (DG: Y тэнхлэг 0-ээс) —
+     тэг цуваа ч сөрөг тэнхлэг гаргахгүй. Тэг цувааг "мэдээлэл алга" болгох нь
+     хэвээр зөв (UI4: dsHasTrend нь c1d.some(v>0)-ийг шаардана). */
+  check('BE39. Тэг цувааны тэнхлэг сөрөг тоо ГАРГАХГҮЙ (0-ээс эхэлнэ)',
+    zeroCh.yTicks.length > 0 && zeroCh.yTicks.every((t) => Number(String(t.label).replace(/,/g, '')) >= 0) &&
+    Number(zeroCh.yTicks[0].label) === 0,
     JSON.stringify(zeroCh.yTicks.map((t) => t.label)));
   check('BE39. Цуваатай үед тэнхлэг хэвийн (0-ээс дээш)',
     btc([100, 110, 120, 130], 0).yTicks.every((t) => Number(String(t.label).replace(/,/g, '')) >= 0),
@@ -7392,6 +7400,60 @@ function groupHS() {
    (4) мөр хоорондын багана зөрсөн.
    Бүгд ГАРААР БОДОХ БОЛОМЖТОЙ жижиг фикстур дээр.
    ═══════════════════════════════════════════════════════════════ */
+/* ─────────── UI. Датасэтийн хуудасны НЭГДСЭН UI стандарт (2026-10-15) ───────────
+   Хэрэглэгчийн гомдол: "зорчигчийн галт тэрэгний датаг яагаад ингэж аймшигтай
+   харуулж байна, агаарын тээвэр шиг нэг стандарт барь; чарт хүснэгт нэг line-д
+   байх таск биелээгүй" — хүснэгт 560/1240px, 3 багана, 104092 (тусгаарлагчгүй),
+   198px donut | 964px жагсаалт. Энэ бүлэг (а) форматын цэвэр функцыг гараар
+   бодсон утгаар, (б) статик шалгагчийг өөрийг нь (эвдсэн хуулбар дээр УНАХ ёстой)
+   шалгана. Харагдацыг өгөгдөлтэй төлөвөөр layout-audit (+fx) шалгана. */
+function groupUI() {
+  group('UI. Нэгдсэн UI стандарт — хүснэгт · мөр · дараалал');
+  const src = dcScript();
+  const fm = src.match(/const TABLE_NUM_TYPES=(\[[^\]]*\]);\nfunction fmtTableCell\(v,type\)\{([\s\S]*?)\n\}/);
+  check('UI1. fmtTableCell + TABLE_NUM_TYPES тодорхойлогдсон', !!fm);
+  if (fm) {
+    const f = new Function('TABLE_NUM_TYPES', 'v', 'type', fm[2]).bind(null, eval(fm[1]));
+    check('UI1. int → мянгатын тусгаарлагч (104092 → 104,092)', f(104092, 'int') === '104,092', f(104092, 'int'));
+    check('UI1. pct → 1 орон + % (2.04 → 2.0%)', f(2.04, 'pct') === '2.0%', f(2.04, 'pct'));
+    check('UI1. pctchg → тэмдэгтэй (+7.3% / -13.7%)', f(7.3, 'pctchg') === '+7.3%' && f(-13.7, 'pctchg') === '-13.7%');
+    check('UI1. float → 1 орон (352.66 → 352.7)', f(352.66, 'float') === '352.7', f(352.66, 'float'));
+    check('UI1. null/NaN тоо → "—" (0 гэж зохиохгүй)', f(null, 'pctchg') === '—' && f(NaN, 'int') === '—');
+    check('UI1. Текст/ID багана ХӨНДӨГДӨХГҮЙ (аяллын дугаар 94952 → 94952)', f(94952, 'string') === 94952 && f('OM297', 'string') === 'OM297');
+  }
+  const { spawnSync } = require('child_process');
+  const runChk = (file) => spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'check-ui-standard.js')],
+    { env: Object.assign({}, process.env, file ? { EH_UI_FILE: file } : {}), encoding: 'utf8' });
+  const ok = runChk(null);
+  check('UI2. scripts/check-ui-standard.js репо дээр ногоон', ok.status === 0, (ok.stdout || '') + (ok.stderr || ''));
+  const html = read('index.html');
+  const tmp = path.join(require('os').tmpdir(), 'eh-ui-' + process.pid + '.html');
+  const mut = (name, from, to, rule) => {
+    if (html.indexOf(from) < 0) { bad('UI3. ' + name + ' — эвдэх мөр олдсонгүй'); return; }
+    fs.writeFileSync(tmp, html.replace(from, to));
+    const r = runChk(tmp);
+    check('UI3. Шалгагч ' + name + '-ийг БАРИНА [' + rule + ']', r.status === 1 && r.stdout.indexOf('[' + rule + ']') >= 0, r.stdout);
+  };
+  mut('start-aligned мөр', 'class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;"',
+    'class="eh-g-1c" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;"', 'ROW1');
+  mut('гар хүснэгт', '<div data-eh-table="1"', '<sc-raw-table></sc-raw-table><div data-eh-table="1"', 'TBL0');
+  mut('хагас өргөнтэй хүснэгт', 'data-eh-table="1" style="min-width:100%;', 'data-eh-table="1" style="min-width:560px;', 'TBL1');
+  mut('тусгаарлагчгүй нүд', '{v:fmtTableCell(c,types[ci])', '{v:c', 'TBL2');
+  mut('графикийг хүснэгтийн өмнө', '{{ detail.pvTitle }}', '{{ detail.pvTitleX }}', 'ORD1');
+  try { fs.unlinkSync(tmp); } catch (e) { /* алгасна */ }
+  check('UI4. Хоосон (бүх 0) цуваа хавтгай "0" шугам зурахгүй — "мэдээлэл алга"',
+    /Array\.isArray\(dsSec\.c1d\)&&dsSec\.c1d\.some\(v=>\+v>0\)/.test(src));
+  check('UI4. Таамгийн доод хязгаар 0-оос доош орохгүй (Y тэнхлэг 0-ээс)',
+    /const lo=all\.map\(\(v,i\)=>Math\.max\(0,/.test(src));
+  check('UI5. Эх сурвалжгүй 7 хоногийн карт 4 "—" нүд зурахгүй (wp.hasData-д ороосон)',
+    html.indexOf('<sc-if value="{{ detail.wp.hasData }}">') > 0 && /wpNoData:true,hasData:false/.test(src));
+  check('UI6. «Салбарын бүтэц» хоосон бол хоосон карт биш, борлуулалтын суваг (зорчигч) тавигдана',
+    /showRankAlt:rankEmptyNow&&paxChannelsNow/.test(src) && html.indexOf('<sc-if value="{{ detail.showRankAlt }}">') > 0);
+  check('UI7. layout-audit өгөгдөлтэй төлөв (+fx) ба тээврийн хэрэгслийн 4 табыг шалгадаг',
+    /route: r \+ '\+fx'/.test(read('tests/layout-audit.js')) && read('tests/layout-audit.js').indexOf("'vehreg/plate'") > 0 &&
+    fs.existsSync(path.join(ROOT, 'tests', 'lib', 'feed-fixtures.js')));
+}
+
 function groupDG() {
   group('DG. Домэйны толь ба графикийн sanity');
   let G = null;
@@ -7511,10 +7573,11 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=DG')) { groupDG(); }
+  else if (process.argv.includes('--only=UI')) { groupUI(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); groupUI(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
