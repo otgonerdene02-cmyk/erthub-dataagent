@@ -1671,7 +1671,7 @@ function groupAX() {
   /* Донут — зорчигчоор, зохиомол fallback-гүй */
   check('AX11. ОУ/Дотоодын донут НИСЛЭГИЙН хувиар (kpis[2]) БИШ, \'75%\' fallback-гүй',
     !/sAir\.kpis\[2\]\[2\]\|\|'75%'/.test(src) && /sAir\.paxSplit/.test(src) &&
-    /SECTORS\.air\.paxSplit=\{intl:cur\.intlPax,dom:cur\.domPax/.test(src));
+    /SECTORS\.air\.paxSplit=\{\.\.\.split,typeFiltered/.test(src));
   check('AX12. Өмнөх оны дата алга үед ачааны өсөлт null (0% биш)',
     src.includes('monthCargoYoyArr.push(hasPrev&&pKg>0?pctNum(cur.monthCargoKg[m]||0,pKg):null)'));
   /* Treemap — бүс нутгийн палитр давхардалгүй */
@@ -7355,6 +7355,112 @@ function groupHS() {
     JSON.stringify(con.ui_form).includes('"search_empty"') && JSON.stringify(con.ui_form).includes('"search_catalog"'));
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   DG. ДОМЭЙНЫ ТОЛЬ + ГРАФИКИЙН SANITY (js/erthub-glossary.js)
+
+   Агаарын хуудасны 4 алдааны регресс:
+   (1) "Орон нутаг"/ОН дотоод гэж танигдаагүй, «Төрөл»=ОУ шүүлтээр донут
+       100% ОУ болж дотоодыг нуусан;
+   (2) дутуу сар бүтэн сар мэт, Y тэнхлэг 500-аас эхэлсэн;
+   (3) тээвэрлэгчийн хувь = зорчигч, дэд мөр = нислэг (нэгж ХУТГАГДСАН);
+   (4) мөр хоорондын багана зөрсөн.
+   Бүгд ГАРААР БОДОХ БОЛОМЖТОЙ жижиг фикстур дээр.
+   ═══════════════════════════════════════════════════════════════ */
+function groupDG() {
+  group('DG. Домэйны толь ба графикийн sanity');
+  let G = null;
+  try { G = require(path.join(ROOT, 'js', 'erthub-glossary.js')); } catch (e) { /* доор bad */ }
+  check('DG1. js/erthub-glossary.js ачаалагдана (airFlightKind, ratioSanity, airPaxSplit)',
+    !!G && typeof G.airFlightKind === 'function' && typeof G.ratioSanity === 'function' && typeof G.airPaxSplit === 'function');
+  if (!G) return;
+
+  /* DG2. Нэршлийн normalize: "Орон нутаг" = дотоод; латин/кирилл, зай, том жижиг */
+  const K = G.airFlightKind;
+  check('DG2. "ОН" / "Орон нутаг" / "орон нутаг " / "Дотоод" → dom',
+    ['ОН', 'Орон нутаг', ' орон нутаг ', 'Дотоод', 'дотоодын', 'Domestic'].every(v => K(v) === 'dom'),
+    JSON.stringify(['ОН', 'Орон нутаг', 'Дотоод'].map(K)));
+  check('DG2. "ОУ" / "Олон улс" / латин "OУ" / "International" → intl',
+    ['ОУ', 'Олон улс', 'олон улсын', 'OУ', 'International'].every(v => K(v) === 'intl'));
+  check('DG2. Танигдаагүй утга ЧИМЭЭГҮЙ дотоод болохгүй → unknown',
+    K('Тодорхойгүй') === 'unknown' && K('') === 'unknown' && K(null) === 'unknown');
+
+  /* DG3. paxSplit: «Төрөл» шүүлтээс үл хамаарна — 3 мөр: ОУ 100 зорчигч, ОН 40, ОН 0 */
+  const rows = [
+    { ou: 'ОУ', pax: 100, month: 3, dir: '1', region: 'Ази' },
+    { ou: 'ОН', pax: 40, month: 3, dir: '0', region: 'Ази' },
+    { ou: 'ОН', pax: 0, month: 4, dir: '1', region: 'Ази' },
+    { ou: '??', pax: 7, month: 4, dir: '1', region: 'Ази' }
+  ];
+  const sp = G.airPaxSplit(rows, { dir: 'all', region: 'all', monthFrom: 1, monthTo: 12 });
+  check('DG3. paxSplit: ОУ 100 / ОН 40 (+0 зорчигчтай ОН нислэг тоологдоно)',
+    sp.intl === 100 && sp.dom === 40 && sp.intlFlights === 1 && sp.domFlights === 2, JSON.stringify(sp));
+  check('DG3. paxSplit: танигдаагүй 1 мөр unknown-д (хаягдсангүй, дотоодод нэмэгдсэнгүй)',
+    sp.unknown === 7 && sp.unknownFlights === 1);
+  const spDep = G.airPaxSplit(rows, { dir: 'dep', region: 'all', monthFrom: 1, monthTo: 12 });
+  check('DG3. paxSplit: чиглэл/сарын шүүлт ҮЙЛЧИЛНЭ (dep → ОУ 100, ОН 0)',
+    spDep.intl === 100 && spDep.dom === 0, JSON.stringify(spDep));
+
+  /* DG4. Sanity: нийлбэр 100%, ганц ангилал, хоосон, танигдаагүй */
+  const S = G.ratioSanity;
+  const good = S([{ key: 'i', label: 'ОУ', value: 100 }, { key: 'd', label: 'Дотоод', value: 40 }], { expected: 2 });
+  check('DG4. Хоёр ангилалтай → ok, нийлбэр 100%',
+    good.ok && Math.abs(good.shares.reduce((t, x) => t + x.pct, 0) - 100) < 1e-9, JSON.stringify(good));
+  const single = S([{ key: 'i', label: 'ОУ', value: 100 }, { key: 'd', label: 'Дотоод', value: 0 }], { expected: 2 });
+  check('DG4. Ганц ангилал 100% → анхааруулга (single)', !single.ok && single.issues.some(i => i.code === 'single'));
+  const empty = S([{ key: 'i', label: 'ОУ', value: 0 }, { key: 'd', label: 'Дотоод', value: 0 }], { expected: 2 });
+  check('DG4. Нийт 0 → "empty" (100% донут зурахгүй)', !empty.ok && empty.issues[0].code === 'empty');
+  const unk = S([{ key: 'i', label: 'ОУ', value: 5 }, { key: 'd', label: 'Дотоод', value: 5 }], { expected: 2, unknown: 3 });
+  check('DG4. Танигдаагүй ангилал → "unknown" анхааруулга', unk.issues.some(i => i.code === 'unknown'));
+
+  /* DG5. Дутуу сар: одоогийн сар = дуусаагүй (hardcode хийгээгүй) */
+  const now = Date.UTC(2026, 9, 14, 6, 0, 0); // 2026-10-14 (УБ)
+  check('DG5. isCurrentMonth: 2026-10 = одоогийн, 2026-09 = бүтэн',
+    G.isCurrentMonth(2026, 10, now) === true && G.isCurrentMonth(2026, 9, now) === false &&
+    G.isCurrentMonth(2025, 10, now) === false);
+
+  /* DG6. Trend график: Y тэнхлэг 0-ээс, legend, дутуу цэгийн tooltip */
+  const src = dcScript();
+  const mt = src.match(/\nfunction buildTrendChart\(data,off(?:,partial)?\)\{([\s\S]*?)\n\}\n/);
+  if (!mt) { bad('DG6. buildTrendChart() задарсангүй'); }
+  else {
+    const MONTHS = ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар', '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'];
+    const mk = new Function('MONTHS', 'stxt', 'return function buildTrendChart(data,off,partial){' + mt[1] + '}')(MONTHS, (p, x) => x);
+    const d9 = [1343, 900, 1043, 1028, 1213, 1555, 1860, 1871, 1433];
+    const withP = mk(d9, 0, 559), noP = mk(d9, 0);
+    check('DG6. Y тэнхлэг 0-ээс эхэлнэ (дутуу сар 559 багтсан ч 500 биш)',
+      withP.yTicks[0].label === '0' && noP.yTicks[0].label === '0',
+      JSON.stringify(withP.yTicks.map(t => t.label)));
+    check('DG6. Дутуу цэг: legend 3 (Бодит/Хэсэгчилсэн/Таамаг), байхгүй үед 2',
+      withP.legend.length === 3 && withP.legend.map(l => l.key).join() === 'actual,partial,forecast' &&
+      noP.legend.length === 2 && noP.legend.map(l => l.key).join() === 'actual,forecast',
+      JSON.stringify(withP.legend));
+    check('DG6. Дутуу цэгийн tooltip: "(1–N хүртэл): 559 · дутуу сар (хэсэгчилсэн)"',
+      /\(1–\d+ хүртэл\): 559 · дутуу сар \(хэсэгчилсэн\)/.test(withP.partialLabel), withP.partialLabel);
+    check('DG6. Графикийн богино шошго tooltip-ээс богино (баруун ирмэгт багтана)',
+      withP.partialShort.length > 0 && withP.partialShort.length < withP.partialLabel.length, withP.partialShort);
+    check('DG6. Таамаг ДУТУУ сараас эхлэхгүй: шугам 9 цэг, таамгийн эхлэл = сүүлийн бүтэн сар',
+      withP.line.split('L').length === 9 && withP.fcSplitX === noP.fcSplitX, '');
+  }
+
+  /* DG7. Хуудасны бүтэц (статик): 2-р мөр 1-р мөртэй ИЖИЛ багана, нэгж хутгагдаагүй */
+  const idx = read('index.html');
+  const rowGrids = idx.match(/class="eh-trend-rank[^"]*" style="display:grid;grid-template-columns:([^;]+);/g) || [];
+  const cols = rowGrids.map(g => g.match(/grid-template-columns:([^;]+);/)[1]);
+  check('DG7. Агаарын хуудасны 2 мөр ижил column grid (1.5fr 1fr)',
+    cols.length >= 2 && cols.every(c => c === '1.5fr 1fr'), JSON.stringify(cols));
+  check('DG7. Тээвэрлэгчийн дэд мөр: зорчигч ба нислэг НЭРЭЭР (хувь = зорчигчийн)',
+    /c\[1\]\.toLocaleString\('en-US'\)\+' '\+stxt\('chart\.legend_pax_word','зорчигч'\)\+' · '\+fmtCount\(byCarrierFlights/.test(idx));
+  const con = readJson('content.json');
+  check('DG7. Гарчигт хэмжигдэхүүн нэрлэгдсэн (зорчигчоор / ОУ нислэг)',
+    /зорчигчоор/.test(con.widgets.dint.title) && /зорчигчоор/.test(con.widgets.dstr_air.title) && /ОУ нислэг/.test(con.widgets.dcty.title));
+  check('DG7. content.json: "Орон нутаг" → "Дотоод (орон нутаг)" шошго',
+    con.site.chart.domestic === 'Дотоод (орон нутаг)');
+  check('DG7. Улсын жагсаалт ОУ нислэгээс (ОН нислэг "Тодорхойгүй" улс болж орохгүй)',
+    /if\(f\.cntry && airFlightKind\(f\.ou\)==='intl'\)\{\s*byCountry\[f\.cntry\]/.test(idx));
+  check('DG7. index.html домэйны толийг ачаална',
+    idx.includes('<script src="js/erthub-glossary.js"></script>'));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -7378,10 +7484,11 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=I3')) { await groupI3(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
+  else if (process.argv.includes('--only=DG')) { groupDG(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
