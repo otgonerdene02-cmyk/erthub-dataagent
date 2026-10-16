@@ -1284,7 +1284,10 @@
       "spec_coverage": "Хамрах хугацаа",
       "spec_updated": "Сүүлд шинэчлэгдсэн",
       "spec_license": "Лиценз",
-      "spec_license_v": "Эх сурвалж зарлаагүй"
+      "spec_license_v": "Эх сурвалж зарлаагүй",
+      "col_all": "Бүгд",
+      "col_more": "+{n} бусад",
+      "col_less": "Хураах"
     },
     "common": {
       "send": "Илгээх"

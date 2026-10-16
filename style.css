@@ -105,6 +105,9 @@ body{margin:0;}
   /* Сарын график + тээвэрлэгчийн жагсаалт: гар утсанд дараалан, жагсаалт бүтнээрээ */
   .eh-trend-rank { grid-template-columns: minmax(0, 1fr) !important; }
   .eh-ri-row { grid-template-columns: minmax(0, 1fr) !important; }
+  /* FL баганын шүүлт: шошгоны 112px багана гар утсанд chip-ийн зайг иддэг тул дээр нь */
+  .eh-fl-row { flex-direction: column !important; gap: 6px !important; }
+  .eh-fl-row > :first-child { width: auto !important; padding-top: 0 !important; }
   .eh-fill-list { position: static; flex: none; min-height: 0; }
   .eh-fill-scroll { position: static; overflow: visible; padding-right: 0; max-height: 420px; overflow-y: auto; }
   /* 7 хоногийн баганын график: 6–7 багана 244px-д багтаж, огнооны шошго ("10.07")
