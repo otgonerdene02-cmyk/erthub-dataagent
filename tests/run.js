@@ -4403,6 +4403,12 @@ async function groupBE() {
       WA(null, null, 'all').hasData === false && WA({ status: 'no_data', months: [] }, null, 'all').hasData === false &&
       WA({ status: 'ok', months: [] }, null, 'all').hasData === false);
     check('WA6. Түүхэд байхгүй он → hasData:false', WA(ALL, null, 2030).hasData === false);
+    /* WA10. Эхний жил (2025) → өмнөх 2024 он түүхэнд алга: "no_prev_year" + түүхийн
+       эхлэл 2025-08 (зорчигчийн PA5/PA15-тай ижил гэрээ). */
+    const y25 = WA(ALL, null, 2025);
+    check('WA10. Эхний жил → yoyReason "no_prev_year", prevYear 2024, historyFrom 2025-08',
+      y25.yoy === null && y25.yoyReason === 'no_prev_year' && y25.prevYear === 2024 && y25.historyFrom === '2025-08',
+      JSON.stringify([y25.yoyReason, y25.prevYear, y25.historyFrom]));
     /* WA9. Бодит өгөгдөл (2026-10): сар бүрд complete_days < days, backend
        partial:true — гэхдээ календарийн ≥90% өдөртэй сар ДУТУУ БИШ.
        Өмнө нь 46/46 сар "*"-тай, YoY үргэлж null байв. */
@@ -4450,7 +4456,10 @@ async function groupBE() {
   const pam = dcScript().match(/function paxAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   if (!pam) { bad('PA0. paxAnalysisModel() олдсонгүй'); }
   else {
-    const PA = new Function('all', 'sel', 'year', 'mr', pam[1]);
+    /* paxAnalysisModel нь paxSeriesWithGaps-ийг дууддаг — хамт задалж дамжуулна */
+    const psg = dcScript().match(/\nfunction paxSeriesWithGaps\(ms,fullRange\)\{([\s\S]*?)\n\}/);
+    const PSG = new Function('ms', 'fullRange', psg ? psg[1] : 'throw new Error("paxSeriesWithGaps алга")');
+    const PA = (all, sel, year, mr) => new Function('paxSeriesWithGaps', 'all', 'sel', 'year', 'mr', pam[1])(PSG, all, sel, year, mr);
     const pm = (month, days, dim, trips, passengers, domestic, international) =>
       ({ month, days, days_in_month: dim, trips, passengers, domestic, international });
     const PALL = { status: 'ok', months: [pm('2025-09', 30, 30, 20, 100, 90, 10), pm('2026-09', 30, 30, 25, 120, 100, 20),
@@ -4463,7 +4472,28 @@ async function groupBE() {
     check('PA1. Аялал бүрийн дундаж 250/53, өдрийн дундаж 250/70',
       Math.abs(p.perTrip - 250 / 53) < 1e-9 && p.days === 70 && Math.abs(p.perDay - 250 / 70) < 1e-9);
     check('PA2. 10/31 өдөр → дутуу (1), шошго "*"; бусад бүтэн',
-      p.partialN === 1 && p.series.labels.join(',') === '25-09,26-09,26-10*');
+      p.partialN === 1 && p.series.labels.filter((_, i) => !p.series.gap[i]).join(',') === '25-09,26-09,26-10*');
+    /* PA16. Дунд нь өгөгдөлгүй сар → хоосон слот (2026-10-16 ковидын кэйс: 2020-12…2021-07
+       8 сар алга атал тэнхлэг "20-11* → 21-08*" гэж шууд үсэрч, шугам залгагдаж байв).
+       Фикстур: 2025-09 → 2026-09 хооронд 2025-10…2026-08 = 11 сар алга. */
+    check('PA16. Бүтэн хүрээнд дунд нь алга 11 сар слот болно (25-10 … 26-08), утга null',
+      p.series.gap.filter(Boolean).length === 11 && p.series.labels[1] === '25-10' && p.series.labels[11] === '26-08' &&
+      p.series.dom[1] === null && p.series.trips[11] === null && p.series.labels.length === 14,
+      JSON.stringify(p.series.labels));
+    {
+      const r9 = PA(PALL, null, 'all', { from: 9, to: 9 });
+      check('PA16. Сарын хүрээний шүүлттэй үед (9–9) завсар ЗОРИУД — слот оруулахгүй',
+        r9.series.gap.every(g => !g) && r9.series.labels.join(',') === '25-09,26-09', JSON.stringify(r9.series.labels));
+      const Cg = (dcScript().match(/function buildPaxStackedChart\(domSeries,intlSeries,tripSeries,labels,gaps\)\{([\s\S]*?)\n\}/) || [, ''])[1];
+      const g = Cg ? (new Function('domSeries', 'intlSeries', 'tripSeries', 'labels', 'gaps', Cg))(
+        [70, null, 100], [10, null, 0], [15, null, 25], ['a', 'b', 'c'], [false, true, false]) : {};
+      const gapBar = (g.barRects || []).filter(b => /мэдээлэл алга/.test(b.tip));
+      check('PA16. График: слот = 1 бүдэг тууз "b — мэдээлэл алга", 0 өндрийн багана ЗУРАХГҮЙ',
+        gapBar.length === 1 && gapBar[0].tip === 'b — мэдээлэл алга' &&
+        !(g.barRects || []).some(b => /^b — ОН/.test(b.tip)), JSON.stringify((g.barRects || []).map(b => b.tip)));
+      check('PA16. Аяллын шугам слот дээр ТАСАРНА (2 тусдаа "M"), слотод цэг алга',
+        (String(g.line).match(/M/g) || []).length === 2 && !/L/.test(g.line) && (g.dotPts || []).length === 2, String(g.line));
+    }
     check('PA2. Бүгд дээр YoY ЗОХИОХГҮЙ: null, шалтгаан "pick_year"', p.yoy === null && p.yoyReason === 'pick_year');
     check('PA3. Чиглэл зорчигчоор буурахаар (А, Б), нийлбэр 250',
       p.routes.map(r => r.route).join(',') === 'А,Б' && p.routeTotal === 250);
@@ -4476,7 +4506,37 @@ async function groupBE() {
     const q0 = PA(PALL, null, 2026);
     check('PA5. Оны задаргаа ирээгүй бол бүтэн түүхийн чиглэлийг харуулахгүй', !q0.hasBreakdown && q0.routes.length === 0);
     const only = PA({ status: 'ok', months: [pm('2026-09', 30, 30, 25, 120, 100, 20)], by_route: [], by_type: [] }, null, 2026);
-    check('PA5. Өмнөх оны өгөгдөл байхгүй → YoY null, шалтгаан "none"', only.yoy === null && only.yoyReason === 'none');
+    /* PA5 нь өмнө нь ЭНЭ төлөвийг "none" гэж баталж, картын текст АЛЬ оныг
+       хэлж буйг шалгадаггүй байв → 2025 сонгоход "өмнөх оны өгөгдөл алга" гэж
+       гарч, хэрэглэгч "2025 дата байхад яагаад алга" гэж уншсан (2026-10-16). */
+    check('PA5. Өмнөх он түүхэнд ОГТ алга → YoY null, шалтгаан "no_prev_year", он + түүхийн эхлэл',
+      only.yoy === null && only.yoyReason === 'no_prev_year' && only.prevYear === 2025 && only.historyFrom === '2026-09',
+      JSON.stringify([only.yoyReason, only.prevYear, only.historyFrom]));
+    {
+      /* PA15. "none" (өмнөх он БАЙГАА ч бүтэн хос сар алга) ба "no_prev_year"-ийг ялгана.
+         2025-09 ДУТУУ (10/30) → 2026-09-тэй хос болохгүй. */
+      const half = PA({ status: 'ok', months: [pm('2025-09', 10, 30, 5, 20, 20, 0), pm('2026-09', 30, 30, 25, 120, 100, 20)],
+        by_route: [], by_type: [] }, null, 2026);
+      check('PA15. Өмнөх он байгаа ч бүтэн хос сар алга → "none" (no_prev_year БИШ)',
+        half.yoy === null && half.yoyReason === 'none', half.yoyReason);
+      const yrt = dcScript().match(/\nfunction yoyReasonText\(m,T\)\{([\s\S]*?)\n\}/);
+      if (!yrt) bad('PA15. yoyReasonText() олдсонгүй');
+      else {
+        const YRT = new Function('m', 'T', yrt[1]);
+        const PAC15 = (readJson('content.json').site || {}).pax_an || {};
+        const T15 = (k, fb) => (PAC15[k] != null ? PAC15[k] : fb);
+        const txt = YRT(only, T15);
+        check('PA15. Картын тайлбар АЛЬ он алгыг (2025) ба түүхийн эхлэлийг (2026-09) нэрлэнэ',
+          txt.includes('2025') && txt.includes('2026-09') && !/\{(year|from)\}/.test(txt), txt);
+        check('PA15. "none" үед "өмнөх оны өгөгдөл алга" гэж ХУДАЛ хэлэхгүй (бүтэн сар алга гэнэ)',
+          !/өмнөх оны өгөгдөл алга/.test(YRT(half, T15)), YRT(half, T15));
+        check('PA15. Вагон, зорчигч ХОЁУЛАА нэг helper-ээр (yoyReasonText) — текст хуваагдахгүй',
+          (dcScript().match(/:yoyReasonText\(m,T\)\}/g) || []).length === 2);
+        const WAC15 = (readJson('content.json').site || {}).wagon_an || {};
+        check('PA15. kpi_yoy_no_prev {year}/{from}-тэй pax_an ба wagon_an-д',
+          [PAC15, WAC15].every(c => /\{year\}/.test(c.kpi_yoy_no_prev || '') && /\{from\}/.test(c.kpi_yoy_no_prev || '')));
+      }
+    }
     check('PA6. null / no_data / хоосон / байхгүй он → hasData:false',
       PA(null, null, 'all').hasData === false && PA({ status: 'no_data', months: [] }, null, 'all').hasData === false &&
       PA(PALL, null, 2030).hasData === false);
@@ -4560,8 +4620,8 @@ async function groupBE() {
     check('PA10. paxFetchWindow: 2026 бүтэн → 2026-01-01 … 2026-12-31; 2026 + 2 сар → 02-01 … 02-28',
       JSON.stringify(W(2026, { from: 1, to: 12 })) === JSON.stringify({ from: '2026-01-01', to: '2026-12-31' }) &&
       JSON.stringify(W(2026, { from: 2, to: 2 })) === JSON.stringify({ from: '2026-02-01', to: '2026-02-28' }));
-    const C = (dcScript().match(/function buildPaxStackedChart\(domSeries,intlSeries,tripSeries,labels\)\{([\s\S]*?)\n\}/) || [, ''])[1];
-    const chart = C ? (new Function('domSeries', 'intlSeries', 'tripSeries', 'labels', C))(
+    const C = (dcScript().match(/function buildPaxStackedChart\(domSeries,intlSeries,tripSeries,labels,gaps\)\{([\s\S]*?)\n\}/) || [, ''])[1];
+    const chart = C ? (new Function('domSeries', 'intlSeries', 'tripSeries', 'labels', 'gaps', C))(
       [70, 90, 100, 100, 30], [10, 10, 10, 20, 0], [15, 20, 22, 25, 8], ['a', 'b', 'c', 'd', 'e']) : {};
     check('PA11. Багана: ОН + ОУ (ОУ>0 бүр 2 хэсэг) → 5 + 4 = 9 тэмдэг',
       (chart.barRects || []).length === 9);
@@ -5105,6 +5165,32 @@ async function groupBE() {
   check('BE26. Ганц сар → өөрчлөлт "—" + "харьцуулах өгөгдөл алга" (0% гэж ЗОХИОХГҮЙ)',
     !!paxRow1 && paxRow1[3] === '—' && paxRow1[4] === 'flat' && paxRow1[5] === 'харьцуулах өгөгдөл алга');
   check('BE26. Дата алга → мөр үүсэхгүй', mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: null }) === null);
+  /* BE26y. Өмнөх оны МӨН сар байвал YoY (агаарын KPI-тай ижил). Нүүрний KPI нь
+     summary 2025-ыг өгч байхад "өмнөх оны дата алга" гэсэн хуучирсан таамгаар
+     MoM (−29.9%, улирлын нөлөө) харуулж байв (2026-10-16).
+     Гараар: 2026-08 148,470 vs 2025-08 170,988 → −13.17% → "-13.2%". */
+  {
+    const prev25 = [149648, 97172, 129955, 137119, 131502, 166437, 154979, 170988, 111276, 132381, 133147, 128625];
+    const rowY = mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: { year: 2026, counts: JAN_AUG.slice(), prev: { year: 2025, counts: prev25 } } });
+    check('BE26y. Өмнөх оны мөн сар байвал YoY: 8-р сар 2026 vs 2025 = -13.2% (down)',
+      !!rowY && rowY[3] === '-13.2%' && rowY[4] === 'down', JSON.stringify(rowY && rowY.slice(0, 6)));
+    check('BE26y. Шошго YoY гэдгийг ил (өмнөх оны мөн сар + 2025 он)',
+      !!rowY && /өмнөх оны мөн сартай/.test(rowY[5]) && rowY[5].includes('2025'), rowY && rowY[5]);
+    const rowN = mkRow(st26, fmt26, MONTHS25).call({ _railPaxSeries: { year: 2026, counts: JAN_AUG.slice(),
+      prev: { year: 2025, counts: [1, 2, 3, null, null, null, null, null, null, null, null, null] } } });
+    check('BE26y. Өмнөх оны МӨН сар (8) алга → MoM-оор (−6.4%) буцна', !!rowN && rowN[3] === '-6.4%' && /өмнөх сартай/.test(rowN[5]));
+    const sss = dcScript().match(/\nfunction sectorSummaryToSeries\(json,now,cov\)\{([\s\S]*?)\n\}\n/);
+    const SSF = sss && new Function('COVERAGE_DEFAULT', 'json', 'now', 'cov', sss[1]);
+    if (!SSF) bad('BE26y. sectorSummaryToSeries олдсонгүй');
+    else {
+      const rows = [['2025-08', 170988], ['2025-09', 111276], ['2026-01', 10], ['2026-02', 20]]
+        .map(([m, v]) => ({ month: m + '-01T00:00:00.000Z', total_volume: String(v) }));
+      const s = SSF({ excludes_current: true }, { status: 'ok', unit: 'зорчигч', data: rows }, Date.UTC(2026, 9, 16), null);
+      check('BE26y. sectorSummaryToSeries өмнөх оныг ХАЯХГҮЙ: prev.year 2025, 8-р сар 170,988, 1-р сар null',
+        !!s && !!s.prev && s.prev.year === 2025 && s.prev.counts[7] === 170988 && s.prev.counts[0] === null && s.counts.join(',') === '10,20',
+        JSON.stringify(s && s.prev));
+    }
+  }
 
   /* Вагоны мөрүүдийн АРД залгагдана — BE12-ын ижил фикстурт railPaxKpiRow нэмнэ */
   const withPax = (paxRow) => {
@@ -7739,6 +7825,128 @@ async function groupAF() {
   }
 }
 
+/* ── DA. ДАТА АНАЛИСТЫН ТУЛГАЛТ — "алга" гэсэн мэдэгдэл бүр нотолгоотой ──
+   2026-10-16: зорчигчийн хуудсанд 2025 сонгоход «Өмнөх оноос — өмнөх оны
+   өгөгдөл алга» гарч, хэрэглэгч "2025 дата байхад яагаад алга" гэж асуув.
+   Тестүүд (PA5) энэ төлөвийг "зөв" гэж баталдаг байсан — загварын дотоод
+   шалтгааныг л шалгаж, (1) карт АЛЬ оныг хэлж буй, (2) өмнөх он ЭХ
+   СУРВАЛЖИД үнэхээр алга уу эсвэл бидний таталт дутуу уу гэдгийг огт
+   асуудаггүй байв. Ижил УБТЗ-ийн вагоны түүх 2023-аас эхэлдэг атал
+   зорчигчийнх 2025-аас — энэ зөрүүг хэн ч тулгаагүй.
+   DA1 — статик: "өмнөх … алга" текст бүр хугацааг ({year}/{from}) нэрлэнэ.
+   DA2 — амьд (portal.mrt.gov.mn, хүрэхгүй бол SKIP): нэг эх сурвалжийн
+         датасэтүүдийн түүхийн эхлэл зөрвөл tests/lib/known-coverage-gaps.js-д
+         бүртгэлтэй байх ёстой, эс бөгөөс УНАНА.
+   DA3 — амьд: бодит түүхийн он БҮРээр «Өмнөх оноос» картын текстийг бодож,
+         YoY-гүй бол АЛЬ он алга, түүх хэзээнээс гэдгийг нэрлэсэн эсэх. */
+async function groupDA() {
+  group('DA. Дата аналистын тулгалт (хамрах хүрээ · "алга" мэдэгдэл)');
+  const C = readJson('content.json');
+  /* DA1 */
+  const claims = [];
+  (function walk(o, p) {
+    for (const k in o) {
+      const v = o[k], q = p ? p + '.' + k : k;
+      if (typeof v === 'string') {
+        if (/өмнөх оны[^"]{0,40}(дата|өгөгдөл)[^"]{0,10}алга/i.test(v) && !/\{(year|from|month)\}/.test(v)) claims.push(q + ' = ' + v);
+      } else if (v && typeof v === 'object') walk(v, q);
+    }
+  })(C, '');
+  check('DA1. "өмнөх оны өгөгдөл алга" төрлийн текст бүр ХУГАЦААГ нэрлэнэ ({year}/{from})', claims.length === 0, claims.join(' | '));
+
+  /* DA2/DA3 — амьд */
+  const BASE = 'https://portal.mrt.gov.mn';
+  const EP = { railPax: '/api/sectors/rail/passengers/history', railWagon: '/api/sectors/rail/wagon-loading/history' };
+  const VOL = { railPax: 'passengers', railWagon: 'loaded' };
+  /* Нэг эх сурвалж (УБТЗ / Veritech) — хамрах хүрээ ижил байх ёстой бүлгүүд */
+  const SIBLINGS = [['railPax', 'railWagon']];
+  const hist = {};
+  for (const k of Object.keys(EP)) {
+    try {
+      const r = await fetch(BASE + EP[k], { signal: AbortSignal.timeout(20000) });
+      const j = await r.json();
+      if (j && j.status === 'ok' && Array.isArray(j.months) && j.months.length) hist[k] = j;
+    } catch (e) { /* SKIP доор */ }
+  }
+  if (!hist.railPax || !hist.railWagon) {
+    skipped('DA2/DA3. Амьд түүхийн тулгалт', 'portal.mrt.gov.mn хүрэхгүй');
+    return;
+  }
+  /* Түүхийн БОДИТ эхлэл: медиан сарын 5%-иас бага "сүнс" сарыг тооцохгүй
+     (үзлэгийн түүхэнд 2019-07 = 1 мөр гэх мэт эх сурвалжийн огнооны алдаа). */
+  const realFrom = (k) => {
+    const ms = hist[k].months.map(m => ({ m: String(m.month).slice(0, 7), v: +m[VOL[k]] || 0 })).sort((a, b) => a.m < b.m ? -1 : 1);
+    const vs = ms.map(x => x.v).sort((a, b) => a - b), med = vs[Math.floor(vs.length / 2)] || 0;
+    const f = ms.find(x => x.v >= med * 0.05);
+    return f ? f.m : null;
+  };
+  const GAPS = require('./lib/known-coverage-gaps.js');
+  const monthsBetween = (a, b) => (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7));
+  const unexplained = [], warn = [];
+  for (const grp of SIBLINGS) {
+    const froms = grp.map(k => ({ k, f: realFrom(k) })).filter(x => x.f);
+    const earliest = froms.reduce((a, b) => (a.f <= b.f ? a : b));
+    for (const x of froms) {
+      if (monthsBetween(earliest.f, x.f) < 12) continue;
+      const g = GAPS.find(e => e.dataset === x.k && e.from === x.f);
+      if (!g) unexplained.push(x.k + ' түүх ' + x.f + '-аас, харин ' + earliest.k + ' ' + earliest.f + '-аас');
+      else if (!g.sourceChecked) warn.push(x.k + ': ' + g.next);
+    }
+  }
+  check('DA2. Нэг эх сурвалжийн датасэтүүдийн түүхийн эхлэлийн зөрүү (≥12 сар) known-coverage-gaps.js-д бүртгэлтэй',
+    unexplained.length === 0, unexplained.join(' | ') + ' — эх сурвалжаас шалгаад tests/lib/known-coverage-gaps.js-д бүртгэ');
+  /* DA2b. Бүртгэл ХУУЧРАХГҮЙ: бичлэгийн `from` = порталын одоогийн бодит эхлэл.
+     2026-10-16: 2023 нөхөгдсөний дараа "2024-01" бичлэг үлдэж, тест анзаараагүй,
+     WARN чимээгүй алга болсон — нээлттэй ажил мартагдах эрсдэл. */
+  const stale = GAPS.filter(g => hist[g.dataset] && realFrom(g.dataset) !== g.from)
+    .map(g => g.dataset + ': бүртгэлд ' + g.from + ', портал одоо ' + realFrom(g.dataset) + '-аас');
+  check('DA2b. Бүртгэлийн бичлэг бүр порталын ОДООГИЙН түүхийн эхлэлтэй таарна (хуучирсан бичлэг алга)',
+    stale.length === 0, stale.join(' | ') + ' — known-coverage-gaps.js-ийг шинэчил эсвэл устга');
+  /* DA2c. Хөрш датасэтүүд ХОЁУЛАА ижил оноос эхэлсэн ч эх сурвалж түүнээс ЭРТ
+     өгөгдөлтэй байж болно (зорчигч 2022 = 5 131 мөр) — sibling тулгалт үүнийг
+     харахгүй. sourceRows-д порталын эхлэлээс ӨМНӨХ он байвал нээлттэй гэж WARN. */
+  GAPS.forEach(g => {
+    const earlier = Object.keys(g.sourceRows || {}).filter(y => +y < +String(g.from).slice(0, 4) && +g.sourceRows[y] > 0);
+    if (earlier.length) warn.push(g.dataset + ': эх сурвалжид ' + earlier.map(y => y + ' (' + g.sourceRows[y] + ' мөр)').join(', ') +
+      ' байна, порталд алга — ' + g.next);
+  });
+  /* sourceChecked:false бичлэг бүр WARN — хамгийн ЭРТ эхэлдэг датасэт (хөрш тулгалт
+     юу ч олохгүй) ба sourceRows-д эрт он үлдээгүй үед ч нээлттэй ажил чимээгүй алга
+     болохгүй (2026-10-16: зорчигч 2021 нөхөгдсөний дараа 2020 шалгаагүй ч WARN алга болов). */
+  GAPS.filter(g => !g.sourceChecked && !warn.some(w => w.startsWith(g.dataset + ':')))
+    .forEach(g => warn.push(g.dataset + ': эх сурвалжийн эхлэл батлагдаагүй — ' + g.next));
+  warn.forEach(w => console.log('  WARN  DA2. Эх сурвалжаас шалгаагүй/нөхөөгүй хамрах хүрээ — ' + w));
+  check('DA2. Бүртгэлийн бичлэг бүр шалтгаан, дараагийн алхам, кэйсийн баримттай (reason/next/case)',
+    GAPS.every(g => g.reason && g.next && g.case && fs.existsSync(path.join(ROOT, g.case))), JSON.stringify(GAPS.map(g => g.case)));
+
+  /* DA3 */
+  const src = dcScript();
+  const fx = (re) => { const m = src.match(re); return m && m[1]; };
+  const paxB = fx(/function paxAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
+  const wagB = fx(/function wagonAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
+  const yrtB = fx(/\nfunction yoyReasonText\(m,T\)\{([\s\S]*?)\n\}/);
+  if (!paxB || !wagB || !yrtB) { bad('DA3. paxAnalysisModel/wagonAnalysisModel/yoyReasonText олдсонгүй'); return; }
+  const psgB = fx(/\nfunction paxSeriesWithGaps\(ms,fullRange\)\{([\s\S]*?)\n\}/);
+  const PSG = new Function('ms', 'fullRange', psgB || '');
+  const MODELS = { railPax: [(a, s, y, r) => new Function('paxSeriesWithGaps', 'all', 'sel', 'year', 'mr', paxB)(PSG, a, s, y, r), 'pax_an'],
+    railWagon: [new Function('all', 'sel', 'year', 'mr', wagB), 'wagon_an'] };
+  const YRT = new Function('m', 'T', yrtB);
+  const badTxt = [];
+  for (const k of Object.keys(MODELS)) {
+    const [M, blk] = MODELS[k], TC = (C.site || {})[blk] || {};
+    const T = (key, fb) => (TC[key] != null ? TC[key] : fb);
+    const years = [...new Set(hist[k].months.map(m => +String(m.month).slice(0, 4)))];
+    for (const y of years) {
+      const m = M(hist[k], null, y, null);
+      if (!m.hasData || m.yoy) continue;
+      const t = YRT(m, T);
+      if (m.yoyReason === 'no_prev_year' && !(t.includes(String(y - 1)) && t.includes(m.historyFrom))) badTxt.push(k + ' ' + y + ': ' + t);
+      if (/\{(year|from)\}/.test(t)) badTxt.push(k + ' ' + y + ': орлуулаагүй ' + t);
+    }
+  }
+  check('DA3. Бодит түүхийн он бүрт «Өмнөх оноос» тайлбар АЛЬ он алга + түүхийн эхлэлийг нэрлэнэ', badTxt.length === 0, badTxt.join(' | '));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -7766,10 +7974,11 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=FL')) { groupFL(); }
   else if (process.argv.includes('--only=AF')) { await groupAF(); }
   else if (process.argv.includes('--only=UI')) { groupUI(); }
+  else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); groupFL(); groupUI(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); groupFL(); groupUI(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
