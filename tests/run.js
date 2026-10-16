@@ -4456,7 +4456,10 @@ async function groupBE() {
   const pam = dcScript().match(/function paxAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   if (!pam) { bad('PA0. paxAnalysisModel() олдсонгүй'); }
   else {
-    const PA = new Function('all', 'sel', 'year', 'mr', pam[1]);
+    /* paxAnalysisModel нь paxSeriesWithGaps-ийг дууддаг — хамт задалж дамжуулна */
+    const psg = dcScript().match(/\nfunction paxSeriesWithGaps\(ms,fullRange\)\{([\s\S]*?)\n\}/);
+    const PSG = new Function('ms', 'fullRange', psg ? psg[1] : 'throw new Error("paxSeriesWithGaps алга")');
+    const PA = (all, sel, year, mr) => new Function('paxSeriesWithGaps', 'all', 'sel', 'year', 'mr', pam[1])(PSG, all, sel, year, mr);
     const pm = (month, days, dim, trips, passengers, domestic, international) =>
       ({ month, days, days_in_month: dim, trips, passengers, domestic, international });
     const PALL = { status: 'ok', months: [pm('2025-09', 30, 30, 20, 100, 90, 10), pm('2026-09', 30, 30, 25, 120, 100, 20),
@@ -4469,7 +4472,28 @@ async function groupBE() {
     check('PA1. Аялал бүрийн дундаж 250/53, өдрийн дундаж 250/70',
       Math.abs(p.perTrip - 250 / 53) < 1e-9 && p.days === 70 && Math.abs(p.perDay - 250 / 70) < 1e-9);
     check('PA2. 10/31 өдөр → дутуу (1), шошго "*"; бусад бүтэн',
-      p.partialN === 1 && p.series.labels.join(',') === '25-09,26-09,26-10*');
+      p.partialN === 1 && p.series.labels.filter((_, i) => !p.series.gap[i]).join(',') === '25-09,26-09,26-10*');
+    /* PA16. Дунд нь өгөгдөлгүй сар → хоосон слот (2026-10-16 ковидын кэйс: 2020-12…2021-07
+       8 сар алга атал тэнхлэг "20-11* → 21-08*" гэж шууд үсэрч, шугам залгагдаж байв).
+       Фикстур: 2025-09 → 2026-09 хооронд 2025-10…2026-08 = 11 сар алга. */
+    check('PA16. Бүтэн хүрээнд дунд нь алга 11 сар слот болно (25-10 … 26-08), утга null',
+      p.series.gap.filter(Boolean).length === 11 && p.series.labels[1] === '25-10' && p.series.labels[11] === '26-08' &&
+      p.series.dom[1] === null && p.series.trips[11] === null && p.series.labels.length === 14,
+      JSON.stringify(p.series.labels));
+    {
+      const r9 = PA(PALL, null, 'all', { from: 9, to: 9 });
+      check('PA16. Сарын хүрээний шүүлттэй үед (9–9) завсар ЗОРИУД — слот оруулахгүй',
+        r9.series.gap.every(g => !g) && r9.series.labels.join(',') === '25-09,26-09', JSON.stringify(r9.series.labels));
+      const Cg = (dcScript().match(/function buildPaxStackedChart\(domSeries,intlSeries,tripSeries,labels,gaps\)\{([\s\S]*?)\n\}/) || [, ''])[1];
+      const g = Cg ? (new Function('domSeries', 'intlSeries', 'tripSeries', 'labels', 'gaps', Cg))(
+        [70, null, 100], [10, null, 0], [15, null, 25], ['a', 'b', 'c'], [false, true, false]) : {};
+      const gapBar = (g.barRects || []).filter(b => /мэдээлэл алга/.test(b.tip));
+      check('PA16. График: слот = 1 бүдэг тууз "b — мэдээлэл алга", 0 өндрийн багана ЗУРАХГҮЙ',
+        gapBar.length === 1 && gapBar[0].tip === 'b — мэдээлэл алга' &&
+        !(g.barRects || []).some(b => /^b — ОН/.test(b.tip)), JSON.stringify((g.barRects || []).map(b => b.tip)));
+      check('PA16. Аяллын шугам слот дээр ТАСАРНА (2 тусдаа "M"), слотод цэг алга',
+        (String(g.line).match(/M/g) || []).length === 2 && !/L/.test(g.line) && (g.dotPts || []).length === 2, String(g.line));
+    }
     check('PA2. Бүгд дээр YoY ЗОХИОХГҮЙ: null, шалтгаан "pick_year"', p.yoy === null && p.yoyReason === 'pick_year');
     check('PA3. Чиглэл зорчигчоор буурахаар (А, Б), нийлбэр 250',
       p.routes.map(r => r.route).join(',') === 'А,Б' && p.routeTotal === 250);
@@ -4596,8 +4620,8 @@ async function groupBE() {
     check('PA10. paxFetchWindow: 2026 бүтэн → 2026-01-01 … 2026-12-31; 2026 + 2 сар → 02-01 … 02-28',
       JSON.stringify(W(2026, { from: 1, to: 12 })) === JSON.stringify({ from: '2026-01-01', to: '2026-12-31' }) &&
       JSON.stringify(W(2026, { from: 2, to: 2 })) === JSON.stringify({ from: '2026-02-01', to: '2026-02-28' }));
-    const C = (dcScript().match(/function buildPaxStackedChart\(domSeries,intlSeries,tripSeries,labels\)\{([\s\S]*?)\n\}/) || [, ''])[1];
-    const chart = C ? (new Function('domSeries', 'intlSeries', 'tripSeries', 'labels', C))(
+    const C = (dcScript().match(/function buildPaxStackedChart\(domSeries,intlSeries,tripSeries,labels,gaps\)\{([\s\S]*?)\n\}/) || [, ''])[1];
+    const chart = C ? (new Function('domSeries', 'intlSeries', 'tripSeries', 'labels', 'gaps', C))(
       [70, 90, 100, 100, 30], [10, 10, 10, 20, 0], [15, 20, 22, 25, 8], ['a', 'b', 'c', 'd', 'e']) : {};
     check('PA11. Багана: ОН + ОУ (ОУ>0 бүр 2 хэсэг) → 5 + 4 = 9 тэмдэг',
       (chart.barRects || []).length === 9);
@@ -7886,6 +7910,11 @@ async function groupDA() {
     if (earlier.length) warn.push(g.dataset + ': эх сурвалжид ' + earlier.map(y => y + ' (' + g.sourceRows[y] + ' мөр)').join(', ') +
       ' байна, порталд алга — ' + g.next);
   });
+  /* sourceChecked:false бичлэг бүр WARN — хамгийн ЭРТ эхэлдэг датасэт (хөрш тулгалт
+     юу ч олохгүй) ба sourceRows-д эрт он үлдээгүй үед ч нээлттэй ажил чимээгүй алга
+     болохгүй (2026-10-16: зорчигч 2021 нөхөгдсөний дараа 2020 шалгаагүй ч WARN алга болов). */
+  GAPS.filter(g => !g.sourceChecked && !warn.some(w => w.startsWith(g.dataset + ':')))
+    .forEach(g => warn.push(g.dataset + ': эх сурвалжийн эхлэл батлагдаагүй — ' + g.next));
   warn.forEach(w => console.log('  WARN  DA2. Эх сурвалжаас шалгаагүй/нөхөөгүй хамрах хүрээ — ' + w));
   check('DA2. Бүртгэлийн бичлэг бүр шалтгаан, дараагийн алхам, кэйсийн баримттай (reason/next/case)',
     GAPS.every(g => g.reason && g.next && g.case && fs.existsSync(path.join(ROOT, g.case))), JSON.stringify(GAPS.map(g => g.case)));
@@ -7897,7 +7926,9 @@ async function groupDA() {
   const wagB = fx(/function wagonAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   const yrtB = fx(/\nfunction yoyReasonText\(m,T\)\{([\s\S]*?)\n\}/);
   if (!paxB || !wagB || !yrtB) { bad('DA3. paxAnalysisModel/wagonAnalysisModel/yoyReasonText олдсонгүй'); return; }
-  const MODELS = { railPax: [new Function('all', 'sel', 'year', 'mr', paxB), 'pax_an'],
+  const psgB = fx(/\nfunction paxSeriesWithGaps\(ms,fullRange\)\{([\s\S]*?)\n\}/);
+  const PSG = new Function('ms', 'fullRange', psgB || '');
+  const MODELS = { railPax: [(a, s, y, r) => new Function('paxSeriesWithGaps', 'all', 'sel', 'year', 'mr', paxB)(PSG, a, s, y, r), 'pax_an'],
     railWagon: [new Function('all', 'sel', 'year', 'mr', wagB), 'wagon_an'] };
   const YRT = new Function('m', 'T', yrtB);
   const badTxt = [];

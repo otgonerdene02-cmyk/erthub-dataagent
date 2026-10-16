@@ -6728,11 +6728,32 @@ function paxAnalysisModel(all,sel,year,mr){
     pax,trips,dom,intl,domPct:pct(dom,dom+intl),intlPct:pct(intl,dom+intl),
     perTrip:trips>0?pax/trips:null,perDay:days>0?pax/days:null,yoy,yoyReason,
     prevYear:yr==='all'?null:yr-1,historyFrom:String(months[0].month).slice(0,7),
-    series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
-      dom:ms.map(m=>+m.domestic||0),intl:ms.map(m=>+m.international||0),trips:ms.map(m=>+m.trips||0)},
+    series:paxSeriesWithGaps(ms,fullRange),
     rows,ranked,hasBreakdown,routes,routeTotal,
     channels,channelTotal,channelCovered,hasChannels:channelTotal>0,
     topRouteShare:routeTotal>0&&routes.length?routes[0].passengers/routeTotal*100:null};
+}
+
+/* Зорчигчийн сарын цуваа + ДУНД нь өгөгдөлгүй сарын хоосон слот (gap:true).
+   2020-12…2021-07 (ковид, үйлчилгээ зогссон) 8 сар өгөгдөлгүй атал тэнхлэг
+   "20-11* → 21-08*" гэж шууд үсэрч, аяллын шугам хоёр цэгийг залгаж байв —
+   хугацааг ХУДЛАА шахаж харуулна (2026-10-16, docs/cases). Сарын хүрээний
+   шүүлттэй үед (fullRange биш) завсар ЗОРИУД тул слот оруулахгүй. */
+function paxSeriesWithGaps(ms,fullRange){
+  const out={labels:[],dom:[],intl:[],trips:[],gap:[]};
+  const key=m=>{const p=String(m.month).split('-');return (+p[0])*12+(+p[1]-1);};
+  ms.forEach((m,i)=>{
+    if(fullRange&&i>0){
+      for(let k=key(ms[i-1])+1;k<key(m);k++){
+        const y=Math.floor(k/12), mo=k%12+1;
+        out.labels.push(String(y).slice(2)+'-'+String(mo).padStart(2,'0'));
+        out.dom.push(null); out.intl.push(null); out.trips.push(null); out.gap.push(true);
+      }
+    }
+    out.labels.push(String(m.month).slice(2)+(m.partial?'*':''));
+    out.dom.push(+m.domestic||0); out.intl.push(+m.international||0); out.trips.push(+m.trips||0); out.gap.push(false);
+  });
+  return out;
 }
 
 /* «Өмнөх оноос» карт YoY-гүй үеийн тайлбар — вагон, зорчигч ХОЁУЛАА.
@@ -6752,7 +6773,7 @@ function yoyReasonText(m,T){
    + аяллын шугам (баруун тэнхлэг). Хоёр тэнхлэг БҮРД 0-ээс эхэлнэ; өмнөх
    dual-axis нь шугамын тэнхлэгийг 0-ээс эхлүүлдэггүй байсан тул өсөлтийг
    хэтрүүлж харуулдаг байв. Тоо бүр <title>-д (нэр — утга) гарна. */
-function buildPaxStackedChart(domSeries,intlSeries,tripSeries,labels){
+function buildPaxStackedChart(domSeries,intlSeries,tripSeries,labels,gaps){
   const w=640,h=230,padL=58,padR=58,padT=16,padB=32;
   const plotW=w-padL-padR, plotH=h-padT-padB;
   const n=(domSeries&&domSeries.length)||0;
@@ -6774,9 +6795,17 @@ function buildPaxStackedChart(domSeries,intlSeries,tripSeries,labels){
   const fmt=v=>Math.round(v).toLocaleString('en-US');
   const lbl=i=>(labels&&labels[i])||'';
   const tipBar=i=>lbl(i)+' — ОН: '+fmt(dv[i])+' · ОУ: '+fmt(iv[i]||0)+' · нийт: '+fmt(totals[i]);
+  /* gaps[i] — өгөгдөлгүй сар: багана БИШ, бүтэн өндрийн бүдэг тууз + "мэдээлэл
+     алга" tooltip (0 гэж зурахгүй, тоо зохиохгүй), шугам энд тасарна. */
+  const isGap=i=>!!(gaps&&gaps[i]);
   const barRects=[];
   dv.forEach((d,i)=>{
     const x=(padL+i*slot+(slot-barW)/2).toFixed(1), tip=tipBar(i);
+    if(isGap(i)){
+      barRects.push({x:(padL+i*slot).toFixed(1),y:padT.toFixed(1),w:slot.toFixed(1),h:plotH.toFixed(1),
+        fill:'rgba(130,142,168,0.14)',tip:lbl(i)+' — мэдээлэл алга'});
+      return;
+    }
     const yDomTop=Y1(d), yIntlTop=Y1(d+(iv[i]||0)), yBase=padT+plotH;
     barRects.push({x,y:yDomTop.toFixed(1),w:barW.toFixed(1),h:(yBase-yDomTop).toFixed(1),fill:'#2E7CF6',tip});
     if(iv[i]>0) barRects.push({x,y:yIntlTop.toFixed(1),w:barW.toFixed(1),h:(yDomTop-yIntlTop).toFixed(1),fill:'#0FA37F',tip});
@@ -6787,10 +6816,11 @@ function buildPaxStackedChart(domSeries,intlSeries,tripSeries,labels){
   const isPart=i=>String(lbl(i)).slice(-1)==='*';
   let line='', pen=false;
   xy.forEach((p,i)=>{
-    if(isPart(i)){ pen=false; return; }
+    if(isPart(i)||isGap(i)){ pen=false; return; }
     line+=(pen?' L':(line?' M':'M'))+p[0].toFixed(1)+','+p[1].toFixed(1); pen=true;
   });
-  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),tip:lbl(i)+' — аялал: '+fmt(tv[i])+(isPart(i)?' (дутуу сар)':'')}));
+  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),tip:lbl(i)+' — аялал: '+fmt(tv[i])+(isPart(i)?' (дутуу сар)':'')}))
+    .filter((_,i)=>!isGap(i));
   const fr=[0,0.25,0.5,0.75,1];
   const yTicksLeft=fr.map(f=>{const val=barMax*f,y=Y1(val);return {y:y.toFixed(1),label:fmt(val),fx:0,fy:(y-7).toFixed(1)};});
   const yTicksRight=fr.map(f=>{const val=lineMax*f,y=Y2(val);return {y:y.toFixed(1),label:fmt(val),fx:(w-padR+4).toFixed(1),fy:(y-7).toFixed(1)};});
@@ -9648,7 +9678,7 @@ class Component extends DCLogic {
       sub:fmt(r.trips)+' '+T('routes_trips','аялал')+' · '+(m.routeTotal>0?(r.passengers/m.routeTotal*100).toFixed(1):'0.0')+'%',
       width:(r.passengers/(rMax||1)*100).toFixed(0)+'%'}));
     const extra=Math.max(0,m.routes.length-10);
-    const chart=buildPaxStackedChart(m.series.dom,m.series.intl,m.series.trips,m.series.labels);
+    const chart=buildPaxStackedChart(m.series.dom,m.series.intl,m.series.trips,m.series.labels,m.series.gap);
     /* Сарын мөрүүд — датасэтийн СТАНДАРТ хүснэгтэд (paxTableSchema), тусдаа гар хүснэгт алга */
     const partialNote=m.partialN>0?(m.partialN+' '+T('partial_note','сар дутуу өгөгдөлтэй (* тэмдэглэгээ) — жилийн харьцуулалтад ороогүй')):'';
     const chTop=m.channels.length?m.channels[0].passengers:1;
