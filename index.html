@@ -6025,7 +6025,14 @@ function sectorSummaryToSeries(json,now,cov){
      сар байвал (жиш. 1,2,4) цуваа бүрэн биш — хэсэгчилж зурахгүй. */
   const maxM=Math.max.apply(null,[...byKey.keys()].filter(k=>Math.floor(k/100)===year).map(k=>k%100));
   if(!counts.length||maxM!==counts.length) return null;
-  return {unit,year,counts,lastMonth:counts.length,partial,partialValue};
+  /* Өмнөх оны МӨН сарууд (1–12, байхгүй сар = null). seriesKpiRow нь сүүлийн
+     бүтэн сарыг үүнтэй (YoY) харьцуулна — summary 2025-ыг өгч байхад зөвхөн
+     өнөө оныг авч MoM хийдэг байсан нь "өмнөх оны дата алга" гэсэн ХУУЧИРСАН
+     таамаг байв (2026-10-16, docs/cases). */
+  const prevCounts=[];
+  for(let m=1;m<=12;m++) prevCounts.push(byKey.has((year-1)*100+m)?byKey.get((year-1)*100+m):null);
+  const prev=prevCounts.some(v=>v!=null)?{year:year-1,counts:prevCounts}:null;
+  return {unit,year,counts,lastMonth:counts.length,partial,partialValue,prev};
 }
 
 /* Вагон ачилтын ТУСДАА endpoint (/api/sectors/rail/wagon-loading) →
@@ -6603,8 +6610,13 @@ function wagonAnalysisModel(all,sel,year,mr){
   const stations=(bd&&Array.isArray(bd.by_station)?bd.by_station:[])
     .map(s=>({station:s.station,code:s.code,loaded:+s.loaded||0,unloaded:+s.unloaded||0}))
     .sort((a,b)=>b.loaded-a.loaded);
-  const yoyReason=yoy?'ok':(yr==='all'?'pick_year':'none');
+  /* 'no_prev_year' — өмнөх он порталын түүхэнд ОГТ алга (эхний жил).
+     'none'-оос ялгана: хоосон картанд АЛЬ он алга, түүх хэзээнээс эхэлдгийг
+     нэрлэхгүй бол хэрэглэгч "дата байхад яагаад алга гэж байна" гэж уншина. */
+  const hasPrevYear=yr!=='all'&&months.some(m=>+String(m.month).slice(0,4)===yr-1);
+  const yoyReason=yoy?'ok':(yr==='all'?'pick_year':(hasPrevYear?'none':'no_prev_year'));
   return {hasData:true,years,year:yr,mFrom,mTo,monthFull,monthCount:ms.length,days,partialN,yoyReason,
+    prevYear:yr==='all'?null:yr-1,historyFrom:months.map(m=>String(m.month).slice(0,7)).sort()[0],
     loaded,unloaded,dom,frn,domPct:pct(dom,dom+frn),frnPct:pct(frn,dom+frn),
     ratio:unloaded>0?loaded/unloaded:null,perDay:days>0?loaded/days:null,yoy,
     series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
@@ -6667,7 +6679,9 @@ function paxAnalysisModel(all,sel,year,mr){
     const a=sum(pairs,'passengers'), b=pairs.reduce((t,m)=>t+(+prev.get(String(m.month).slice(5)).passengers||0),0);
     if(pairs.length&&b>0) yoy={pct:(a-b)/b*100,months:pairs.length};
   }
-  const yoyReason=yoy?'ok':(yr==='all'?'pick_year':'none');
+  /* 'no_prev_year' — өмнөх он порталын түүхэнд ОГТ алга (вагоны загвартай ижил). */
+  const hasPrevYear=yr!=='all'&&months.some(m=>+String(m.month).slice(0,4)===yr-1);
+  const yoyReason=yoy?'ok':(yr==='all'?'pick_year':(hasPrevYear?'none':'no_prev_year'));
   /* Сар бүрийн мөр + өмнөх сартай (MoM) ба өмнөх оны ижил сартай (YoY) харьцуулалт.
      Хоёул бүтэн сар байвал л тооцно — дутуу сарын тоо хэзээ ч өсөлт гэж гарахгүй. */
   const byKey=new Map(months.map(m=>[String(m.month),m]));
@@ -6704,11 +6718,25 @@ function paxAnalysisModel(all,sel,year,mr){
   return {hasData:true,years,year:yr,fullRange,rangeFrom:mFrom,rangeTo:mTo,monthCount:ms.length,days,partialN,
     pax,trips,dom,intl,domPct:pct(dom,dom+intl),intlPct:pct(intl,dom+intl),
     perTrip:trips>0?pax/trips:null,perDay:days>0?pax/days:null,yoy,yoyReason,
+    prevYear:yr==='all'?null:yr-1,historyFrom:String(months[0].month).slice(0,7),
     series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
       dom:ms.map(m=>+m.domestic||0),intl:ms.map(m=>+m.international||0),trips:ms.map(m=>+m.trips||0)},
     rows,ranked,hasBreakdown,routes,routeTotal,
     channels,channelTotal,channelCovered,hasChannels:channelTotal>0,
     topRouteShare:routeTotal>0&&routes.length?routes[0].passengers/routeTotal*100:null};
+}
+
+/* «Өмнөх оноос» карт YoY-гүй үеийн тайлбар — вагон, зорчигч ХОЁУЛАА.
+   T = тухайн самбарын stxt ('wagon_an.'/'pax_an.'). 'no_prev_year' үед АЛЬ
+   он алга, порталын түүх хэзээнээс эхэлдгийг ЗААВАЛ нэрлэнэ: "өмнөх оны
+   өгөгдөл алга" гэж л бичвэл сонгосон оны дата нүдэн дээр байхад хэрэглэгч
+   "дата байхад яагаад алга" гэж уншдаг байв (2026-10-16, docs/cases).
+   "порталд" — эх сурвалжид байхгүй гэсэн үг БИШ, таталтын хамрах хүрээ. */
+function yoyReasonText(m,T){
+  if(m.yoyReason==='pick_year') return T('kpi_yoy_pick','жил сонгож харьцуулна');
+  if(m.yoyReason==='no_prev_year') return T('kpi_yoy_no_prev','{year} оны өгөгдөл порталд алга · түүх {from}-аас')
+    .replace('{year}',String(m.prevYear)).replace('{from}',String(m.historyFrom||''));
+  return T('kpi_yoy_none','харьцуулах бүтэн сар алга');
 }
 
 /* Зорчигчийн сарын график — ОН/ОУ-ийг ЭЭЛЖ харуулсан багана (нийт = өндөр)
@@ -8011,16 +8039,25 @@ class Component extends DCLogic {
     }
     this.setState({['series_'+k]:s.year*100+s.lastMonth});
   }
-  /* k04.rail-ийн 4 дэх мөр: сүүлийн БҮТЭН сарын зорчигч + өмнөх сартай
-     харьцуулалт. Өмнөх оны дата алга тул YoY БИШ MoM — шошгон дээр ил
-     бичнэ. k[6] = бодит сарын цуваа (spark нь ЗОХИОМОЛ биш). */
+  /* k04.rail-ийн 4 дэх мөр: сүүлийн БҮТЭН сарын зорчигч + харьцуулалт.
+     Өмнөх оны МӨН сар (s.prev) байвал YoY — агаарын KPI-тай ижил (улирлын
+     хэлбэлзэлтэй тул MoM нь улирлыг л үзүүлнэ: 9-р сар vs 8-р сар −29.9%,
+     харин 2025-09-тэй −6.5%). Өмнөх оны мөн сар алга бол MoM, шошгон дээр
+     ил. k[6] = бодит сарын цуваа (spark нь ЗОХИОМОЛ биш). */
   seriesKpiRow(k){
     const cfg=SECTOR_SERIES[k], s=this._sectorSeries&&this._sectorSeries[k];
     if(!cfg||!s||!Array.isArray(s.counts)||!s.counts.length) return null;
     const L=cfg.labels();
     const n=s.counts.length, cur=s.counts[n-1], prev=n>1?s.counts[n-2]:null;
+    const py=s.prev&&Array.isArray(s.prev.counts)?s.prev.counts[n-1]:null;
     let delta='—', dir='flat', cmp=stxt('status.no_compare','харьцуулах өгөгдөл алга');
-    if(prev){
+    if(py>0){
+      const d=(cur-py)/py*100;
+      delta=(d>=0?'+':'')+d.toFixed(1)+'%';
+      dir=d>0?'up':(d<0?'down':'flat');
+      cmp=MONTHS[n-1]+' '+stxt('chart.compare_prev_month_mid','· өмнөх оны мөн сартай (')+MONTHS[n-1]+' '+s.prev.year+
+        stxt('chart.compare_prev_month_end',') харьцуулбал');
+    }else if(prev){
       const d=(cur-prev)/prev*100;
       delta=(d>=0?'+':'')+d.toFixed(1)+'%';
       dir=d>0?'up':(d<0?'down':'flat');
@@ -9395,7 +9432,7 @@ class Component extends DCLogic {
       {label:T('kpi_dom','Дотоодын ачилт'),value:(m.domPct).toFixed(1)+'%',sub:T('kpi_dom_sub','ачсан вагоны')},
       {label:T('kpi_perday','Өдрийн дундаж ачилт'),value:m.perDay==null?dash:fmt(m.perDay),sub:unit},
       {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?((m.yoy.pct>0?'+':'')+m.yoy.pct.toFixed(1)+'%'):dash,
-        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):(m.yoyReason==='pick_year'?T('kpi_yoy_pick','жил сонгож харьцуулна'):T('kpi_yoy_none','харьцуулах бүтэн сар алга'))}
+        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):yoyReasonText(m,T)}
     ];
     const circ=2*Math.PI*40;
     const segs=[{label:T('dom_label','Дотоод'),pct:m.domPct,color:'#2E7CF6'},
@@ -9578,7 +9615,7 @@ class Component extends DCLogic {
       {label:T('kpi_intl','Олон улсын (ОУ)'),value:m.intlPct.toFixed(1)+'%',sub:T('kpi_intl_sub','нийт зорчигчийн')},
       {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:T('kpi_per_day_sub','зорчигч / өдөр')},
       {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?pctTxt(m.yoy.pct):dash,
-        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):(m.yoyReason==='pick_year'?T('kpi_yoy_pick','жил сонгож харьцуулна'):T('kpi_yoy_none','өмнөх оны өгөгдөл алга'))}
+        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):yoyReasonText(m,T)}
     ];
     const circ=2*Math.PI*40;
     const segs=[{label:T('dom_label','Орон нутаг (ОН)'),pct:m.domPct,color:'#2E7CF6',cnt:m.dom},
