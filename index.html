@@ -2153,6 +2153,16 @@
       </div>
     </div>
 
+    <!-- FL3 — хүснэгтийн баганын шүүлт идэвхтэй үед: KPI/график дагаж буйг ил
+         хэлж, аль үзүүлэлт хамаарахгүйг нэрлэнэ (бүх датасэтэд нэг мөр). -->
+    <sc-if value="{{ detail.pvScope.active }}">
+      <div data-pv-scope="1" style="display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-left:3px solid {{ detail.color }};border-radius:11px;font-size:12px;line-height:1.5;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.pvScope.label }}</span>
+        <span style="font-weight:600;color:var(--ink);min-width:0;overflow-wrap:anywhere;">{{ detail.pvScope.summary }}</span>
+        <button sc-camel-on-click="{{ detail.pvScope.clear }}" style="cursor:pointer;font-family:inherit;font-size:11.5px;padding:4px 11px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--ink2);white-space:nowrap;">✕ {{ detail.pvScope.clearLabel }}</button>
+        <span style="flex-basis:100%;color:var(--ink3);">{{ detail.pvScope.note }}</span>
+      </div>
+    </sc-if>
     <!-- Вагоны нэгдсэн шүүлт (жил + сарын хүрээ) — "Шүүлт" товчоор нээгдэж,
          доорх KPI/донут/график/станцын бүх үзүүлэлтэд хамаарна (техникийн
          үзлэгтэй ижил стандарт). Түүх ирээгүй бол харагдахгүй. -->
@@ -4850,6 +4860,24 @@ const ERAS=[
    товч түүнийг файлаар ч гаргаж байв. Үлдсэн 4 бичлэг бүгд `rows:[]`-ээр
    эхэлж, амьд эх сурвалж ирсний дараа Л дүүрнэ — дата ирээгүй бол
    хүснэгт "мэдээлэл алга" гэж ил хэлнэ (ТОО ЗОХИОХГҮЙ). */
+/* FL3 — хүснэгтийн баганын сонголтыг агаарын НИСЛЭГ дээр шалгах предикат (сонголтгүй
+   бол null). Хүснэгтийн нүдийг бүтээдэг ЯГ ТЭР accessor-оор (cols[ci][3]) утга гаргаж,
+   EHGlossary.rowMatchesCols-той ижил (trim) харьцуулна — хүснэгт, KPI, график нэг
+   нислэгийн олонлогоор тайлбарлагдана. Сүүлийн багана (Төлөв) = нислэгийн төрөл. */
+function airFlightColMatch(sel,cols){
+  const ks=Object.keys(sel||{}).filter(k=>sel[k]);
+  if(!ks.length) return null;
+  const last=cols.length-1;
+  return f=>{
+    const d=f.year+'-'+String(f.month).padStart(2,'0')+'-'+String(f.day).padStart(2,'0');
+    for(const k of ks){
+      const ci=+k;
+      const v=ci===last?(f.flightType||'Тогтмол'):(cols[ci]&&cols[ci][3]?cols[ci][3](f,d):'');
+      if(String(v==null?'':v).trim()!==String(sel[k]).trim()) return false;
+    }
+    return true;
+  };
+}
 /* FL — хүснэгтийн баганын шүүлтээс ХАСАХ багана: датасэтийн нэгдсэн шүүлт
    (дээд талын самбар) аль хэдийн шүүдэг, эсвэл өөр баганатай ижил утгатай.
    Агаар: Төрөл (ОУ/Дотоод), Чиглэл, Бүс нутаг нь нэгдсэн шүүлтэд; "Төлөв"-ийн
@@ -6616,7 +6644,11 @@ function wagonAnalysisModel(all,sel,year,mr){
     /* "Бусад" бол ангилалгүй үлдэгдэл — эрэмбэд хамгийн сүүлд, харьцуулах
        боломжтой төрлүүд түрүүнд. */
     .sort((a,b)=>(a.type==='other')-(b.type==='other')||b.loaded-a.loaded);
+  /* FL3: mr.keys = хүснэгтийн баганын шүүлтэд таарсан станцууд. Сарын KPI/цуваа
+     станцаар задрахгүй тул зөвхөн станцын жагсаалт ба нийлбэр шүүгдэнэ. */
+  const keys=mr&&mr.keys;
   const stations=(bd&&Array.isArray(bd.by_station)?bd.by_station:[])
+    .filter(s=>!keys||keys.has(String(s.station==null?'':s.station).trim()))
     .map(s=>({station:s.station,code:s.code,loaded:+s.loaded||0,unloaded:+s.unloaded||0}))
     .sort((a,b)=>b.loaded-a.loaded);
   /* 'no_prev_year' — өмнөх он порталын түүхэнд ОГТ алга (эхний жил).
@@ -6673,7 +6705,11 @@ function paxAnalysisModel(all,sel,year,mr){
   const mFrom=Math.min(12,Math.max(1,+(mr&&mr.from)||1)), mTo=Math.min(12,Math.max(1,+(mr&&mr.to)||12));
   const fullRange=mFrom===1&&mTo===12;
   const mNo=m=>+String(m.month).slice(5);
-  const ms=months.filter(m=>(yr==='all'||+String(m.month).slice(0,4)===yr)&&mNo(m)>=mFrom&&mNo(m)<=mTo);
+  /* FL3: mr.keys = хүснэгтийн баганын шүүлтэд таарсан сарууд ('YYYY-MM') — KPI,
+     харьцаа, цуваа, эрэмбэ бүгд ЗӨВХӨН тэдгээр сараар. */
+  const keys=mr&&mr.keys;
+  const ms=months.filter(m=>(yr==='all'||+String(m.month).slice(0,4)===yr)&&mNo(m)>=mFrom&&mNo(m)<=mTo
+    &&(!keys||keys.has(String(m.month))));
   if(!ms.length) return {hasData:false};
   const sum=(a,k)=>a.reduce((t,m)=>t+(+m[k]||0),0);
   const pax=sum(ms,'passengers'), trips=sum(ms,'trips'), days=sum(ms,'days');
@@ -6728,7 +6764,8 @@ function paxAnalysisModel(all,sel,year,mr){
     pax,trips,dom,intl,domPct:pct(dom,dom+intl),intlPct:pct(intl,dom+intl),
     perTrip:trips>0?pax/trips:null,perDay:days>0?pax/days:null,yoy,yoyReason,
     prevYear:yr==='all'?null:yr-1,historyFrom:String(months[0].month).slice(0,7),
-    series:paxSeriesWithGaps(ms,fullRange),
+    /* Шүүлтээр хасагдсан сарыг "өгөгдөлгүй" слот болгохгүй */
+    series:paxSeriesWithGaps(ms,fullRange&&!keys),
     rows,ranked,hasBreakdown,routes,routeTotal,
     channels,channelTotal,channelCovered,hasChannels:channelTotal>0,
     topRouteShare:routeTotal>0&&routes.length?routes[0].passengers/routeTotal*100:null};
@@ -7758,7 +7795,10 @@ class Component extends DCLogic {
     })};
 
     /* Аймгийн жагсаалт (топ 10) — үргэлж харагдана, газрын зураг ачаалаагүй ч. */
-    const aim=PM?(PM.aimags||[]):A.aimags;
+    /* FL3: хүснэгтийн баганын шүүлт (Төлөв) → таарсан аймгууд; эрэмбэ ба газрын
+       зураг дагана. Хувь (share) нь бүх аймгийн нийтээс хэвээр. */
+    const aimKeys=this.pvColScope(DATASETS[this.state.dsIndex]||DATASETS[0]).keys;
+    const aim=(PM?(PM.aimags||[]):A.aimags).filter(r=>!aimKeys||aimKeys.has(String(r.name==null?'':r.name).trim()));
     const amax=aim.length?aim[0].count:1;
     ri.rank=aim.slice(0,10).map(r=>({name:r.name,value:fmt(r.count)+' · '+r.share.toFixed(1)+'%',
       width:(r.count/amax*100).toFixed(1)+'%'}));
@@ -8684,7 +8724,12 @@ class Component extends DCLogic {
       if(m<filters.monthFrom || m>filters.monthTo) return false;
       return true;
     };
-    const filtered=flights.filter(matchFilter);
+    /* filteredU — нэгдсэн шүүлт (хүснэгтийн мөр, chip-ийн утга эндээс; агшихгүй).
+       filtered — нэмээд хүснэгтийн баганын шүүлт (FL3): KPI, график, эрэмбэ,
+       газрын зураг бүгд үүнээс. */
+    const filteredU=flights.filter(matchFilter);
+    const colMatch=airFlightColMatch(((this.state&&this.state.pvColFilter)||{}).air,AIR_COLUMNS);
+    const filtered=colMatch?filteredU.filter(colMatch):filteredU;
     // Чарт бүтээгчийн (EHChart) нэгтгэл ЯГ ЭНЭ шүүгдсэн мөрүүд дээр
     // ажиллана — ингэснээр тохируулсан чарт хуудасны Он/Сар/Бүс/Чиглэлийн
     // шүүлтийг Tableau-гийн dashboard filter шиг ДАГАНА (нэг дэлгэц дээрх
@@ -8719,14 +8764,14 @@ class Component extends DCLogic {
     // snapshot (this feed updates continuously) is compared fairly instead
     // of a partial year against a complete one.
     const prevFilteredSamePeriod=prevFlights
-      ? prevFlights.filter(matchFilter).filter(f=>
-          (f.month||1)<cur.latestM || ((f.month||1)===cur.latestM && (f.day||0)<=cur.latestD))
+      ? prevFlights.filter(matchFilter).filter(f=>(!colMatch||colMatch(f))&&(
+          (f.month||1)<cur.latestM || ((f.month||1)===cur.latestM && (f.day||0)<=cur.latestD)))
       : [];
     const prev=aggregate(prevFilteredSamePeriod);
     // Сар бүрийн харьцуулалт (Сараар ачааны хэмжээ chart-ын шугам) нь
     // "мөн үеийн" тайрсан prev биш — сар тус бүрийг өмнөх оны ЯГ ТУХАЙН
     // сартай харьцуулна, тул өмнөх оны БҮХ (тайрахгүй) шүүгдсэн дата хэрэгтэй.
-    const prevAllFiltered=prevFlights?prevFlights.filter(matchFilter):[];
+    const prevAllFiltered=prevFlights?prevFlights.filter(f=>matchFilter(f)&&(!colMatch||colMatch(f))):[];
     const prevAll=aggregate(prevAllFiltered);
 
     const pctDelta=(a,b)=>{
@@ -8772,6 +8817,8 @@ class Component extends DCLogic {
       if(filters.dir==='dep' && f.dir!=='1') return false;
       if(filters.dir==='arr' && f.dir!=='0') return false;
       if(filters.region!=='all' && f.region!==filters.region) return false;
+      // FL3: хүснэгтийн баганын шүүлт энэ картанд ч хамаарна (сарын муж биш)
+      if(colMatch && !colMatch(f)) return false;
       return true;
     };
     const flWin=this.lastFullMonthWindow(year);
@@ -8952,7 +8999,9 @@ class Component extends DCLogic {
     // service returns (AIR_COLUMNS), only bounded generously to protect DOM
     // perf; head/types/notes are rewritten alongside so schema, table and
     // Excel export all stay in lockstep.
-    const sortedFull=filtered.slice().sort((a,b)=>b.unixtimestamp-a.unixtimestamp);
+    /* Хүснэгт нь нэгдсэн шүүлтийн БҮХ мөр — баганын шүүлтийг buildPreview өөрөө
+       хийнэ (chip-ийн утга сонголтоор агшихгүй). */
+    const sortedFull=filteredU.slice().sort((a,b)=>b.unixtimestamp-a.unixtimestamp);
     // Идэвхтэй шүүлтүүрийн зураглал — METRICS доторх "view" бүлгийн
     // үзүүлэлтүүд эндээс уншина. Датасэтийн бүтэн үнэн нь meta-д (flightsMeta)
     // тусад нь сууна: сонголт солиход мета хөдлөхгүй.
@@ -9383,7 +9432,42 @@ class Component extends DCLogic {
       if(v) cur[ci]=v; else delete cur[ci];
       all[schemaKey]=cur;
       return {pvColFilter:all,dsPage:0};
-    });
+    },()=>{ if(schemaKey==='air') this.recomputeAirData(); });
+  }
+  clearPvColFilter(schemaKey){
+    this.setState(s=>{
+      const all=Object.assign({},s.pvColFilter||{});
+      delete all[schemaKey];
+      return {pvColFilter:all,dsPage:0};
+    },()=>{ if(schemaKey==='air') this.recomputeAirData(); });
+  }
+  /* FL3 — хүснэгтийн баганын шүүлт KPI/графикт: идэвхтэй сонголт ба таарсан
+     мөрийн ТҮЛХҮҮР (эхний багана: сар / станц / аймаг). Зорчигч, вагон, үзлэгийн
+     анализ эдгээр түлхүүрээр өөрийн хэмжээсийг шүүнэ; агаар нь нислэг бүрийг
+     applyRealFlightsData-д шууд шалгана (airFlightColMatch). Мөрийн массивын
+     адилтгал + сонголтоор кэшлэнэ. */
+  pvColScope(dsel){
+    const none={active:false,keys:null};
+    if(!dsel||typeof EHGlossary==='undefined') return none;
+    const schemaKey=dsel.schema||dsel.sector;
+    const selRaw=(this.state.pvColFilter||{})[schemaKey]||{};
+    const dc=this._pvDimCache&&this._pvDimCache.key===schemaKey?this._pvDimCache.cols:null;
+    const ks=Object.keys(selRaw).filter(k=>selRaw[k]&&(!dc||dc.some(c=>String(c.index)===k)));
+    if(!ks.length) return none;
+    const sc=this.tableSchema(dsel,schemaKey);
+    if(!sc||!Array.isArray(sc.rows)) return none;
+    const sel={}; ks.forEach(k=>{ sel[k]=selRaw[k]; });
+    const ck=schemaKey+'|'+JSON.stringify(sel);
+    const c=this._pvScopeCache;
+    if(!c||c.ck!==ck||c.src!==sc.rows){
+      const keys=new Set(sc.rows.filter(r=>EHGlossary.rowMatchesCols(r,sel)).map(r=>String(r[0]==null?'':r[0]).trim()));
+      this._pvScopeCache={ck,src:sc.rows,keys};
+    }
+    return {active:true,schemaKey,sel,keys:this._pvScopeCache.keys,
+      summary:ks.map(k=>(sc.head[k]||'')+': '+sel[k]).join(' · ')};
+  }
+  pvScopeKeys(){
+    return this.pvColScope(DATASETS[this.state.dsIndex]||DATASETS[0]).keys;
   }
   // Filter chips (Он/Төрөл/Чиглэл/Бүс нутгаар) for the live flights feed.
   // Structured generically — keyed off dsel.sector rather than hardcoded to
@@ -9450,7 +9534,8 @@ class Component extends DCLogic {
   buildWagonAnalysis(){
     const T=(k,fb)=>stxt('wagon_an.'+k,fb);
     const st=this.state;
-    const m=wagonAnalysisModel(this._wagonHistAll,this._wagonHistSel,st.wagonYear,{from:st.wagonMFrom,to:st.wagonMTo});
+    const keys=this.pvColScope(DATASETS[st.dsIndex]||DATASETS[0]).keys;
+    const m=wagonAnalysisModel(this._wagonHistAll,this._wagonHistSel,st.wagonYear,{from:st.wagonMFrom,to:st.wagonMTo,keys});
     const fmt=v=>Math.round(v).toLocaleString('en-US');
     const base={isWagonDetail:true,wagonHasData:m.hasData,wagonNoData:!m.hasData,
       wagonT:{head:T('head','Вагон ачилтын анализ'),
@@ -9599,7 +9684,9 @@ class Component extends DCLogic {
   buildPaxAnalysis(){
     const T=(k,fb)=>stxt('pax_an.'+k,fb);
     const st=this.state;
-    const m=paxAnalysisModel(this._paxHistAll,this._paxHistSel,st.paxYear,{from:st.paxMFrom,to:st.paxMTo});
+    /* FL3: хүснэгтийн баганын шүүлт (Төлөв = Бүтэн/Дутуу сар) → таарсан сарууд */
+    const keys=this.pvColScope(DATASETS[st.dsIndex]||DATASETS[0]).keys;
+    const m=paxAnalysisModel(this._paxHistAll,this._paxHistSel,st.paxYear,{from:st.paxMFrom,to:st.paxMTo,keys});
     const fmt=v=>Math.round(v).toLocaleString('en-US');
     const dash=T('dash','—');
     const pctTxt=v=>v==null?dash:((v>0?'+':'')+v.toFixed(1)+'%');
@@ -9646,6 +9733,8 @@ class Component extends DCLogic {
       dirty:!(m.year==='all'&&m.fullRange),
       reset:()=>this.resetPaxFilter()
     };
+    /* Хүснэгтийн шүүлтэд таарах сар алга — "түүх холбогдоогүй" гэж ХУДАЛ хэлэхгүй */
+    if(!m.hasData&&keys) base.paxT.noData=stxt('pv_scope.no_match','Хүснэгтийн шүүлтэд таарах мөр алга — шүүлтийг цэвэрлэнэ үү.');
     if(!m.hasData) return {...base,paxFilterUi:filterUi};
     const unit=T('unit','зорчигч');
     const kpis=[
@@ -11210,7 +11299,20 @@ class Component extends DCLogic {
       excel_btn:stxt('detail.excel_btn','⇩ Excel татах'),
       ask_btn:stxt('detail.ask_btn','Асуух ↵')
     };
+    /* FL3 — идэвхтэй хүснэгтийн баганын шүүлт KPI/графикийн дээр ил: юу шүүгдсэн,
+       аль үзүүлэлт дагадаг/дагадаггүй (хэмжээсгүй бол ил хэлнэ), нэг товчоор цэвэрлэнэ. */
+    const pvSc=this.state.page==='detail'?this.pvColScope(dsel):{active:false};
+    const pvNote={air:()=>stxt('pv_scope.note_air','KPI, график, эрэмбэ, газрын зураг бүгд энэ шүүлтийг дагана.'),
+      rail_pax:()=>stxt('pv_scope.note_rail_pax','KPI, харьцаа, сарын график ба эрэмбэ энэ шүүлтийг дагана. Чиглэл ба борлуулалтын сувгийн задаргаа сараар задрахгүй тул хамаарахгүй.'),
+      rail_wagon:()=>stxt('pv_scope.note_rail_wagon','Станцын жагсаалт зөвхөн шүүлтэд таарсан станцуудыг харуулна (Төлөв нь хүснэгтийн сүүлийн хоногийнх, жагсаалтын тоо сонгосон хугацааных). KPI, харьцаа, вагоны төрөл, сарын график станцаар задрахгүй тул хамаарахгүй.'),
+      road_inspect:()=>stxt('pv_scope.note_road_inspect','Аймгийн эрэмбэ ба газрын зураг энэ шүүлтийг дагана. KPI, хоногийн ба гаригийн график, шалтгаан аймгаар задрахгүй тул хамаарахгүй.')}[pvSc.schemaKey]
+      ||(()=>stxt('pv_scope.note_default','Энэ шүүлт зөвхөн хүснэгтэд хамаарна.'));
+    const pvScope={active:!!pvSc.active,
+      label:stxt('pv_scope.label','Хүснэгтийн шүүлт'),summary:pvSc.summary||'',
+      clearLabel:stxt('pv_scope.clear','Цэвэрлэх'),clear:()=>this.clearPvColFilter(pvSc.schemaKey),
+      note:pvNote()};
     const detail={
+      pvScope,
       t:detailT,
       dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
       isAirDetail,...airExtra,...wagonExtra,...paxExtra,/* UI стандарт (ROW): «Салбарын бүтэц» хоосон бол хоосон картыг графикийн хажууд
