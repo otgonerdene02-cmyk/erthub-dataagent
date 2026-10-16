@@ -65,11 +65,19 @@ body{margin:0;}
 /* Сарын график (зүүн) + тээвэрлэгчдийн жагсаалт (баруун): жагсаалт нь ГРАФИКИЙН
    ӨНДӨРТЭЙ яг тэнцүү байж, дотроо гүйлгэнэ. Карт нь өөрийн агуулгаараа мөрийн
    өндрийг түлхэхгүй (жагсаалт absolute scroll), толгой нь тогтмол. */
-/* Зөвхөн агаарын дэлгэрэнгүйд (.eh-fill) — бусад салбарт жагсаалт богино тул хоосон зай үлдэхгүй */
-.eh-trend-rank.eh-fill { align-items: stretch !important; }
-.eh-fill .eh-fill-card { display: flex; flex-direction: column; }
-.eh-fill .eh-fill-list { position: relative; flex: 1 1 0; min-height: 0; }
-.eh-fill .eh-fill-scroll { position: absolute; inset: 0; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }
+/* UI СТАНДАРТ (ROW) — БҮХ хуудсанд: нэг мөрийн карт ИЖИЛ өндөртэй (.eh-row = stretch).
+   Урт жагсаалттай карт (.eh-fill-card) мөрийн өндрийг ТҮЛХЭХГҮЙ — жагсаалт нь
+   (.eh-fill-list › .eh-fill-scroll) зэргэлдээ картын өндрийг дүүргээд дотроо гүйлгэнэ.
+   Өмнө нь зөвхөн агаарт (.eh-fill) байсан тул галт тэрэг/вагон/үзлэг дээр
+   198px donut | 964px жагсаалт гэх мэт зөрүү гарч байв. layout-audit: row-height-mismatch. */
+.eh-row, .eh-trend-rank.eh-fill { align-items: stretch !important; }
+.eh-fill-card { display: flex; flex-direction: column; }
+.eh-fill-list { position: relative; flex: 1 1 0; min-height: 220px; }
+.eh-fill-scroll { position: absolute; inset: 0; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }
+/* Богино жагсаалттай карт (≤10 мөр) өндөр зэргэлдээ картын хажууд: мөрүүд картын
+   өндрийг ЖИГД дүүргэнэ — доор нь хоосон зай үлдэхгүй (layout-audit card-empty). */
+.eh-fit-card { display: flex; flex-direction: column; }
+.eh-fit-card > .eh-fit-body { flex: 1 1 auto; justify-content: space-evenly; }
 /* 4 / 8 нүдтэй тоон тайлууд: auto-fit нь 3+1, 7+1 болгодог байв → desktop 4 багана,
    таблет/гар утсанд 2 багана (4 ба 8 хоёулаа тэгш хуваагдана). Гар утсанд eh-g-2c давхар ажиллана. */
 @media (max-width: 1100px) {
@@ -100,8 +108,8 @@ body{margin:0;}
   /* FL баганын шүүлт: шошгоны 112px багана гар утсанд chip-ийн зайг иддэг тул дээр нь */
   .eh-fl-row { flex-direction: column !important; gap: 6px !important; }
   .eh-fl-row > :first-child { width: auto !important; padding-top: 0 !important; }
-  .eh-fill .eh-fill-list { position: static; flex: none; }
-  .eh-fill .eh-fill-scroll { position: static; overflow: visible; padding-right: 0; }
+  .eh-fill-list { position: static; flex: none; min-height: 0; }
+  .eh-fill-scroll { position: static; overflow: visible; padding-right: 0; max-height: 420px; overflow-y: auto; }
   /* 7 хоногийн баганын график: 6–7 багана 244px-д багтаж, огнооны шошго ("10.07")
      хүрээнээсээ гарахгүй. Гурван мөр (утга · багана · огноо) ижил gap-тай байх ЁСТОЙ. */
   .eh-wk { gap: 4px !important; }
