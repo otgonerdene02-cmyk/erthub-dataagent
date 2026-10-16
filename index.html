@@ -884,7 +884,7 @@
             <div data-eh-card="w2pb" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;">{{ w2pbTitle }}{{ w2pbMark }}</div>
             <div style="display:flex;gap:2px;height:26px;border-radius:7px;overflow:hidden;background:var(--surface2);">
               <sc-for list="{{ weekPaxShare }}" as="ws" hint-placeholder-count="3">
-                <div style="width:{{ ws.w }};background:linear-gradient(180deg,{{ ws.color }},{{ ws.color }}b3);min-width:5px;"></div>
+                <div style="width:{{ ws.w }};background:linear-gradient(180deg,{{ ws.color }},{{ ws.color }}b3);min-width:{{ ws.minw }};"><title>{{ ws.tip }}</title></div>
               </sc-for>
             </div>
             <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px;">
@@ -893,10 +893,13 @@
                   <div style="width:9px;height:9px;border-radius:3px;background:{{ ws.color }};flex-shrink:0;"></div>
                   <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ws.label }}</div>
                   <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);white-space:nowrap;">{{ ws.value }}</div>
-                  <div style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);white-space:nowrap;min-width:46px;text-align:right;">{{ ws.pct }}%</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);white-space:nowrap;min-width:46px;text-align:right;">{{ ws.pctText }}</div>
                 </div>
               </sc-for>
             </div>
+            <sc-if value="{{ weekPaxShareNote }}">
+              <div data-dg-note="weekPaxShare" style="font-size:10.5px;line-height:1.4;color:var(--ink3);margin-top:8px;">{{ weekPaxShareNote }}</div>
+            </sc-if>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
             <sc-for list="{{ weekPaxStats }}" as="ws" hint-placeholder-count="4">
@@ -975,7 +978,7 @@
             <div data-eh-card="w2cb" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;">{{ w2cbTitle }}{{ w2cbMark }}</div>
             <div style="display:flex;gap:2px;height:26px;border-radius:7px;overflow:hidden;background:var(--surface2);">
               <sc-for list="{{ weekCargoShare }}" as="ws" hint-placeholder-count="3">
-                <div style="width:{{ ws.w }};background:linear-gradient(180deg,{{ ws.color }},{{ ws.color }}b3);min-width:5px;"></div>
+                <div style="width:{{ ws.w }};background:linear-gradient(180deg,{{ ws.color }},{{ ws.color }}b3);min-width:{{ ws.minw }};"><title>{{ ws.tip }}</title></div>
               </sc-for>
             </div>
             <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px;">
@@ -984,10 +987,13 @@
                   <div style="width:9px;height:9px;border-radius:3px;background:{{ ws.color }};flex-shrink:0;"></div>
                   <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ws.label }}</div>
                   <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);white-space:nowrap;">{{ ws.value }}</div>
-                  <div style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);white-space:nowrap;min-width:46px;text-align:right;">{{ ws.pct }}%</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);white-space:nowrap;min-width:46px;text-align:right;">{{ ws.pctText }}</div>
                 </div>
               </sc-for>
             </div>
+            <sc-if value="{{ weekCargoShareNote }}">
+              <div data-dg-note="weekCargoShare" style="font-size:10.5px;line-height:1.4;color:var(--ink3);margin-top:8px;">{{ weekCargoShareNote }}</div>
+            </sc-if>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
             <sc-for list="{{ weekCargoStats }}" as="ws" hint-placeholder-count="4">
@@ -1204,10 +1210,13 @@
           <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink2);">
             <div style="width:8px;height:8px;border-radius:50%;background:{{ da.color }};flex-shrink:0;"></div>
             <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ da.label }}</div>
-            <div style="font-family:'JetBrains Mono',monospace;color:var(--ink);">{{ da.pct }}%</div>
+            <div style="font-family:'JetBrains Mono',monospace;color:var(--ink);">{{ da.pctText }}</div>
           </div>
         </sc-for>
       </div>
+      <sc-if value="{{ donut.hasNote }}">
+        <div data-dg-note="d05" style="font-size:10.5px;line-height:1.4;color:var(--ink3);margin-top:10px;">{{ donut.note }}</div>
+      </sc-if>
     </div>
     </div>
 
@@ -2463,6 +2472,77 @@
       </div>
       </sc-if>
       <sc-if value="{{ detail.wp.wpNoData }}"><div data-wp-nodata="1" style="margin-top:-6px;font-size:11.5px;color:var(--ink3);line-height:1.45;">{{ detail.wp.note }}</div></sc-if>
+      <div data-ddq-block="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="ddq" data-eh-field="title">{{ detail.ddqTitle }}</span></div>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--line);">
+          <sc-if value="{{ detail.dqKnown }}">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:46px;font-weight:700;letter-spacing:-.03em;color:{{ detail.dqColor }};line-height:1;">{{ detail.dqTotal }}<span style="font-size:17px;color:var(--ink3);font-weight:500;">/100</span></div>
+            <div>
+              <div style="font-size:15px;font-weight:600;color:{{ detail.dqColor }};margin-bottom:5px;">{{ detail.dqTier }}</div>
+              <div style="display:flex;gap:3px;">
+                <sc-for list="{{ detail.stars }}" as="st" hint-placeholder-count="5">
+                  <div style="font-size:16px;line-height:1;color:{{ st.color }};">★</div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ detail.dqUnknown }}">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;letter-spacing:-.02em;color:var(--ink3);line-height:1.2;">Тодорхойгүй</div>
+            <div style="font-size:12.5px;color:var(--ink3);max-width:46ch;line-height:1.5;text-wrap:pretty;">{{ detail.t.dq_missing }}</div>
+          </sc-if>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 13px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.t.freq_head }}</span>
+            <span style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;">{{ detail.dqFreqLabel }}</span>
+          </div>
+        </div>
+        <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;">
+          <sc-for list="{{ detail.dims }}" as="dm" hint-placeholder-count="4">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--ink);margin-bottom:7px;">
+                <span style="text-wrap:pretty;">{{ dm.label }} <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);">{{ dm.weightLabel }}</span></span>
+                <sc-if value="{{ dm.unknown }}">
+                  <span style="flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--ink3);background:var(--surface2);border:1px solid var(--line2);border-radius:999px;padding:3px 9px;white-space:nowrap;">Тодорхойгүй</span>
+                </sc-if>
+                <sc-if value="{{ dm.known }}">
+                  <span style="font-family:'JetBrains Mono',monospace;font-weight:600;flex-shrink:0;color:{{ dm.valColor }};">{{ dm.val }}</span>
+                </sc-if>
+              </div>
+              <div style="height:6px;border-radius:4px;{{ dm.trackStyle }}overflow:hidden;">
+                <div style="height:100%;border-radius:4px;background:{{ dm.barColor }};width:{{ dm.width }};"></div>
+              </div>
+              <div style="font-size:11.5px;color:var(--ink3);margin-top:7px;line-height:1.45;text-wrap:pretty;">{{ dm.note }}</div>
+              <sc-if value="{{ dm.hasDetail }}">
+                <div style="font-size:11.5px;color:var(--ink2);margin-top:5px;line-height:1.45;text-wrap:pretty;">{{ dm.detail }}</div>
+              </sc-if>
+              <sc-for list="{{ dm.items }}" as="ck" hint-placeholder-count="4">
+                <div style="display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:var(--ink2);margin-top:4px;">
+                  <span style="color:{{ ck.color }};font-weight:700;flex-shrink:0;">{{ ck.mark }}</span>
+                  <span style="flex:1;min-width:0;text-wrap:pretty;">{{ ck.label }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:{{ ck.color }};flex-shrink:0;">{{ ck.pts }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div data-ds-profile="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);font-weight:600;">{{ detail.t.profile_head }}</div>
+            <div style="font-size:11.5px;color:var(--ink3);text-wrap:pretty;">{{ detail.t.profile_note }}</div>
+          </div>
+          <sc-if value="{{ detail.noProfile }}"><div style="font-size:12.5px;color:var(--ink3);">{{ detail.noData }}</div></sc-if>
+          <sc-if value="{{ detail.hasProfile }}">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+              <sc-for list="{{ detail.profile }}" as="pf" hint-placeholder-count="4">
+                <div style="background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;">
+                  <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ pf.l }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--ink);">{{ pf.v }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div data-eh-card="ddq" data-eh-field="foot" style="font-size:11px;color:var(--ink3);margin-top:20px;padding-top:16px;border-top:1px solid var(--line);line-height:1.5;text-wrap:pretty;">{{ detail.ddqFoot }}</div>
+      </div>
     </div>
 
     <sc-if value="{{ detail.act }}">
@@ -3476,77 +3556,6 @@
     </div>
     </sc-if>
 
-    <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;">
-      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="ddq" data-eh-field="title">{{ detail.ddqTitle }}</span></div>
-      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--line);">
-        <sc-if value="{{ detail.dqKnown }}">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:46px;font-weight:700;letter-spacing:-.03em;color:{{ detail.dqColor }};line-height:1;">{{ detail.dqTotal }}<span style="font-size:17px;color:var(--ink3);font-weight:500;">/100</span></div>
-          <div>
-            <div style="font-size:15px;font-weight:600;color:{{ detail.dqColor }};margin-bottom:5px;">{{ detail.dqTier }}</div>
-            <div style="display:flex;gap:3px;">
-              <sc-for list="{{ detail.stars }}" as="st" hint-placeholder-count="5">
-                <div style="font-size:16px;line-height:1;color:{{ st.color }};">★</div>
-              </sc-for>
-            </div>
-          </div>
-        </sc-if>
-        <sc-if value="{{ detail.dqUnknown }}">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;letter-spacing:-.02em;color:var(--ink3);line-height:1.2;">Тодорхойгүй</div>
-          <div style="font-size:12.5px;color:var(--ink3);max-width:46ch;line-height:1.5;text-wrap:pretty;">{{ detail.t.dq_missing }}</div>
-        </sc-if>
-        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 13px;">
-          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.t.freq_head }}</span>
-          <span style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;">{{ detail.dqFreqLabel }}</span>
-        </div>
-      </div>
-      <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;">
-        <sc-for list="{{ detail.dims }}" as="dm" hint-placeholder-count="4">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--ink);margin-bottom:7px;">
-              <span style="text-wrap:pretty;">{{ dm.label }} <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);">{{ dm.weightLabel }}</span></span>
-              <sc-if value="{{ dm.unknown }}">
-                <span style="flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--ink3);background:var(--surface2);border:1px solid var(--line2);border-radius:999px;padding:3px 9px;white-space:nowrap;">Тодорхойгүй</span>
-              </sc-if>
-              <sc-if value="{{ dm.known }}">
-                <span style="font-family:'JetBrains Mono',monospace;font-weight:600;flex-shrink:0;color:{{ dm.valColor }};">{{ dm.val }}</span>
-              </sc-if>
-            </div>
-            <div style="height:6px;border-radius:4px;{{ dm.trackStyle }}overflow:hidden;">
-              <div style="height:100%;border-radius:4px;background:{{ dm.barColor }};width:{{ dm.width }};"></div>
-            </div>
-            <div style="font-size:11.5px;color:var(--ink3);margin-top:7px;line-height:1.45;text-wrap:pretty;">{{ dm.note }}</div>
-            <sc-if value="{{ dm.hasDetail }}">
-              <div style="font-size:11.5px;color:var(--ink2);margin-top:5px;line-height:1.45;text-wrap:pretty;">{{ dm.detail }}</div>
-            </sc-if>
-            <sc-for list="{{ dm.items }}" as="ck" hint-placeholder-count="4">
-              <div style="display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:var(--ink2);margin-top:4px;">
-                <span style="color:{{ ck.color }};font-weight:700;flex-shrink:0;">{{ ck.mark }}</span>
-                <span style="flex:1;min-width:0;text-wrap:pretty;">{{ ck.label }}</span>
-                <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:{{ ck.color }};flex-shrink:0;">{{ ck.pts }}</span>
-              </div>
-            </sc-for>
-          </div>
-        </sc-for>
-      </div>
-      <div data-ds-profile="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
-        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);font-weight:600;">{{ detail.t.profile_head }}</div>
-          <div style="font-size:11.5px;color:var(--ink3);text-wrap:pretty;">{{ detail.t.profile_note }}</div>
-        </div>
-        <sc-if value="{{ detail.noProfile }}"><div style="font-size:12.5px;color:var(--ink3);">{{ detail.noData }}</div></sc-if>
-        <sc-if value="{{ detail.hasProfile }}">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-            <sc-for list="{{ detail.profile }}" as="pf" hint-placeholder-count="4">
-              <div style="background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;">
-                <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ pf.l }}</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--ink);">{{ pf.v }}</div>
-              </div>
-            </sc-for>
-          </div>
-        </sc-if>
-      </div>
-      <div data-eh-card="ddq" data-eh-field="foot" style="font-size:11px;color:var(--ink3);margin-top:20px;padding-top:16px;border-top:1px solid var(--line);line-height:1.5;text-wrap:pretty;">{{ detail.ddqFoot }}</div>
-    </div>
   </div>
   </sc-if>
 
@@ -8012,7 +8021,8 @@ class Component extends DCLogic {
        сар хасагдсан) — хоногийн огноо ЗОХИОХГҮЙ. */
     if(cfg.source){
       const mLbl=s.year+'-'+String(s.lastMonth).padStart(2,'0');
-      this.setSourceMeta(cfg.source,{updatedAt:mLbl,updatedAtFull:mLbl,lastRecord:mLbl});
+      const lastRec=s.partial?(mLbl+' · '+s.partial+' '+stxt('feed.partial_tag','дутуу')):mLbl;
+      this.setSourceMeta(cfg.source,{updatedAt:mLbl,updatedAtFull:mLbl,lastRecord:lastRec});
     }
     /* Датасэтийн дэлгэрэнгүй хуудасны ХҮСНЭГТ — вагон/үзлэгтэй ижил
        зарчим: DS_SCHEMA дахь мөр ХООСОН эхэлдэг тул цуваа ирээгүй бол
@@ -10383,9 +10393,19 @@ class Component extends DCLogic {
         acc+=pct; return seg;
       });
       const shareTot=dtot;
+      /* Холбогдоогүй (0) сегмент: зурвас дээр "хэлтэрхий" зурахгүй, хувь/дүнд
+         «0.0%» биш «—» (мэдээлэл алга) — HV/DG. */
       const share=donutValues.map((v,i)=>({label:wd.donut.labels[i],color:wd.donut.colors[i],
-        pct:(v/shareTot*100).toFixed(1),w:Math.max(v/shareTot*100,1.4).toFixed(2)+'%',
-        value:i===0?fmtWeekVal(v):'0'}));
+        pct:(v/shareTot*100).toFixed(1),pctText:v>0?(v/shareTot*100).toFixed(1)+'%':'—',
+        w:v>0?Math.max(v/shareTot*100,1.4).toFixed(2)+'%':'0%',minw:v>0?'5px':'0',
+        value:i===0?fmtWeekVal(v):'—',
+        tip:wd.donut.labels[i]+' — '+(v>0?fmtWeekVal(v)+' ('+(v/shareTot*100).toFixed(1)+'%)':stxt('status.no_data','мэдээлэл алга'))}));
+      const shareSanity=(typeof EHGlossary!=='undefined')
+        ?EHGlossary.ratioSanity(donutValues.map((v,i)=>({key:'s'+i,label:wd.donut.labels[i],value:v})),{expected:donutValues.length})
+        :{issues:[]};
+      const shareNote=shareSanity.issues.some(i=>i.code==='single')
+        ?stxt('status.share_single','Зөвхөн «{name}» салбар холбогдсон тул 100% гарч байна — бусад салбарын мэдээлэл алга. Энэ нь бүх салбарын бодит харьцаа БИШ.').replace('{name}',wd.donut.labels[0])
+        :(shareSanity.issues.some(i=>i.code==='empty')?stxt('status.share_empty','Харьцаа тооцох өгөгдөл холбогдоогүй — мэдээлэл алга.'):'');
       // H5 (нэмэлт): "Оны эхнээс/Өмнөх оны мөн үе/Тээвэрлэгч(Чиглэл)" 4
       // статистикийн 3 нь одоогоор ямар ч эх сурвалжтай холбогдоогүй
       // WEEK_DATA-ийн статик тоо — 0/"—" + шошготой үзүүлнэ. "Өмнөх 7
@@ -10447,7 +10467,7 @@ class Component extends DCLogic {
       const airOnlyNote=(realVal!=null&&otherSectorsNone)
         ?stxt('status.air_only','Зөвхөн агаарын тээврийн эх сурвалж холбогдсон. Бусад салбар холбогдох бүрд нийт дүнд нэмэгдэнэ.')
         :'';
-      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,stats,plan,unit,total,delta,airOnlyNote};
+      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,shareNote,stats,plan,unit,total,delta,airOnlyNote};
     };
     const wPax=buildWeek('pax',WEEK_DATA.pax,'w2p','w2px'), wCargo=buildWeek('cargo',WEEK_DATA.cargo,'w2c','w2cx');
 
@@ -10631,7 +10651,7 @@ class Component extends DCLogic {
           deltaColor:/^\+/.test(k[2])?'#0E8F63':'var(--ink3)',
           spark:sp,area:sp+' L120,32 L0,32 Z'};
       }),
-      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,weekPaxDeltaCols:String(Math.max(1,wPax.delta.length)),weekPaxAirOnlyNote:wPax.airOnlyNote,
+      weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekPaxShareNote:wPax.shareNote,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekCargoShareNote:wCargo.shareNote,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,weekPaxDeltaCols:String(Math.max(1,wPax.delta.length)),weekPaxAirOnlyNote:wPax.airOnlyNote,
       section02MockNote,
       w2pMark:section02Marks.w2p,w2pbMark:section02Marks.w2pb,w2pxMark:section02Marks.w2px,
       w2cMark:section02Marks.w2c,w2cbMark:section02Marks.w2cb,w2cxMark:section02Marks.w2cx,
@@ -11556,7 +11576,7 @@ class Component extends DCLogic {
       let v=live?(parseFloat(String(SECTORS[k].kpis[0][1]).replace(/[^0-9.]/g,''))||0):0;
       /* Утгын тохиргоо ЗӨВХӨН air салбарт (мөр түвшний дата зөвхөн тэнд). */
       if(d05Spec&&k==='air'&&live) v=d05Spec.raw;
-      return {key:k,label:SECTORS[k].label,color:NEON[k],v};
+      return {key:k,label:SECTORS[k].label,color:NEON[k],v,live};
     });
     const total=raw.reduce((s,r)=>s+r.v,0)||1;
     const circ=2*Math.PI*46;
@@ -11566,12 +11586,25 @@ class Component extends DCLogic {
       const dash=`${(pct/100*circ).toFixed(1)} ${circ.toFixed(1)}`;
       const offset=(-acc/100*circ).toFixed(1);
       acc+=pct;
-      return {label:r.label,color:r.color,pct:pct.toFixed(1),dash,offset,opacity:r.key===activeKey?1:0.45,
-        tip:r.label+' — '+pct.toFixed(1)+'%'};
+      /* Холбогдоогүй салбарт «0.0%» гэж бичихгүй — мэдээлэл алга (HV/DG). */
+      return {label:r.label,color:r.color,pct:pct.toFixed(1),pctText:r.live?pct.toFixed(1)+'%':'—',dash,offset,opacity:r.key===activeKey?1:0.45,
+        tip:r.label+' — '+(r.live?pct.toFixed(1)+'%':stxt('status.no_data','мэдээлэл алга'))};
     });
+    /* DG: ганц салбар 100% болбол ЗОХИОМОЛ биш гэдгийг ил хэлнэ (бусад салбар
+       холбогдоогүй). Нийт 0 бол "олдсонгүй". */
+    const sanity=(typeof EHGlossary!=='undefined')
+      ?EHGlossary.ratioSanity(raw.map(r=>({key:r.key,label:r.label,value:r.v})),{expected:raw.length})
+      :{issues:[]};
+    let note='';
+    if(sanity.issues.some(i=>i.code==='single')){
+      const only=raw.find(r=>r.v>0);
+      note=stxt('status.share_single','Зөвхөн «{name}» салбар холбогдсон тул 100% гарч байна — бусад салбарын мэдээлэл алга. Энэ нь бүх салбарын бодит харьцаа БИШ.').replace('{name}',only?only.label:'');
+    } else if(sanity.issues.some(i=>i.code==='empty')){
+      note=stxt('status.share_empty','Харьцаа тооцох өгөгдөл холбогдоогүй — мэдээлэл алга.');
+    }
     const act=raw.find(r=>r.key===activeKey)||raw[0];
     const activePct=(act.v/total*100).toFixed(0);
-    return {arcs,activePct,activePctLabel:activePct+'%',activeName:act.label};
+    return {arcs,activePct,activePctLabel:(act.live?activePct+'%':'—'),activeName:act.label,note,hasNote:!!note};
   }
   buildGlobe(){
     const d3=window.d3;
