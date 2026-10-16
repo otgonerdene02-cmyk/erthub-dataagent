@@ -7547,6 +7547,46 @@ function groupDG() {
     /if\(f\.cntry && airFlightKind\(f\.ou\)==='intl'\)\{\s*byCountry\[f\.cntry\]/.test(idx));
   check('DG7. index.html домэйны толийг ачаална',
     idx.includes('<script src="js/erthub-glossary.js"></script>'));
+
+  /* DG8. Нүүрний share/donut: ганц салбар 100% бол ил анхааруулга, «0.0%» биш «—» (регресс).
+     d05 buildDonut-ыг гараар бодох фикстур дээр ажиллуулна: агаар 1000, төмөр зам 500. */
+  const mD = idx.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  buildGlobe\(\)/);
+  if (!mD) { bad('DG8. buildDonut() задарсангүй'); }
+  else {
+    const SEC = {
+      air: { label: 'Агаар', kpis: [['x', '1,000']] },
+      rail: { label: 'Төмөр зам', kpis: [['x', '500']] },
+      road: { label: 'Авто зам', kpis: [['x', '9']] }
+    };
+    const NEON = { air: '#1', rail: '#2', road: '#3' };
+    const mkD = new Function('SECTORS', 'NEON', 'stxt', 'EHGlossary',
+      'return function(activeKey){' + mD[1] + '}')(SEC, NEON, (p, x) => x, G);
+    const ctx = (live) => ({
+      visibleSectorKeys: () => ['air', 'rail', 'road'],
+      valueFromSpec: () => null,
+      kpiVerified: (w, k) => live.includes(k)
+    });
+    const one = mkD.call(ctx(['air']), 'air');
+    check('DG8. d05: ганц салбар (агаар) холбогдсон → 100% + ил тайлбар (нэр заасан)',
+      one.arcs[0].pct === '100.0' && one.hasNote && /Агаар/.test(one.note) && /БИШ/.test(one.note), JSON.stringify(one.note));
+    check('DG8. d05: холбогдоогүй салбар «0.0%» биш «—», tooltip «мэдээлэл алга»',
+      one.arcs[1].pctText === '—' && one.arcs[2].pctText === '—' && /мэдээлэл алга/.test(one.arcs[1].tip) && one.arcs[0].pctText === '100.0%',
+      JSON.stringify(one.arcs.map(a => [a.pctText, a.tip])));
+    const two = mkD.call(ctx(['air', 'rail']), 'air');
+    check('DG8. d05: хоёр салбар холбогдвол нийлбэр 100%, тайлбар ГАРАХГҮЙ',
+      !two.hasNote && Math.abs(two.arcs.reduce((t, a) => t + parseFloat(a.pct), 0) - 100) < 0.11 && two.arcs[0].pctText === '66.7%',
+      JSON.stringify(two.arcs.map(a => a.pct)));
+    const none = mkD.call(ctx([]), 'air');
+    check('DG8. d05: бүгд холбогдоогүй → «мэдээлэл алга» тайлбар, төв хувь «—» (100% зохиохгүй)',
+      none.hasNote && /мэдээлэл алга/.test(none.note) && none.activePctLabel === '—' && none.arcs.every(a => a.pct === '0.0'),
+      JSON.stringify(none));
+  }
+  check('DG8. 7 хоногийн донут/share: ratioSanity + холбогдоогүй сегмент «—», тайлбар хоёр картад (w2pb, w2cb)',
+    /shareSanity=[\s\S]{0,90}EHGlossary\.ratioSanity/.test(idx) && /pctText:v>0\?/.test(idx) &&
+    idx.includes('data-dg-note="weekPaxShare"') && idx.includes('data-dg-note="weekCargoShare"') &&
+    idx.includes('weekPaxShareNote:wPax.shareNote') && idx.includes('weekCargoShareNote:wCargo.shareNote'));
+  check('DG8. content.json: status.share_single («{name}»), status.share_empty бүртгэлтэй',
+    /\{name\}/.test(con.site.status.share_single || '') && !!con.site.status.share_empty);
 }
 
 /* ─────────── AF. Агаарын нэгдсэн шүүлтийн текст → content.json ─────────── */
