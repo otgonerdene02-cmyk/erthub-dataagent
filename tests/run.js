@@ -7461,6 +7461,79 @@ function groupDG() {
     idx.includes('<script src="js/erthub-glossary.js"></script>'));
 }
 
+/* ──────────────────────────────── FL ШҮҮЛТИЙН СТАНДАРТ ──────────────────────────────── */
+/* FL. Шүүлтийн баганы утгыг датаас авна (стандартчлахгүй). Лавлагаа: агаарын хүснэгт.
+   Сайт дээрх бодит шүүлтийн UI-г энэ бүлэг шалгахгүй — шинэ датасэт бүр дээр
+   EHGlossary.missingFilterCols()-оор баганын бүрдлийг шалгана. */
+function groupFL() {
+  group('FL. Шүүлтийн стандарт (датаас утга)');
+  let G = null;
+  try { G = require(path.join(ROOT, 'js', 'erthub-glossary.js')); } catch (e) { /* доор bad */ }
+  check('FL1. erthub-glossary: filterDimensions, missingFilterCols байна',
+    !!G && typeof G.filterDimensions === 'function' && typeof G.missingFilterCols === 'function');
+  if (!G) return;
+
+  const rows = [
+    { type: 'ОУ', dir: 'arr', region: 'Европ' },
+    { type: ' ОУ ', dir: 'dep', region: 'Европ' },
+    { type: 'ОН', dir: 'dep', region: '' },
+    { type: '', dir: 'arr', region: null },
+  ];
+  const d = G.filterDimensions(rows, ['type', 'dir', 'region']);
+  check('FL2. Утгыг датаас авч trim + давхардал/хоосыг хасна',
+    JSON.stringify(d.type) === JSON.stringify(['ОН', 'ОУ']), JSON.stringify(d.type));
+  check('FL3. Багана бүр бие даасан (dir, region)',
+    JSON.stringify(d.dir) === JSON.stringify(['arr', 'dep']) && JSON.stringify(d.region) === JSON.stringify(['Европ']),
+    JSON.stringify(d));
+  check('FL4. Утгыг стандартчлахгүй (ОН хэвээр, "Орон нутаг" болгохгүй)',
+    d.type.indexOf('ОН') !== -1 && d.type.indexOf('Орон нутаг') === -1);
+  check('FL5. missingFilterCols стандарт багана дутуу бол тэдгээрийг буцаана',
+    JSON.stringify(G.missingFilterCols(['type', 'dir'], ['type', 'dir', 'region'])) === JSON.stringify(['region']));
+  check('FL6. Бүх багана байвал дутуу жагсаалт хоосон',
+    G.missingFilterCols(['type', 'dir', 'region'], ['type', 'dir']).length === 0);
+
+  /* FL7–FL9. DS_SCHEMA-ийн массив мөр дээр шүүлтийн багана сонгох (гараар бодох фикстур).
+     Багана: 0 Станц (мөр бүр өвөрмөц → ID, шүүлт БИШ) · 1 Төрөл (2 утга) · 2 Тоо (int)
+     · 3 Ангилал (enum) · 4 Төлөв (сүүлийн, "ok:Хэвийн" → харагдах шошгоор шүүнэ). */
+  const head = ['Станц', 'Төрөл', 'Тоо', 'Ангилал', 'Төлөв'];
+  const types = ['string', 'string', 'int', 'enum', 'enum'];
+  const arows = [
+    ['А', 'ачаа', 5, 'x', 'ok:Хэвийн'],
+    ['Б', 'ачаа', 3, 'y', 'warn:Анхаарах'],
+    ['В', 'зорчигч', 7, 'x', 'ok:Хэвийн'],
+    ['Г', ' зорчигч ', 1, 'x', 'ok:Хэвийн'],
+  ];
+  const fc = G.filterColumns(head, types, arows);
+  check('FL7. filterColumns: Төрөл, Ангилал, Төлөв сонгогдоно (ID ба тоо ОРОХГҮЙ)',
+    JSON.stringify(fc.map(c => c.index)) === '[1,3,4]', JSON.stringify(fc));
+  check('FL7. Төлөвийн утга нь харагдах шошго ("ok:" угтваргүй)',
+    JSON.stringify(fc[2] && fc[2].values) === JSON.stringify(['Анхаарах', 'Хэвийн']), JSON.stringify(fc[2]));
+  check('FL7. Утгууд датаас (trim, давхардалгүй)',
+    JSON.stringify(fc[0] && fc[0].values) === JSON.stringify(['ачаа', 'зорчигч']), JSON.stringify(fc[0]));
+  check('FL8. exclude: нэгдсэн шүүлт шүүдэг баганыг хасна',
+    JSON.stringify(G.filterColumns(head, types, arows, { exclude: ['Төрөл', 'Төлөв'] }).map(c => c.index)) === '[3]');
+  check('FL8. maxDistinct-ээс олон утгатай string багана (чөлөөт текст) орохгүй',
+    G.filterColumns(head, types, arows, { maxDistinct: 1 }).every(c => c.index !== 1));
+  check('FL8. counts: утга бүрийн мөрийн тоо (ачаа 2, зорчигч 2 — trim-тэй)',
+    fc[0] && fc[0].counts['ачаа'] === 2 && fc[0].counts['зорчигч'] === 2, JSON.stringify(fc[0] && fc[0].counts));
+  check('FL8. Хоосон мөр → шүүлтийн багана алга',
+    G.filterColumns(head, types, []).length === 0);
+  const pick = sel => arows.filter(r => G.rowMatchesCols(r, sel)).map(r => r[0]).join('');
+  check('FL9. rowMatchesCols: Төрөл=зорчигч → В, Г (trim-тэй таарна)', pick({ 1: 'зорчигч' }) === 'ВГ', pick({ 1: 'зорчигч' }));
+  check('FL9. Хоёр баганы AND: зорчигч + x → В, Г; ачаа + x → А', pick({ 1: 'зорчигч', 3: 'x' }) === 'ВГ' && pick({ 1: 'ачаа', 3: 'x' }) === 'А');
+  check('FL9. Төлөвийн шошгоор: Анхаарах → Б', pick({ 4: 'Анхаарах' }) === 'Б', pick({ 4: 'Анхаарах' }));
+  check('FL9. Хоосон сонголт ("Бүгд") → бүх мөр', pick({}) === 'АБВГ' && pick({ 1: '' }) === 'АБВГ');
+
+  /* FL10. index.html-ийн хүснэгт шүүлтийг ҮНЭХЭЭР ашиглана (статик) */
+  const src = dcScript();
+  const bp = (src.match(/\n  buildPreview\(dsel,dsRows\)\{([\s\S]*?)\n  \}\n/) || [])[1] || '';
+  check('FL10. buildPreview: filterColumns-оор датаас багана гаргана', /\b(EHGlossary|G)\.filterColumns\(/.test(bp));
+  check('FL10. buildPreview: мөрийг rowMatchesCols-оор шүүнэ', /EHGlossary\.rowMatchesCols\(/.test(bp));
+  check('FL10. Кэшийн түлхүүрт баганын сонголт орно (эс тэгвэл шүүлт солиход хүснэгт хуучнаараа)',
+    /cacheKey=[^;]*colSel/.test(bp), (bp.match(/const cacheKey=[^;]*;/) || [''])[0]);
+  check('FL10. Темплейт: хүснэгтийн шүүлтэд баганын chip-ийн мөр', /detail\.pvColFilters/.test(read('index.html')));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -7485,10 +7558,11 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=DG')) { groupDG(); }
+  else if (process.argv.includes('--only=FL')) { groupFL(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); groupFL(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
