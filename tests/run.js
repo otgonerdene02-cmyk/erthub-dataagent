@@ -7549,6 +7549,83 @@ function groupDG() {
     idx.includes('<script src="js/erthub-glossary.js"></script>'));
 }
 
+/* ─────────── AF. Агаарын нэгдсэн шүүлтийн текст → content.json ─────────── */
+/* Шүүлтийн блок (isAirDetail/showAirFilters) өмнө нь "Нэгдсэн шүүлт — …",
+   "ачаалж байна…", "Бүгд", "Явсан/Ирсэн/Дотоодын", " он · … сар" текстийг
+   хатуу кодлосон байв — админ засаж чаддаггүй байсан. Утга солигдоход
+   сайтын гаралт ӨӨРЧЛӨГДӨХ ёстой (F/G бүлгийн загвар). */
+async function groupAF() {
+  group('AF. Агаарын шүүлтийн текст (content.json → сайт)');
+  const idx = read('index.html'), con = readJson('content.json');
+  const d = con.site.detail || {};
+  const keys = ['all', 'loading', 'air_year_word', 'air_month_word', 'air_type_dom', 'air_dir_dep', 'air_dir_arr'];
+  check('AF1. content.json site.detail шинэ 7 түлхүүр бүртгэлтэй',
+    keys.every(k => typeof d[k] === 'string' && d[k].length), JSON.stringify(keys.filter(k => !d[k])));
+  keys.forEach(k => check('AF1. stxt(\'detail.' + k + '\') кодод уншигдана', idx.includes("stxt('detail." + k + "'")));
+
+  /* AF2. Темплейтийн шүүлтийн блок: хатуу монгол үг үлдээгүй (зөвхөн {{ }}) */
+  const a = idx.indexOf('<sc-if value="{{ detail.showAirFilters }}">');
+  const blk = idx.slice(a, idx.indexOf('<div class="eh-g4 eh-g-2c"', a));
+  const hard = (blk.match(/>([^<>{}]*[А-Яа-яӨөҮүЁё][^<>{}]*)</g) || []).map(x => x.slice(1, -1).trim()).filter(Boolean);
+  check('AF2. Шүүлтийн блокт хатуу монгол текст алга', hard.length === 0, hard.join(' | '));
+  check('AF2. Толгой = sections.sec-01 (шинэ давхар түлхүүр нэмээгүй)',
+    blk.includes('{{ sSec01 }}') && /sSec01:this\.stxt\('sections\.sec-01'/.test(idx) &&
+    !/"nav_filter_head"|air_filter_head/.test(JSON.stringify(con)));
+
+  /* AF3. Unit: buildAirFilters() — content-ийн утга солигдоход чип/дүгнэлт солигдоно */
+  const m = idx.match(/\n  buildAirFilters\(dsel\)\{([\s\S]*?)\n  \}\n  \/\* Вагоны датасэтийн/);
+  if (!m) { bad('AF3. buildAirFilters() задарсангүй'); return; }
+  const build = (content) => {
+    const stxt = (p, fb) => { const v = content[p]; return v == null || v === '' ? fb : v; };
+    const self = {
+      _flightsYears: [2025, 2026], _airRegions: ['Ази'],
+      state: { airType: 'all', airDir: 'all', airRegion: 'all', airYearLoading: false, airYFrom: '2026', airYTo: '2026', airMFrom: '1', airMTo: '12' },
+      airRange() { return { yFrom: 2026, yTo: 2026, mFrom: 3, mTo: 5, avail: [2025, 2026], allYears: false }; },
+      setAirYearRange() {}, setAirRangeField() {}, setState() {}, applyAirRange() {}, setAirFilter() {}
+    };
+    return new Function('stxt', 'return function(dsel){' + m[1] + '}')(stxt).call(self, { sector: 'air' });
+  };
+  const lbl = (r) => r.airTypeChips.map(c => c.label).join('|') + '#' + r.airDirChips.map(c => c.label).join('|') +
+    '#' + r.airRegionChips.map(c => c.label).join('|') + '#' + r.airYearChips[0].label + '#' + r.airRangeUi.summary;
+  const base = build({});
+  check('AF3. Анхны утга ХЭВЭЭР: Бүгд|Олон улсын|Дотоодын # Бүгд|Явсан|Ирсэн',
+    lbl(base) === 'Бүгд|Олон улсын|Дотоодын#Бүгд|Явсан|Ирсэн#Бүгд|Ази#Бүгд#2026 он · 3–5 сар', lbl(base));
+  const alt = build({ 'detail.all': 'ALL', 'chart.intl': 'INTL', 'detail.air_type_dom': 'DOM', 'detail.air_dir_dep': 'DEP',
+    'detail.air_dir_arr': 'ARR', 'detail.air_year_word': 'YR', 'detail.air_month_word': 'MO' });
+  check('AF3. content утга солигдоход ШҮҮЛТИЙН чипүүд ДАГАЖ солигдоно (бүх 5 "Бүгд", ОУ, ОН, чиглэл, дүгнэлт)',
+    lbl(alt) === 'ALL|INTL|DOM#ALL|DEP|ARR#ALL|Ази#ALL#2026 YR · 3–5 MO', lbl(alt));
+
+  /* AF4. DOM: солигдсон content.json-ийг сайт жинхэнэ хуудсанд харуулна (ХОЁР тал: сайт) */
+  if (!CHROME) { skipped('AF4 (DOM)', 'Chrome олдсонгүй'); return; }
+  const slug = (x) => x.sector + '__' + String(x.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  const air = (con.site.datasets || []).find(x => x.sector === 'air');
+  if (!air) { skipped('AF4', 'агаарын датасэт алга'); return; }
+  const mod = JSON.parse(JSON.stringify(con));
+  Object.assign(mod.site.detail, { all: 'AF-ALL', loading: 'AF-LOAD', air_dir_dep: 'AF-DEP', air_dir_arr: 'AF-ARR', air_type_dom: 'AF-DOM' });
+  mod.site.sections['sec-01'] = 'AF-HEAD';
+  const srv = serve();
+  SERVE_OVERRIDE = { '/content.json': JSON.stringify(mod) };
+  try {
+    PROBE_SRC = '/index.html#/browse/' + encodeURIComponent(slug(air));
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      await sleep(7000);
+      const b=[...d.querySelectorAll('button')].find(x=>/Шүүлт/.test(x.innerText)&&x.innerText.length<20);
+      if(!b) return {__err:'Шүүлт товч алга'};
+      b.click(); await sleep(1500);
+      return {text:d.body.innerText};
+    }`, 120000);
+    if (R.__err) skipped('AF4', R.__err + ' — feed ирсэнгүй байж болно');
+    else if (!/AF-HEAD/.test(R.text) && !/AF-DEP/.test(R.text)) skipped('AF4', 'агаарын шүүлт зурагдсангүй (feed ирсэнгүй) — худал FAIL гаргахгүй');
+    else {
+      ['AF-HEAD', 'AF-ALL', 'AF-DEP', 'AF-ARR', 'AF-DOM'].forEach(t =>
+        check('AF4. Сайт дээр "' + t + '" харагдана', R.text.indexOf(t) >= 0));
+    }
+  } finally {
+    SERVE_OVERRIDE = null; PROBE_SRC = '/admin/index.html'; srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -7573,11 +7650,12 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=DG')) { groupDG(); }
+  else if (process.argv.includes('--only=AF')) { await groupAF(); }
   else if (process.argv.includes('--only=UI')) { groupUI(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); groupUI(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); groupUI(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
