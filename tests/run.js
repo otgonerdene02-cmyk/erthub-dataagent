@@ -1892,13 +1892,17 @@ async function groupJ() {
   /* Тоон паритет — DOM дээр: ижил тохиргоог өгөөд админы preview ба
      сайтын виджет ЯГ ИЖИЛ тоо үзүүлэх ёстой. */
   if (!CHROME) { skipped('J4. Тоон паритет (DOM)', 'Chrome олдсонгүй'); return; }
+  /* Тохиргоог СЕРВЕРИЙН санах ойд өгнө — репогийн файл руу бичихгүй.
+     2026-10-16: өмнө нь файл руу бичээд finally-д сэргээдэг байв; процесс
+     дундаа зогсоход (сешн зогссон) ls.value файлд үлдэж, O6 "2 виджетэд",
+     I5/I6 хуурамчаар унав (+ commit-д орох эрсдэл). J4b үүнийг барина. */
   const regPath = path.join(ROOT, 'metric_registry.json');
   const orig = fs.readFileSync(regPath, 'utf8');
   try {
     const reg = JSON.parse(orig);
     reg.widgets.ls = reg.widgets.ls || {};
     reg.widgets.ls.value = { dataset: 'air_flights', measure: 'Зорчигч', agg: 'SUM' };
-    fs.writeFileSync(regPath, JSON.stringify(reg, null, 2) + '\n');
+    SERVE_OVERRIDE = { '/metric_registry.json': JSON.stringify(reg, null, 2) + '\n' };
 
     const srv = serve();
     try {
@@ -1931,8 +1935,10 @@ async function groupJ() {
         a.n === expected, JSON.stringify({ preview: a.n, expected }));
     } finally { srv.close(); }
   } finally {
-    fs.writeFileSync(regPath, orig);   /* тест дуусахад файлыг ЯГ хэвээр нь буцаана */
+    SERVE_OVERRIDE = null;
   }
+  check('J4b. J4 репогийн metric_registry.json-ийг өөрчлөхгүй (тохиргоо санах ойд)',
+    fs.readFileSync(regPath, 'utf8') === orig);
 }
 
 /* ══════════════════════════════════════════════════════════════════
