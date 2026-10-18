@@ -7760,6 +7760,80 @@ async function groupFL() {
     /cacheKey=[^;]*colSel/.test(bp), (bp.match(/const cacheKey=[^;]*;/) || [''])[0]);
   check('FL10. Темплейт: хүснэгтийн шүүлтэд баганын chip-ийн мөр', /detail\.pvColFilters/.test(read('index.html')));
 
+  /* FL13–FL17. FL дүрэм 3 — баганын шүүлт KPI/графикийг ХАМТ өөрчилнө (2026-10-16,
+     хэрэглэгчийн шийдвэр: БҮХ датасэт). Датасэт бүр шүүлтийг ӨӨРИЙН хэмжээсээрээ
+     дагана: агаар — нислэг, зорчигч — сар, вагон — станц, үзлэг — аймаг. */
+  const fxs = re => (src.match(re) || [])[1];
+  /* FL13. Агаарын нислэгийн предикат — хүснэгтийн нүдийг бүтээдэг accessor-оор.
+     Фикстур: 3 нислэг; багана 0 Компани, 1 Огноо, 2 Төлөв (сүүлийн = flightType). */
+  const afcB = fxs(/\nfunction airFlightColMatch\(sel,cols\)\{([\s\S]*?)\n\}/);
+  if (!afcB) bad('FL13. airFlightColMatch() олдсонгүй');
+  else {
+    const AFC = new Function('sel', 'cols', afcB);
+    const cols = [['Компани', 'string', '', f => f.carr], ['Огноо', 'date', '', (f, d) => d], ['Төлөв', 'enum', '', null]];
+    const fl = [{ carr: 'МИАТ', year: 2026, month: 1, day: 5, pax: 100, flightType: 'Тогтмол' },
+      { carr: ' МИАТ ', year: 2026, month: 2, day: 1, pax: 40, flightType: 'Захиалгат' },
+      { carr: 'Хүннү', year: 2026, month: 1, day: 9, pax: 60 }];
+    const paxOf = sel => { const p = AFC(sel, cols); return (p ? fl.filter(p) : fl).reduce((t, f) => t + f.pax, 0); };
+    check('FL13. Сонголтгүй → предикат null (бүх нислэг, зорчигч 200)', AFC({}, cols) === null && paxOf({}) === 200);
+    check('FL13. Компани=МИАТ → 100+40=140 зорчигч (trim-тэй таарна)', paxOf({ 0: 'МИАТ' }) === 140, String(paxOf({ 0: 'МИАТ' })));
+    check('FL13. Огноо accessor (f,dateStr) → 2026-01-09 = 60', paxOf({ 1: '2026-01-09' }) === 60, String(paxOf({ 1: '2026-01-09' })));
+    check('FL13. Төлөв (сүүлийн) = нислэгийн төрөл, хоосон бол "Тогтмол": Тогтмол → 100+60', paxOf({ 2: 'Тогтмол' }) === 160);
+    check('FL13. AND: МИАТ + Захиалгат → 40', paxOf({ 0: 'МИАТ', 2: 'Захиалгат' }) === 40);
+  }
+  /* FL14. Зорчигч — mr.keys (сарын олонлог) → KPI ба цуваа ХАМТ өөрчлөгдөнө.
+     Гараар: 2026-01 100 (бүтэн), 2026-02 50 (дутуу, 5/28 өдөр). */
+  const pamB = fxs(/function paxAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
+  const psgB = fxs(/\nfunction paxSeriesWithGaps\(ms,fullRange\)\{([\s\S]*?)\n\}/);
+  if (!pamB || !psgB) bad('FL14. paxAnalysisModel/paxSeriesWithGaps олдсонгүй');
+  else {
+    const PSG = new Function('ms', 'fullRange', psgB);
+    const PA = (all, year, mr) => new Function('paxSeriesWithGaps', 'all', 'sel', 'year', 'mr', pamB)(PSG, all, null, year, mr);
+    const ALL = { status: 'ok', months: [
+      { month: '2026-01', days: 31, days_in_month: 31, trips: 10, passengers: 100, domestic: 80, international: 20 },
+      { month: '2026-02', days: 5, days_in_month: 28, trips: 4, passengers: 50, domestic: 50, international: 0 }] };
+    const a = PA(ALL, 'all', null), k = PA(ALL, 'all', { from: 1, to: 12, keys: new Set(['2026-01']) });
+    check('FL14. Шүүлтгүй: зорчигч 150, цуваа 2 сар', a.pax === 150 && a.series.labels.length === 2, JSON.stringify([a.pax, a.series.labels]));
+    check('FL14. keys={2026-01}: KPI 100, ОУ 20%, цуваа 1 сар (26-01)',
+      k.hasData && k.pax === 100 && Math.abs(k.intlPct - 20) < 1e-9 && k.series.labels.join(',') === '26-01',
+      JSON.stringify([k.pax, k.intlPct, k.series.labels]));
+    const k2 = PA(ALL, 'all', { from: 1, to: 12, keys: new Set(['2026-02']) });
+    check('FL14. keys={2026-02} (Дутуу сар): KPI 50, дутуу 1', k2.pax === 50 && k2.partialN === 1);
+    check('FL14. Таарах сар алга → hasData:false (тоо зохиохгүй)', PA(ALL, 'all', { keys: new Set(['1999-01']) }).hasData === false);
+  }
+  /* FL15. Вагон — mr.keys (станцын олонлог) → станцын жагсаалт ба нийлбэр. */
+  const wamB = fxs(/function wagonAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
+  if (!wamB) bad('FL15. wagonAnalysisModel олдсонгүй');
+  else {
+    const WA = new Function('all', 'sel', 'year', 'mr', wamB);
+    const ALL = { status: 'ok', months: [{ month: '2026-01', loaded: 500, unloaded: 360, loaded_domestic: 200, loaded_foreign: 300, days: 31 }],
+      by_station: [{ station: 'A', loaded: 300, unloaded: 200 }, { station: 'B', loaded: 200, unloaded: 160 }, { station: 'C', loaded: 0, unloaded: 9 }] };
+    const a = WA(ALL, null, 'all', null), k = WA(ALL, null, 'all', { from: 1, to: 12, keys: new Set(['C']) });
+    check('FL15. Шүүлтгүй: 3 станц, нийт ачилт 500', a.stations.length === 3 && a.stationTotal === 500);
+    check('FL15. keys={C} (Зөвхөн буулгалт): 1 станц, ачилт 0', k.stations.length === 1 && k.stations[0].station === 'C' && k.stationTotal === 0,
+      JSON.stringify(k.stations));
+  }
+  /* FL16. Wiring (статик): агаар KPI/график шүүлттэй мөрөөс, хүснэгт нэгдсэн шүүлтийн мөрөөс
+     (эс тэгвэл chip-ийн утгууд өөрөө агшиж, «Бүгд» рүү буцах боломжгүй болно). */
+  const arf = fxs(/\n  applyRealFlightsData\(flights,prevFlights,year,filters\)\{([\s\S]*?)\n  \}\n/) || '';
+  check('FL16. applyRealFlightsData: airFlightColMatch-аар нислэгийг шүүнэ', /airFlightColMatch\(/.test(arf));
+  check('FL16. Хүснэгтийн мөр (sortedFull) нэгдсэн шүүлтийн мөрөөс (filteredU)', /sortedFull=filteredU\./.test(arf));
+  /* Регресс (browser-оор илэрсэн): «НИЙТ НИСЛЭГ» нь өөрийн сарын цонхтой (flTypeFilter) тул
+     МИАТ сонгоход бусад KPI өөрчлөгдөөд энэ карт 56 хэвээр үлдэж байв. */
+  check('FL16. «НИЙТ НИСЛЭГ»-ийн flTypeFilter ч баганын шүүлтийг (colMatch) шалгана',
+    /const flTypeFilter=\(f\)=>\{[\s\S]*?colMatch[\s\S]*?return true;/.test(arf));
+  check('FL16. Өмнөх оны харьцуулалт (prevAllFiltered) ч баганын шүүлттэй', /prevAllFiltered=[^;]*colMatch/.test(arf));
+  const spc = fxs(/\n  setPvColFilter\(schemaKey,ci,v\)\{([\s\S]*?)\n  \}\n/) || '';
+  check('FL16. setPvColFilter: агаар дээр recomputeAirData дуудна', /recomputeAirData\(\)/.test(spc));
+  const bpv = fxs(/\n  buildPaxAnalysis\(\)\{([\s\S]*?)\n  \}\n/) || '', bwa = fxs(/\n  buildWagonAnalysis\(\)\{([\s\S]*?)\n  \}\n/) || '';
+  const bri = fxs(/\n  buildRoadInspectExtra\(\)\{([\s\S]*?)\n  \}\n/) || '';
+  check('FL16. Зорчигч/вагон/үзлэгийн анализ pvColScope-ийн keys-ийг ашиглана',
+    /pvColScope\(/.test(bpv) && /keys/.test(bpv) && /pvColScope\(/.test(bwa) && /pvColScope\(/.test(bri));
+  /* FL17. Идэвхтэй шүүлтийн мөр — текст content.json-д, темплейтэд */
+  const con = readJson('content.json'), ps = (con.site || {}).pv_scope || {};
+  const need = ['label', 'clear', 'note_air', 'note_rail_pax', 'note_rail_wagon', 'note_road_inspect', 'note_default'];
+  check('FL17. content.json site.pv_scope бүртгэлтэй', need.every(k => typeof ps[k] === 'string' && ps[k].length), need.filter(k => !ps[k]).join(','));
+  check('FL17. Темплейт: detail.pvScope мөр (цэвэрлэх товчтой)', /detail\.pvScope\.active/.test(read('index.html')) && /detail\.pvScope\.clear\b/.test(read('index.html')));
   await groupFLCoverage(G);
 }
 
