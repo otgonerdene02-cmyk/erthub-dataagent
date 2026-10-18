@@ -7834,6 +7834,20 @@ async function groupFL() {
   const need = ['label', 'clear', 'note_air', 'note_rail_pax', 'note_rail_wagon', 'note_road_inspect', 'note_default'];
   check('FL17. content.json site.pv_scope бүртгэлтэй', need.every(k => typeof ps[k] === 'string' && ps[k].length), need.filter(k => !ps[k]).join(','));
   check('FL17. Темплейт: detail.pvScope мөр (цэвэрлэх товчтой)', /detail\.pvScope\.active/.test(read('index.html')) && /detail\.pvScope\.clear\b/.test(read('index.html')));
+  /* FL18. Үзлэгийн нэгдсэн шүүлт (riF) нээгдэхэд хүснэгтийн самбар нуугддаг
+     (tableFilterOpen) — баганын шүүлтийн мөрүүд riF самбарт гарах ёстой
+     (өмнө нь «Төлөв» багана шүүлтгүй үлддэг байв). «Төлөв» багана шүүлтэд
+     гарсан бол riF-ийн давхар төлөвийн мөр нуугдана. */
+  {
+    const idx18 = read('index.html');
+    const a = idx18.indexOf('<div data-ri-filter="1"'), b = idx18.indexOf('<sc-if value="{{ detail.ri.period.show }}">');
+    const riPanel = a >= 0 && b > a ? idx18.slice(a, b) : '';
+    check('FL18. riF самбарт баганын шүүлтийн мөр (detail.pvColFilters + data-fl-col)',
+      /<sc-for list="\{\{ detail\.pvColFilters \}\}"/.test(riPanel) && riPanel.includes('data-fl-col="{{ cf.name }}"'));
+    check('FL18. riF-ийн төлөвийн мөр «Төлөв» баганын шүүлттэй давхардахгүй (riStatusRow)',
+      riPanel.includes('<sc-if value="{{ detail.riStatusRow }}">') &&
+      dcScript().includes("riStatusRow:sf!=='all'||!fCols.some(c=>c.index===sc.head.length-1)"));
+  }
   await groupFLCoverage(G);
 }
 
