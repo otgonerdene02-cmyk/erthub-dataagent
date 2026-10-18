@@ -2327,12 +2327,26 @@
           <input type="number" value="{{ detail.riF.mTo }}" sc-camel-on-input="{{ detail.riF.onMTo }}" min="1" max="12" style="{{ detail.riF.inputStyle }}">
           <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;margin-left:4px;">{{ detail.riF.summary }}</span>
         </div>
+        <sc-if value="{{ detail.riStatusRow }}">
         <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.riF.lStatus }}</div>
           <sc-for list="{{ detail.riF.statusChips }}" as="rsc" hint-placeholder-count="3">
             <button sc-camel-on-click="{{ rsc.pick }}" style="{{ rsc.style }}">{{ rsc.label }}</button>
           </sc-for>
         </div>
+        </sc-if>
+        <!-- FL: хүснэгтийн ангилалтай баганын шүүлт. Нэгдсэн шүүлт байхад хүснэгтийн
+             дотор талын самбар нуугддаг тул баганын мөрүүд ЭНД гарна. -->
+        <sc-for list="{{ detail.pvColFilters }}" as="cf" hint-placeholder-count="0">
+          <div class="eh-fl-row" data-fl-col="{{ cf.name }}" style="display:flex;align-items:flex-start;gap:9px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-top:8px;min-width:52px;flex-shrink:0;line-height:1.35;">{{ cf.name }}</div>
+            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;max-height:156px;overflow-y:auto;min-width:0;flex:1;">
+              <sc-for list="{{ cf.chips }}" as="cc" hint-placeholder-count="3">
+                <button sc-camel-on-click="{{ cc.pick }}" style="{{ cc.style }}">{{ cc.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
       </div>
     </sc-if>
     <sc-if value="{{ detail.ri.period.show }}">
@@ -9440,6 +9454,10 @@ class Component extends DCLogic {
           style:base+'border:1px dashed var(--line2);background:none;color:var(--ink3);'});
         return {name:c.name,chips};
       }),
+      /* Нэгдсэн шүүлтийн (үзлэг) «Төлөв» мөр: сүүлийн төлөвийн багана баганын
+         шүүлтэд гарсан бол ДАВХАРДУУЛАХГҮЙ — баганын шүүлт нь KPI/эрэмбийг ч
+         дагуулдаг (FL3). Ерөнхий төлөв сонгогдсон үед буцаах боломжтой үлдэнэ. */
+      riStatusRow:sf!=='all'||!fCols.some(c=>c.index===sc.head.length-1),
       ...this.buildAirFilters(dsel)
     };
   }

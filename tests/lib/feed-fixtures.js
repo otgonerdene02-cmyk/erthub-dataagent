@@ -65,8 +65,12 @@
   }
   var STATIONS = [['Улаанбаатар', '01'], ['Замын-Үүд', '02'], ['Сүхбаатар', '03'], ['Дархан', '04'], ['Эрдэнэт', '05'], ['Чойр', '06']];
   function wagonLoading() {
-    var bs = STATIONS.map(function (s, i) { return { station: s[0], code: s[1], loaded: 400 - i * 55, unloaded: 360 - i * 40,
-      loaded_domestic: 300 - i * 40, loaded_foreign: 100 - i * 15 }; });
+    /* Сүүлийн станц тухайн хоногт ЗӨВХӨН буулгалттай (loaded=0) — бодит хариунд
+       ийм станц байдаг; «Төлөв» багана 2 утгатай болж шүүлтийн бүрдлийн
+       шалгалт (FL11) хоосон өнгөрөхгүй. */
+    var bs = STATIONS.map(function (s, i) { var z = i === STATIONS.length - 1;
+      return { station: s[0], code: s[1], loaded: z ? 0 : 400 - i * 55, unloaded: 360 - i * 40,
+        loaded_domestic: z ? 0 : 300 - i * 40, loaded_foreign: z ? 0 : 100 - i * 15 }; });
     return { status: 'ok', date: Y + '-' + pad(M) + '-' + pad(Math.max(1, D - 1)), unit: 'вагон',
       count: bs.reduce(function (a, r) { return a + r.loaded; }, 0),
       unloaded_count: bs.reduce(function (a, r) { return a + r.unloaded; }, 0),
@@ -93,7 +97,8 @@
     }
     return { status: 'ok', date: byDay[byDay.length - 1].date, unit: 'үзлэг', count: 1040, passed: 930, passed_minor: 40,
       failed: 110, vehicle_count: 1010, unchecked_emission: 12, failed_by_category: CATS(1), by_day: byDay,
-      by_aimag: AIMAG.map(function (a, i) { return { aimag: a, count: 400 - i * 40, failed: 40 - i * 4 }; }) };
+      /* Сүүлийн аймагт тэнцээгүй үзлэг алга (failed=0) — «Төлөв» 2 утгатай (FL11) */
+      by_aimag: AIMAG.map(function (a, i) { return { aimag: a, count: 400 - i * 40, failed: i === AIMAG.length - 1 ? 0 : 40 - i * 4 }; }) };
   }
   function roadHistory() {
     return { status: 'ok',
@@ -102,7 +107,7 @@
         return { month: x.key, days: x.days, days_in_month: x.dim, partial: x.partial, total: t,
           failed: Math.round(t * 0.11), passed: Math.round(t * 0.89), failed_by_category: CATS(20 + i) };
       }),
-      by_aimag: AIMAG.map(function (a, i) { return { aimag: a, total: 90000 - i * 9000, failed: 9000 - i * 800 }; }),
+      by_aimag: AIMAG.map(function (a, i) { return { aimag: a, total: 90000 - i * 9000, failed: i === AIMAG.length - 1 ? 0 : 9000 - i * 800 }; }),
       by_weekday: [0, 1, 2, 3, 4, 5, 6].map(function (w) { return { weekday: w, days: 60, total: 50000 + w * 3000, avg: 830 + w * 50 }; }) };
   }
   function flightsIndex() { return { years: [{ year: Y }, { year: Y - 1 }] }; }
