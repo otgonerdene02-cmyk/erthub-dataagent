@@ -418,12 +418,19 @@ let SERVE_OVERRIDE = null;   /* {'/js/erthub-publish.js': '<эх бичвэр>'}
 function serve() {
   const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
     '.css': 'text/css', '.svg': 'image/svg+xml' };
+  /* ?fx=1 — feed-ийн фикстурыг (tests/lib/feed-fixtures.js) хуудасны бүх
+     скриптээс ӨМНӨ тарина (scripts/serve.js, layout-audit-тай ижил). */
+  const withFx = (req, p, body) => {
+    if (!/[?&]fx=1/.test(req.url) || !/(^\/|index\.html)$/.test(p)) return body;
+    const h = String(body), i = h.indexOf('<head>');
+    return i < 0 ? body : h.slice(0, i + 6) + '<script src="/tests/lib/feed-fixtures.js"></script>' + h.slice(i + 6);
+  };
   const srv = http.createServer((req, res) => {
     const p = decodeURIComponent(req.url.split('?')[0]);
     if (SERVE_OVERRIDE && SERVE_OVERRIDE[p] != null) {
       res.writeHead(200, { 'Content-Type': MIME[path.extname(p).toLowerCase()] || 'text/plain',
         'Cache-Control': 'no-store' });
-      res.end(SERVE_OVERRIDE[p]);
+      res.end(withFx(req, p, SERVE_OVERRIDE[p]));
       return;
     }
     if (p === '/__result__' && req.method === 'POST') {
@@ -456,7 +463,7 @@ setTimeout(poll,1000);
     fs.readFile(path.join(ROOT, p === '/' ? '/index.html' : p), (err, data) => {
       if (err) { res.writeHead(404); res.end('404'); return; }
       res.writeHead(200, { 'Content-Type': MIME[path.extname(p).toLowerCase()] || 'application/octet-stream' });
-      res.end(data);
+      res.end(withFx(req, p, data));
     });
   });
   PORT = listenFree(srv);
@@ -7683,9 +7690,9 @@ function groupDG() {
 
 /* ──────────────────────────────── FL ШҮҮЛТИЙН СТАНДАРТ ──────────────────────────────── */
 /* FL. Шүүлтийн баганы утгыг датаас авна (стандартчлахгүй). Лавлагаа: агаарын хүснэгт.
-   Сайт дээрх бодит шүүлтийн UI-г энэ бүлэг шалгахгүй — шинэ датасэт бүр дээр
-   EHGlossary.missingFilterCols()-оор баганын бүрдлийг шалгана. */
-function groupFL() {
+   FL1–FL10 нь туслах функц ба статик холболт; FL11–FL12 нь датасэт БҮРИЙН
+   бодит шүүлтийн UI-г хөтчөөр, фикстурын өгөгдөлтэй АВТОМАТ шалгана. */
+async function groupFL() {
   group('FL. Шүүлтийн стандарт (датаас утга)');
   let G = null;
   try { G = require(path.join(ROOT, 'js', 'erthub-glossary.js')); } catch (e) { /* доор bad */ }
@@ -7753,14 +7760,14 @@ function groupFL() {
     /cacheKey=[^;]*colSel/.test(bp), (bp.match(/const cacheKey=[^;]*;/) || [''])[0]);
   check('FL10. Темплейт: хүснэгтийн шүүлтэд баганын chip-ийн мөр', /detail\.pvColFilters/.test(read('index.html')));
 
-  /* FL11–FL15. FL дүрэм 3 — баганын шүүлт KPI/графикийг ХАМТ өөрчилнө (2026-10-16,
+  /* FL13–FL17. FL дүрэм 3 — баганын шүүлт KPI/графикийг ХАМТ өөрчилнө (2026-10-16,
      хэрэглэгчийн шийдвэр: БҮХ датасэт). Датасэт бүр шүүлтийг ӨӨРИЙН хэмжээсээрээ
      дагана: агаар — нислэг, зорчигч — сар, вагон — станц, үзлэг — аймаг. */
   const fxs = re => (src.match(re) || [])[1];
-  /* FL11. Агаарын нислэгийн предикат — хүснэгтийн нүдийг бүтээдэг accessor-оор.
+  /* FL13. Агаарын нислэгийн предикат — хүснэгтийн нүдийг бүтээдэг accessor-оор.
      Фикстур: 3 нислэг; багана 0 Компани, 1 Огноо, 2 Төлөв (сүүлийн = flightType). */
   const afcB = fxs(/\nfunction airFlightColMatch\(sel,cols\)\{([\s\S]*?)\n\}/);
-  if (!afcB) bad('FL11. airFlightColMatch() олдсонгүй');
+  if (!afcB) bad('FL13. airFlightColMatch() олдсонгүй');
   else {
     const AFC = new Function('sel', 'cols', afcB);
     const cols = [['Компани', 'string', '', f => f.carr], ['Огноо', 'date', '', (f, d) => d], ['Төлөв', 'enum', '', null]];
@@ -7768,17 +7775,17 @@ function groupFL() {
       { carr: ' МИАТ ', year: 2026, month: 2, day: 1, pax: 40, flightType: 'Захиалгат' },
       { carr: 'Хүннү', year: 2026, month: 1, day: 9, pax: 60 }];
     const paxOf = sel => { const p = AFC(sel, cols); return (p ? fl.filter(p) : fl).reduce((t, f) => t + f.pax, 0); };
-    check('FL11. Сонголтгүй → предикат null (бүх нислэг, зорчигч 200)', AFC({}, cols) === null && paxOf({}) === 200);
-    check('FL11. Компани=МИАТ → 100+40=140 зорчигч (trim-тэй таарна)', paxOf({ 0: 'МИАТ' }) === 140, String(paxOf({ 0: 'МИАТ' })));
-    check('FL11. Огноо accessor (f,dateStr) → 2026-01-09 = 60', paxOf({ 1: '2026-01-09' }) === 60, String(paxOf({ 1: '2026-01-09' })));
-    check('FL11. Төлөв (сүүлийн) = нислэгийн төрөл, хоосон бол "Тогтмол": Тогтмол → 100+60', paxOf({ 2: 'Тогтмол' }) === 160);
-    check('FL11. AND: МИАТ + Захиалгат → 40', paxOf({ 0: 'МИАТ', 2: 'Захиалгат' }) === 40);
+    check('FL13. Сонголтгүй → предикат null (бүх нислэг, зорчигч 200)', AFC({}, cols) === null && paxOf({}) === 200);
+    check('FL13. Компани=МИАТ → 100+40=140 зорчигч (trim-тэй таарна)', paxOf({ 0: 'МИАТ' }) === 140, String(paxOf({ 0: 'МИАТ' })));
+    check('FL13. Огноо accessor (f,dateStr) → 2026-01-09 = 60', paxOf({ 1: '2026-01-09' }) === 60, String(paxOf({ 1: '2026-01-09' })));
+    check('FL13. Төлөв (сүүлийн) = нислэгийн төрөл, хоосон бол "Тогтмол": Тогтмол → 100+60', paxOf({ 2: 'Тогтмол' }) === 160);
+    check('FL13. AND: МИАТ + Захиалгат → 40', paxOf({ 0: 'МИАТ', 2: 'Захиалгат' }) === 40);
   }
-  /* FL12. Зорчигч — mr.keys (сарын олонлог) → KPI ба цуваа ХАМТ өөрчлөгдөнө.
+  /* FL14. Зорчигч — mr.keys (сарын олонлог) → KPI ба цуваа ХАМТ өөрчлөгдөнө.
      Гараар: 2026-01 100 (бүтэн), 2026-02 50 (дутуу, 5/28 өдөр). */
   const pamB = fxs(/function paxAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   const psgB = fxs(/\nfunction paxSeriesWithGaps\(ms,fullRange\)\{([\s\S]*?)\n\}/);
-  if (!pamB || !psgB) bad('FL12. paxAnalysisModel/paxSeriesWithGaps олдсонгүй');
+  if (!pamB || !psgB) bad('FL14. paxAnalysisModel/paxSeriesWithGaps олдсонгүй');
   else {
     const PSG = new Function('ms', 'fullRange', psgB);
     const PA = (all, year, mr) => new Function('paxSeriesWithGaps', 'all', 'sel', 'year', 'mr', pamB)(PSG, all, null, year, mr);
@@ -7786,47 +7793,210 @@ function groupFL() {
       { month: '2026-01', days: 31, days_in_month: 31, trips: 10, passengers: 100, domestic: 80, international: 20 },
       { month: '2026-02', days: 5, days_in_month: 28, trips: 4, passengers: 50, domestic: 50, international: 0 }] };
     const a = PA(ALL, 'all', null), k = PA(ALL, 'all', { from: 1, to: 12, keys: new Set(['2026-01']) });
-    check('FL12. Шүүлтгүй: зорчигч 150, цуваа 2 сар', a.pax === 150 && a.series.labels.length === 2, JSON.stringify([a.pax, a.series.labels]));
-    check('FL12. keys={2026-01}: KPI 100, ОУ 20%, цуваа 1 сар (26-01)',
+    check('FL14. Шүүлтгүй: зорчигч 150, цуваа 2 сар', a.pax === 150 && a.series.labels.length === 2, JSON.stringify([a.pax, a.series.labels]));
+    check('FL14. keys={2026-01}: KPI 100, ОУ 20%, цуваа 1 сар (26-01)',
       k.hasData && k.pax === 100 && Math.abs(k.intlPct - 20) < 1e-9 && k.series.labels.join(',') === '26-01',
       JSON.stringify([k.pax, k.intlPct, k.series.labels]));
     const k2 = PA(ALL, 'all', { from: 1, to: 12, keys: new Set(['2026-02']) });
-    check('FL12. keys={2026-02} (Дутуу сар): KPI 50, дутуу 1', k2.pax === 50 && k2.partialN === 1);
-    check('FL12. Таарах сар алга → hasData:false (тоо зохиохгүй)', PA(ALL, 'all', { keys: new Set(['1999-01']) }).hasData === false);
+    check('FL14. keys={2026-02} (Дутуу сар): KPI 50, дутуу 1', k2.pax === 50 && k2.partialN === 1);
+    check('FL14. Таарах сар алга → hasData:false (тоо зохиохгүй)', PA(ALL, 'all', { keys: new Set(['1999-01']) }).hasData === false);
   }
-  /* FL13. Вагон — mr.keys (станцын олонлог) → станцын жагсаалт ба нийлбэр. */
+  /* FL15. Вагон — mr.keys (станцын олонлог) → станцын жагсаалт ба нийлбэр. */
   const wamB = fxs(/function wagonAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
-  if (!wamB) bad('FL13. wagonAnalysisModel олдсонгүй');
+  if (!wamB) bad('FL15. wagonAnalysisModel олдсонгүй');
   else {
     const WA = new Function('all', 'sel', 'year', 'mr', wamB);
     const ALL = { status: 'ok', months: [{ month: '2026-01', loaded: 500, unloaded: 360, loaded_domestic: 200, loaded_foreign: 300, days: 31 }],
       by_station: [{ station: 'A', loaded: 300, unloaded: 200 }, { station: 'B', loaded: 200, unloaded: 160 }, { station: 'C', loaded: 0, unloaded: 9 }] };
     const a = WA(ALL, null, 'all', null), k = WA(ALL, null, 'all', { from: 1, to: 12, keys: new Set(['C']) });
-    check('FL13. Шүүлтгүй: 3 станц, нийт ачилт 500', a.stations.length === 3 && a.stationTotal === 500);
-    check('FL13. keys={C} (Зөвхөн буулгалт): 1 станц, ачилт 0', k.stations.length === 1 && k.stations[0].station === 'C' && k.stationTotal === 0,
+    check('FL15. Шүүлтгүй: 3 станц, нийт ачилт 500', a.stations.length === 3 && a.stationTotal === 500);
+    check('FL15. keys={C} (Зөвхөн буулгалт): 1 станц, ачилт 0', k.stations.length === 1 && k.stations[0].station === 'C' && k.stationTotal === 0,
       JSON.stringify(k.stations));
   }
-  /* FL14. Wiring (статик): агаар KPI/график шүүлттэй мөрөөс, хүснэгт нэгдсэн шүүлтийн мөрөөс
+  /* FL16. Wiring (статик): агаар KPI/график шүүлттэй мөрөөс, хүснэгт нэгдсэн шүүлтийн мөрөөс
      (эс тэгвэл chip-ийн утгууд өөрөө агшиж, «Бүгд» рүү буцах боломжгүй болно). */
   const arf = fxs(/\n  applyRealFlightsData\(flights,prevFlights,year,filters\)\{([\s\S]*?)\n  \}\n/) || '';
-  check('FL14. applyRealFlightsData: airFlightColMatch-аар нислэгийг шүүнэ', /airFlightColMatch\(/.test(arf));
-  check('FL14. Хүснэгтийн мөр (sortedFull) нэгдсэн шүүлтийн мөрөөс (filteredU)', /sortedFull=filteredU\./.test(arf));
+  check('FL16. applyRealFlightsData: airFlightColMatch-аар нислэгийг шүүнэ', /airFlightColMatch\(/.test(arf));
+  check('FL16. Хүснэгтийн мөр (sortedFull) нэгдсэн шүүлтийн мөрөөс (filteredU)', /sortedFull=filteredU\./.test(arf));
   /* Регресс (browser-оор илэрсэн): «НИЙТ НИСЛЭГ» нь өөрийн сарын цонхтой (flTypeFilter) тул
      МИАТ сонгоход бусад KPI өөрчлөгдөөд энэ карт 56 хэвээр үлдэж байв. */
-  check('FL14. «НИЙТ НИСЛЭГ»-ийн flTypeFilter ч баганын шүүлтийг (colMatch) шалгана',
+  check('FL16. «НИЙТ НИСЛЭГ»-ийн flTypeFilter ч баганын шүүлтийг (colMatch) шалгана',
     /const flTypeFilter=\(f\)=>\{[\s\S]*?colMatch[\s\S]*?return true;/.test(arf));
-  check('FL14. Өмнөх оны харьцуулалт (prevAllFiltered) ч баганын шүүлттэй', /prevAllFiltered=[^;]*colMatch/.test(arf));
+  check('FL16. Өмнөх оны харьцуулалт (prevAllFiltered) ч баганын шүүлттэй', /prevAllFiltered=[^;]*colMatch/.test(arf));
   const spc = fxs(/\n  setPvColFilter\(schemaKey,ci,v\)\{([\s\S]*?)\n  \}\n/) || '';
-  check('FL14. setPvColFilter: агаар дээр recomputeAirData дуудна', /recomputeAirData\(\)/.test(spc));
+  check('FL16. setPvColFilter: агаар дээр recomputeAirData дуудна', /recomputeAirData\(\)/.test(spc));
   const bpv = fxs(/\n  buildPaxAnalysis\(\)\{([\s\S]*?)\n  \}\n/) || '', bwa = fxs(/\n  buildWagonAnalysis\(\)\{([\s\S]*?)\n  \}\n/) || '';
   const bri = fxs(/\n  buildRoadInspectExtra\(\)\{([\s\S]*?)\n  \}\n/) || '';
-  check('FL14. Зорчигч/вагон/үзлэгийн анализ pvColScope-ийн keys-ийг ашиглана',
+  check('FL16. Зорчигч/вагон/үзлэгийн анализ pvColScope-ийн keys-ийг ашиглана',
     /pvColScope\(/.test(bpv) && /keys/.test(bpv) && /pvColScope\(/.test(bwa) && /pvColScope\(/.test(bri));
-  /* FL15. Идэвхтэй шүүлтийн мөр — текст content.json-д, темплейтэд */
+  /* FL17. Идэвхтэй шүүлтийн мөр — текст content.json-д, темплейтэд */
   const con = readJson('content.json'), ps = (con.site || {}).pv_scope || {};
   const need = ['label', 'clear', 'note_air', 'note_rail_pax', 'note_rail_wagon', 'note_road_inspect', 'note_default'];
-  check('FL15. content.json site.pv_scope бүртгэлтэй', need.every(k => typeof ps[k] === 'string' && ps[k].length), need.filter(k => !ps[k]).join(','));
-  check('FL15. Темплейт: detail.pvScope мөр (цэвэрлэх товчтой)', /detail\.pvScope\.active/.test(read('index.html')) && /detail\.pvScope\.clear\b/.test(read('index.html')));
+  check('FL17. content.json site.pv_scope бүртгэлтэй', need.every(k => typeof ps[k] === 'string' && ps[k].length), need.filter(k => !ps[k]).join(','));
+  check('FL17. Темплейт: detail.pvScope мөр (цэвэрлэх товчтой)', /detail\.pvScope\.active/.test(read('index.html')) && /detail\.pvScope\.clear\b/.test(read('index.html')));
+  await groupFLCoverage(G);
+}
+
+/* FL11–FL12. Шүүлтийн бүрдэл АВТОМАТ: датасэт БҮРИЙН хүснэгт (DS_SCHEMA ба
+   tableSchema()/paxTableSchema()) дээрх ангилалтай багана бүр сайт дээр
+   шүүлтийн мөр болж ГАРЧ БАЙГААГ жинхэнэ хөтчөөр, фикстурын өгөгдөлтэй
+   (?fx=1, tests/lib/feed-fixtures.js) шалгана. Өмнө нь missingFilterCols()-ийг
+   шинэ датасэт нэмэх бүрд гараар ажиллуулах ёстой байв — мартвал шүүлтгүй
+   багана чимээгүй гардаг.
+   Хүлээгдэх багана = EHGlossary.filterColumns(head, types, rows) — exclude-ГҮЙ,
+   хуудасны ЯГ ашигласан мөр дээр (spy). Харагдах = [data-fl-col] мөрүүд.
+   PV_COL_EXCLUDE-ээр хасах нь зөвхөн доорх жагсаалтад шалтгаантай бүртгэгдсэн
+   үед зөвшөөрөгдөнө — эс тэгвэл «хасчихаад мартсан» багана FL11-ээр унана. */
+const FL_EXCLUDE_OK = {
+  /* Агаарын нэгдсэн шүүлт (isAirDetail) ОУ/Дотоод, чиглэл, бүсийг шүүдэг;
+     «Төлөв»-ийн шошго нь «Нислэгийн төрөл»-ийн утга — давхардуулахгүй. */
+  air: ['ОУ/Дотоод', 'Чиглэл', 'Бүс нутаг', 'Төлөв']
+};
+
+/* DATASETS → [{name, sector, schemaKey, slug}] (index.html-ийн datasetSlug-тай ижил
+   томьёо; content.json → site.datasets нэрийг индексээр давхарлана). */
+function flDatasets(idx) {
+  const block = idx.slice(idx.indexOf('const DATASETS=['));
+  const arr = block.slice(0, block.indexOf('\n];'));
+  const out = arr.split(/\n\s*\{sector:/).slice(1).map((chunk) => {
+    const m = chunk.match(/^'(\w+)',name:'((?:[^'\\]|\\.)*)'/);
+    const sm = chunk.match(/\bschema:'(\w+)'/);
+    return m && { sector: m[1], name: m[2].replace(/\\'/g, "'"), schemaKey: sm ? sm[1] : m[1] };
+  }).filter(Boolean);
+  try {
+    const c = readJson('content.json').site.datasets;
+    if (Array.isArray(c)) c.forEach((o, i) => { if (o && o.name && out[i]) out[i].name = o.name; });
+  } catch (e) { /* content.json-гүй ч ажиллана */ }
+  out.forEach((d) => { d.slug = encodeURIComponent(d.sector + '__' + String(d.name).toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '')); });
+  return out;
+}
+
+/* Хөтчийн доторх probe: filterColumns-ийг ороож (spy) хуудас ямар мөр дээр
+   шүүлт бодсоныг барина, датасэт бүр рүү очиж «Шүүлт»-ийг нээгээд
+   [data-fl-col]-ийг уншина. */
+async function flCoverageProbe(d, w, list, warm) {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const G = w.EHGlossary;
+  if (!G) return { __err: 'EHGlossary алга' };
+  const orig = G.filterColumns;
+  let calls = [];
+  G.filterColumns = function (head, types, rows, opts) {
+    calls.push({ head: (head || []).slice(), types: (types || []).slice(), rows: rows || [],
+      exclude: (opts && opts.exclude) || [] });
+    return orig.apply(this, arguments);
+  };
+  const domHead = () => {
+    const t = d.querySelector('[data-eh-table]');
+    if (!t || !t.firstElementChild) return null;
+    return [...t.firstElementChild.querySelectorAll('button')].map((b) => b.textContent.replace(/[↑↓]/g, '').trim());
+  };
+  const out = [];
+  let opened = false;
+  /* buildPreview нь шүүлтийн баганыг схемээр кэшлэдэг (_pvDimCache). Spy-аас
+     ӨМНӨ зурагдсан датасэт (анхдагч dsIndex) кэшээс уншигдаж spy-д харагдахгүй
+     тул эхлээд өөр датасэт рүү очиж кэшийг солино. */
+  if (warm) { w.location.hash = '#/browse/' + warm; await sleep(1500); }
+  for (const it of list) {
+    calls = [];
+    w.location.hash = '#/browse/' + it.slug;
+    let last = null, dh = null, stable = 0;
+    const t0 = Date.now();
+    /* Өгөгдөл (фикстур) ирж хүснэгт тогтворжих хүртэл: толгой = spy-ийн head,
+       мөртэй, 1.5 сек өөрчлөгдөхгүй. Зорчигч 3 → 11 багана болж солигддог. */
+    while (Date.now() - t0 < 25000) {
+      await sleep(300);
+      if (!opened) {
+        const fb = [...d.querySelectorAll('button')].find((b) => b.textContent.includes('▽'));
+        if (fb) { fb.click(); opened = true; stable = 0; continue; }
+      }
+      const dh2 = domHead(), last2 = calls[calls.length - 1] || null;
+      const same = dh2 && last2 && JSON.stringify(dh2) === JSON.stringify(last2.head) && last2.rows.length > 0 &&
+        last2 === last && JSON.stringify(dh2) === JSON.stringify(dh);
+      dh = dh2; last = last2;
+      stable = same ? stable + 1 : 0;
+      if (stable >= 5) break;
+    }
+    out.push({ slug: it.slug, name: it.name, schemaKey: it.schemaKey, domHead: dh,
+      head: last ? last.head : null, rows: last ? last.rows.length : 0, exclude: last ? last.exclude : [],
+      exp: last ? orig(last.head, last.types, last.rows).map((c) => c.name) : [],
+      domCols: [...d.querySelectorAll('[data-fl-col]')].map((e) => e.getAttribute('data-fl-col')),
+      panel: !!d.querySelector('.eh-fl-row') });
+  }
+  G.filterColumns = orig;
+  return { list: out };
+}
+
+/* Probe-ийн үр дүнг дүгнэнэ → [{name, missing:[багана], why}] */
+function flCoverageGaps(G, res) {
+  return res.list.map((r) => {
+    const ok = FL_EXCLUDE_OK[r.schemaKey] || [];
+    const want = r.exp.filter((c) => !(ok.indexOf(c) !== -1 && r.exclude.indexOf(c) !== -1));
+    return { name: r.name, schemaKey: r.schemaKey, missing: G.missingFilterCols(r.domCols, want), panel: r.panel };
+  });
+}
+
+async function groupFLCoverage(G) {
+  if (!CHROME) { skipped('FL11–FL12 шүүлтийн бүрдэл (хөтөч)', 'Chrome олдсонгүй'); return; }
+  const idx = read('index.html');
+  const ds = flDatasets(idx);
+  const src = dcScript();
+  const dsBlock = (src.match(/\nconst DS_SCHEMA=\{([\s\S]*?)\n\};/) || [])[1] || '';
+  const schemaKeys = [...dsBlock.matchAll(/\n {2}(\w+):\{head:/g)].map((m) => m[1]);
+  check('FL11. DATASETS ба DS_SCHEMA уншигдав', ds.length >= 4 && schemaKeys.length >= 4,
+    JSON.stringify({ ds: ds.map((d) => d.schemaKey), schemaKeys }));
+  const unused = schemaKeys.filter((k) => !ds.some((d) => d.schemaKey === k));
+  check('FL11. DS_SCHEMA-ийн схем бүр датасэтэд холбогдсон (шалгалтаас мултрах схем алга)',
+    unused.length === 0, 'холбогдоогүй: ' + unused.join(', '));
+
+  const run = async (list, override) => {
+    const warm = (ds.find((x) => x.schemaKey !== list[0].schemaKey) || {}).slug || '';
+    const srv = serve();
+    const prevSrc = PROBE_SRC, prevOv = SERVE_OVERRIDE;
+    PROBE_SRC = '/index.html?fx=1';
+    SERVE_OVERRIDE = override || null;
+    try {
+      return await runProbe('async function(d,w){return (' + flCoverageProbe.toString() + ')(d,w,' +
+        JSON.stringify(list) + ',' + JSON.stringify(warm) + ');}', 40000 + list.length * 30000);
+    } finally { PROBE_SRC = prevSrc; SERVE_OVERRIDE = prevOv; srv.close(); }
+  };
+
+  const R = await run(ds);
+  if (!R || R.__err || !Array.isArray(R.list)) { bad('FL11. Шүүлтийн бүрдлийн probe', R && R.__err); return; }
+  R.list.forEach((r) => {
+    check('FL11. ' + r.name + ': фикстурын өгөгдөлтэй хүснэгт зурагдав',
+      r.rows > 0 && !!r.domHead && JSON.stringify(r.domHead) === JSON.stringify(r.head),
+      r.rows ? 'хүснэгтийн толгой buildPreview-ийнхтэй таарахгүй: ' + JSON.stringify(r.domHead) + ' ≠ ' + JSON.stringify(r.head)
+        : 'мөр алга — tests/lib/feed-fixtures.js-д энэ датасэтийн feed-ийн фикстур нэм');
+  });
+  const gaps = flCoverageGaps(G, R);
+  gaps.forEach((g) => check('FL11. ' + g.name + ': ангилалтай багана бүр шүүлтэд санал болгогдоно',
+    g.missing.length === 0,
+    g.missing.map((c) => '«' + c + '» багана шүүлтэд алга').join('; ') +
+      (g.panel ? '' : ' (хүснэгтийн «Шүүлт» самбар нээгдсэнгүй)') +
+      ' — FL стандарт: buildPreview-ийн pvColFilters-д гарах ёстой, эсвэл нэгдсэн шүүлт шүүдэг бол PV_COL_EXCLUDE + FL_EXCLUDE_OK-д шалтгаантай бүртгэ'));
+  check('FL11. Ядаж нэг датасэт баганын шүүлттэй (DOM уншилт хоосон биш)',
+    R.list.some((r) => r.domCols.length > 0), JSON.stringify(R.list.map((r) => [r.schemaKey, r.domCols])));
+  Object.keys(FL_EXCLUDE_OK).forEach((k) => {
+    const r = R.list.find((x) => x.schemaKey === k);
+    const stale = r ? FL_EXCLUDE_OK[k].filter((c) => (r.head || []).indexOf(c) === -1) : FL_EXCLUDE_OK[k];
+    check('FL11. FL_EXCLUDE_OK.' + k + ': хасагдсан багана бүр хүснэгтэд байна (хуучирсан бүртгэл алга)',
+      stale.length === 0, stale.join(', '));
+  });
+
+  /* FL12. Эвдэрсэн хуулбар: хүлээгдэх баганатай датасэтийн нэг баганыг
+     PV_COL_EXCLUDE-ээр (FL_EXCLUDE_OK-д бүртгэлгүй) нууна → FL11 тэр
+     датасэт + баганыг НЭРЛЭЖ унах ёстой. Шалгалт өөрөө хоосон болохоос хамгаална. */
+  const victim = R.list.find((r) => !FL_EXCLUDE_OK[r.schemaKey] && r.domCols.length > 0);
+  if (!victim) { bad('FL12. Эвдэрсэн хуулбарт тохирох датасэт алга', JSON.stringify(R.list.map((r) => r.schemaKey))); return; }
+  const col = victim.domCols[0];
+  const broken = idx.replace('const PV_COL_EXCLUDE={', 'const PV_COL_EXCLUDE={' + victim.schemaKey + ':[' + JSON.stringify(col) + '],');
+  check('FL12. Эвдэрсэн хуулбар бэлтгэгдэв', broken !== idx);
+  const RB = await run(ds.filter((x) => x.schemaKey === victim.schemaKey), { '/index.html': broken });
+  const gb = RB && Array.isArray(RB.list) ? flCoverageGaps(G, RB) : [];
+  check('FL12. Хасаад бүртгээгүй багана → «' + victim.name + '»: «' + col + '» гэж нэрлэж унана',
+    gb.length === 1 && gb[0].missing.length === 1 && gb[0].missing[0] === col,
+    JSON.stringify(RB && RB.__err ? RB : gb));
 }
 
 /* ─────────── AF. Агаарын нэгдсэн шүүлтийн текст → content.json ─────────── */
@@ -7934,6 +8104,29 @@ async function groupDA() {
     }
   })(C, '');
   check('DA1. "өмнөх оны өгөгдөл алга" төрлийн текст бүр ХУГАЦААГ нэрлэнэ ({year}/{from})', claims.length === 0, claims.join(' | '));
+
+  /* DA4. Агаарын k04 «НИЙТ НИСЛЭГ»-ийн YoY (кэйс #6, 2026-10-16): өмнөх оны мөн сар
+     байхгүй гурван шалтгааныг нэг хатуу текстээр "алга" гэдэг, ачаалалт унасан ([])
+     эсвэл 0 нислэгтэй сард pctDelta(…,0) → "0.0%" (өөрчлөлтгүй мэт) ХУДАЛ гаргадаг байв. */
+  const apB = (dcScript().match(/\nfunction airPrevCompare\(prevYear,availYears,prevSrc,prevCount\)\{([\s\S]*?)\n\}/) || [])[1];
+  if (!apB) bad('DA4. airPrevCompare() олдсонгүй');
+  else {
+    const AP = new Function('prevYear', 'availYears', 'prevSrc', 'prevCount', apB);
+    const F = [{ month: 9 }];
+    check('DA4. 4 төлөв: feed-д он алга / [] ачаалагдсангүй / 0 нислэг / харьцуулж болно',
+      AP(2024, [2026, 2025], undefined, null) === 'no_year' &&
+      AP(2025, [2026, 2025], undefined, null) === 'not_loaded' &&
+      AP(2025, [2026, 2025], [], 0) === 'not_loaded' &&
+      AP(2025, ['2026', '2025'], F, 0) === 'zero' &&
+      AP(2025, [2026, 2025], F, 12) === 'ok');
+    const src = dcScript();
+    check('DA4. k04: зөвхөн "ok" үед хувь (pctDelta), бусад үед "0.0%" ЗОХИОХГҮЙ',
+      /flDelta=flPrevWhy==='ok'\?pctDelta\(flCount,flPrevCount\):\{s:'',dir:'flat'\}/.test(src) &&
+      !/'харьцуулах өгөгдөл алга \(өмнөх оны мөн сарын дата алга\)'/.test(src));
+    const ch = (C.site || {}).chart || {};
+    check('DA4. Шалтгаан бүрийн текст content.json-д, ОН-ыг нэрлэнэ ({year}; zero нь {month} ч)',
+      ['prev_no_year', 'prev_not_loaded', 'prev_zero'].every(k => /\{year\}/.test(ch[k] || '')) && /\{month\}/.test(ch.prev_zero || ''));
+  }
 
   /* DA2/DA3 — амьд */
   const BASE = 'https://portal.mrt.gov.mn';
@@ -8052,14 +8245,14 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
   else if (process.argv.includes('--only=DG')) { groupDG(); }
-  else if (process.argv.includes('--only=FL')) { groupFL(); }
+  else if (process.argv.includes('--only=FL')) { await groupFL(); }
   else if (process.argv.includes('--only=AF')) { await groupAF(); }
   else if (process.argv.includes('--only=UI')) { groupUI(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); groupFL(); groupUI(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
