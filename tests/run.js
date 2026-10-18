@@ -4363,10 +4363,11 @@ async function groupBE() {
      2025-08 100/80 (дотоод 40) · 2025-09 200/150 (100) · 2026-08 150/90 (60)
      · 2026-09 50/40 (20, ДУТУУ сар, 10 өдөр). Нийт: ачсан 500, буулгасан 360,
      дотоод 220 (44%), харьцаа 500/360, өдөр 102 (31+30+31+10). */
+  const YOC = (() => { const m = dcScript().match(/\nfunction yoyCompare\(months,yr,mFrom,mTo,key\)\{([\s\S]*?)\n\}/); return m ? new Function('months', 'yr', 'mFrom', 'mTo', 'key', m[1]) : null; })();
   const wam = dcScript().match(/function wagonAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   if (!wam) { bad('WA0. wagonAnalysisModel() олдсонгүй'); }
   else {
-    const WA = new Function('all', 'sel', 'year', 'mr', wam[1]);
+    const WA = new Function('yoyCompare', 'all', 'sel', 'year', 'mr', wam[1]).bind(null, YOC);
     const mo = (month, loaded, unloaded, dom, days, partial) => ({ month, loaded, unloaded,
       loaded_domestic: dom, loaded_foreign: loaded - dom, days, complete_days: days, partial });
     const ALL = { status: 'ok', months: [
@@ -4395,8 +4396,12 @@ async function groupBE() {
       a26.loaded === 150 && a26.yoy && Math.abs(a26.yoy.pct - 50) < 1e-9, JSON.stringify([a26.loaded, a26.yoy]));
     check('WA2. Дутуу сар 1 тоологдоно, шошго "*"-тай',
       a.partialN === 1 && a.series.labels.join(',') === '25-08,25-09,26-08,26-09*');
-    check('WA2. Жилүүд [2025,2026]; "Бүгд" дээр YoY ЗОХИОХГҮЙ (null)',
-      a.years.join(',') === '2025,2026' && a.yoy === null);
+    /* Регресс (2026-10-18): «Бүгд» дээр «Өмнөх оноос» "—" (жил сонгож харьцуулна) гардаг байв —
+       хоёр оны дата бүрэн байхад. Одоо СҮҮЛИЙН он (2026) vs 2025, хоёуланд бүтэн сар л:
+       2026-08 150 vs 2025-08 100 → +50% (2026-09 дутуу тул ороогүй, 2025-09-д хос алга). */
+    check('WA2. Жилүүд [2025,2026]; "Бүгд" дээр YoY = 2026 vs 2025, +50% (1 бүтэн сар)',
+      a.years.join(',') === '2025,2026' && !!a.yoy && Math.abs(a.yoy.pct - 50) < 1e-9 && a.yoy.months === 1 &&
+      a.yoy.year === 2026 && a.yoy.prevYear === 2025 && a.yoyReason === 'ok', JSON.stringify(a.yoy));
     check('WA3. Станц ачилтаар буурахаар эрэмбэлэгдэнэ (A, B)',
       a.stations.map(s => s.station).join(',') === 'A,B' && a.stationTotal === 500);
     check('WA3. Тэг төрөл (reefer) харагдахгүй, 2 төрөл',
@@ -4472,7 +4477,8 @@ async function groupBE() {
     /* paxAnalysisModel нь paxSeriesWithGaps-ийг дууддаг — хамт задалж дамжуулна */
     const psg = dcScript().match(/\nfunction paxSeriesWithGaps\(ms,fullRange\)\{([\s\S]*?)\n\}/);
     const PSG = new Function('ms', 'fullRange', psg ? psg[1] : 'throw new Error("paxSeriesWithGaps алга")');
-    const PA = (all, sel, year, mr) => new Function('paxSeriesWithGaps', 'all', 'sel', 'year', 'mr', pam[1])(PSG, all, sel, year, mr);
+    const YOC2 = (() => { const m = dcScript().match(/\nfunction yoyCompare\(months,yr,mFrom,mTo,key\)\{([\s\S]*?)\n\}/); return m ? new Function('months', 'yr', 'mFrom', 'mTo', 'key', m[1]) : null; })();
+    const PA = (all, sel, year, mr) => new Function('paxSeriesWithGaps', 'yoyCompare', 'all', 'sel', 'year', 'mr', pam[1])(PSG, YOC2, all, sel, year, mr);
     const pm = (month, days, dim, trips, passengers, domestic, international) =>
       ({ month, days, days_in_month: dim, trips, passengers, domestic, international });
     const PALL = { status: 'ok', months: [pm('2025-09', 30, 30, 20, 100, 90, 10), pm('2026-09', 30, 30, 25, 120, 100, 20),
@@ -4507,7 +4513,10 @@ async function groupBE() {
       check('PA16. Аяллын шугам слот дээр ТАСАРНА (2 тусдаа "M"), слотод цэг алга',
         (String(g.line).match(/M/g) || []).length === 2 && !/L/.test(g.line) && (g.dotPts || []).length === 2, String(g.line));
     }
-    check('PA2. Бүгд дээр YoY ЗОХИОХГҮЙ: null, шалтгаан "pick_year"', p.yoy === null && p.yoyReason === 'pick_year');
+    /* Регресс (2026-10-18): «Бүгд» дээр YoY "—" байв. Одоо 2026 vs 2025, хоёуланд бүтэн сар:
+       2026-09 120 vs 2025-09 100 → +20% (2026-10 дутуу) — ГАРААР бодов. */
+    check('PA2. Бүгд дээр YoY = 2026 vs 2025: +20%, 1 бүтэн сар', !!p.yoy && Math.abs(p.yoy.pct - 20) < 1e-9 &&
+      p.yoy.months === 1 && p.yoy.year === 2026 && p.yoyReason === 'ok', JSON.stringify(p.yoy));
     check('PA3. Чиглэл зорчигчоор буурахаар (А, Б), нийлбэр 250',
       p.routes.map(r => r.route).join(',') === 'А,Б' && p.routeTotal === 250);
     check('PA3. Сараар эрэмбэ: 2026-09 (120) тэргүүлнэ, дутуу сар тэмдэглэгдэнэ',
@@ -4665,7 +4674,7 @@ async function groupBE() {
     check('PA12. Сарын мөрүүд стандарт хүснэгтэд: гар хүснэгт (paxRows/sc-raw-table) алга',
       !/detail\.paxRows/.test(tplHtml) && tplHtml.indexOf('<sc-raw-table') < 0);
     check('PA13. railPax хүснэгт paxTableSchema()-аас — history-ийн бүх багана (11)',
-      /tableSchema\(dsel,schemaKey\)\{\s*if\(dsel&&dsel\.source==='railPax'\)/.test(tplHtml) &&
+      /tableSchema\(dsel,schemaKey\)\{[\s\S]{0,120}?if\(dsel&&dsel\.source==='railPax'\)/.test(tplHtml) &&
       /types:\['month','int','int','int','int','pct','float','int','pctchg','pctchg','enum'\]/.test(tplHtml));
     check('PA9. Хүснэгт анализтай ИЖИЛ эх сурвалж/жилийн шүүлт (syncPaxTable), чип солиход дутуу сарыг оруулна',
       /syncPaxTable\(\)\{[\s\S]*?paxAnalysisModel\([^)]*this\.state\.paxYear[\s\S]*?'warn:'\+T\.stPartial/.test(dcScript()) &&
@@ -4727,10 +4736,12 @@ async function groupBE() {
 
   /* ── BE22. Схем нь ДАТАСЭТЭЭР сонгогдоно (салбараар БИШ) ── */
   check('BE22. buildPreview схемийг dsel.schema-аар сонгоно',
-    /const schemaKey=dsel\.schema\|\|dsel\.sector;/.test(dcScript()) &&
+    /const baseKey=dsel\.schema\|\|dsel\.sector;/.test(dcScript()) &&
+    /* RAW: түүхий мөрийн хүснэгт өөрийн түлхүүртэй (өргөн/шүүлт холилдохгүй) */
+    /const schemaKey=sc&&sc\.raw\?baseKey\+'__raw':baseKey;/.test(dcScript()) &&
     /* UI стандарт: схемийг tableSchema()-аар (зорчигчийн галт тэрэг history-ийн бүх багана),
        бусад нь DS_SCHEMA[schemaKey] хэвээр — түлхүүр нь датасэтийнх */
-    /const sc=this\.tableSchema\(dsel,schemaKey\);/.test(dcScript()) &&
+    /const sc=this\.tableSchema\(dsel,baseKey\);/.test(dcScript()) &&
     /return DS_SCHEMA\[schemaKey\];/.test(dcScript()) &&
     !/const sc=DS_SCHEMA\[dsel\.sector\];/.test(dcScript()));
   check('BE22. Багана өргөн/эрэмбийн кэш ч ижил түлхүүрээр (датасэт хооронд холилдохгүй)',
@@ -5870,8 +5881,10 @@ async function groupBE() {
       idx35.includes('<sc-if value="{{ detail.ri.period.show }}">') &&
       idx35.includes('<sc-if value="{{ detail.tableFilterOpen }}">') &&
       !idx35.includes('<sc-if value="{{ detail.pvFilterOpen }}">'));
-    check('BE35. Нэгдсэн шүүлт байхад хүснэгтийн дотор талын шүүлт ДАВХАРДАХГҮЙ (түүх ирээгүй үед хэвээр)',
-      src35.includes("tableFilterOpen:!!this.state.pvFilterOpen&&!(roadExtra.riF&&roadExtra.riF.available)"));
+    /* RAW (2026-10-18): түүхий мөрийн хүснэгт нэгдсэн хугацааны шүүлтээс ӨӨР баганатай
+       (аймаг, салбар, дүгнэлт…) тул тэр үед л баганын шүүлтийн самбар нээгдэнэ. */
+    check('BE35. Нэгдсэн шүүлт байхад нэгтгэлийн хүснэгтийн дотор талын шүүлт ДАВХАРДАХГҮЙ (түүхий мөрөнд л нээгдэнэ)',
+      src35.includes("tableFilterOpen:!!this.state.pvFilterOpen&&(!(roadExtra.riF&&roadExtra.riF.available)||!!(this.tableSchema(dsel,dsel.schema||dsel.sector)||{}).raw)"));
     check('BE35. Түүх ирээгүй (null) → панель нуугдана, хуудас өмнөх шигээ',
       src35.includes("const none={riF:{available:false,show:false}") &&
       src35.includes('if(!hist||!sel||!P) return none;'));
@@ -7539,6 +7552,7 @@ function groupUI() {
   mut('хагас өргөнтэй хүснэгт', 'data-eh-table="1" style="min-width:100%;', 'data-eh-table="1" style="min-width:560px;', 'TBL1');
   mut('тусгаарлагчгүй нүд', '{v:fmtTableCell(c,types[ci])', '{v:c', 'TBL2');
   mut('графикийг хүснэгтийн өмнө', '{{ detail.pvTitle }}', '{{ detail.pvTitleX }}', 'ORD1');
+  mut('чанарын үнэлгээг хүснэгтийн өмнө', '{{ detail.pvTitle }}', '<i data-ddq-block="1"></i>{{ detail.pvTitle }}', 'ORD2');
   try { fs.unlinkSync(tmp); } catch (e) { /* алгасна */ }
   check('UI4. Хоосон (бүх 0) цуваа хавтгай "0" шугам зурахгүй — "мэдээлэл алга"',
     /Array\.isArray\(dsSec\.c1d\)&&dsSec\.c1d\.some\(v=>\+v>0\)/.test(src));
@@ -7551,6 +7565,81 @@ function groupUI() {
   check('UI7. layout-audit өгөгдөлтэй төлөв (+fx) ба тээврийн хэрэгслийн 4 табыг шалгадаг',
     /route: r \+ '\+fx'/.test(read('tests/layout-audit.js')) && read('tests/layout-audit.js').indexOf("'vehreg/plate'") > 0 &&
     fs.existsSync(path.join(ROOT, 'tests', 'lib', 'feed-fixtures.js')));
+
+  /* RAW — датасэтийн хүснэгт = эх сервисийн ТҮҮХИЙ мөр, БҮХ багана (2026-10-18:
+     вагоны хүснэгтэд огноо харагддаггүй байв — зөвхөн станцын нэгтгэл). */
+  const fxs = (re) => { const m = src.match(re); return m ? m[1] : null; };
+  const d2sB = fxs(/\nfunction datasetRowsToSchema\(json,mFrom,mTo,noteLabel\)\{([\s\S]*?)\n\}/);
+  const winB = fxs(/\nfunction dsRowsWindow\(yFrom,yTo,mFrom,mTo\)\{([\s\S]*?)\n\}/);
+  const apiM = src.match(/const DS_ROWS_API=(\{[^}]*\});/);
+  check('RAW0. datasetRowsToSchema / dsRowsWindow / DS_ROWS_API тодорхойлогдсон', !!(d2sB && winB && apiM));
+  if (d2sB && winB && apiM) {
+    const D2S = new Function('DS_RAW_TYPES', 'json', 'mFrom', 'mTo', 'noteLabel', d2sB)
+      .bind(null, ['date', 'month', 'int', 'float', 'pct', 'pctchg', 'string', 'enum']);
+    const WIN = new Function('yFrom', 'yTo', 'mFrom', 'mTo', winB);
+    const API = eval('(' + apiM[1] + ')');
+    check('RAW1. Вагон, зорчигч, үзлэг гурвуулаа түүхий мөрийн endpoint-тэй',
+      API.railWagon === 'rail-wagon' && API.railPax === 'rail-pax' && API.roadInspect === 'road-inspections', JSON.stringify(API));
+    const J = { status: 'ok', total: 3, truncated: false,
+      columns: [{ key: 'record_date', label: 'Огноо', type: 'date' }, { key: 'station_name', label: 'Өртөөний нэр', type: 'string' },
+        { key: 'loaded_covered_domestic', label: 'Ачсан битүү вагон (дотоод)', type: 'int' }, { key: 'x', label: 'X', type: 'weird' }],
+      rows: [['2026-09-17', 'Өргөн', 8, 'a'], ['2026-08-02', 'Эрээнцав', 1, 'b'], ['2025-09-30', 'Дархан', 4, 'c']] };
+    const S = D2S(J, 1, 12, 'Эх талбар');
+    check('RAW2. ОГНОО багана эхэнд, бүх багана шошготойгоо (4)',
+      S && S.raw && S.head.join('|') === 'Огноо|Өртөөний нэр|Ачсан битүү вагон (дотоод)|X', S && S.head.join('|'));
+    check('RAW2. Төрөл хадгалагдана (date/string/int), танихгүй төрөл → string',
+      S && S.types.join(',') === 'date,string,int,string', S && S.types.join(','));
+    check('RAW2. Мөр бүр + хоосон төлөвийн нүд (төлөв ЗОХИОХГҮЙ), тоо ТҮҮХИЙгээрээ',
+      S && S.rows.length === 3 && S.rows[0].length === 5 && S.rows[0][4] === '' && S.rows[0][2] === 8);
+    check('RAW2. Тэмдэглэл = эх талбарын нэр', S && S.notes[2] === 'Эх талбар: loaded_covered_domestic', S && S.notes[2]);
+    const S9 = D2S(J, 9, 9, '');
+    check('RAW3. Сарын хүрээ 9–9 → 2026-09 ба 2025-09 (2 мөр, ГАРААР)', S9 && S9.rows.length === 2 &&
+      S9.rows.map(r => r[0]).join(',') === '2026-09-17,2025-09-30');
+    check('RAW4. no_data / багана алга / null → null (нэгтгэлийн хүснэгт хэвээр)',
+      D2S({ status: 'no_data', columns: [], rows: [] }) === null && D2S(null) === null && D2S({ status: 'ok', columns: [], rows: [] }) === null);
+    const T = D2S(Object.assign({}, J, { total: 12000, truncated: true }), 1, 12, '');
+    check('RAW5. Таслагдсан хариу: total 12000, loaded 3, truncated', T.truncated === true && T.total === 12000 && T.loaded === 3);
+    const w = WIN(2026, 2026, 9, 9);
+    check('RAW6. Цонх: 2026 он, 9-р сар → 2026-09-01…2026-09-30', w.from === '2026-09-01' && w.to === '2026-09-30', JSON.stringify(w));
+    const w2 = WIN(2024, 2026, 2, 2);
+    check('RAW6. Цонх: 2024–2026, 2-р сар → 2024-02-01…2026-02-28 (сарыг клиент шүүнэ)',
+      w2.from === '2024-02-01' && w2.to === '2026-02-28' && w2.mFrom === 2 && w2.mTo === 2, JSON.stringify(w2));
+    const wa = WIN('all', 'all', 1, 12);
+    check('RAW6. «Бүгд» он → from/to null (сүүлийн мөрүүд)', wa.from === null && wa.to === null);
+    check('RAW7. Хүснэгт төлөвгүй үед pill ба «Төлөвөөр» мөр нуугдана',
+      html.indexOf('<sc-if value="{{ pr.hasStatus }}">') > 0 && html.indexOf('<sc-if value="{{ detail.pvHasStatus }}">') > 0);
+    check('RAW8. EHBackend.fetchDatasetRows → /api/datasets/<key>/rows',
+      /function fetchDatasetRows\(key, from, to, limit\)/.test(read('js/erthub-backend.js')) &&
+      read('js/erthub-backend.js').indexOf("'/api/datasets/'") > 0);
+    /* FL3 × RAW: баганын шүүлт KPI-г хамрах түлхүүр — түүхий мөрийн 0-р багана ОГНОО
+       тул датасэт бүр түлхүүр баганаа зарлана; таслагдсан хариу KPI-г хамруулахгүй. */
+    const scM = src.match(/const DS_ROWS_SCOPE=(\{[^\n]*\});/);
+    const SCP = scM ? eval('(' + scM[1] + ')') : {};
+    check('RAW9. FL3 хамрах түлхүүр: вагон=станц, зорчигч=сар (огнооны 7 тэмдэгт), үзлэг=аймаг',
+      SCP.railWagon && SCP.railWagon.col === 'station_name' && SCP.railPax && SCP.railPax.col === 'record_date' &&
+      SCP.railPax.len === 7 && SCP.roadInspect && SCP.roadInspect.col === 'branch_aimag', scM && scM[1]);
+    check('RAW9. pvColScope: buildPreview-тэй ижил __raw түлхүүр, таслагдсан үед хамруулахгүй',
+      /const schemaKey=sc\.raw\?baseKey\+'__raw':baseKey;\s*const selRaw=/.test(src) && /if\(ki<0\|\|sc\.truncated\) return none;/.test(src));
+  }
+
+  /* YY — «Өмнөх оноос»: «Бүгд» он сонгосон үед СҮҮЛИЙН он vs өмнөх он (2026-10-18) */
+  const ycB = fxs(/\nfunction yoyCompare\(months,yr,mFrom,mTo,key\)\{([\s\S]*?)\n\}/);
+  check('YY0. yoyCompare тодорхойлогдсон', !!ycB);
+  if (ycB) {
+    const YC = new Function('months', 'yr', 'mFrom', 'mTo', 'key', ycB);
+    const M = [{ month: '2025-01', v: 100 }, { month: '2025-02', v: 200 }, { month: '2025-03', v: 50 },
+      { month: '2026-01', v: 150 }, { month: '2026-02', v: 100 }, { month: '2026-03', v: 999, partial: true }];
+    const a = YC(M, 'all', 1, 12, 'v');
+    check('YY1. «Бүгд» → 2026 vs 2025, бүтэн 2 сар: (150+100)/(100+200)−1 = −16.7%',
+      a.yoy && a.yoy.year === 2026 && a.yoy.prevYear === 2025 && a.yoy.months === 2 && Math.abs(a.yoy.pct - (250 / 300 - 1) * 100) < 1e-9, JSON.stringify(a));
+    const b = YC(M, 'all', 2, 2, 'v');
+    check('YY2. Сарын хүрээ 2–2 → зөвхөн 2-р сар: 100/200−1 = −50%', b.yoy && b.yoy.months === 1 && Math.abs(b.yoy.pct + 50) < 1e-9);
+    const c = YC(M, 2025, 1, 12, 'v');
+    check('YY3. 2025 сонгосон → 2024 алга: yoy null, hasPrevYear false', c.yoy === null && c.hasPrevYear === false && c.year === 2025);
+    const d = YC(M, 'all', 3, 3, 'v');
+    check('YY4. Дутуу сар (2026-03) харьцуулалтад ОРОХГҮЙ → null, гэхдээ өмнөх он БАЙГАА',
+      d.yoy === null && d.hasPrevYear === true);
+  }
 }
 
 function groupDG() {
@@ -7788,7 +7877,9 @@ async function groupFL() {
   if (!pamB || !psgB) bad('FL14. paxAnalysisModel/paxSeriesWithGaps олдсонгүй');
   else {
     const PSG = new Function('ms', 'fullRange', psgB);
-    const PA = (all, year, mr) => new Function('paxSeriesWithGaps', 'all', 'sel', 'year', 'mr', pamB)(PSG, all, null, year, mr);
+    const ycFL = fxs(/\nfunction yoyCompare\(months,yr,mFrom,mTo,key\)\{([\s\S]*?)\n\}/);
+    const YCF = new Function('months', 'yr', 'mFrom', 'mTo', 'key', ycFL || 'throw new Error("yoyCompare алга")');
+    const PA = (all, year, mr) => new Function('paxSeriesWithGaps', 'yoyCompare', 'all', 'sel', 'year', 'mr', pamB)(PSG, YCF, all, null, year, mr);
     const ALL = { status: 'ok', months: [
       { month: '2026-01', days: 31, days_in_month: 31, trips: 10, passengers: 100, domestic: 80, international: 20 },
       { month: '2026-02', days: 5, days_in_month: 28, trips: 4, passengers: 50, domestic: 50, international: 0 }] };
@@ -7805,7 +7896,9 @@ async function groupFL() {
   const wamB = fxs(/function wagonAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   if (!wamB) bad('FL15. wagonAnalysisModel олдсонгүй');
   else {
-    const WA = new Function('all', 'sel', 'year', 'mr', wamB);
+    const ycFL2 = fxs(/\nfunction yoyCompare\(months,yr,mFrom,mTo,key\)\{([\s\S]*?)\n\}/);
+    const WA = new Function('yoyCompare', 'all', 'sel', 'year', 'mr', wamB)
+      .bind(null, new Function('months', 'yr', 'mFrom', 'mTo', 'key', ycFL2 || 'throw new Error("yoyCompare алга")'));
     const ALL = { status: 'ok', months: [{ month: '2026-01', loaded: 500, unloaded: 360, loaded_domestic: 200, loaded_foreign: 300, days: 31 }],
       by_station: [{ station: 'A', loaded: 300, unloaded: 200 }, { station: 'B', loaded: 200, unloaded: 160 }, { station: 'C', loaded: 0, unloaded: 9 }] };
     const a = WA(ALL, null, 'all', null), k = WA(ALL, null, 'all', { from: 1, to: 12, keys: new Set(['C']) });
@@ -8216,8 +8309,10 @@ async function groupDA() {
   if (!paxB || !wagB || !yrtB) { bad('DA3. paxAnalysisModel/wagonAnalysisModel/yoyReasonText олдсонгүй'); return; }
   const psgB = fx(/\nfunction paxSeriesWithGaps\(ms,fullRange\)\{([\s\S]*?)\n\}/);
   const PSG = new Function('ms', 'fullRange', psgB || '');
-  const MODELS = { railPax: [(a, s, y, r) => new Function('paxSeriesWithGaps', 'all', 'sel', 'year', 'mr', paxB)(PSG, a, s, y, r), 'pax_an'],
-    railWagon: [new Function('all', 'sel', 'year', 'mr', wagB), 'wagon_an'] };
+  const ycB = fx(/\nfunction yoyCompare\(months,yr,mFrom,mTo,key\)\{([\s\S]*?)\n\}/);
+  const YC = new Function('months', 'yr', 'mFrom', 'mTo', 'key', ycB || 'throw new Error("yoyCompare алга")');
+  const MODELS = { railPax: [(a, s, y, r) => new Function('paxSeriesWithGaps', 'yoyCompare', 'all', 'sel', 'year', 'mr', paxB)(PSG, YC, a, s, y, r), 'pax_an'],
+    railWagon: [new Function('yoyCompare', 'all', 'sel', 'year', 'mr', wagB).bind(null, YC), 'wagon_an'] };
   const YRT = new Function('m', 'T', yrtB);
   const badTxt = [];
   for (const k of Object.keys(MODELS)) {

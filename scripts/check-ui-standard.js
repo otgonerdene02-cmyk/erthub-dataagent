@@ -20,6 +20,7 @@
            БИШ — stretch (+ class="eh-row"). Зориудын үл хамаарал: data-row-ok="шалтгаан".
      ORD1  Датасэтийн хуудасны дараалал: KPI → «…-ийн жагсаалт» хүснэгт → график
            (вагон/зорчигчийн графикийн блок хүснэгтийн ДАРАА).
+     ORD2  Чанарын үнэлгээ (data-ddq-block) хүснэгт ба бүх графикийн ДАРАА — хамгийн сүүлд.
 
    Ашиглалт: node scripts/check-ui-standard.js   (алдаатай бол exit 1) */
 const fs = require('fs');
@@ -90,9 +91,19 @@ const pvAt = html.indexOf('{{ detail.pvTitle }}');
   if (at < 0) bad('ORD1', 0, k + ' блок олдсонгүй');
   else if (pvAt < 0 || at < pvAt) bad('ORD1', lineOf(at), k + ' нь датасэтийн хүснэгтийн ӨМНӨ байна — дараалал KPI → хүснэгт → график (агаар шиг)');
 });
+/* ORD2 — чанарын үнэлгээ хамгийн сүүлд: хүснэгт ба БҮХ графикийн дараа */
+const tpl = html.slice(0, Math.max(0, html.indexOf('<script type="text/x-dc"')) || html.length); // зөвхөн темплейт — JS тайлбар дахь {{ }}-ийг тоолохгүй
+const dqAt = tpl.indexOf('data-ddq-block="1"');
+if (dqAt < 0) bad('ORD2', 0, 'data-ddq-block блок олдсонгүй');
+else {
+  ['{{ detail.pvTitle }}', 'data-wagon-charts="1"', 'data-pax-charts="1"', '{{ detail.dstrTitle }}', '{{ detail.daiTitle }}'].forEach((k) => {
+    const at = tpl.lastIndexOf(k);
+    if (at > dqAt) bad('ORD2', lineOf(dqAt), 'чанарын үнэлгээ «' + k + '»-ийн ӨМНӨ байна — дараалал KPI → хүснэгт → график → чанарын үнэлгээ');
+  });
+}
 
 if (!errs.length) {
-  console.log('UI стандарт: OK (TBL0–TBL3, ROW1, ORD1)');
+  console.log('UI стандарт: OK (TBL0–TBL3, ROW1, ORD1–ORD2)');
   process.exit(0);
 }
 errs.forEach((e) => console.log('  ✗ [' + e.rule + '] index.html' + (e.line ? ':' + e.line : '') + ' — ' + e.msg));
