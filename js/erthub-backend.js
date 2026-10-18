@@ -144,6 +144,23 @@
       });
   }
 
+  /* Датасэтийн ТҮҮХИЙ мөр — эх сервисийн БҮХ багана (огноо ч мөн). Хариу:
+     {status,columns:[{key,label,type}],rows:[[...]],total,truncated} эсвэл
+     {status:'no_data'}. Endpoint deploy болоогүй (404) бол null — хүснэгт
+     өмнөх нэгтгэлээрээ үлдэнэ. key: rail-wagon / rail-pax / road-inspections. */
+  function fetchDatasetRows(key, from, to, limit) {
+    if (!BASE) return Promise.resolve(null);
+    var q = [];
+    if (from) q.push('from=' + encodeURIComponent(from));
+    if (to) q.push('to=' + encodeURIComponent(to));
+    if (limit) q.push('limit=' + encodeURIComponent(limit));
+    return fetchJson(BASE + '/api/datasets/' + encodeURIComponent(key) + '/rows' + (q.length ? '?' + q.join('&') : ''))
+      .catch(function (e) {
+        console.info('[ErtHub] backend (datasets/' + key + '/rows) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
   window.EHBackend = {
     enabled: !!BASE,
     fetchSectorSummary: fetchSectorSummary,
@@ -152,6 +169,7 @@
     fetchRailPassengersHistory: fetchRailPassengersHistory,
     fetchRoadInspections: fetchRoadInspections,
     fetchRoadInspectionsHistory: fetchRoadInspectionsHistory,
-    fetchVehicleRegistry: fetchVehicleRegistry
+    fetchVehicleRegistry: fetchVehicleRegistry,
+    fetchDatasetRows: fetchDatasetRows
   };
 })();

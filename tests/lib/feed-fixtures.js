@@ -143,8 +143,42 @@
     });
     return h;
   }
+  /* /api/datasets/:key/rows — backend-ийн гэрээтэй ижил хэлбэр (columns + rows).
+     from/to-гоор огноогоор шүүнэ. */
+  function datasetRows(u) {
+    var key = (u.match(/\/api\/datasets\/([^/]+)\/rows/) || [])[1];
+    var mf = u.match(/[?&]from=(\d{4}-\d{2}-\d{2})/), mt = u.match(/[?&]to=(\d{4}-\d{2}-\d{2})/);
+    var days = [];
+    for (var i = 1; i <= 40; i++) {
+      var d = new Date(Date.UTC(Y, M - 1, D - i)).toISOString().slice(0, 10);
+      if ((!mf || d >= mf[1]) && (!mt || d <= mt[1])) days.push(d);
+    }
+    var columns, rows = [];
+    if (key === 'rail-wagon') {
+      columns = [['record_date', 'Огноо', 'date'], ['station_code', 'Өртөөний код', 'string'], ['station_name', 'Өртөөний нэр', 'string'],
+        ['loaded_mtd_domestic', 'Сарын эхнээс ачсан (дотоод)', 'int'], ['loaded_covered_domestic', 'Ачсан битүү вагон (дотоод)', 'int'],
+        ['loaded_tank_foreign', 'Ачсан цистерн (гадаад)', 'int'], ['unloaded_covered_domestic', 'Буусан битүү вагон (дотоод)', 'int']];
+      days.slice(0, 10).forEach(function (d, j) { STATIONS.forEach(function (s, i) {
+        rows.push([d, s[1], s[0], 400 - i * 50 + j, 12 + i, (i * 3 + j) % 7, 9 + (i + j) % 5]); }); });
+    } else if (key === 'rail-pax') {
+      columns = [['record_date', 'Огноо', 'date'], ['source_record_id', 'Бичлэгийн ID', 'string'], ['train_no', 'Галт тэрэгний дугаар', 'string'],
+        ['train_type', 'Төрөл (ОН/ОУ)', 'string'], ['line_name', 'Чиглэл', 'string'], ['passenger_count', 'Зорчигч', 'int'],
+        ['sales_kass', 'Касс', 'int'], ['sales_web', 'Вэб', 'int']];
+      days.slice(0, 10).forEach(function (d, j) { [['276', 'ОН', 'УЛААНБААТАР - ЗАМЫН-ҮҮД'], ['263', 'ОН', 'УЛААНБААТАР - СҮХБААТАР'],
+        ['4', 'ОУ', 'УЛААНБААТАР - БЭЭЖИН']].forEach(function (t, i) {
+        var p = 600 - i * 150 + j * 3; rows.push([d, String(180000 + j * 10 + i), t[0], t[1], t[2], p, Math.round(p * 0.6), p - Math.round(p * 0.6)]); }); });
+    } else if (key === 'road-inspections') {
+      columns = [['record_date', 'Үзлэгийн огноо', 'date'], ['source_record_id', 'Үзлэгийн дугаар', 'string'], ['branch_aimag', 'Аймаг, нийслэл', 'string'],
+        ['branch_name', 'Салбар', 'string'], ['result_raw', 'Дүгнэлт', 'string'], ['failed_brake', 'Тоормос', 'string'], ['failed_count', 'Тэнцээгүй хэсэг', 'int']];
+      days.slice(0, 5).forEach(function (d, j) { AIMAG.forEach(function (a, i) {
+        rows.push([d, String(5000000 + j * 100 + i), a, 'PC1' + pad(i) + ' салбар', i % 4 ? 'Тэнцсэн' : 'Тэнцээгүй', i % 4 ? 'pass' : 'fail', i % 4 ? 0 : 1]); }); });
+    } else return 404;
+    return { status: rows.length ? 'ok' : 'no_data', dataset: key, total: rows.length, truncated: false,
+      columns: columns.map(function (c) { return { key: c[0], label: c[1], type: c[2] }; }), rows: rows };
+  }
   function route(url) {
     var u = String(url);
+    if (u.indexOf('/api/datasets/') >= 0) return datasetRows(u);
     if (u.indexOf('/api/sectors/road/inspections/history') >= 0)
       return ranged(u, roadHistory(), 'total', [['by_aimag', 'total']]);
     if (u.indexOf('/api/sectors/rail/wagon-loading/history') >= 0)

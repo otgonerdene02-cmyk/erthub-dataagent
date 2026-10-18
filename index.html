@@ -2437,114 +2437,6 @@
     </div>
     </sc-if>
 
-    <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
-      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dwp" data-eh-field="title">{{ detail.dwpTitle }}</span></div>
-      <!-- UI стандарт: эх сурвалжгүй үед 4 том "—" нүд зурахгүй — нэг мөр тайлбар л үлдэнэ -->
-      <sc-if value="{{ detail.wp.hasData }}">
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
-        <div>
-          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Энэ 7 хоногт</div>
-          <div data-wp-val="total" style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;">{{ detail.wp.total }}</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Оны эхнээс өссөн дүнгээр</div>
-          <div data-wp-val="ytd" style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;">{{ detail.wp.ytd }}</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Өмнөх 7 хоногийн харьцуулалт</div>
-          <div data-wp-val="wow" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.wowColor }};">{{ detail.wp.wow }}</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Өмнөх оны мөн үеийн харьцуулалт</div>
-          <div data-wp-val="yoy" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.yoyColor }};">{{ detail.wp.yoy }}</div>
-        </div>
-      </div>
-      </sc-if>
-      <sc-if value="{{ detail.wp.hasPlan }}">
-      <div data-wp-plan="1" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);">
-        <div style="display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--ink2);margin-bottom:8px;">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span data-eh-card="dwp" data-eh-field="foot">{{ detail.dwpFoot }}</span> — {{ detail.wp.planLabel }}</span>
-          <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:{{ detail.color }};">{{ detail.wp.planPctLabel }}</span>
-        </div>
-        <div style="height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;">
-          <div style="height:100%;border-radius:5px;background:{{ detail.color }};width:{{ detail.wp.planWidth }};"></div>
-        </div>
-      </div>
-      </sc-if>
-      <sc-if value="{{ detail.wp.wpNoData }}"><div data-wp-nodata="1" style="margin-top:-6px;font-size:11.5px;color:var(--ink3);line-height:1.45;">{{ detail.wp.note }}</div></sc-if>
-      <div data-ddq-block="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
-        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="ddq" data-eh-field="title">{{ detail.ddqTitle }}</span></div>
-        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--line);">
-          <sc-if value="{{ detail.dqKnown }}">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:46px;font-weight:700;letter-spacing:-.03em;color:{{ detail.dqColor }};line-height:1;">{{ detail.dqTotal }}<span style="font-size:17px;color:var(--ink3);font-weight:500;">/100</span></div>
-            <div>
-              <div style="font-size:15px;font-weight:600;color:{{ detail.dqColor }};margin-bottom:5px;">{{ detail.dqTier }}</div>
-              <div style="display:flex;gap:3px;">
-                <sc-for list="{{ detail.stars }}" as="st" hint-placeholder-count="5">
-                  <div style="font-size:16px;line-height:1;color:{{ st.color }};">★</div>
-                </sc-for>
-              </div>
-            </div>
-          </sc-if>
-          <sc-if value="{{ detail.dqUnknown }}">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;letter-spacing:-.02em;color:var(--ink3);line-height:1.2;">Тодорхойгүй</div>
-            <div style="font-size:12.5px;color:var(--ink3);max-width:46ch;line-height:1.5;text-wrap:pretty;">{{ detail.t.dq_missing }}</div>
-          </sc-if>
-          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 13px;">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.t.freq_head }}</span>
-            <span style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;">{{ detail.dqFreqLabel }}</span>
-          </div>
-        </div>
-        <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;">
-          <sc-for list="{{ detail.dims }}" as="dm" hint-placeholder-count="4">
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--ink);margin-bottom:7px;">
-                <span style="text-wrap:pretty;">{{ dm.label }} <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);">{{ dm.weightLabel }}</span></span>
-                <sc-if value="{{ dm.unknown }}">
-                  <span style="flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--ink3);background:var(--surface2);border:1px solid var(--line2);border-radius:999px;padding:3px 9px;white-space:nowrap;">Тодорхойгүй</span>
-                </sc-if>
-                <sc-if value="{{ dm.known }}">
-                  <span style="font-family:'JetBrains Mono',monospace;font-weight:600;flex-shrink:0;color:{{ dm.valColor }};">{{ dm.val }}</span>
-                </sc-if>
-              </div>
-              <div style="height:6px;border-radius:4px;{{ dm.trackStyle }}overflow:hidden;">
-                <div style="height:100%;border-radius:4px;background:{{ dm.barColor }};width:{{ dm.width }};"></div>
-              </div>
-              <div style="font-size:11.5px;color:var(--ink3);margin-top:7px;line-height:1.45;text-wrap:pretty;">{{ dm.note }}</div>
-              <sc-if value="{{ dm.hasDetail }}">
-                <div style="font-size:11.5px;color:var(--ink2);margin-top:5px;line-height:1.45;text-wrap:pretty;">{{ dm.detail }}</div>
-              </sc-if>
-              <sc-for list="{{ dm.items }}" as="ck" hint-placeholder-count="4">
-                <div style="display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:var(--ink2);margin-top:4px;">
-                  <span style="color:{{ ck.color }};font-weight:700;flex-shrink:0;">{{ ck.mark }}</span>
-                  <span style="flex:1;min-width:0;text-wrap:pretty;">{{ ck.label }}</span>
-                  <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:{{ ck.color }};flex-shrink:0;">{{ ck.pts }}</span>
-                </div>
-              </sc-for>
-            </div>
-          </sc-for>
-        </div>
-        <div data-ds-profile="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
-          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);font-weight:600;">{{ detail.t.profile_head }}</div>
-            <div style="font-size:11.5px;color:var(--ink3);text-wrap:pretty;">{{ detail.t.profile_note }}</div>
-          </div>
-          <sc-if value="{{ detail.noProfile }}"><div style="font-size:12.5px;color:var(--ink3);">{{ detail.noData }}</div></sc-if>
-          <sc-if value="{{ detail.hasProfile }}">
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
-              <sc-for list="{{ detail.profile }}" as="pf" hint-placeholder-count="4">
-                <div style="background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;">
-                  <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ pf.l }}</div>
-                  <div style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--ink);">{{ pf.v }}</div>
-                </div>
-              </sc-for>
-            </div>
-          </sc-if>
-        </div>
-        <div data-eh-card="ddq" data-eh-field="foot" style="font-size:11px;color:var(--ink3);margin-top:20px;padding-top:16px;border-top:1px solid var(--line);line-height:1.5;text-wrap:pretty;">{{ detail.ddqFoot }}</div>
-      </div>
-    </div>
-
     <sc-if value="{{ detail.act }}">
     <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:34px;">
       <sc-if value="{{ detail.isApiAct }}">
@@ -2637,6 +2529,7 @@
       <div style="margin-bottom:16px;">
         <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--ink);letter-spacing:-.015em;margin-bottom:5px;">{{ detail.pvTitle }}</div>
         <div data-eh-card="dtb" data-eh-field="foot" style="font-size:12px;color:var(--ink3);line-height:1.4;">{{ detail.dtbFoot }}</div>
+        <sc-if value="{{ detail.pvHasNote }}"><div data-pv-note="1" style="font-size:12px;color:var(--ink2);line-height:1.4;margin-top:4px;">{{ detail.pvNote }}</div></sc-if>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
         <input type="text" value="{{ detail.pvQuery }}" sc-camel-on-input="{{ detail.onPvQuery }}" placeholder="Хайх…" style="flex:1;min-width:180px;height:38px;border:1px solid var(--line2);border-radius:10px;background:rgba(var(--ink-rgb),.05);box-shadow:inset 0 1px 3px rgba(12,20,40,.07);padding:0 13px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;box-sizing:border-box;">
@@ -2678,6 +2571,7 @@
       </sc-if>
       <sc-if value="{{ detail.tableFilterOpen }}">
         <div style="display:flex;flex-direction:column;gap:10px;padding:12px 14px;margin-bottom:14px;background:var(--surface2);border:1px solid var(--line);border-radius:11px;">
+          <sc-if value="{{ detail.pvHasStatus }}">
           <div class="eh-fl-row" style="display:flex;align-items:flex-start;gap:9px;">
             <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-top:8px;width:112px;flex-shrink:0;line-height:1.35;">{{ detail.t.byStatus }}</div>
             <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;flex:1;">
@@ -2686,6 +2580,7 @@
               </sc-for>
             </div>
           </div>
+          </sc-if>
           <sc-for list="{{ detail.pvColFilters }}" as="cf" hint-placeholder-count="0">
             <div class="eh-fl-row" data-fl-col="{{ cf.name }}" style="display:flex;align-items:flex-start;gap:9px;">
               <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-top:8px;width:112px;flex-shrink:0;line-height:1.35;">{{ cf.name }}:</div>
@@ -2711,7 +2606,7 @@
           <sc-for list="{{ pr.cells }}" as="pc" hint-placeholder-count="4">
             <div style="{{ pc.style }}">{{ pc.v }}</div>
           </sc-for>
-          <div style="justify-self:end;max-width:100%;box-sizing:border-box;text-align:center;line-height:1.3;font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:999px;color:{{ pr.status.color }};background:{{ pr.status.color }}1c;">{{ pr.status.label }}</div>
+          <sc-if value="{{ pr.hasStatus }}"><div style="justify-self:end;max-width:100%;box-sizing:border-box;text-align:center;line-height:1.3;font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:999px;color:{{ pr.status.color }};background:{{ pr.status.color }}1c;">{{ pr.status.label }}</div></sc-if>
         </div>
       </sc-for>
       </div>
@@ -3556,6 +3451,115 @@
     </div>
     </sc-if>
 
+    <!-- UI стандарт (ORD): чанарын үнэлгээ (7 хоногийн гүйцэтгэлтэй хамт) ХАМГИЙН СҮҮЛД —
+         толгой → шүүлт → KPI → хүснэгт → график → чанар. Өмнө нь KPI-ийн шууд доор байж хүснэгтийг доош түлхэж байв. -->
+    <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dwp" data-eh-field="title">{{ detail.dwpTitle }}</span></div>
+      <!-- UI стандарт: эх сурвалжгүй үед 4 том "—" нүд зурахгүй — нэг мөр тайлбар л үлдэнэ -->
+      <sc-if value="{{ detail.wp.hasData }}">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
+        <div>
+          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Энэ 7 хоногт</div>
+          <div data-wp-val="total" style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;">{{ detail.wp.total }}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Оны эхнээс өссөн дүнгээр</div>
+          <div data-wp-val="ytd" style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;">{{ detail.wp.ytd }}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Өмнөх 7 хоногийн харьцуулалт</div>
+          <div data-wp-val="wow" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.wowColor }};">{{ detail.wp.wow }}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Өмнөх оны мөн үеийн харьцуулалт</div>
+          <div data-wp-val="yoy" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.yoyColor }};">{{ detail.wp.yoy }}</div>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ detail.wp.hasPlan }}">
+      <div data-wp-plan="1" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);">
+        <div style="display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--ink2);margin-bottom:8px;">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span data-eh-card="dwp" data-eh-field="foot">{{ detail.dwpFoot }}</span> — {{ detail.wp.planLabel }}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:{{ detail.color }};">{{ detail.wp.planPctLabel }}</span>
+        </div>
+        <div style="height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;">
+          <div style="height:100%;border-radius:5px;background:{{ detail.color }};width:{{ detail.wp.planWidth }};"></div>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ detail.wp.wpNoData }}"><div data-wp-nodata="1" style="margin-top:-6px;font-size:11.5px;color:var(--ink3);line-height:1.45;">{{ detail.wp.note }}</div></sc-if>
+      <div data-ddq-block="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="ddq" data-eh-field="title">{{ detail.ddqTitle }}</span></div>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--line);">
+          <sc-if value="{{ detail.dqKnown }}">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:46px;font-weight:700;letter-spacing:-.03em;color:{{ detail.dqColor }};line-height:1;">{{ detail.dqTotal }}<span style="font-size:17px;color:var(--ink3);font-weight:500;">/100</span></div>
+            <div>
+              <div style="font-size:15px;font-weight:600;color:{{ detail.dqColor }};margin-bottom:5px;">{{ detail.dqTier }}</div>
+              <div style="display:flex;gap:3px;">
+                <sc-for list="{{ detail.stars }}" as="st" hint-placeholder-count="5">
+                  <div style="font-size:16px;line-height:1;color:{{ st.color }};">★</div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ detail.dqUnknown }}">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;letter-spacing:-.02em;color:var(--ink3);line-height:1.2;">Тодорхойгүй</div>
+            <div style="font-size:12.5px;color:var(--ink3);max-width:46ch;line-height:1.5;text-wrap:pretty;">{{ detail.t.dq_missing }}</div>
+          </sc-if>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 13px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ detail.t.freq_head }}</span>
+            <span style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;">{{ detail.dqFreqLabel }}</span>
+          </div>
+        </div>
+        <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;">
+          <sc-for list="{{ detail.dims }}" as="dm" hint-placeholder-count="4">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--ink);margin-bottom:7px;">
+                <span style="text-wrap:pretty;">{{ dm.label }} <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);">{{ dm.weightLabel }}</span></span>
+                <sc-if value="{{ dm.unknown }}">
+                  <span style="flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--ink3);background:var(--surface2);border:1px solid var(--line2);border-radius:999px;padding:3px 9px;white-space:nowrap;">Тодорхойгүй</span>
+                </sc-if>
+                <sc-if value="{{ dm.known }}">
+                  <span style="font-family:'JetBrains Mono',monospace;font-weight:600;flex-shrink:0;color:{{ dm.valColor }};">{{ dm.val }}</span>
+                </sc-if>
+              </div>
+              <div style="height:6px;border-radius:4px;{{ dm.trackStyle }}overflow:hidden;">
+                <div style="height:100%;border-radius:4px;background:{{ dm.barColor }};width:{{ dm.width }};"></div>
+              </div>
+              <div style="font-size:11.5px;color:var(--ink3);margin-top:7px;line-height:1.45;text-wrap:pretty;">{{ dm.note }}</div>
+              <sc-if value="{{ dm.hasDetail }}">
+                <div style="font-size:11.5px;color:var(--ink2);margin-top:5px;line-height:1.45;text-wrap:pretty;">{{ dm.detail }}</div>
+              </sc-if>
+              <sc-for list="{{ dm.items }}" as="ck" hint-placeholder-count="4">
+                <div style="display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:var(--ink2);margin-top:4px;">
+                  <span style="color:{{ ck.color }};font-weight:700;flex-shrink:0;">{{ ck.mark }}</span>
+                  <span style="flex:1;min-width:0;text-wrap:pretty;">{{ ck.label }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:{{ ck.color }};flex-shrink:0;">{{ ck.pts }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div data-ds-profile="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);font-weight:600;">{{ detail.t.profile_head }}</div>
+            <div style="font-size:11.5px;color:var(--ink3);text-wrap:pretty;">{{ detail.t.profile_note }}</div>
+          </div>
+          <sc-if value="{{ detail.noProfile }}"><div style="font-size:12.5px;color:var(--ink3);">{{ detail.noData }}</div></sc-if>
+          <sc-if value="{{ detail.hasProfile }}">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+              <sc-for list="{{ detail.profile }}" as="pf" hint-placeholder-count="4">
+                <div style="background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;">
+                  <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ pf.l }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--ink);">{{ pf.v }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div data-eh-card="ddq" data-eh-field="foot" style="font-size:11px;color:var(--ink3);margin-top:20px;padding-top:16px;border-top:1px solid var(--line);line-height:1.5;text-wrap:pretty;">{{ detail.ddqFoot }}</div>
+      </div>
+    </div>
   </div>
   </sc-if>
 
@@ -4910,6 +4914,50 @@ const DS_SCHEMA={
       'Тухайн сард бүртгэгдсэн зорчигчийн тоо','Сарын дүн бүрэн бүртгэгдсэн эсэх'],
     rows:[]}
 };
+
+/* ── Датасэтийн хүснэгт = эх сервисийн ТҮҮХИЙ мөр (UI стандарт · RAW) ──────
+   Хүснэгт нь эх сервисээс ирж буй БҮХ баганыг (огноо ч мөн) харуулна —
+   нэгтгэл (станц/аймаг/сараар) нь график. Өмнө нь вагоны хүснэгт зөвхөн
+   станцын нэгтгэл байсан тул огноо, вагоны төрлийн 28 талбар ОГТ
+   харагддаггүй байв (2026-10-18). Багана нь backend-ээс автоматаар
+   (/api/datasets/:key/rows, silver хүснэгтийн бүх багана) — шинэ датасэт =
+   энд ганц мөр + backend-ийн DATASETS-д ганц мөр. Endpoint ирэхгүй (404,
+   унтарсан) бол хүснэгт өмнөх нэгтгэлээрээ үлдэнэ (fallback). */
+const DS_ROWS_API={railWagon:'rail-wagon',railPax:'rail-pax',roadInspect:'road-inspections'};
+const DS_ROWS_LIMIT=5000;
+const DS_RAW_TYPES=['date','month','int','float','pct','pctchg','string','enum'];
+/* Шүүлтийн он/сар → татах огнооны цонх. yFrom==null = бүх он (сүүлийн мөрүүд). */
+function dsRowsWindow(yFrom,yTo,mFrom,mTo){
+  const mf=Math.min(12,Math.max(1,+mFrom||1)), mt=Math.min(12,Math.max(1,+mTo||12));
+  if(yFrom==null||yFrom==='all') return {from:null,to:null,mFrom:mf,mTo:mt};
+  const y0=+yFrom, y1=yTo==null||yTo==='all'?y0:+yTo;
+  const pad=n=>String(n).padStart(2,'0');
+  return {from:Math.min(y0,y1)+'-'+pad(mf)+'-01',
+    to:Math.max(y0,y1)+'-'+pad(mt)+'-'+pad(new Date(Date.UTC(Math.max(y0,y1),mt,0)).getUTCDate()),mFrom:mf,mTo:mt};
+}
+/* /api/datasets/:key/rows хариу → DS_SCHEMA хэлбэр. ЦЭВЭР (tests/run.js RAW).
+   Мөр бүрийн сүүлд хоосон "төлөв" нүд (хүснэгтийн гэрээ) — түүхий мөрөнд
+   төлөв ЗОХИОХГҮЙ, pill харагдахгүй. Сарын хүрээ (mFrom–mTo) огнооны
+   баганаар шүүнэ. */
+function datasetRowsToSchema(json,mFrom,mTo,noteLabel){
+  if(!json||json.status!=='ok'||!Array.isArray(json.columns)||!json.columns.length||!Array.isArray(json.rows)) return null;
+  const cols=json.columns;
+  const types=cols.map(c=>DS_RAW_TYPES.indexOf(c.type)>=0?c.type:'string');
+  let di=cols.findIndex(c=>c.key==='record_date');
+  if(di<0) di=types.indexOf('date');
+  const mf=+mFrom||1, mt=+mTo||12;
+  const inRange=r=>{
+    if(di<0||(mf===1&&mt===12)) return true;
+    const mo=+String(r[di]||'').slice(5,7);
+    return !mo||(mo>=mf&&mo<=mt);
+  };
+  const rows=json.rows.filter(inRange).map(r=>r.concat(['']));
+  /* Багана шошгоо бүтэн харуулах өргөнтэй (толгой mono, том үсэг ~7.8px/тэмдэгт); олон багана бол хэвтээ гүйлгэнэ */
+  const widths=cols.map((c,i)=>types[i]==='date'?106:Math.max(96,Math.min(250,Math.round(String(c.label||c.key).length*7.8+22))));
+  return {raw:true,head:cols.map(c=>String(c.label||c.key)),types,widths,
+    notes:cols.map(c=>(noteLabel||'')+(noteLabel?': ':'')+c.key),rows,
+    total:+json.total||json.rows.length,loaded:json.rows.length,truncated:!!json.truncated};
+}
 
 /* Мөр: [шошго, тоо, тэмдэглэл, өнгө]. Тэмдэглэл ХООСОН — өмнө нь
    "+12 энэ улиралд", "+3", "+5", "0.0%" гэж хатуу бичигдсэн байсан ч
@@ -6599,14 +6647,7 @@ function wagonAnalysisModel(all,sel,year,mr){
   const days=sum(ms,'days');
   const partialN=ms.filter(m=>m.partial).length;
   /* YoY: зөвхөн ХОЁР оны ХОЁУЛАНД бүтэн (partial биш) байгаа сарууд. */
-  let yoy=null;
-  if(yr!=='all'){
-    const prev=new Map(months.filter(m=>+String(m.month).slice(0,4)===yr-1&&!m.partial)
-      .map(m=>[String(m.month).slice(5),m]));
-    const pairs=ms.filter(m=>!m.partial&&prev.has(String(m.month).slice(5)));
-    const a=sum(pairs,'loaded'), b=pairs.reduce((t,m)=>t+(+prev.get(String(m.month).slice(5)).loaded||0),0);
-    if(pairs.length&&b>0) yoy={pct:(a-b)/b*100,months:pairs.length};
-  }
+  const yc=yoyCompare(months,yr,mFrom,mTo,'loaded'), yoy=yc.yoy;
   const bd=monthFull?(yr==='all'?all:sel):null;
   const hasBreakdown=monthFull&&!!(bd&&Array.isArray(bd.by_station)&&bd.by_station.length);
   const pct=(v,t)=>t>0?v/t*100:0;
@@ -6622,10 +6663,9 @@ function wagonAnalysisModel(all,sel,year,mr){
   /* 'no_prev_year' — өмнөх он порталын түүхэнд ОГТ алга (эхний жил).
      'none'-оос ялгана: хоосон картанд АЛЬ он алга, түүх хэзээнээс эхэлдгийг
      нэрлэхгүй бол хэрэглэгч "дата байхад яагаад алга гэж байна" гэж уншина. */
-  const hasPrevYear=yr!=='all'&&months.some(m=>+String(m.month).slice(0,4)===yr-1);
-  const yoyReason=yoy?'ok':(yr==='all'?'pick_year':(hasPrevYear?'none':'no_prev_year'));
+  const yoyReason=yoy?'ok':(!yc.year?'pick_year':(yc.hasPrevYear?'none':'no_prev_year'));
   return {hasData:true,years,year:yr,mFrom,mTo,monthFull,monthCount:ms.length,days,partialN,yoyReason,
-    prevYear:yr==='all'?null:yr-1,historyFrom:months.map(m=>String(m.month).slice(0,7)).sort()[0],
+    prevYear:yc.year?yc.year-1:null,historyFrom:months.map(m=>String(m.month).slice(0,7)).sort()[0],
     loaded,unloaded,dom,frn,domPct:pct(dom,dom+frn),frnPct:pct(frn,dom+frn),
     ratio:unloaded>0?loaded/unloaded:null,perDay:days>0?loaded/days:null,yoy,
     series:{labels:ms.map(m=>String(m.month).slice(2)+(m.partial?'*':'')),
@@ -6633,6 +6673,24 @@ function wagonAnalysisModel(all,sel,year,mr){
     hasBreakdown,types,stations,
     typeTotal:types.reduce((t,x)=>t+x.loaded,0),
     stationTotal:stations.reduce((t,x)=>t+x.loaded,0)};
+}
+
+/* YoY — вагон, зорчигч ХОЁУЛАА. «Бүгд» он сонгосон үед ХАМГИЙН СҮҮЛИЙН он
+   (2026)-ыг өмнөх онтой (2025) харьцуулна — өмнө нь "жил сонгож харьцуулна"
+   гэж "—" харуулдаг байсан тул хоёр жилийн дата бүрэн байхад YoY огт
+   гардаггүй байв (2026-10-18). Зөвхөн ХОЁР оны ХОЁУЛАНД бүтэн (partial биш),
+   сарын хүрээнд багтсан сарууд. ЦЭВЭР функц (tests/run.js YY). */
+function yoyCompare(months,yr,mFrom,mTo,key){
+  const yOf=m=>+String(m.month).slice(0,4), mOf=m=>+String(m.month).slice(5,7);
+  const ys=months.map(yOf).filter(y=>y>0);
+  const ty=yr==='all'?(ys.length?Math.max.apply(null,ys):null):+yr;
+  if(!ty) return {yoy:null,year:null,hasPrevYear:false};
+  const inR=m=>mOf(m)>=mFrom&&mOf(m)<=mTo;
+  const prev=new Map(months.filter(m=>yOf(m)===ty-1&&!m.partial&&inR(m)).map(m=>[mOf(m),m]));
+  const pairs=months.filter(m=>yOf(m)===ty&&!m.partial&&inR(m)&&prev.has(mOf(m)));
+  const a=pairs.reduce((t,m)=>t+(+m[key]||0),0), b=pairs.reduce((t,m)=>t+(+prev.get(mOf(m))[key]||0),0);
+  return {yoy:(pairs.length&&b>0)?{pct:(a-b)/b*100,months:pairs.length,year:ty,prevYear:ty-1}:null,
+    year:ty,hasPrevYear:months.some(m=>yOf(m)===ty-1)};
 }
 
 /* Зорчигчийн галт тэрэгний шүүлтийн ЦОНХ — backend-ээс ямар хугацааны
@@ -6680,17 +6738,9 @@ function paxAnalysisModel(all,sel,year,mr){
   const dom=sum(ms,'domestic'), intl=sum(ms,'international');
   const partialN=ms.filter(m=>m.partial).length;
   const pct=(v,t)=>t>0?v/t*100:0;
-  let yoy=null;
-  if(yr!=='all'){
-    const prev=new Map(months.filter(m=>+String(m.month).slice(0,4)===yr-1&&!m.partial)
-      .map(m=>[String(m.month).slice(5),m]));
-    const pairs=ms.filter(m=>!m.partial&&prev.has(String(m.month).slice(5)));
-    const a=sum(pairs,'passengers'), b=pairs.reduce((t,m)=>t+(+prev.get(String(m.month).slice(5)).passengers||0),0);
-    if(pairs.length&&b>0) yoy={pct:(a-b)/b*100,months:pairs.length};
-  }
+  const yc=yoyCompare(months,yr,mFrom,mTo,'passengers'), yoy=yc.yoy;
   /* 'no_prev_year' — өмнөх он порталын түүхэнд ОГТ алга (вагоны загвартай ижил). */
-  const hasPrevYear=yr!=='all'&&months.some(m=>+String(m.month).slice(0,4)===yr-1);
-  const yoyReason=yoy?'ok':(yr==='all'?'pick_year':(hasPrevYear?'none':'no_prev_year'));
+  const yoyReason=yoy?'ok':(!yc.year?'pick_year':(yc.hasPrevYear?'none':'no_prev_year'));
   /* Сар бүрийн мөр + өмнөх сартай (MoM) ба өмнөх оны ижил сартай (YoY) харьцуулалт.
      Хоёул бүтэн сар байвал л тооцно — дутуу сарын тоо хэзээ ч өсөлт гэж гарахгүй. */
   const byKey=new Map(months.map(m=>[String(m.month),m]));
@@ -6727,7 +6777,7 @@ function paxAnalysisModel(all,sel,year,mr){
   return {hasData:true,years,year:yr,fullRange,rangeFrom:mFrom,rangeTo:mTo,monthCount:ms.length,days,partialN,
     pax,trips,dom,intl,domPct:pct(dom,dom+intl),intlPct:pct(intl,dom+intl),
     perTrip:trips>0?pax/trips:null,perDay:days>0?pax/days:null,yoy,yoyReason,
-    prevYear:yr==='all'?null:yr-1,historyFrom:String(months[0].month).slice(0,7),
+    prevYear:yc.year?yc.year-1:null,historyFrom:String(months[0].month).slice(0,7),
     series:paxSeriesWithGaps(ms,fullRange),
     rows,ranked,hasBreakdown,routes,routeTotal,
     channels,channelTotal,channelCovered,hasChannels:channelTotal>0,
@@ -9247,8 +9297,11 @@ class Component extends DCLogic {
        нь галт тэрэгний хуваарийн зохиомол мөрүүдийг өөрийн дата мэт
        харуулж байв. `schema` зарлаагүй датасэт урьдын адил салбарынхаа
        схемийг хэвээр ашиглана. */
-    const schemaKey=dsel.schema||dsel.sector;
-    const sc=this.tableSchema(dsel,schemaKey);
+    const baseKey=dsel.schema||dsel.sector;
+    const sc=this.tableSchema(dsel,baseKey);
+    /* Түүхий мөрийн хүснэгт өөр баганатай — өргөн/шүүлтийн сонголтыг ТУСАД нь хадгална */
+    const schemaKey=sc&&sc.raw?baseKey+'__raw':baseKey;
+    const hasStatus=!sc.raw;
     const q=(this.state.dsQ||'').toLowerCase().trim();
     const sf=this.state.pvStatusFilter||'all';
     const sort=this.state.dsSort||0, dir=this.state.dsDir||-1;
@@ -9332,6 +9385,7 @@ class Component extends DCLogic {
           style:'font-size:14.5px;color:'+(types[ci]==='date'||types[ci]==='month'?'var(--ink2)':'var(--ink)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
             +(isMono(ci)?'font-family:\'JetBrains Mono\',monospace;font-size:13.5px;':'')
             +(isNum(ci)?'text-align:right;justify-self:end;font-weight:600;':'')})),
+        hasStatus,
         status:{label:String(r[r.length-1]).split(':')[1]||'',
           color:String(r[r.length-1]).split(':')[0]==='warn'?'#B9903A':'#0E8F63'}
       })),
@@ -9345,11 +9399,15 @@ class Component extends DCLogic {
       pvEmpty:rows.length===0,
       pvTotal:dsRows,
       pvTitle:dsel.name+' — жагсаалт',
+      pvHasStatus:hasStatus,
+      pvHasNote:!!(sc.raw&&sc.truncated),
+      pvNote:sc.raw&&sc.truncated?stxt('detail.raw_truncated','Сүүлийн {n} мөр харагдаж байна (нийт {total}) — он, сараар нарийсгаж үзнэ үү.')
+        .replace('{n}',fmtNum(sc.loaded)).replace('{total}',fmtNum(sc.total)):'',
       pvExport:()=>{
         const XLSX=window.XLSX;
         if(!XLSX){ this.setState({toast:'Excel сан ачаалагдаж байна, түр хүлээгээд дахин оролдоно уу.'}); this.fadeToast&&this.fadeToast(); return; }
         const header=sc.head;
-        const body=rows.map(r=>r.slice(0,-1).concat([String(r[r.length-1]).split(':')[1]||String(r[r.length-1])]));
+        const body=rows.map(r=>hasStatus?r.slice(0,-1).concat([String(r[r.length-1]).split(':')[1]||String(r[r.length-1])]):r.slice(0,-1));
         const ws=XLSX.utils.aoa_to_sheet([header].concat(body));
         const wb=XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb,ws,dsel.name.slice(0,28)||'Дата');
@@ -9492,7 +9550,7 @@ class Component extends DCLogic {
       {label:T('kpi_dom','Дотоодын ачилт'),value:(m.domPct).toFixed(1)+'%',sub:T('kpi_dom_sub','ачсан вагоны')},
       {label:T('kpi_perday','Өдрийн дундаж ачилт'),value:m.perDay==null?dash:fmt(m.perDay),sub:unit},
       {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?((m.yoy.pct>0?'+':'')+m.yoy.pct.toFixed(1)+'%'):dash,
-        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):yoyReasonText(m,T)}
+        sub:m.yoy?(T('kpi_yoy_vs','{year} / {prev}').replace('{year}',m.yoy.year).replace('{prev}',m.yoy.prevYear)+' · '+m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):yoyReasonText(m,T)}
     ];
     const circ=2*Math.PI*40;
     const segs=[{label:T('dom_label','Дотоод'),pct:m.domPct,color:'#2E7CF6'},
@@ -9579,11 +9637,47 @@ class Component extends DCLogic {
      багана нь доорх тусдаа "Сарын дэлгэрэнгүй" гар хүснэгтэд байв (хоёр өөр
      стандарт). Одоо НЭГ хүснэгт, мөрүүд нь анализын шүүлтийг (жил/сар) дагана. */
   tableSchema(dsel,schemaKey){
+    const raw=this.dsRawSchema(dsel);
+    if(raw) return raw;
     if(dsel&&dsel.source==='railPax'){
       const px=this.paxTableSchema();
       if(px) return px;
     }
     return DS_SCHEMA[schemaKey];
+  }
+  /* Датасэтийн шүүлт (он/сар) → түүхий мөрийн огнооны цонх. */
+  dsRowsWin(source){
+    const st=this.state;
+    if(source==='railWagon') return dsRowsWindow(st.wagonYear,st.wagonYear,st.wagonMFrom,st.wagonMTo);
+    if(source==='railPax') return dsRowsWindow(st.paxYear,st.paxYear,st.paxMFrom,st.paxMTo);
+    if(source==='roadInspect'){
+      const s=this.roadInspectSel();
+      return s?dsRowsWindow(s.yFrom,s.yTo,s.mFrom,s.mTo):dsRowsWindow(null);
+    }
+    return dsRowsWindow(null);
+  }
+  /* Түүхий мөрийн схем (байхгүй/хүлээгдэж буй бол null → нэгтгэлийн хүснэгт).
+     Цонх өөрчлөгдөхөд дахин татна; хариу цонхоор кэшлэгдэнэ. */
+  dsRawSchema(dsel){
+    const key=dsel&&DS_ROWS_API[dsel.source];
+    if(!key||typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchDatasetRows) return null;
+    const w=this.dsRowsWin(dsel.source);
+    const wk=key+'|'+w.from+'|'+w.to;
+    const c=this._dsRows||(this._dsRows={});
+    if(!(wk in c)){
+      c[wk]=undefined;
+      EHBackend.fetchDatasetRows(key,w.from,w.to,DS_ROWS_LIMIT).then(j=>{
+        c[wk]=j||null;
+        this.setState(s=>({dsRowsVer:(s.dsRowsVer||0)+1}));
+      });
+    }
+    const j=c[wk];
+    if(!j) return null;
+    const note=stxt('detail.raw_field_note','Эх талбар');
+    const sk=wk+'|'+w.mFrom+'|'+w.mTo+'|'+note;
+    if(!this._dsRawSc||this._dsRawSc.k!==sk||this._dsRawSc.j!==j)
+      this._dsRawSc={k:sk,j,sc:datasetRowsToSchema(j,w.mFrom,w.mTo,note)};
+    return this._dsRawSc.sc;
   }
   paxTableSchema(){
     const st=this.state;
@@ -9675,7 +9769,7 @@ class Component extends DCLogic {
       {label:T('kpi_intl','Олон улсын (ОУ)'),value:m.intlPct.toFixed(1)+'%',sub:T('kpi_intl_sub','нийт зорчигчийн')},
       {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:T('kpi_per_day_sub','зорчигч / өдөр')},
       {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?pctTxt(m.yoy.pct):dash,
-        sub:m.yoy?(m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):yoyReasonText(m,T)}
+        sub:m.yoy?(T('kpi_yoy_vs','{year} / {prev}').replace('{year}',m.yoy.year).replace('{prev}',m.yoy.prevYear)+' · '+m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):yoyReasonText(m,T)}
     ];
     const circ=2*Math.PI*40;
     const segs=[{label:T('dom_label','Орон нутаг (ОН)'),pct:m.domPct,color:'#2E7CF6',cnt:m.dom},
