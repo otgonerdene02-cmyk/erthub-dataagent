@@ -7860,6 +7860,29 @@ async function groupDA() {
   })(C, '');
   check('DA1. "өмнөх оны өгөгдөл алга" төрлийн текст бүр ХУГАЦААГ нэрлэнэ ({year}/{from})', claims.length === 0, claims.join(' | '));
 
+  /* DA4. Агаарын k04 «НИЙТ НИСЛЭГ»-ийн YoY (кэйс #6, 2026-10-16): өмнөх оны мөн сар
+     байхгүй гурван шалтгааныг нэг хатуу текстээр "алга" гэдэг, ачаалалт унасан ([])
+     эсвэл 0 нислэгтэй сард pctDelta(…,0) → "0.0%" (өөрчлөлтгүй мэт) ХУДАЛ гаргадаг байв. */
+  const apB = (dcScript().match(/\nfunction airPrevCompare\(prevYear,availYears,prevSrc,prevCount\)\{([\s\S]*?)\n\}/) || [])[1];
+  if (!apB) bad('DA4. airPrevCompare() олдсонгүй');
+  else {
+    const AP = new Function('prevYear', 'availYears', 'prevSrc', 'prevCount', apB);
+    const F = [{ month: 9 }];
+    check('DA4. 4 төлөв: feed-д он алга / [] ачаалагдсангүй / 0 нислэг / харьцуулж болно',
+      AP(2024, [2026, 2025], undefined, null) === 'no_year' &&
+      AP(2025, [2026, 2025], undefined, null) === 'not_loaded' &&
+      AP(2025, [2026, 2025], [], 0) === 'not_loaded' &&
+      AP(2025, ['2026', '2025'], F, 0) === 'zero' &&
+      AP(2025, [2026, 2025], F, 12) === 'ok');
+    const src = dcScript();
+    check('DA4. k04: зөвхөн "ok" үед хувь (pctDelta), бусад үед "0.0%" ЗОХИОХГҮЙ',
+      /flDelta=flPrevWhy==='ok'\?pctDelta\(flCount,flPrevCount\):\{s:'',dir:'flat'\}/.test(src) &&
+      !/'харьцуулах өгөгдөл алга \(өмнөх оны мөн сарын дата алга\)'/.test(src));
+    const ch = (C.site || {}).chart || {};
+    check('DA4. Шалтгаан бүрийн текст content.json-д, ОН-ыг нэрлэнэ ({year}; zero нь {month} ч)',
+      ['prev_no_year', 'prev_not_loaded', 'prev_zero'].every(k => /\{year\}/.test(ch[k] || '')) && /\{month\}/.test(ch.prev_zero || ''));
+  }
+
   /* DA2/DA3 — амьд */
   const BASE = 'https://portal.mrt.gov.mn';
   const EP = { railPax: '/api/sectors/rail/passengers/history', railWagon: '/api/sectors/rail/wagon-loading/history' };

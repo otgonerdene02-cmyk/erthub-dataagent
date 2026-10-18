@@ -6756,6 +6756,18 @@ function paxSeriesWithGaps(ms,fullRange){
   return out;
 }
 
+/* Агаарын KPI-ийн өмнөх оны МӨН сартай харьцуулах боломж (цэвэр, tests AP).
+   'no_year'    — өмнөх он feed-ийн индексэд алга
+   'not_loaded' — индексэд бий ч кэш алга/хоосон ([] = ensureYears-ийн алдаа)
+   'zero'       — ачаалагдсан ч тэр сард нислэг 0 (0-д хуваахгүй, "0.0%" ЗОХИОХГҮЙ)
+   'ok'         — харьцуулж болно */
+function airPrevCompare(prevYear,availYears,prevSrc,prevCount){
+  if(!(availYears||[]).map(Number).includes(+prevYear)) return 'no_year';
+  if(!Array.isArray(prevSrc)||!prevSrc.length) return 'not_loaded';
+  if(!(prevCount>0)) return 'zero';
+  return 'ok';
+}
+
 /* «Өмнөх оноос» карт YoY-гүй үеийн тайлбар — вагон, зорчигч ХОЁУЛАА.
    T = тухайн самбарын stxt ('wagon_an.'/'pax_an.'). 'no_prev_year' үед АЛЬ
    он алга, порталын түүх хэзээнээс эхэлдгийг ЗААВАЛ нэрлэнэ: "өмнөх оны
@@ -8753,7 +8765,7 @@ class Component extends DCLogic {
         extraCount:Math.max(0,sortedPairs.length-10)
       };
     };
-    const compareLabel=prevFlights?stxt('chart.compare_prev_year','өмнөх оны мөн үетэй харьцуулахад'):'харьцуулах өгөгдөл алга';
+    const compareLabel=prevFlights?stxt('chart.compare_prev_year','өмнөх оны мөн үетэй харьцуулахад'):stxt('status.no_compare','харьцуулах өгөгдөл алга');
     const intlPct=cur.count?(cur.intlFlights/cur.count*100):0;
     const intlPaxPct=cur.totalPax?(cur.intlPax/cur.totalPax*100):0;
     const domPaxPct=cur.totalPax?(cur.domPax/cur.totalPax*100):0;
@@ -8792,11 +8804,19 @@ class Component extends DCLogic {
     const flPrevCount=flPrevSrc
       ?flPrevSrc.filter(f=>f.year===flPrevWin.lmYear&&f.month===flPrevWin.lmMonth&&flTypeFilter(f)).length
       :null;
-    const flDelta=flPrevCount!=null?pctDelta(flCount,flPrevCount):{s:'',dir:'flat'};
-    const flCompareLabel=flPrevCount!=null
+    /* Өмнөх оны мөн сар байхгүй ШАЛТГААНЫГ ялгана (docs/cases кэйс #6): feed-д он
+       алга / ачаалагдсангүй ([] = ensureYears-ийн алдаа) / тэр сард 0 нислэг. Өмнө
+       нь сүүлийн хоёр нь pctDelta(…,0) → "0.0%" (өөрчлөлтгүй мэт) ХУДАЛ гардаг байв. */
+    const flPrevWhy=flPrevWin?airPrevCompare(flPrevWin.lmYear,this._flightsYears,flPrevSrc,flPrevCount):'none';
+    const flDelta=flPrevWhy==='ok'?pctDelta(flCount,flPrevCount):{s:'',dir:'flat'};
+    const flCompareLabel=flPrevWhy==='ok'
       ?(flWin.monthLabel+' '+stxt('chart.compare_prev_month_mid','· өмнөх оны мөн сартай (')+
         MONTHS[flPrevWin.lmMonth-1]+' '+flPrevWin.lmYear+stxt('chart.compare_prev_month_end',') харьцуулбал'))
-      :'харьцуулах өгөгдөл алга (өмнөх оны мөн сарын дата алга)';
+      :flPrevWhy==='none'?stxt('status.no_compare','харьцуулах өгөгдөл алга')
+      :({no_year:stxt('chart.prev_no_year','{year} оны нислэгийн өгөгдөл feed-д алга — харьцуулах боломжгүй'),
+         not_loaded:stxt('chart.prev_not_loaded','{year} оны нислэгийн өгөгдөл ачаалагдсангүй — харьцуулалтгүй'),
+         zero:stxt('chart.prev_zero','{month} {year}-д нислэг бүртгэгдээгүй — харьцуулах боломжгүй')}[flPrevWhy])
+        .replace('{year}',String(flPrevWin.lmYear)).replace('{month}',MONTHS[flPrevWin.lmMonth-1]||'');
 
     /* Мөрийн нэрийг content.json → site.sector_kpi_air_live-ээс. Бодит
        дата ирэхэд air 4 мөрөөс 8 мөр болдог тул тусдаа жагсаалт. */
