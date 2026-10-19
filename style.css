@@ -105,6 +105,8 @@ body{margin:0;}
   /* Сарын график + тээвэрлэгчийн жагсаалт: гар утсанд дараалан, жагсаалт бүтнээрээ */
   .eh-trend-rank { grid-template-columns: minmax(0, 1fr) !important; }
   .eh-ri-row { grid-template-columns: minmax(0, 1fr) !important; }
+  /* Ачааны нэгтгэл: 7 хоногийн KPI-ийн 8 оронтой тоо (27,100,000) 2 баганад багтана */
+  .eh-ftk-v { font-size: 16px !important; }
   /* FL баганын шүүлт: шошгоны 112px багана гар утсанд chip-ийн зайг иддэг тул дээр нь */
   .eh-fl-row { flex-direction: column !important; gap: 6px !important; }
   .eh-fl-row > :first-child { width: auto !important; padding-top: 0 !important; }

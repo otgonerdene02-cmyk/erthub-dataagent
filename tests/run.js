@@ -5973,9 +5973,10 @@ async function groupBE() {
   check('BE36. Датасэт content.json-д ТӨГСГӨЛД бүртгэгдсэн (индекс гулсахгүй)',
     (() => {
       const ds = readJson('content.json').site.datasets;
-      /* Зорчигч индекс 3 хэвээр; дараа нэмэгдсэн нь (ачаа, 2026-10-19) ТӨГСГӨЛД */
+      /* Зорчигч индекс 3 хэвээр; дараа нэмэгдсэн нь (ачаа, ачааны нэгтгэл — 2026-10-19) ТӨГСГӨЛД */
       return ds[3].name === 'Зорчигчийн галт тэрэгний мэдээ' && ds[3].sector === 'rail' &&
-        ds.slice(4).every(d => /^Ачаа тээврийн мэдээ/.test(d.name));
+        ds.slice(4).every(d => /^Ачаа тээврийн мэдээ/.test(d.name) || d.name === 'Төмөр замын ачаа тээврийн нэгтгэл') &&
+        ds[ds.length - 1].name === 'Төмөр замын ачаа тээврийн нэгтгэл';
     })());
 
   /* ── BE37. period_coverage — САРЫН ЦУВААНЫ ГАНЦ ДҮРЭМ ──
@@ -7611,7 +7612,8 @@ function groupFR() {
   const fxSrc = read('tests/lib/feed-fixtures.js');
   const content = JSON.parse(read('content.json'));
   for (const [srcKey, rowsKey, schema, name] of [['railFreightUbtz', 'rail-freight-ubtz', 'rail_freight_ubtz', 'Ачаа тээврийн мэдээ (УБТЗ ХНН)'],
-    ['railFreightMtz', 'rail-freight-mtz', 'rail_freight_mtz', 'Ачаа тээврийн мэдээ (МТЗ ТӨХК)']]) {
+    ['railFreightMtz', 'rail-freight-mtz', 'rail_freight_mtz', 'Ачаа тээврийн мэдээ (МТЗ ТӨХК)'],
+    ['railFreightAll', 'rail-freight-all', 'rail_freight_all', 'Төмөр замын ачаа тээврийн нэгтгэл']]) {
     check('FR13. ' + srcKey + ': DATASETS + SOURCES + DS_ROWS_API + DS_ROWS_SCOPE + DS_SCHEMA + API_ENDPOINTS',
       src.includes("name:'" + name + "'") && src.includes("schema:'" + schema + "',source:'" + srcKey + "'") &&
       new RegExp(srcKey + ":\\{label:").test(src) && src.includes(srcKey + ":'" + rowsKey + "'") &&
@@ -7645,6 +7647,78 @@ function groupFR() {
     src.includes("(r)=>fmt(r.wagons)+' '+wUnit);") && !/fmt\(r\.wagons\)\+' '\+wUnit\+' · '\+\(t>0\?\(r\.tonnes/.test(src));
   check('FR22. Сонгосон хугацаанд 0 тонн чиглэл: KPI «бүртгэгдээгүй», donut-д зүсмэлгүй (МТЗ экспорт 0.0%)',
     src.includes("const exp=m.dirs.find(d=>d.key==='export'&&d.tonnes>0);") && src.includes('const donut=m.dirs.filter(d=>d.tonnes>0).map('));
+
+  /* ── FT. Төмөр замын ачаа тээврийн НЭГТГЭЛ (railFreightAll, backend VIEW gold.rail_freight_total) ──
+     Гараар бодох фикстур:
+       org_months 2026: УБТЗ 100 (01) + 300 (09) = 400 · МТЗ 50 (01)  → 450, УБТЗ 88.9%
+       7 хоног: 10-05…10-11 = 200 т · 10-12…10-18 = 180 т (экспорт 100 + дотоод 80) → −10.0%
+       YTD 2026 = 1200 (УБТЗ 1000, МТЗ 200) / 2025 мөн үе 1000 → +20.0%
+       МТЗ сүүлийн бичлэг 2026-02-01 < 10-12 → хоцорсон (7 хоногт ороогүй гэж ил) */
+  const ftm = src.match(/\nfunction freightTotalModel\(all,year,mr\)\{([\s\S]*?)\n\}/);
+  const fcol = src.match(/const FREIGHT_ORG_COLORS=(\[[^\]]*\]);/);
+  check('FT0. freightTotalModel + FREIGHT_ORG_COLORS тодорхойлогдсон', !!(ftm && fcol));
+  if (ftm && fcol) {
+    const TM = (all, year, mr) => new Function('FREIGHT_ORG_COLORS', 'all', 'year', 'mr', ftm[1])(eval(fcol[1]), all, year, mr);
+    const TOT = { status: 'ok',
+      by_org: [{ org: 'УБТЗ', name: 'Улаанбаатар төмөр зам ХНН', last_date: '2026-10-18' }, { org: 'МТЗ', name: 'Монголын төмөр зам ТӨХК', last_date: '2026-02-01' }],
+      org_months: [{ month: '2025-09', org: 'УБТЗ', tonnes: 999, wagons: 9, rows: 9 },
+        { month: '2026-01', org: 'УБТЗ', tonnes: 100, wagons: 2, rows: 1 }, { month: '2026-01', org: 'МТЗ', tonnes: 50, wagons: 1, rows: 1 },
+        { month: '2026-09', org: 'УБТЗ', tonnes: 300, wagons: 6, rows: 3 }],
+      weekly: { week_end: '2026-10-18', weeks: [
+        { week_start: '2026-10-05', week_end: '2026-10-11', missing: false, tonnes: 200, export_tonnes: 200, by_org: { 'УБТЗ': { tonnes: 200, wagons: 4 }, 'МТЗ': { tonnes: 0, wagons: 0 } } },
+        { week_start: '2026-10-12', week_end: '2026-10-18', missing: false, tonnes: 180, export_tonnes: 100, domestic_tonnes: 80, by_org: { 'УБТЗ': { tonnes: 180, wagons: 4 }, 'МТЗ': { tonnes: 0, wagons: 0 } } }],
+        ytd: { year: 2026, from: '2026-01-01', to: '2026-10-18', tonnes: 1200, by_org: { 'УБТЗ': { tonnes: 1000 }, 'МТЗ': { tonnes: 200 } } },
+        prev_ytd: { year: 2025, from: '2025-01-01', to: '2025-10-18', tonnes: 1000, by_org: {} } } };
+    const t = TM(TOT, 2026, null);
+    check('FT1. Тээвэрлэгчийн задаргаа (2026): УБТЗ 400 + МТЗ 50 = 450, хувь нийлбэр 100%',
+      t.hasOrgs && t.splitTotal === 450 && t.split[0].tonnes === 400 && t.split[1].tonnes === 50 &&
+      Math.abs(t.split[0].pct + t.split[1].pct - 100) < 1e-9 && Math.abs(t.split[0].pct - 400 / 450 * 100) < 1e-9, JSON.stringify(t.split));
+    const t9 = TM(TOT, 2026, { from: 9, to: 9 });
+    check('FT2. Сарын хүрээ (9-р сар) задаргааг ХАМТ шүүнэ: УБТЗ 300, МТЗ 0 (байгууллага алга болохгүй)',
+      t9.split.length === 2 && t9.split[0].tonnes === 300 && t9.split[1].tonnes === 0 && t9.splitTotal === 300);
+    check('FT3. «Бүгд» он: 999 + 400 + 50 = 1449', TM(TOT, 'all', null).splitTotal === 1449);
+    const w = t.weekly;
+    check('FT4. 7 хоног: өмнөх 7 хоногоос 180/200 − 1 = −10.0%; мөн үеэс 1200/1000 − 1 = +20.0%',
+      !!w && Math.abs(w.wow + 10) < 1e-9 && Math.abs(w.yoy - 20) < 1e-9, JSON.stringify(w && [w.wow, w.yoy]));
+    check('FT5. Хоцорсон тээвэрлэгч (МТЗ 2026-02-01) ил — 7 хоногийн дүнд ороогүй',
+      w.stale.length === 1 && w.stale[0].code === 'МТЗ');
+    check('FT6. Оны эхнээс өссөн дүнгийн тээвэрлэгчийн хувь: УБТЗ 1000/1200',
+      Math.abs(w.ytdOrgs.list[0].pct - 1000 / 1200 * 100) < 1e-9 && w.weekOrgs.list[0].pct === 100);
+    const miss = JSON.parse(JSON.stringify(TOT));
+    miss.weekly.weeks[0].missing = true;
+    miss.weekly.prev_ytd.tonnes = 0;
+    const wm = TM(miss, 2026, null).weekly;
+    check('FT7. Өмнөх 7 хоног бичлэггүй / өмнөх оны мөн үе 0 → харьцуулалт null (0% эсвэл ∞ зохиохгүй)',
+      wm.wow === null && wm.yoy === null);
+    check('FT8. by_org алга (хуучин backend) → hasOrgs:false; weekly алга (шүүлттэй хариу) → weekly:null',
+      TM({ status: 'ok', months: [] }).hasOrgs === false && TM(null).hasOrgs === false &&
+      TM(Object.assign({}, TOT, { weekly: undefined }), 2026).weekly === null);
+  }
+  const bw = src.match(/\nfunction buildFreightWeekChart\(weeks,dirs,words\)\{([\s\S]*?)\n\}/);
+  check('FT9. buildFreightWeekChart тодорхойлогдсон', !!bw);
+  if (bw) {
+    const BW = new Function('weeks', 'dirs', 'words', bw[1]);
+    const wks = [{ week_start: '2026-09-28', week_end: '2026-10-04', missing: true },
+      { week_start: '2026-10-05', week_end: '2026-10-11', export_tonnes: 200, domestic_tonnes: 0 },
+      { week_start: '2026-10-12', week_end: '2026-10-18', export_tonnes: 100, domestic_tonnes: 80 }];
+    const c = BW(wks, [{ key: 'export', label: 'Экспорт', color: '#1' }, { key: 'domestic', label: 'Дотоод', color: '#2' }], {});
+    const b = c.bars.find(r => r.tip === '10.12–10.18 — Экспорт: 100 т');
+    check('FT9. Hover "10.12–10.18 — Экспорт: 100 т" (HV: нэр — утга), 7 хоног бүрт чиглэл бүр багана',
+      !!b && c.bars.filter(r => /^10\.12–10\.18 — /.test(r.tip)).length === 2, JSON.stringify(c.bars.map(r => r.tip)));
+    check('FT9. Бичлэггүй 7 хоног — бүдэг тууз + "мэдээлэл алга" (0 багана биш); Y тэнхлэг 0-ээс',
+      c.bars.filter(r => /мэдээлэл алга/.test(r.tip)).length === 1 && c.yTicks[0].label === '0');
+    const b2 = c.bars.find(r => r.tip === '10.05–10.11 — Экспорт: 200 т'), b1 = b;
+    check('FT9. Өндөр утгатайгаа пропорциональ (200 т = 100 т-ийн 2 дахин)',
+      !!b2 && Math.abs(+b2.h / +b1.h - 2) < 0.02, b2 && [b2.h, b1.h].join('/'));
+  }
+  check('FT10. railFreightAll = нэгтгэл (total:true, org=all); салбарын хуудсанд нэгтгэлийн самбар гарахгүй',
+    src.includes("railFreightAll:{org:'all',rows:'rail-freight-all',schema:'rail_freight_all',total:true}") &&
+    src.includes('if(!fs||!fs.total) return {freightIsTotal:false};') &&
+    src.includes('freightChart:chart,freightLegend:legend,...this.buildFreightTotal(dsel,m)};') &&
+    /<sc-if value="\{\{ detail\.freightIsTotal \}\}"><sc-if value="\{\{ detail\.freightHasData \}\}">\s*<div data-freight-total="1">/.test(read('index.html')));
+  check('FT11. Нэгтгэлийн бүх харагдах текст content.json-д (freight_an.total_*)',
+    ['total_wk_title', 'total_orgs_title', 'total_week_chart_title', 'total_split_title', 'total_kpi_week', 'total_kpi_ytd',
+      'total_kpi_wow', 'total_kpi_yoy', 'total_stale_note'].every(k => typeof content.site.freight_an[k] === 'string'));
 }
 
 /* ─────────── UI. Датасэтийн хуудасны НЭГДСЭН UI стандарт (2026-10-15) ───────────
