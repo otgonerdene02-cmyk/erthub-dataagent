@@ -183,11 +183,32 @@
     return true;
   }
 
+  /* (5) Графикийн хугацаа — диаграм бүр ЯГ ямар хугацааны датаг харуулж буйг
+     гарчгийн доор нэг мөрөөр хэлнэ: «Хугацаа: 2022-01 — 2026-08 · 44 сар».
+     keys = 'YYYY-MM' сарууд (шүүлтээр орсон). Хугацаа нь эхний ба сүүлийн сараас
+     тооцогдоно; дутуу сар байвал partialTo (сүүлийн өдөр)-ээр тэмдэглэнэ.
+     Сарын түлхүүр хоосон бол хугацаа ЗОХИОХГҮЙ — "мэдээлэл алга". */
+  function periodSpan(keys, opts) {
+    var o = opts || {};
+    var w = Object.assign({ prefix: 'Хугацаа', months: 'сар', partial: 'дутуу сар', through: 'хүртэл', none: 'мэдээлэл алга', dropped: 'дутуу сар хасагдсан' }, o.words || {});
+    var list = (keys || []).map(function (k) { return String(k).slice(0, 7); })
+      .filter(function (k) { return /^\d{4}-\d{2}$/.test(k); }).sort();
+    if (!list.length) return { from: '', to: '', count: 0, text: w.prefix + ': ' + w.none };
+    var from = list[0], to = list[list.length - 1];
+    var count = (+to.slice(0, 4) * 12 + +to.slice(5, 7)) - (+from.slice(0, 4) * 12 + +from.slice(5, 7)) + 1;
+    var span = from === to ? from : from + ' — ' + to;
+    var parts = [w.prefix + ': ' + span, count + ' ' + w.months];
+    if (o.partialTo) parts.push(w.partial + ' (' + o.partialTo + ' ' + w.through + ')');
+    else if (o.partialCount) parts.push(w.partial);
+    if (o.dropped) parts.push(w.dropped);
+    return { from: from, to: to, count: count, text: parts.join(' · ') };
+  }
+
   var api = {
     airPaxSplit: airPaxSplit, norm: norm, airFlightKind: airFlightKind, KIND_LABEL: KIND_LABEL, AIR_KIND: AIR_KIND,
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,
-    filterColumns: filterColumns, rowMatchesCols: rowMatchesCols
+    filterColumns: filterColumns, rowMatchesCols: rowMatchesCols, periodSpan: periodSpan
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.EHGlossary = api;
