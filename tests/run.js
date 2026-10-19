@@ -187,6 +187,9 @@ function groupB() {
       /* `ds_schema_road_inspect` — үзлэгийн датасэтийн баганын нэр/тайлбар.
          applyRoadInspectionData() дотор ИНДЕКСЭЭР уншдаг (вагонтой ижил). */
       'ds_schema_road_inspect',
+      /* `ds_schema_rail_freight` — ачаа тээврийн нэгтгэлийн хүснэгт; syncFreightTable()
+         ИНДЕКСЭЭР уншина (вагонтой ижил). */
+      'ds_schema_rail_freight',
       /* `sector_kpi_road_live` ба `road_fail_cats` — техникийн хяналтын
          үзлэгийн KPI мөрийн нэр ба тэнцээгүй хэсгийн шошго.
          applyRoadInspectionData() дотор ИНДЕКСЭЭР уншдаг
@@ -211,7 +214,7 @@ function groupB() {
       /* `wagon_an` — вагоны анализын самбар. Зам нь T('kpi_loaded') гэх мэт
          жижиг туслахаар дамждаг (stxt('wagon_an.'+k)) тул шууд бичлэг хайх
          аргаар олдохгүй. Түлхүүр бүр WA7-д баталгаажна. */
-      'wagon_an', 'pax_an',
+      'wagon_an', 'pax_an', 'freight_an',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -4610,7 +4613,8 @@ async function groupBE() {
         check('PA15. "none" үед "өмнөх оны өгөгдөл алга" гэж ХУДАЛ хэлэхгүй (бүтэн сар алга гэнэ)',
           !/өмнөх оны өгөгдөл алга/.test(YRT(half, T15)), YRT(half, T15));
         check('PA15. Вагон, зорчигч ХОЁУЛАА нэг helper-ээр (yoyReasonText) — текст хуваагдахгүй',
-          (dcScript().match(/:yoyReasonText\(m,T\)\}/g) || []).length === 2);
+          /* 2026-10-19: ачаа тээвэр (УБТЗ/МТЗ) ч мөн энэ helper-ээр — 3 */
+          (dcScript().match(/:yoyReasonText\(m,T\)\}/g) || []).length === 3);
         const WAC15 = (readJson('content.json').site || {}).wagon_an || {};
         check('PA15. kpi_yoy_no_prev {year}/{from}-тэй pax_an ба wagon_an-д',
           [PAC15, WAC15].every(c => /\{year\}/.test(c.kpi_yoy_no_prev || '') && /\{from\}/.test(c.kpi_yoy_no_prev || '')));
@@ -4645,7 +4649,7 @@ async function groupBE() {
         ['kass', 'kiosk', 'web', 'sms', 'phone', 'tapa'].every(k => PACc.channels && PACc.channels[k]));
     }
 
-    const bp = dcScript().match(/buildPaxAnalysis\(\)\{([\s\S]*?)\n  \}\n  buildDocDetail/);
+    const bp = dcScript().match(/buildPaxAnalysis\(\)\{([\s\S]*?)\n  \}\n  (?:buildDocDetail|\/\* Ачаа тээврийн анализын самбар)/);
     const PAC = (readJson('content.json').site || {}).pax_an || {};
     const pkeys = bp ? [...bp[1].matchAll(/T\('([a-z_.]+)'/g)].map(m => m[1]).filter(k => !k.endsWith('.')) : [];
     const pmiss = pkeys.filter(k => k.split('.').reduce((o, x) => (o == null ? o : o[x]), PAC) == null);
@@ -4815,7 +4819,8 @@ async function groupBE() {
   check('BE22. Устгасан датасэтийн зохиомол схем (road/rail/water/public) БАЙХГҮЙ',
     !/\n  (road|rail|water|public):\{head:/.test(dsSchemaBlock), dsSchemaBlock.slice(0, 80));
   check('BE22. Схем бүр мөргүй (rows:[]) эхэлнэ — зохиомол дата кодод байхгүй',
-    (dsSchemaBlock.match(/rows:\[\]/g) || []).length === 4,
+    (dsSchemaBlock.match(/rows:\[\]/g) || []).length === (dsSchemaBlock.match(/\n  [a-z_]+:\{head:/g) || []).length &&
+    (dsSchemaBlock.match(/rows:\[\]/g) || []).length >= 4,
     String((dsSchemaBlock.match(/rows:\[/g) || []).length));
   check('BE22. Зорчигчийн датасэт ӨӨРИЙН схемтэй (rail_pax)',
     /schema:'rail_pax'/.test(dcScript()) && /rail_pax:\{head:/.test(dsSchemaBlock));
@@ -5512,7 +5517,8 @@ async function groupBE() {
   const idxH = read('index.html');
   check('BE33. Хуудас road-ийн үзлэгт дүгнэлт/график, бусад датасэтэд trend-rank хэвээр',
     dcScript().includes("const roadExtra=(isRoadInspect&&this.state.page==='detail')?this.buildRoadInspectExtra():{};") &&
-    dcScript().includes("notRoadInspect:!isRoadInspect,...roadExtra,") &&
+    /* ачаа тээвэр (2026-10-19) өөрийн самбартай — ерөнхий trend-rank-аас мөн хасагдана */
+    dcScript().includes("notRoadInspect:!isRoadInspect&&!isFreight,...roadExtra,") &&
     idxH.includes('<sc-if value="{{ detail.notRoadInspect }}">') &&
     idxH.includes('<sc-if value="{{ detail.isRoadInspect }}">'));
   check('BE33. Дүгнэлтийн бүх текст content.json → site.road_insp-д бүртгэгдсэн (шинэ хардкод текст алга)',
@@ -6024,8 +6030,9 @@ async function groupBE() {
   check('BE36. Датасэт content.json-д ТӨГСГӨЛД бүртгэгдсэн (индекс гулсахгүй)',
     (() => {
       const ds = readJson('content.json').site.datasets;
-      return ds[ds.length - 1].name === 'Зорчигчийн галт тэрэгний мэдээ' &&
-        ds[ds.length - 1].sector === 'rail';
+      /* Зорчигч индекс 3 хэвээр; дараа нэмэгдсэн нь (ачаа, 2026-10-19) ТӨГСГӨЛД */
+      return ds[3].name === 'Зорчигчийн галт тэрэгний мэдээ' && ds[3].sector === 'rail' &&
+        ds.slice(4).every(d => /^Ачаа тээврийн мэдээ/.test(d.name));
     })());
 
   /* ── BE37. period_coverage — САРЫН ЦУВААНЫ ГАНЦ ДҮРЭМ ──
@@ -7569,6 +7576,134 @@ function groupHS() {
    (4) мөр хоорондын багана зөрсөн.
    Бүгд ГАРААР БОДОХ БОЛОМЖТОЙ жижиг фикстур дээр.
    ═══════════════════════════════════════════════════════════════ */
+/* ─────────── FR. Ачаа тээврийн мэдээ (УБТЗ ХНН · МТЗ ТӨХК, 2026-10-19) ───────────
+   Veritech-ийн баримтын 7–9-р мөр. Анализын модель ба графикийг ГАРААР бодогдох
+   3 сарын фикстур дээр (нүдээр "зөв харагдана" гэж батлахгүй):
+     2025-09 бүтэн: транзит 10т/1в · экспорт 100/2 · дотоод 40/1          = 150 т · 4 в
+     2026-09 бүтэн: транзит 20/1 · экспорт 110/2 · импорт 10/1 · дотоод 60/2 = 200 т · 6 в
+     2026-10 (10-18 хүртэл, ДУТУУ): экспорт 50/1 · дотоод 10/1             =  60 т · 2 в
+   Нийт 410 т · 12 вагон · 78 өдөр. YoY = 2026-09 / 2025-09 = 200/150 − 1 = +33.3%. */
+function groupFR() {
+  group('FR. Ачаа тээврийн мэдээ — модель · график · холболт');
+  const src = dcScript();
+  const fam = src.match(/\nfunction freightAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
+  const yoc = src.match(/\nfunction yoyCompare\(months,yr,mFrom,mTo,key\)\{([\s\S]*?)\n\}/);
+  const dirsM = src.match(/const FREIGHT_DIRS=(\[[^\]]*\]);/);
+  check('FR0. freightAnalysisModel + yoyCompare + FREIGHT_DIRS тодорхойлогдсон', !!(fam && yoc && dirsM));
+  if (!(fam && yoc && dirsM)) return;
+  const YOC = new Function('months', 'yr', 'mFrom', 'mTo', 'key', yoc[1]);
+  const minM = src.match(/const FREIGHT_YOY_MIN=([0-9]+);/);
+  check('FR0. FREIGHT_YOY_MIN = 3 (YoY хамгийн багадаа 3 бүтэн хос сар)', !!minM && +minM[1] === 3);
+  const FA = (all, sel, year, mr) => new Function('FREIGHT_DIRS', 'FREIGHT_YOY_MIN', 'yoyCompare', 'all', 'sel', 'year', 'mr', fam[1])(eval(dirsM[1]), minM ? +minM[1] : 3, YOC, all, sel, year, mr);
+  const fm = (month, days, last, d) => Object.assign({ month, days, days_in_month: 30, last_date: last, rows: 10,
+    transit_tonnes: 0, transit_wagons: 0, export_tonnes: 0, export_wagons: 0, import_tonnes: 0, import_wagons: 0, domestic_tonnes: 0, domestic_wagons: 0 }, d);
+  const ALL = { status: 'ok', months: [
+    fm('2025-09', 30, '2025-09-30', { transit_tonnes: 10, transit_wagons: 1, export_tonnes: 100, export_wagons: 2, domestic_tonnes: 40, domestic_wagons: 1 }),
+    fm('2026-09', 30, '2026-09-30', { transit_tonnes: 20, transit_wagons: 1, export_tonnes: 110, export_wagons: 2, import_tonnes: 10, import_wagons: 1, domestic_tonnes: 60, domestic_wagons: 2 }),
+    fm('2026-10', 18, '2026-10-18', { export_tonnes: 50, export_wagons: 1, domestic_tonnes: 10, domestic_wagons: 1 })],
+    by_station: [{ station: 'А', export_tonnes: 100, domestic_tonnes: 20, export_wagons: 2 }, { station: 'Б', transit_tonnes: 30, export_tonnes: 60, transit_wagons: 1 }],
+    by_cargo: [{ cargo: 'Бусад', domestic_tonnes: 50 }, { cargo: 'Нүүрс', export_tonnes: 160 }] };
+  const m = FA(ALL, null, 'all');
+  check('FR1. Нийт 410 т, 12 вагон, 78 өдөр; вагон бүрт 410/12, өдөрт 410/78',
+    m.hasData && m.tonnes === 410 && m.wagons === 12 && m.days === 78 &&
+    Math.abs(m.perWagon - 410 / 12) < 1e-9 && Math.abs(m.perDay - 410 / 78) < 1e-9, JSON.stringify([m.tonnes, m.wagons, m.days]));
+  check('FR2. Зөвхөн СҮҮЛИЙН сар (10-18 < 10-31) дутуу, шошго "*"; дунд 11 сар хоосон слот',
+    m.partialN === 1 && m.series.labels[m.series.labels.length - 1] === '26-10*' &&
+    m.series.gap.filter(Boolean).length === 11 && m.series.labels[1] === '25-10' && m.series.dirs.export[1] === null,
+    JSON.stringify(m.series.labels));
+  const sumPct = m.dirs.reduce((t, d) => t + d.pct, 0);
+  const ex = m.dirs.find(d => d.key === 'export');
+  check('FR3. Чиглэлийн хувь нийлбэр 100%, экспорт = 260/410', Math.abs(sumPct - 100) < 1e-9 && Math.abs(ex.pct - 260 / 410 * 100) < 1e-9,
+    JSON.stringify(m.dirs));
+  /* Регресс (2026-10-19 UX аудит): МТЗ дээр ганц хос сар (2026-01/2025-01) "+535.8%" гэж гарч байв */
+  check('FR4. Ганц бүтэн хос сар (2026-09/2025-09) → YoY ГАРАХГҮЙ, шалтгаан "few"',
+    m.yoy === null && m.yoyReason === 'few', JSON.stringify([m.yoy, m.yoyReason]));
+  const Y3 = FA({ status: 'ok', months: ['07', '08', '09'].flatMap((mo, i) => [
+    fm('2025-' + mo, 31, '2025-' + mo + '-30', { export_tonnes: 100, export_wagons: 2 }),
+    fm('2026-' + mo, 31, '2026-' + mo + '-30', { export_tonnes: 110 + i * 10, export_wagons: 2 })]) }, null, 'all');
+  check('FR4. 3 бүтэн хос сар: (110+120+130)/(3×100) − 1 = +20.0%',
+    !!Y3.yoy && Math.abs(Y3.yoy.pct - 20) < 1e-9 && Y3.yoy.months === 3, JSON.stringify(Y3.yoy));
+  const mtz = FA({ status: 'ok', months: [fm('2024-01', 5, '2024-01-31', { domestic_tonnes: 300, domestic_wagons: 5 }),
+    fm('2024-02', 3, '2024-02-29', { domestic_tonnes: 100, domestic_wagons: 2, export_tonnes: 20, export_wagons: 1 })] }, null, 'all');
+  check('FR5. МТЗ шиг: транзит/импорт ОГТ алга бол харьцаа/легендэд гарахгүй (зөвхөн экспорт + дотоод)',
+    JSON.stringify(mtz.present) === '["export","domestic"]' && mtz.dirs.length === 2, JSON.stringify(mtz.present));
+  check('FR6. Өдрийн тоо цөөн (5/31) ч сарын сүүлийн өдөртэй бол дутуу БИШ (МТЗ өдөр бүр бүртгэдэггүй)',
+    mtz.partialN === 0, String(mtz.partialN));
+  const mk = FA(ALL, null, 'all', { keys: new Set(['Б']) });
+  check('FR7. Хүснэгтийн өртөөний шүүлт (FL3) → зөвхөн өртөөний эрэмбэ шүүгдэнэ, KPI хэвээр',
+    mk.stations.length === 1 && mk.stations[0].name === 'Б' && mk.stationTotal === 90 && mk.tonnes === 410);
+  check('FR8. Ачааны эрэмбэ тонноор буурахаар (Нүүрс 160 > Бусад 50)',
+    m.cargo.filter(c => !c.unnamed)[0].name === 'Нүүрс' && m.cargo.filter(c => !c.unnamed)[1].name === 'Бусад');
+  /* Регресс (2026-10-19 UX аудит): нэргүй мөр задаргаанд ороогүй тул «Нийт» KPI-аас дутуу (МТЗ 13%) */
+  check('FR8. Нэргүй үлдэгдэл (410 − 210 = 200) тусдаа мөр → эрэмбийн нийт = KPI-ийн нийт 410',
+    m.cargo.length === 3 && m.cargo[0].unnamed && m.cargo[0].tonnes === 200 && m.cargoTotal === 410 && m.stationTotal === 410,
+    JSON.stringify([m.cargoTotal, m.stationTotal]));
+  const y25 = FA(ALL, null, 2025);
+  const y25s = FA(ALL, { status: 'ok', months: [], by_station: [{ station: 'А', export_tonnes: 7 }], by_cargo: [] }, 2025);
+  check('FR9. Он сонгоход KPI тэр оных (150 т), задаргаа сонгосон хүрээний хариуг хүлээнэ (sel=null → pending)',
+    y25.tonnes === 150 && !y25.hasBreakdown && y25s.hasBreakdown && y25s.stations.find(s => s.name === 'А').tonnes === 7);
+  check('FR10. Түүх алга / no_data / буруу хариу → hasData:false (тоо зохиохгүй)',
+    !FA(null).hasData && !FA({ status: 'no_data', months: [] }).hasData && !FA({ status: 'ok' }).hasData);
+  check('FR11. Сонгосон хүрээнд сар алга бол hasData:false, гэхдээ жилүүдийг буцаана (шүүлт харагдсаар)',
+    FA(ALL, null, 2024).hasData === false && JSON.stringify(FA(ALL, null, 2024).years) === '[2025,2026]');
+
+  const bc = src.match(/\nfunction buildFreightStackedChart\(stacks,lineSeries,labels,gaps,words\)\{([\s\S]*?)\n\}/);
+  check('FR12. buildFreightStackedChart тодорхойлогдсон', !!bc);
+  if (bc) {
+    const BC = new Function('stacks', 'lineSeries', 'labels', 'gaps', 'words', bc[1]);
+    const stacks = m.present.map(d => ({ key: d, label: d, color: '#000', values: m.series.dirs[d] }));
+    const c = BC(stacks, m.series.wagons, m.series.labels, m.series.gap, {});
+    const sep = c.barRects.find(r => /^26-09 — /.test(r.tip));
+    check('FR12. Hover: "26-09 — export: 110 т · … · нийт: 200 т" (HV: нэр — утга)',
+      !!sep && /export: 110 т/.test(sep.tip) && /нийт: 200 т/.test(sep.tip), sep && sep.tip);
+    check('FR12. Өгөгдөлгүй сар — бүдэг тууз + "мэдээлэл алга" (0 багана зурахгүй)',
+      c.barRects.filter(r => /мэдээлэл алга/.test(r.tip)).length === 11);
+    check('FR12. Y тэнхлэг 0-ээс, дутуу сар шугамд холбогдохгүй (2 бүтэн сар → нэг M + нэг M)',
+      c.yTicksLeft[0].label === '0' && (c.line.match(/M/g) || []).length === 2 && !/L/.test(c.line), c.line);
+    check('FR12. Дутуу сарын цэгийн tooltip-д "(дутуу сар)"', /\(дутуу сар\)/.test(c.dotPts[c.dotPts.length - 1].tip));
+  }
+
+  /* Холболт — нэг датасэт нэмэхэд хамт өөрчлөгдөх ёстой газрууд (CLAUDE.md RAW: backend
+     DATASETS + index.html DS_ROWS_API + feed-fixtures). */
+  const fxSrc = read('tests/lib/feed-fixtures.js');
+  const content = JSON.parse(read('content.json'));
+  for (const [srcKey, rowsKey, schema, name] of [['railFreightUbtz', 'rail-freight-ubtz', 'rail_freight_ubtz', 'Ачаа тээврийн мэдээ (УБТЗ ХНН)'],
+    ['railFreightMtz', 'rail-freight-mtz', 'rail_freight_mtz', 'Ачаа тээврийн мэдээ (МТЗ ТӨХК)']]) {
+    check('FR13. ' + srcKey + ': DATASETS + SOURCES + DS_ROWS_API + DS_ROWS_SCOPE + DS_SCHEMA + API_ENDPOINTS',
+      src.includes("name:'" + name + "'") && src.includes("schema:'" + schema + "',source:'" + srcKey + "'") &&
+      new RegExp(srcKey + ":\\{label:").test(src) && src.includes(srcKey + ":'" + rowsKey + "'") &&
+      src.includes(srcKey + ":{col:'station_name'}") && src.includes('  ' + schema + ':{head:') &&
+      src.includes("'" + srcKey + "'],"));
+    check('FR14. ' + rowsKey + ': фикстурт түүхий мөр + түүх (layout-audit/FL11 өгөгдөлтэй төлөв)',
+      fxSrc.includes("'" + rowsKey + "'") && /rail\\\/freight\\\/\(\[a-z\]\+\)\\\/history/.test(fxSrc));
+    check('FR15. content.json site.datasets-д ' + name + ' (индексээр давхардана)',
+      content.site.datasets.some(d => d.name === name));
+  }
+  const dsBlock = (src.split('\nconst DATASETS=[')[1] || '').split('\n];')[0];
+  const dsN = (dsBlock.match(/\n  \{sector:'[a-z]+',name:'/g) || []).length;
+  check('FR15. content.json site.datasets ба DATASETS ижил урттай (индексийн давхарга зөрөхгүй)',
+    dsN > 0 && content.site.datasets.length === dsN, content.site.datasets.length + ' / ' + dsN);
+  /* Регресс (2026-10-19): түүхий мөрийн хүснэгтэд pvColScope().schemaKey = "<схем>__raw"
+     болсноос хойш FL3-ийн тайлбар БҮХ датасэт дээр note_default ("зөвхөн хүснэгтэд")
+     болж ХУДАЛ хэлж байв — KPI/эрэмбэ дагаж байхад. */
+  check('FR16. FL3 тайлбар __raw түлхүүрээс схемийн нэрийг авна (бүх датасэт)',
+    /\}\[String\(pvSc\.schemaKey\|\|''\)\.replace\(\/__raw\$\/,''\)\]/.test(src) &&
+    src.includes("rail_freight_ubtz:()=>stxt('pv_scope.note_rail_freight'"));
+  check('FR17. Ачааны хуудсанд салбарын ерөнхий «чиг хандлага + бүтэц» мөр гарахгүй (өөрийн самбартай)',
+    src.includes('notRoadInspect:!isRoadInspect&&!isFreight,'));
+  check('FR18. Түүх нэг удаа ачаалж каталогийн «Сүүлийн бичлэг»-ийг backend-ийн огнооноос',
+    /async loadFreightHistory\(source\)\{[\s\S]*?setSourceMeta\(source,\{updatedAt:m\.lastDate/.test(src));
+  check('FR19. EHBackend.fetchRailFreightHistory — org-ийг шалгаж /api/sectors/rail/freight/:org/history',
+    /function fetchRailFreightHistory\(org, from, to\)[\s\S]*?\/\^\[a-z\]\+\$\/[\s\S]*?\/api\/sectors\/rail\/freight\//.test(read('js/erthub-backend.js')));
+  /* Регресс — chart-stat-qa (2026-10-19): тоо зөв ч ШОШГО худал байсан 3 газар */
+  check('FR20. «Вагон» KPI «ачаатай» гэж хэлэхгүй (эх датанд хоосон вагон/чингэлэг 19–39%)',
+    !/kpi_wagons_sub','ачаатай вагон'/.test(src) && content.site.freight_an.kpi_wagons_sub.includes('хоосон'));
+  check('FR21. Өртөөний мөр: вагоны тоон дээр ТОННЫ хувийг давтахгүй (вагоны хувь мэт уншигдана)',
+    src.includes("(r)=>fmt(r.wagons)+' '+wUnit);") && !/fmt\(r\.wagons\)\+' '\+wUnit\+' · '\+\(t>0\?\(r\.tonnes/.test(src));
+  check('FR22. Сонгосон хугацаанд 0 тонн чиглэл: KPI «бүртгэгдээгүй», donut-д зүсмэлгүй (МТЗ экспорт 0.0%)',
+    src.includes("const exp=m.dirs.find(d=>d.key==='export'&&d.tonnes>0);") && src.includes('const donut=m.dirs.filter(d=>d.tonnes>0).map('));
+}
+
 /* ─────────── UI. Датасэтийн хуудасны НЭГДСЭН UI стандарт (2026-10-15) ───────────
    Хэрэглэгчийн гомдол: "зорчигчийн галт тэрэгний датаг яагаад ингэж аймшигтай
    харуулж байна, агаарын тээвэр шиг нэг стандарт барь; чарт хүснэгт нэг line-д
@@ -8414,11 +8549,12 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=FL')) { await groupFL(); }
   else if (process.argv.includes('--only=AF')) { await groupAF(); }
   else if (process.argv.includes('--only=UI')) { groupUI(); }
+  else if (process.argv.includes('--only=FR')) { groupFR(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupFR(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
