@@ -2969,6 +2969,7 @@
           </div>
         </div>
       </div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
       <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;"><span data-eh-card="dmap" data-eh-field="foot">{{ detail.dmapFoot }}</span> {{ detail.t.map_hint }}</div>
       <sc-if value="{{ detail.flowMap.notReady }}">
         <div style="height:220px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:12.5px;">{{ detail.t.map_loading }}</div>
@@ -3201,6 +3202,7 @@
     <div class="eh-trend-rank eh-fill eh-row" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
       <div class="eh-fit-card" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span>{{ detail.c1 }}</div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.trendPeriod }}</div>
         <div class="eh-fit-body" style="display:flex;flex-direction:column;">
         <sc-if value="{{ detail.noTrend }}">
           <div style="height:180px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ detail.noTrendNote }}</div>
@@ -3254,6 +3256,7 @@
       <sc-if value="{{ detail.showRank }}">
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dstr" data-eh-field="title">{{ detail.dstrTitle }}</span></div>
+        <sc-if value="{{ detail.isAirDetail }}"><div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div></sc-if>
         <div class="eh-fill-list"><div class="eh-fill-scroll" style="display:flex;flex-direction:column;gap:13px;">
           <sc-for list="{{ detail.rank }}" as="rk" hint-placeholder-count="4">
             <div>
@@ -3439,6 +3442,7 @@
     <div class="eh-trend-rank" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dcty" data-eh-field="title">{{ detail.dctyTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
         <div class="eh-cap-list" style="display:flex;flex-direction:column;gap:12px;">
           <sc-for list="{{ detail.airCountries }}" as="cn" hint-placeholder-count="5">
             <div>
@@ -3466,6 +3470,7 @@
       </div>
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dint" data-eh-field="title">{{ detail.dintTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
         <div style="display:flex;align-items:center;gap:20px;flex:1 1 auto;">
           <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
             <sc-for list="{{ detail.airDonut }}" as="ad" hint-placeholder-count="2">
@@ -3499,6 +3504,7 @@
           <div sc-camel-on-click="{{ detail.airTreemap.back }}" style="cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9px;border:1px solid var(--line2);background:var(--surface);white-space:nowrap;">← {{ detail.airTreemap.regionLabel }}</div>
         </sc-if>
       </div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
       <div style="font-size:12.5px;color:var(--ink3);line-height:1.5;margin:-4px 0 4px;">{{ detail.airTreemap.help }}</div>
       <div style="font-size:14px;font-weight:600;color:var(--ink);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">{{ detail.airTreemap.totalLabel }}</div>
       <sc-if value="{{ detail.airTreemap.empty }}">
@@ -3631,6 +3637,7 @@
 
     <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dcgo" data-eh-field="title">{{ detail.dcgoTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;">
         <sc-for list="{{ detail.cargoRank }}" as="cr" hint-placeholder-count="10">
           <div>
@@ -9464,6 +9471,7 @@ class Component extends DCLogic {
     SECTORS.air._partialDropped=airTrim.partial;
     SECTORS.air._partialValue=airTrim.partial?airTrim.value:null;
     SECTORS.air.c1d=airTrim.counts;
+    SECTORS.air.c1dYear=year;
     const lastRealM=airTrim.counts.length||12;
     /* Энэ салбарын сарын ЦУВАА нь бодит (_liveKpis нь зөвхөн KPI мөр амьд
        гэдгийг л хэлнэ). Хоёрыг ЯЛГАХ шалтгаан: rail-д KPI амьд боловч
@@ -9495,7 +9503,10 @@ class Component extends DCLogic {
       prevPax:hasPrev?prevPaxArr:null,prevCargoTon:hasPrev?prevCargoTonArr:null,
       year:year,prevYear:hasPrev?year-1:null,
       /* DG-P: хугацаа — 1..lastRealM (дутуу сар цуваанаас хасагдсан бол тэмдэглэнэ) */
-      periodKeys:(airTrim.counts.length?monthLabels:[]).map((_,i)=>year+'-'+String(i+1).padStart(2,'0')),partialN:0,partialDropped:!!airTrim.partial};
+      /* Шүүлтийн сарын мужаар хязгаарлана (monthFrom..monthTo) — 5 карт + 2 график
+         нэг хугацаа харуулна. Муж өөрчлөгдөхөд хугацааны мөр хамт өөрчлөгдөнө. */
+      periodKeys:(airTrim.counts.length?monthLabels:[]).map((_,i)=>year+'-'+String(i+1).padStart(2,'0'))
+        .filter((_,i)=>i+1>=(filters.monthFrom||1)&&i+1<=(filters.monthTo||12)),partialN:0,partialDropped:!!airTrim.partial};
     /* ОУ/Дотоодын харьцааны донут — ЗОРЧИГЧООР (гарчиг/эх dashboard-тай
        нийцнэ). Өмнө нь kpis[2]-ийн НИСЛЭГИЙН хувийг (75%) зурж байсан. */
     /* Харьцаа нь «Төрөл» шүүлтээс ҮЛ ХАМААРНА: ОУ-аар шүүгдсэн үед дотоодыг
@@ -11831,6 +11842,10 @@ class Component extends DCLogic {
       (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name)))&&
       Array.isArray(dsSec.c1d)&&dsSec.c1d.some(v=>+v>0);
     const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue,dsel.source==='railPax'):null;
+    /* DG-P: трендийн картын хугацаа — c1d-ийн БОДИТ бичлэгтэй сарууд (c1dYear-ээр).
+       Дутуу сар цуваанаас хасагдсан бол тэмдэглэнэ. Цуваа хоосон бол «мэдээлэл алга». */
+    const dsTrendKeys=(dsHasTrend&&dsSec.c1dYear)?dsSec.c1d.map((v,i)=>(+v>0?dsSec.c1dYear+'-'+String(i+1).padStart(2,'0'):null)).filter(Boolean):[];
+    const dsTrendPeriod=chartPeriodText({periodKeys:dsTrendKeys,partialN:0,partialDropped:!!dsSec._partialDropped},(k,fb)=>stxt('chart.'+k,fb));
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
@@ -12111,6 +12126,7 @@ class Component extends DCLogic {
           mark:it.on?'✓':'✕'}))
       })),
       c1:dsHasTrend?(SECTORS[dsel.sector].c1+((dsel.source==='railPax'&&dsSec.c1dYear)?' · '+dsSec.c1dYear:'')):stxt('detail.no_series_title','ЧИГ ХАНДЛАГА'),
+      trendPeriod:dsTrendPeriod,
       hasTrend:dsHasTrend,noTrend:!dsHasTrend,
       noTrendNote:stxt('status.no_series','чиг хандлагын цуваа алга'),
       trend:dsTrend||{yTicks:[],xTicks:[]},
