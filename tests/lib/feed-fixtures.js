@@ -110,6 +110,33 @@
       by_aimag: AIMAG.map(function (a, i) { return { aimag: a, total: 90000 - i * 9000, failed: i === AIMAG.length - 1 ? 0 : 9000 - i * 800 }; }),
       by_weekday: [0, 1, 2, 3, 4, 5, 6].map(function (w) { return { weekday: w, days: 60, total: 50000 + w * 3000, avg: 830 + w * 50 }; }) };
   }
+  /* Ачаа тээврийн мэдээ (/api/sectors/rail/freight/:org/history) — УБТЗ 4 чиглэл,
+     МТЗ зөвхөн экспорт + дотоод (бодит хариутай ижил бүтэц). УБТЗ-ийн өртөө 14,
+     ачаа 15 — урт жагсаалт мөрийн өндрийг хэрхэн түлхэхийг аудит харна. */
+  var FR_ST = ['Улаанбаатар', 'Дархан-II', 'Замын-Үүд МЧ-1', 'Сүхбаатар', 'Эрдэнэт', 'Багахангай', 'Шарын гол', 'Салхит',
+    'Айраг', 'Сайншанд', 'Зүүнхараа', 'Бор-Өндөр', 'Тэрэлж', 'Аршаант'];
+  var FR_CG = ['Нүүрс', 'Төмрийн хүдэр', 'Медь /конц/', 'Нефть, нефтийн бүтээгдэхүүн', 'Барилгын ачаа', 'Цемент', 'Үр тариа',
+    'Хүнсний ачаа', 'Мод, модон материал', 'Химийн бордоо', 'Жонш', 'Хар төмөр', 'Их даацын ачаатай чингэлэг', 'Машин механизм', 'Бусад'];
+  function freightHistory(org) {
+    var mtz = org === 'mtz';
+    var dirs = mtz ? ['export', 'domestic'] : ['transit', 'export', 'import', 'domestic'];
+    var all = ['transit', 'export', 'import', 'domestic'];
+    var row = function (o, k) { all.forEach(function (d) {
+      var on = dirs.indexOf(d) >= 0, t = on ? Math.round(k * (d === 'export' ? 1.6 : d === 'domestic' ? 1.2 : 0.6)) : 0;
+      o[d + '_tonnes'] = t; o[d + '_wagons'] = on ? Math.round(t / 42) : 0; });
+      o.tonnes = all.reduce(function (a, d) { return a + o[d + '_tonnes']; }, 0);
+      o.wagons = all.reduce(function (a, d) { return a + o[d + '_wagons']; }, 0); return o; };
+    var base = mtz ? 120000 : 900000;
+    return { status: 'ok', org: org, unit: 'тонн', directions: all,
+      months: months().map(function (x, i) {
+        var k = wave(i, base, base * 0.2) * (x.partial ? x.days / x.dim : 1);
+        return row({ month: x.key, days: x.days, days_in_month: x.dim, rows: mtz ? 90 : 2600,
+          last_date: x.key + '-' + pad(x.days) }, k); }),
+      by_station: (mtz ? ['Цогтцэций', 'Төмөртэй'] : FR_ST).map(function (s, i) {
+        return row({ station: s, rows: 900 - i * 50 }, base * 6 / (i + 1)); }),
+      by_cargo: (mtz ? FR_CG.slice(0, 6) : FR_CG).map(function (c, i) {
+        return row({ cargo: c, rows: 700 - i * 40 }, base * 5 / (i + 1.5)); }) };
+  }
   function flightsIndex() { return { years: [{ year: Y }, { year: Y - 1 }] }; }
   function flights(year) {
     var carr = ['MIAT', 'Airchina', 'Hunnu Air', 'Aero Mongolia'];
@@ -177,6 +204,21 @@
         ['branch_name', 'Салбар', 'string'], ['result_raw', 'Дүгнэлт', 'string'], ['failed_brake', 'Тоормос', 'string'], ['failed_count', 'Тэнцээгүй хэсэг', 'int']];
       days.slice(0, 5).forEach(function (d, j) { AIMAG.forEach(function (a, i) {
         rows.push([d, String(5000000 + j * 100 + i), a, 'PC1' + pad(i) + ' салбар', i % 4 ? 'Тэнцсэн' : 'Тэнцээгүй', i % 4 ? 'pass' : 'fail', i % 4 ? 0 : 1]); }); });
+    } else if (key === 'rail-freight-ubtz' || key === 'rail-freight-mtz') {
+      var mz = key === 'rail-freight-mtz';
+      columns = [['record_date', 'Огноо', 'date'], ['source_record_id', 'Бичлэгийн ID', 'string'], ['organization', 'Байгууллага', 'string'],
+        ['station_name', 'Өртөө', 'string'], ['cargo_name', 'Ачааны нэр', 'string'],
+        ['export_wagons', 'Экспорт (вагон)', 'int'], ['export_tonnes', 'Экспорт (тонн)', 'float'],
+        ['domestic_wagons', 'Дотоод (вагон)', 'int'], ['domestic_tonnes', 'Дотоод (тонн)', 'float']];
+      if (!mz) columns.splice(5, 0, ['transit_wagons', 'Транзит (вагон)', 'int'], ['transit_tonnes', 'Транзит (тонн)', 'float'],
+        ['import_wagons', 'Импорт (вагон)', 'int'], ['import_tonnes', 'Импорт (тонн)', 'float']);
+      var sts = mz ? ['Цогтцэций', 'Төмөртэй'] : FR_ST.slice(0, 5);
+      days.slice(0, 10).forEach(function (d, j) { sts.forEach(function (s, i) {
+        var e = 12 + i + j, t = e * 61.5, dw = 3 + (i + j) % 6;
+        var r = [d, String(1833091747960000 + j * 10 + i), mz ? 'Монголын төмөр зам ТӨХК' : 'УБТЗ', s, FR_CG[(i + j) % FR_CG.length]];
+        if (!mz) r.push(i % 2, i % 2 ? 41.2 : 0, (j + i) % 3, ((j + i) % 3) * 38.5);
+        r.push(e, Math.round(t * 100) / 100, dw, Math.round(dw * 44.4 * 100) / 100);
+        rows.push(r); }); });
     } else return 404;
     return { status: rows.length ? 'ok' : 'no_data', dataset: key, total: rows.length, truncated: false,
       columns: columns.map(function (c) { return { key: c[0], label: c[1], type: c[2] }; }), rows: rows };
@@ -188,6 +230,8 @@
       return ranged(u, roadHistory(), 'total', [['by_aimag', 'total']]);
     if (u.indexOf('/api/sectors/rail/wagon-loading/history') >= 0)
       return ranged(u, wagonHistory(), 'loaded', [['by_station', 'loaded']]);
+    var fo = u.match(/\/api\/sectors\/rail\/freight\/([a-z]+)\/history/);
+    if (fo) return ranged(u, freightHistory(fo[1]), 'tonnes', []);
     if (u.indexOf('/api/sectors/rail/passengers/history') >= 0)
       return ranged(u, railHistory(), 'passengers', [['by_route', 'passengers']]);
     if (u.indexOf('/api/sectors/rail/passengers/history') >= 0) return railHistory();

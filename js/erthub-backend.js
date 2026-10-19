@@ -77,6 +77,21 @@
       });
   }
 
+  /* Ачаа тээврийн мэдээний ТҮҮХ — org = 'ubtz' | 'mtz' (migrations/020). Хариу:
+     {status,months[{month,days,last_date,rows,<чиглэл>_tonnes|_wagons,tonnes,wagons}],
+     by_station[],by_cargo[]} эсвэл {status:'no_data'}. 404/унтарсан бол null. */
+  function fetchRailFreightHistory(org, from, to) {
+    if (!BASE || !/^[a-z]+$/.test(String(org || ''))) return Promise.resolve(null);
+    var q = [];
+    if (from) q.push('from=' + encodeURIComponent(from));
+    if (to) q.push('to=' + encodeURIComponent(to));
+    return fetchJson(BASE + '/api/sectors/rail/freight/' + org + '/history' + (q.length ? '?' + q.join('&') : ''))
+      .catch(function (e) {
+        console.info('[ErtHub] backend (rail/freight/' + org + '/history) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
   /* Зорчигчийн галт тэрэгний ТҮҮХ — сар (ОН/ОУ), чиглэл, төрөл. from/to
      (YYYY-MM-DD) заавал биш. Хариу: {status,months[],by_route[],by_type[]}
      эсвэл {status:'no_data'}. 404/унтарсан бол null → "мэдээлэл алга". */
@@ -167,6 +182,7 @@
     fetchRailWagonLoading: fetchRailWagonLoading,
     fetchRailWagonHistory: fetchRailWagonHistory,
     fetchRailPassengersHistory: fetchRailPassengersHistory,
+    fetchRailFreightHistory: fetchRailFreightHistory,
     fetchRoadInspections: fetchRoadInspections,
     fetchRoadInspectionsHistory: fetchRoadInspectionsHistory,
     fetchVehicleRegistry: fetchVehicleRegistry,
