@@ -92,7 +92,7 @@
       });
   }
 
-  /* Авто тээврийн зорчигч тээврийн мэдээний ТҮҮХ (Veritech 15401437, migrations/023):
+  /* Авто тээврийн зорчигч тээврийн мэдээний ТҮҮХ (Veritech 15401437, migrations/024):
      {status,types[],months[{month,days,last_date,passengers,refunded,by_type{},refunded_by_type{}}],
      by_route[],by_company[],by_channel[],by_vehicle[],by_passenger_type[],upcoming,weekly?}
      эсвэл {status:'no_data'}. 404/унтарсан бол null → "мэдээлэл алга". */

@@ -186,7 +186,7 @@
         ytd: Object.assign({ year: y, from: y + '-01-01', to: iso(we) }, ytdOrg(1)),
         prev_ytd: Object.assign({ year: y - 1, from: (y - 1) + '-01-01', to: (y - 1) + iso(we).slice(4) }, ytdOrg(0.88)) } };
   }
-  /* АВТО ТЭЭВРИЙН ЗОРЧИГЧ (/api/sectors/road/passengers/history, migrations/023) — 4
+  /* АВТО ТЭЭВРИЙН ЗОРЧИГЧ (/api/sectors/road/passengers/history, migrations/024) — 4
      тээврийн төрөл; өмнөх оны 1–7-р сар мэдээгүй (эх сурвалжийн цоорхой — харьцуулалт
      «мэдээ дутуу» болохыг харуулна), weekly — сүүлийн бүтэн 8 долоо хоног. */
   var RP_TYPES = ['Хот хооронд', 'Улс хооронд', 'Аймаг хооронд', 'Орон нутаг'];
@@ -264,7 +264,7 @@
       r.passengers = m.passengers; r.passenger_days = m.days; r.passenger_last = m.month + '-' + pad(m.days); });
     freightTotal().months.forEach(function (m) { var r = row(m.month, 'rail', m.days_in_month);
       r.freight_tonnes = m.tonnes; r.freight_days = m.days; r.freight_last = m.last_date; });
-    /* Авто тээвэр — билеттэй зорчигч (migrations/023-ийн UNION) */
+    /* Авто тээвэр — билеттэй зорчигч (migrations/024-ийн UNION) */
     roadPaxHistory().months.forEach(function (m) { var r = row(m.month, 'road', m.days_in_month);
       r.passengers = m.passengers; r.passenger_days = m.days; r.passenger_last = m.last_date; });
     rows.sort(function (a, b) { return a.month < b.month ? -1 : a.month > b.month ? 1 : (a.sector < b.sector ? -1 : 1); });
