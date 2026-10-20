@@ -137,6 +137,55 @@
       by_cargo: (mtz ? FR_CG.slice(0, 6) : FR_CG).map(function (c, i) {
         return row({ cargo: c, rows: 700 - i * 40 }, base * 5 / (i + 1.5)); }) };
   }
+  /* НЭГТГЭЛ (/api/sectors/rail/freight/all/history) — УБТЗ + МТЗ-ийн нийлбэр (backend-ийн
+     VIEW-тэй ижил: сар/өртөө/ачаа нь хоёулангийнх) + by_org, org_months, weekly (сүүлийн
+     бүтэн 8 долоо хоног, Даваа–Ням). */
+  function freightTotal() {
+    var u = freightHistory('ubtz'), m = freightHistory('mtz');
+    var all = ['transit', 'export', 'import', 'domestic'];
+    var keys = all.reduce(function (a, d) { return a.concat([d + '_tonnes', d + '_wagons']); }, ['tonnes', 'wagons', 'rows']);
+    var merge = function (a, b) { var o = Object.assign({}, a); keys.forEach(function (k) { o[k] = (+a[k] || 0) + (+(b && b[k]) || 0); }); return o; };
+    var byName = function (arr, nk) { var idx = {}, out = []; arr.forEach(function (r) {
+      if (idx[r[nk]]) { var j = out.indexOf(idx[r[nk]]); out[j] = idx[r[nk]] = merge(idx[r[nk]], r); }
+      else { idx[r[nk]] = Object.assign({}, r); out.push(idx[r[nk]]); } });
+      return out.sort(function (a, b) { return b.tonnes - a.tonnes; }); };
+    var sum = function (arr) { return arr.reduce(function (a, r) { return merge(a, r); }, {}); };
+    var orgs = [['УБТЗ', 'Улаанбаатар төмөр зам ХНН', u], ['МТЗ', 'Монголын төмөр зам ТӨХК', m]];
+    var lastDay = new Date(Date.UTC(Y, M - 1, D - 1));
+    var we = new Date(lastDay.getTime() - (lastDay.getUTCDay() % 7) * 864e5);   // Ням ≤ сүүлийн өдөр
+    var iso = function (d) { return d.toISOString().slice(0, 10); };
+    var weeks = [];
+    for (var i = 7; i >= 0; i--) {
+      var ws = new Date(we.getTime() - (i * 7 + 6) * 864e5), wend = new Date(we.getTime() - i * 7 * 864e5);
+      var byOrg = {}, w = { week_start: iso(ws), week_end: iso(wend), missing: false, days: 7, rows: 700 };
+      all.forEach(function (d) { w[d + '_tonnes'] = 0; w[d + '_wagons'] = 0; });
+      orgs.forEach(function (o, k) {
+        var base = k ? 26000 : 230000, t = 0, wg = 0;
+        all.forEach(function (d) {
+          var on = !k || d === 'export' || d === 'domestic';
+          var v = on ? Math.round(wave(i + k, base, base * 0.15) * (d === 'domestic' ? 0.55 : d === 'export' ? 0.3 : 0.075)) : 0;
+          w[d + '_tonnes'] += v; w[d + '_wagons'] += Math.round(v / 42); t += v; wg += Math.round(v / 42); });
+        byOrg[o[0]] = { tonnes: t, wagons: wg }; });
+      w.tonnes = all.reduce(function (a, d) { return a + w[d + '_tonnes']; }, 0);
+      w.wagons = all.reduce(function (a, d) { return a + w[d + '_wagons']; }, 0);
+      w.by_org = byOrg; weeks.push(w);
+    }
+    var ytdOrg = function (f) { var b = {}, t = 0; orgs.forEach(function (o, k) { var v = Math.round((k ? 1.1e6 : 2.6e7) * f); b[o[0]] = { tonnes: v, wagons: Math.round(v / 42) }; t += v; });
+      return { by_org: b, tonnes: t, wagons: Math.round(t / 42) }; };
+    var y = +iso(we).slice(0, 4);
+    return { status: 'ok', org: 'all', unit: 'тонн', directions: all, view: 'gold.rail_freight_total',
+      months: u.months.map(function (x) { var mm = m.months.filter(function (z) { return z.month === x.month; })[0];
+        var o = merge(x, mm); o.days = x.days; o.days_in_month = x.days_in_month; o.last_date = x.last_date; o.month = x.month; return o; }),
+      by_station: u.by_station.concat(m.by_station),
+      by_cargo: byName(u.by_cargo.concat(m.by_cargo), 'cargo'),
+      by_org: orgs.map(function (o) { var t = sum(o[2].months); return Object.assign({ org: o[0], name: o[1],
+        first_date: o[2].months[0].month + '-01', last_date: o[2].months[o[2].months.length - 1].last_date }, t); }),
+      org_months: orgs.reduce(function (a, o) { return a.concat(o[2].months.map(function (x) {
+        return { month: x.month, org: o[0], rows: x.rows, tonnes: x.tonnes, wagons: x.wagons }; })); }, []),
+      weekly: { max_date: iso(lastDay), week_end: iso(we), weeks: weeks,
+        ytd: Object.assign({ year: y, from: y + '-01-01', to: iso(we) }, ytdOrg(1)),
+        prev_ytd: Object.assign({ year: y - 1, from: (y - 1) + '-01-01', to: (y - 1) + iso(we).slice(4) }, ytdOrg(0.88)) } };
+  }
   function flightsIndex() { return { years: [{ year: Y }, { year: Y - 1 }] }; }
   function flights(year) {
     var carr = ['MIAT', 'Airchina', 'Hunnu Air', 'Aero Mongolia'];
@@ -204,8 +253,8 @@
         ['branch_name', 'Салбар', 'string'], ['result_raw', 'Дүгнэлт', 'string'], ['failed_brake', 'Тоормос', 'string'], ['failed_count', 'Тэнцээгүй хэсэг', 'int']];
       days.slice(0, 5).forEach(function (d, j) { AIMAG.forEach(function (a, i) {
         rows.push([d, String(5000000 + j * 100 + i), a, 'PC1' + pad(i) + ' салбар', i % 4 ? 'Тэнцсэн' : 'Тэнцээгүй', i % 4 ? 'pass' : 'fail', i % 4 ? 0 : 1]); }); });
-    } else if (key === 'rail-freight-ubtz' || key === 'rail-freight-mtz') {
-      var mz = key === 'rail-freight-mtz';
+    } else if (key === 'rail-freight-ubtz' || key === 'rail-freight-mtz' || key === 'rail-freight-all') {
+      var mz = key === 'rail-freight-mtz', fa = key === 'rail-freight-all';
       columns = [['record_date', 'Огноо', 'date'], ['source_record_id', 'Бичлэгийн ID', 'string'], ['organization', 'Байгууллага', 'string'],
         ['station_name', 'Өртөө', 'string'], ['cargo_name', 'Ачааны нэр', 'string'],
         ['export_wagons', 'Экспорт (вагон)', 'int'], ['export_tonnes', 'Экспорт (тонн)', 'float'],
@@ -219,6 +268,14 @@
         if (!mz) r.push(i % 2, i % 2 ? 41.2 : 0, (j + i) % 3, ((j + i) % 3) * 38.5);
         r.push(e, Math.round(t * 100) / 100, dw, Math.round(dw * 44.4 * 100) / 100);
         rows.push(r); }); });
+      /* Нэгтгэл: VIEW-ийн байгууллагын багана (огнооны дараа) + МТЗ-ийн мөр */
+      if (fa) {
+        columns.splice(1, 0, ['org_code', 'Тээвэрлэгч', 'string'], ['org_name', 'Тээвэрлэгчийн нэр', 'string']);
+        rows = rows.map(function (r) { return [r[0], 'УБТЗ', 'Улаанбаатар төмөр зам ХНН'].concat(r.slice(1)); });
+        days.slice(0, 4).forEach(function (d, j) { ['Цогтцэций', 'Төмөртэй'].forEach(function (s, i) {
+          rows.push([d, 'МТЗ', 'Монголын төмөр зам ТӨХК', String(1844091747960000 + j * 10 + i), 'Монголын төмөр зам ТӨХК', s, 'Нүүрс',
+            null, null, null, null, 0, 0, 20 + i, Math.round((20 + i) * 66.1 * 100) / 100]); }); });
+      }
     } else return 404;
     return { status: rows.length ? 'ok' : 'no_data', dataset: key, total: rows.length, truncated: false,
       columns: columns.map(function (c) { return { key: c[0], label: c[1], type: c[2] }; }), rows: rows };
@@ -231,7 +288,7 @@
     if (u.indexOf('/api/sectors/rail/wagon-loading/history') >= 0)
       return ranged(u, wagonHistory(), 'loaded', [['by_station', 'loaded']]);
     var fo = u.match(/\/api\/sectors\/rail\/freight\/([a-z]+)\/history/);
-    if (fo) return ranged(u, freightHistory(fo[1]), 'tonnes', []);
+    if (fo) return ranged(u, fo[1] === 'all' ? freightTotal() : freightHistory(fo[1]), 'tonnes', []);
     if (u.indexOf('/api/sectors/rail/passengers/history') >= 0)
       return ranged(u, railHistory(), 'passengers', [['by_route', 'passengers']]);
     if (u.indexOf('/api/sectors/rail/passengers/history') >= 0) return railHistory();

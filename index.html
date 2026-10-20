@@ -2969,6 +2969,7 @@
           </div>
         </div>
       </div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
       <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;"><span data-eh-card="dmap" data-eh-field="foot">{{ detail.dmapFoot }}</span> {{ detail.t.map_hint }}</div>
       <sc-if value="{{ detail.flowMap.notReady }}">
         <div style="height:220px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:12.5px;">{{ detail.t.map_loading }}</div>
@@ -3066,6 +3067,127 @@
       </sc-if>
     </div>
     </sc-if>
+
+    <!-- Төмөр замын ачаа тээврийн НЭГТГЭЛ — 7 хоногийн тайлан + тээвэрлэгчийн задаргаа
+         (зөвхөн railFreightAll). Хүснэгтийн ДАРАА (ORD); мөр бүр ижил өндөр (eh-row + stretch). -->
+    <sc-if value="{{ detail.freightIsTotal }}"><sc-if value="{{ detail.freightHasData }}">
+      <div data-freight-total="1">
+        <sc-if value="{{ detail.freightTotHasWeekly }}">
+          <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+            <div data-freight-week="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+                <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">{{ detail.freightTotT.wkTitle }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);font-weight:600;">{{ detail.freightTotRange }}</div>
+              </div>
+              <div style="font-size:11px;color:var(--ink3);line-height:1.5;margin-bottom:14px;">{{ detail.freightTotT.wkScope }}</div>
+              <div class="eh-g-2c" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1 1 auto;">
+                <sc-for list="{{ detail.freightTotKpis }}" as="tk" hint-placeholder-count="4">
+                  <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);">{{ tk.label }}</div>
+                    <div class="eh-ftk-v" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:{{ tk.tone }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ tk.value }}</div>
+                    <div style="font-size:11px;color:var(--ink3);line-height:1.4;">{{ tk.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ detail.freightTotHasStale }}"><div data-freight-stale="1" style="margin-top:12px;font-size:11.5px;line-height:1.5;color:var(--ink3);">ⓘ {{ detail.freightTotStale }}</div></sc-if>
+            </div>
+            <div data-freight-orgs="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
+              <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.freightTotT.orgsTitle }}</div>
+              <div style="display:flex;flex-wrap:wrap;justify-content:space-around;gap:16px;flex:1 1 auto;align-items:center;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+                  <svg sc-camel-view-box="0 0 100 100" style="width:112px;height:112px;">
+                    <sc-for list="{{ detail.freightTotWeekDonut }}" as="od" hint-placeholder-count="2">
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="{{ od.color }}" stroke-width="13" stroke-dasharray="{{ od.dash }}" stroke-dashoffset="{{ od.offset }}" transform="rotate(-90 50 50)"><title>{{ od.tip }}</title></circle>
+                    </sc-for>
+                  </svg>
+                  <div style="font-size:11.5px;color:var(--ink2);text-align:center;">{{ detail.freightTotWeekCap }}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+                  <svg sc-camel-view-box="0 0 100 100" style="width:112px;height:112px;">
+                    <sc-for list="{{ detail.freightTotYtdDonut }}" as="od" hint-placeholder-count="2">
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="{{ od.color }}" stroke-width="13" stroke-dasharray="{{ od.dash }}" stroke-dashoffset="{{ od.offset }}" transform="rotate(-90 50 50)"><title>{{ od.tip }}</title></circle>
+                    </sc-for>
+                  </svg>
+                  <div style="font-size:11.5px;color:var(--ink2);text-align:center;">{{ detail.freightTotYtdCap }}</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);text-align:right;">{{ detail.freightTotLegendHead }}</div>
+                <sc-for list="{{ detail.freightTotOrgLegend }}" as="ol" hint-placeholder-count="2">
+                  <div data-tip="{{ ol.tip }}" style="display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;font-size:12px;">
+                    <span style="width:9px;height:9px;border-radius:3px;background:{{ ol.color }};flex-shrink:0;"></span>
+                    <span style="color:var(--ink2);flex:1 1 150px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ol.code }} · {{ ol.name }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;margin-left:auto;">{{ ol.week }} / {{ ol.ytd }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+            <div data-freight-weekchart="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+              <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.freightTotT.weekChartTitle }}</div>
+              <div style="font-size:10.5px;color:var(--ink3);margin-bottom:8px;">{{ detail.freightTotT.weekChartLegend }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:10px;font-size:11px;color:var(--ink2);">
+                <sc-for list="{{ detail.freightTotWeekLegend }}" as="wl" hint-placeholder-count="4">
+                  <span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:9px;height:9px;border-radius:3px;background:{{ wl.color }};"></span>{{ wl.label }}</span>
+                </sc-for>
+              </div>
+              <svg sc-camel-view-box="0 0 640 230" style="width:100%;height:auto;display:block;">
+                <sc-for list="{{ detail.freightTotWeekChart.yTicks }}" as="yt" hint-placeholder-count="5">
+                  <line x1="{{ detail.freightTotWeekChart.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.freightTotWeekChart.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
+                  <foreignObject x="0" y="{{ yt.fy }}" width="54" height="14">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
+                  </foreignObject>
+                </sc-for>
+                <sc-for list="{{ detail.freightTotWeekChart.bars }}" as="wb" hint-placeholder-count="24">
+                  <rect x="{{ wb.x }}" y="{{ wb.y }}" width="{{ wb.w }}" height="{{ wb.h }}" fill="{{ wb.fill }}" opacity=".88" rx="1.5"><title>{{ wb.tip }}</title></rect>
+                </sc-for>
+                <sc-for list="{{ detail.freightTotWeekChart.xTicks }}" as="xt" hint-placeholder-count="8">
+                  <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="72" height="14">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap;">{{ xt.label }}</div>
+                  </foreignObject>
+                </sc-for>
+              </svg>
+            </div>
+            <div data-freight-split="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fit-card">
+              <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.freightTotT.splitTitle }}</div>
+              <div class="eh-fit-body" style="display:flex;flex-direction:column;gap:12px;justify-content:{{ detail.freightTotSplitJustify }};">
+                <sc-for list="{{ detail.freightTotSplit }}" as="ts" hint-placeholder-count="2">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ts.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ ts.value }} · {{ ts.pct }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ ts.width }};border-radius:3px;background:{{ ts.color }};"></div></div>
+                    <div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ ts.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.freightTotSplitTotal }}</div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ detail.freightTotNoWeekly }}"><sc-if value="{{ detail.freightTotHasSplit }}">
+          <div style="font-size:12px;color:var(--ink3);margin-bottom:10px;">{{ detail.freightTotT.noWeekly }}</div>
+          <div data-freight-split="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.freightTotT.splitTitle }}</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <sc-for list="{{ detail.freightTotSplit }}" as="ts" hint-placeholder-count="2">
+                <div>
+                  <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                    <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ts.name }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ ts.value }} · {{ ts.pct }}</span>
+                  </div>
+                  <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ ts.width }};border-radius:3px;background:{{ ts.color }};"></div></div>
+                  <div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ ts.sub }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if></sc-if>
+      </div>
+    </sc-if></sc-if>
 
     <!-- Ачаа тээврийн графикууд — хүснэгтийн ДАРАА (UI стандарт ORD). Мөр бүр ижил
          өндөртэй (eh-row + stretch, урт жагсаалт дотроо гүйлгэнэ). -->
@@ -3199,8 +3321,10 @@
 
     <sc-if value="{{ detail.notRoadInspect }}">
     <div class="eh-trend-rank eh-fill eh-row" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
-      <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+      <div class="eh-fit-card" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span>{{ detail.c1 }}</div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.trendPeriod }}</div>
+        <div class="eh-fit-body" style="display:flex;flex-direction:column;">
         <sc-if value="{{ detail.noTrend }}">
           <div style="height:180px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ detail.noTrendNote }}</div>
         </sc-if>
@@ -3249,9 +3373,11 @@
         </div>
         </sc-if>
       </div>
+      </div>
       <sc-if value="{{ detail.showRank }}">
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dstr" data-eh-field="title">{{ detail.dstrTitle }}</span></div>
+        <sc-if value="{{ detail.isAirDetail }}"><div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div></sc-if>
         <div class="eh-fill-list"><div class="eh-fill-scroll" style="display:flex;flex-direction:column;gap:13px;">
           <sc-for list="{{ detail.rank }}" as="rk" hint-placeholder-count="4">
             <div>
@@ -3437,6 +3563,7 @@
     <div class="eh-trend-rank" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dcty" data-eh-field="title">{{ detail.dctyTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
         <div class="eh-cap-list" style="display:flex;flex-direction:column;gap:12px;">
           <sc-for list="{{ detail.airCountries }}" as="cn" hint-placeholder-count="5">
             <div>
@@ -3464,6 +3591,7 @@
       </div>
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dint" data-eh-field="title">{{ detail.dintTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
         <div style="display:flex;align-items:center;gap:20px;flex:1 1 auto;">
           <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
             <sc-for list="{{ detail.airDonut }}" as="ad" hint-placeholder-count="2">
@@ -3497,6 +3625,7 @@
           <div sc-camel-on-click="{{ detail.airTreemap.back }}" style="cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9px;border:1px solid var(--line2);background:var(--surface);white-space:nowrap;">← {{ detail.airTreemap.regionLabel }}</div>
         </sc-if>
       </div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
       <div style="font-size:12.5px;color:var(--ink3);line-height:1.5;margin:-4px 0 4px;">{{ detail.airTreemap.help }}</div>
       <div style="font-size:14px;font-weight:600;color:var(--ink);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">{{ detail.airTreemap.totalLabel }}</div>
       <sc-if value="{{ detail.airTreemap.empty }}">
@@ -3629,6 +3758,7 @@
 
     <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dcgo" data-eh-field="title">{{ detail.dcgoTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.airPeriod }}</div>
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;">
         <sc-for list="{{ detail.cargoRank }}" as="cr" hint-placeholder-count="10">
           <div>
@@ -4991,6 +5121,7 @@ const API_ENDPOINTS=[
   ['rail','GET','/api/sectors/rail/summary','Зорчигчийн галт тэрэгний сарын мэдээ','Сар','—','railPax'],
   ['rail','GET','/api/sectors/rail/freight/ubtz/history','Ачаа тээврийн мэдээ (УБТЗ ХНН)','Хоног','—','railFreightUbtz'],
   ['rail','GET','/api/sectors/rail/freight/mtz/history','Ачаа тээврийн мэдээ (МТЗ ТӨХК)','Хоног','—','railFreightMtz'],
+  ['rail','GET','/api/sectors/rail/freight/all/history','Төмөр замын ачаа тээврийн нэгтгэл (УБТЗ + МТЗ)','Хоног','—','railFreightAll'],
   ['air','GET','https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/flights-index.json','Агаарын тээврийн статистик (нислэгийн feed)','Өдөр','—','flights']
 ];
 const DEV_GUIDE=[
@@ -5167,6 +5298,12 @@ const DS_SCHEMA={
     notes:['Ачаа бүртгэгдсэн өртөө','Сонгосон хугацааны нийт ачаа (4 чиглэлийн нийлбэр)','Ачаатай вагоны тоо',
       'Транзит ачаа','Экспорт ачаа','Импорт ачаа','Дотоод ачаа','Өртөөний ачаа нийтийн хэдэн хувь','Сонгосон хугацаанд ачаа бүртгэгдсэн эсэх'],
     rows:[]},
+  /* Нэгтгэл (УБТЗ + МТЗ) — ижил бүтэц, өртөөгөөр. Түүхий мөрийн endpoint (rail-freight-all) ирэхгүй үеийн fallback. */
+  rail_freight_all:{head:['Өртөө','Ачаа (тонн)','Вагон','Транзит (тонн)','Экспорт (тонн)','Импорт (тонн)','Дотоод (тонн)','Эзлэх хувь','Төлөв'],
+    types:['string','float','int','float','float','float','float','float','enum'],
+    notes:['Ачаа бүртгэгдсэн өртөө','Сонгосон хугацааны нийт ачаа (4 чиглэлийн нийлбэр)','Ачаатай вагоны тоо',
+      'Транзит ачаа','Экспорт ачаа','Импорт ачаа','Дотоод ачаа','Өртөөний ачаа нийтийн хэдэн хувь','Сонгосон хугацаанд ачаа бүртгэгдсэн эсэх'],
+    rows:[]},
   rail_pax:{head:['Сар','Зорчигч','Төлөв'],
     types:['month','int','enum'], fmtInt:true,
     notes:['Тайлант сар (YYYY-MM) — өгөгдөл дутуу сар «Дутуу сар» гэж тэмдэглэгдэнэ',
@@ -5183,12 +5320,12 @@ const DS_SCHEMA={
    энд ганц мөр + backend-ийн DATASETS-д ганц мөр. Endpoint ирэхгүй (404,
    унтарсан) бол хүснэгт өмнөх нэгтгэлээрээ үлдэнэ (fallback). */
 const DS_ROWS_API={railWagon:'rail-wagon',railPax:'rail-pax',roadInspect:'road-inspections',
-  railFreightUbtz:'rail-freight-ubtz',railFreightMtz:'rail-freight-mtz'};
+  railFreightUbtz:'rail-freight-ubtz',railFreightMtz:'rail-freight-mtz',railFreightAll:'rail-freight-all'};
 const DS_ROWS_LIMIT=5000;
 /* FL3: хүснэгтийн баганын шүүлт KPI/графикийг ямар ТҮЛХҮҮРЭЭР хамрахыг
    (вагон = станц, зорчигч = сар 'YYYY-MM', үзлэг = аймаг) түүхий баганаас уншина.
    Нэгтгэлийн хүснэгтэд энэ нь 0-р багана байсан; түүхий мөрөнд 0-р багана огноо. */
-const DS_ROWS_SCOPE={railWagon:{col:'station_name'},railPax:{col:'record_date',len:7},roadInspect:{col:'branch_aimag'},railFreightUbtz:{col:'station_name'},railFreightMtz:{col:'station_name'}};
+const DS_ROWS_SCOPE={railWagon:{col:'station_name'},railPax:{col:'record_date',len:7},roadInspect:{col:'branch_aimag'},railFreightUbtz:{col:'station_name'},railFreightMtz:{col:'station_name'},railFreightAll:{col:'station_name'}};
 const DS_RAW_TYPES=['date','month','int','float','pct','pctchg','string','enum'];
 /* Шүүлтийн он/сар → татах огнооны цонх. yFrom==null = бүх он (сүүлийн мөрүүд). */
 function dsRowsWindow(yFrom,yTo,mFrom,mTo){
@@ -5427,7 +5564,9 @@ const SOURCES={
   /* Ачаа тээврийн мэдээ (silver.rail_freight ← Veritech 15399738 / 15439650).
      Түүх нэг удаа (бүх сар) — каталогийн «Сүүлийн бичлэг» ба анализын самбар. */
   railFreightUbtz:{label:'УБТЗ · ачаа тээврийн мэдээ', load:app=>app.loadFreightHistory('railFreightUbtz')},
-  railFreightMtz:{label:'МТЗ · ачаа тээврийн мэдээ', load:app=>app.loadFreightHistory('railFreightMtz')}
+  railFreightMtz:{label:'МТЗ · ачаа тээврийн мэдээ', load:app=>app.loadFreightHistory('railFreightMtz')},
+  /* НЭГТГЭЛ — gold.rail_freight_total (backend migrations/021): бүх тээвэрлэгчийн эх мөрийн UNION */
+  railFreightAll:{label:'Төмөр зам · ачаа тээврийн нэгтгэл', load:app=>app.loadFreightHistory('railFreightAll')}
 };
 // Карт өөрөө өөрөөр зарлаагүй бол эдгээр метрик автоматаар үйлчилнэ —
 // үзэлтийн тоо бол салбар, эх сурвалж харгалзахгүй бүх датасэтэд утга учиртай.
@@ -5519,7 +5658,14 @@ const DATASETS=[
   {sector:'rail',name:'Ачаа тээврийн мэдээ (УБТЗ ХНН)',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нийтийн API нээлттэй',desc:'Улаанбаатар төмөр зам ХНН-ийн улсын сүлжээний өртөө, хилийн боомт тус бүрийн ачаа тээвэр — ачааны нэр төрөл, чиглэлээр (транзит, экспорт, импорт, дотоод) вагон ба тонноор. Нэг мөр = эх системийн нэг бичлэг (өртөө × ачаа × өдөр). 2022 оноос хойшхи түүхтэй.',
    schema:'rail_freight_ubtz',source:'railFreightUbtz',bind:{freq:'lastRecord'}},
   {sector:'rail',name:'Ачаа тээврийн мэдээ (МТЗ ТӨХК)',agency:'МТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Тогтмол бус (гараар)',use:'Нийтийн API нээлттэй',desc:'Монголын төмөр зам ТӨХК-ийн (Цогтцэций, Төмөртэй өртөө) ачаа тээвэр — ачааны нэр төрөл, дотоод ба экспортоор вагон ба тонноор. Эх системд гараар бүртгэгддэг.',
-   schema:'rail_freight_mtz',source:'railFreightMtz',bind:{freq:'lastRecord'}}
+   schema:'rail_freight_mtz',source:'railFreightMtz',bind:{freq:'lastRecord'}},
+  /* НЭГТГЭЛ (2026-10-19, дата архитектур): УБТЗ ба МТЗ-ийн мэдээ талбар, нэгж, grain-ээрээ
+     ЯГ ИЖИЛ тул backend-д хуулбар хүснэгт биш VIEW (gold.rail_freight_total = эх мөрийн UNION +
+     тээвэрлэгчийн хэмжээс). Салбар тус бүрийн датасэт хэвээр; нэгтгэл нь салбарын нийт ба
+     тээвэрлэгчийн задаргаа, 7 хоногийн тайланг харуулна. Шинэ тээвэрлэгч (ТТЗ) = backend-ийн
+     толь (silver.rail_freight_orgs) ганц INSERT — энэ мөр өөрчлөгдөхгүй. */
+  {sector:'rail',name:'Төмөр замын ачаа тээврийн нэгтгэл',agency:'УБТЗ · МТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нийтийн API нээлттэй',desc:'Төмөр замын салбарын нийт ачаа тээвэр — УБТЗ ХНН ба МТЗ ТӨХК-ийн мэдээг нэгтгэсэн (эх бичлэг бүр тээвэрлэгчийн нэртэй). 7 хоногийн тайлан, оны эхнээс өссөн дүн, тээвэрлэгч, чиглэл (транзит, экспорт, импорт, дотоод), өртөө, ачааны төрлөөр.',
+   schema:'rail_freight_all',source:'railFreightAll',bind:{freq:'lastRecord'}}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
 // ЗОХИОХГҮЙ, DATASETS/SERVICES-ийн бодит уртаас тооцоолно (KPI_UNIFIED-ийн
@@ -7153,7 +7299,9 @@ function yoyReasonText(m,T){
    ачааны нэр. Хоёр датасэт НЭГ модель, НЭГ самбар (source-оор ялгана). */
 const FREIGHT_SOURCES={
   railFreightUbtz:{org:'ubtz',rows:'rail-freight-ubtz',schema:'rail_freight_ubtz'},
-  railFreightMtz:{org:'mtz',rows:'rail-freight-mtz',schema:'rail_freight_mtz'}
+  railFreightMtz:{org:'mtz',rows:'rail-freight-mtz',schema:'rail_freight_mtz'},
+  /* total — нэгтгэл: by_org / org_months / weekly-тэй (freightTotalModel) */
+  railFreightAll:{org:'all',rows:'rail-freight-all',schema:'rail_freight_all',total:true}
 };
 const FREIGHT_DIRS=['transit','export','import','domestic'];
 const FREIGHT_COLORS={transit:'#8B5CF6',export:'#2E7CF6',import:'#E8913A',domestic:'#0FA37F'};
@@ -7328,6 +7476,94 @@ function buildFreightStackedChart(stacks,lineSeries,labels,gaps,words){
   const xTicks=Array.from({length:n},(_,i)=>({x:X(i).toFixed(1),label:lbl(i),fx:(X(i)-20).toFixed(1),fy:(h-padB+8).toFixed(1)}))
     .filter((_,i)=>i%every===0);
   return {...base,barRects,line,dotPts,yTicksLeft,yTicksRight,xTicks};
+}
+
+/* ── Төмөр замын ачаа тээврийн НЭГТГЭЛ (railFreightAll) ────────────────────
+   backend: GET /api/sectors/rail/freight/all/history — gold.rail_freight_total
+   (бүх тээвэрлэгчийн эх мөрийн UNION, migrations/021). Сарын/өртөө/ачааны хэсэг нь
+   freightAnalysisModel-оор (салбартай ИЖИЛ самбар); энд зөвхөн нэгтгэлийн нэмэлт:
+   by_org (толь + сүүлийн бичлэг), org_months (шүүлтээр задрах), weekly (7 хоногийн
+   тайлан — сүүлийн БҮТЭН Даваа–Ням, шүүлтээс үл хамаарна). */
+const FREIGHT_ORG_COLORS=['#E2574C','#F0B429','#7C5CFF','#14B8A6'];
+/* ЦЭВЭР (tests/run.js FT). Тоо ЗОХИОХГҮЙ: by_org алга бол {hasOrgs:false}; weekly
+   алга (шүүлттэй хариу, хуучин backend) бол weekly:null. Харьцуулалт (%) хоёр тал
+   бүтэн байхад л — бичлэггүй (missing) 7 хоног 0 гэж тооцохгүй. stale = сүүлийн
+   бичлэг нь тайлангийн 7 хоногоос ӨМНӨ дууссан тээвэрлэгч (МТЗ 2026-02-оос) —
+   7 хоногийн дүн ба он дамнасан харьцуулалтад тэр тээвэрлэгч дутуу орсныг ил хэлнэ. */
+function freightTotalModel(all,year,mr){
+  if(!(all&&all.status==='ok'&&Array.isArray(all.by_org)&&all.by_org.length)) return {hasOrgs:false,weekly:null};
+  const n=v=>+v||0;
+  const orgs=all.by_org.map((o,i)=>({code:String(o.org),name:String(o.name||o.org),
+    firstDate:o.first_date||null,lastDate:o.last_date||null,color:FREIGHT_ORG_COLORS[i%FREIGHT_ORG_COLORS.length]}));
+  const yr=(year==='all'||year==null)?'all':+year;
+  const mFrom=Math.min(12,Math.max(1,+(mr&&mr.from)||1)), mTo=Math.min(12,Math.max(1,+(mr&&mr.to)||12));
+  const om=(Array.isArray(all.org_months)?all.org_months:[]).filter(r=>{
+    const y=+String(r.month).slice(0,4), mo=+String(r.month).slice(5,7);
+    return (yr==='all'||y===yr)&&mo>=mFrom&&mo<=mTo;});
+  const split=orgs.map(o=>{const rs=om.filter(r=>String(r.org)===o.code);
+    return {...o,tonnes:rs.reduce((t,r)=>t+n(r.tonnes),0),wagons:rs.reduce((t,r)=>t+n(r.wagons),0),rows:rs.reduce((t,r)=>t+n(r.rows),0)};});
+  const splitTotal=split.reduce((t,o)=>t+o.tonnes,0);
+  split.forEach(o=>{o.pct=splitTotal>0?o.tonnes/splitTotal*100:0;});
+  const W=all.weekly;
+  let weekly=null;
+  if(W&&Array.isArray(W.weeks)&&W.weeks.length){
+    const weeks=W.weeks, last=weeks[weeks.length-1], prev=weeks.length>1?weeks[weeks.length-2]:null;
+    const pct=(a,b)=>b>0?(a/b-1)*100:null;
+    const wow=(!last.missing&&prev&&!prev.missing)?pct(n(last.tonnes),n(prev.tonnes)):null;
+    const ytd=W.ytd||null, py=W.prev_ytd||null;
+    const yoy=(ytd&&py&&n(py.tonnes)>0)?pct(n(ytd.tonnes),n(py.tonnes)):null;
+    const slices=b=>{const list=orgs.map(o=>({...o,tonnes:n(b&&b[o.code]&&b[o.code].tonnes),wagons:n(b&&b[o.code]&&b[o.code].wagons)}));
+      const t=list.reduce((s,o)=>s+o.tonnes,0);
+      list.forEach(o=>{o.pct=t>0?o.tonnes/t*100:0;});
+      return {list,total:t};};
+    weekly={weekEnd:W.week_end,maxDate:W.max_date||null,weeks,last,prev,wow,ytd,prevYtd:py,yoy,
+      stale:orgs.filter(o=>!o.lastDate||o.lastDate<last.week_start),
+      weekOrgs:slices(last.by_org),ytdOrgs:slices(ytd&&ytd.by_org)};
+  }
+  return {hasOrgs:true,orgs,split,splitTotal,weekly};
+}
+/* 7 хоногоор: чиглэл бүрийн ачаа — бүлэглэсэн багана (зурган тайлангийн загвар).
+   Y 0-ээс; бичлэггүй долоо хоног — бүдэг тууз + "мэдээлэл алга" (0 багана биш).
+   Tooltip: "10.12–10.18 — Экспорт: 1,234 т" (HV: нэр — утга). */
+function buildFreightWeekChart(weeks,dirs,words){
+  const W=Object.assign({tonne:'т',none:'мэдээлэл алга'},words||{});
+  const w=640,h=230,padL=58,padR=12,padT=16,padB=32;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const n=(weeks&&weeks.length)||0, k=(dirs&&dirs.length)||0;
+  const base={w,h,axisX1:padL,axisX2:w-padR};
+  if(!n||!k) return {...base,bars:[],yTicks:[],xTicks:[]};
+  const md=s=>String(s||'').slice(5).replace('-','.');
+  const lbl=i=>md(weeks[i].week_start)+'–'+md(weeks[i].week_end);
+  const val=(i,d)=>+weeks[i][d.key+'_tonnes']||0;
+  let mx=0;
+  weeks.forEach((wk,i)=>{ if(!wk.missing) dirs.forEach(d=>{ mx=Math.max(mx,val(i,d)); }); });
+  const niceMax=x=>{
+    if(!(x>0)) return 1;
+    const mag=Math.pow(10,Math.floor(Math.log10(x))), f=x/mag;
+    return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*mag;
+  };
+  const top=niceMax(mx*1.04);
+  const Y=x=>padT+plotH*(1-x/top);
+  const slot=plotW/n, group=slot*0.78, bw=group/k;
+  const fmt=x=>Math.round(x).toLocaleString('en-US');
+  const bars=[];
+  weeks.forEach((wk,i)=>{
+    if(wk.missing){
+      bars.push({x:(padL+i*slot).toFixed(1),y:padT.toFixed(1),w:slot.toFixed(1),h:plotH.toFixed(1),
+        fill:'rgba(130,142,168,0.14)',tip:lbl(i)+' — '+W.none});
+      return;
+    }
+    dirs.forEach((d,j)=>{
+      const v=val(i,d), y=Y(v);
+      bars.push({x:(padL+i*slot+(slot-group)/2+j*bw+0.5).toFixed(1),y:y.toFixed(1),w:Math.max(1,bw-1).toFixed(1),
+        h:Math.max(v>0?0.8:0,padT+plotH-y).toFixed(1),fill:d.color,tip:lbl(i)+' — '+d.label+': '+fmt(v)+' '+W.tonne});
+    });
+  });
+  const short=x=>x>=1e6?(+(x/1e6).toFixed(2))+'M':x>=1e3?(+(x/1e3).toFixed(1))+'K':fmt(x);
+  const yTicks=[0,0.25,0.5,0.75,1].map(f=>{const v=top*f,y=Y(v);return {y:y.toFixed(1),label:short(v),fy:(y-7).toFixed(1)};});
+  const every=Math.max(1,Math.ceil(n/8));
+  const xTicks=weeks.map((_,i)=>({label:lbl(i),fx:(padL+i*slot+slot/2-36).toFixed(1),fy:(h-padB+8).toFixed(1)})).filter((_,i)=>i%every===0);
+  return {...base,bars,yTicks,xTicks};
 }
 
 /* Зорчигчийн сарын график — ОН/ОУ-ийг ЭЭЛЖ харуулсан багана (нийт = өндөр)
@@ -9497,6 +9733,7 @@ class Component extends DCLogic {
     SECTORS.air._partialDropped=airTrim.partial;
     SECTORS.air._partialValue=airTrim.partial?airTrim.value:null;
     SECTORS.air.c1d=airTrim.counts;
+    SECTORS.air.c1dYear=year;
     const lastRealM=airTrim.counts.length||12;
     /* Энэ салбарын сарын ЦУВАА нь бодит (_liveKpis нь зөвхөн KPI мөр амьд
        гэдгийг л хэлнэ). Хоёрыг ЯЛГАХ шалтгаан: rail-д KPI амьд боловч
@@ -9528,7 +9765,10 @@ class Component extends DCLogic {
       prevPax:hasPrev?prevPaxArr:null,prevCargoTon:hasPrev?prevCargoTonArr:null,
       year:year,prevYear:hasPrev?year-1:null,
       /* DG-P: хугацаа — 1..lastRealM (дутуу сар цуваанаас хасагдсан бол тэмдэглэнэ) */
-      periodKeys:(airTrim.counts.length?monthLabels:[]).map((_,i)=>year+'-'+String(i+1).padStart(2,'0')),partialN:0,partialDropped:!!airTrim.partial};
+      /* Шүүлтийн сарын мужаар хязгаарлана (monthFrom..monthTo) — 5 карт + 2 график
+         нэг хугацаа харуулна. Муж өөрчлөгдөхөд хугацааны мөр хамт өөрчлөгдөнө. */
+      periodKeys:(airTrim.counts.length?monthLabels:[]).map((_,i)=>year+'-'+String(i+1).padStart(2,'0'))
+        .filter((_,i)=>i+1>=(filters.monthFrom||1)&&i+1<=(filters.monthTo||12)),partialN:0,partialDropped:!!airTrim.partial};
     /* ОУ/Дотоодын харьцааны донут — ЗОРЧИГЧООР (гарчиг/эх dashboard-тай
        нийцнэ). Өмнө нь kpis[2]-ийн НИСЛЭГИЙН хувийг (75%) зурж байсан. */
     /* Харьцаа нь «Төрөл» шүүлтээс ҮЛ ХАМААРНА: ОУ-аар шүүгдсэн үед дотоодыг
@@ -10573,7 +10813,76 @@ class Component extends DCLogic {
       freightStationsMore:more(m.stations,stExp,'freightStationsExpanded'),
       freightStationsTotal:T('total','Нийт')+': '+fmt(m.stationTotal)+' '+tUnit,
       freightPending:!m.hasBreakdown,
-      freightChart:chart,freightLegend:legend};
+      freightChart:chart,freightLegend:legend,...this.buildFreightTotal(dsel,m)};
+  }
+  /* Нэгтгэлийн нэмэлт самбар (railFreightAll) — freightTotalModel() (цэвэр) → темплейт.
+     Текст: content.json → site.freight_an.total_*. Салбар (УБТЗ/МТЗ)-ын хуудсанд {}
+     буцаана (freightIsTotal:false) тул тэдгээр өөрчлөгдөхгүй. */
+  buildFreightTotal(dsel,m){
+    const fs=FREIGHT_SOURCES[dsel.source];
+    if(!fs||!fs.total) return {freightIsTotal:false};
+    const T=(k,fb)=>stxt('freight_an.'+k,fb);
+    const u=this.freightUi(dsel.source);
+    const tm=freightTotalModel((this._freightAll||{})[dsel.source],u.year,{from:u.mFrom,to:u.mTo});
+    const fmt=v=>Math.round(v).toLocaleString('en-US');
+    const tUnit=T('unit','тонн'), wUnit=T('unit_wagon','вагон'), dash=T('dash','—');
+    const sg=p=>p==null?dash:((p>0?'+':'')+p.toFixed(1)+'%');
+    const md=s=>String(s||'').slice(5).replace('-','.');
+    const range=wk=>wk?md(wk.week_start)+'–'+md(wk.week_end):'';
+    const dirName=d=>T('dirs.'+d,{transit:'Транзит',export:'Экспорт',import:'Импорт',domestic:'Дотоод'}[d]);
+    const circ=2*Math.PI*40;
+    const donut=list=>{let acc=0;return list.filter(o=>o.tonnes>0).map(o=>{const r={label:o.code,color:o.color,pctLabel:o.pct.toFixed(1)+'%',
+      tip:o.name+' — '+fmt(o.tonnes)+' '+tUnit+' · '+fmt(o.wagons)+' '+wUnit+' · '+o.pct.toFixed(1)+'%',
+      dash:(o.pct/100*circ).toFixed(1)+' '+circ.toFixed(1),offset:(-acc/100*circ).toFixed(1)};acc+=o.pct;return r;});};
+    const txt={wkTitle:T('total_wk_title','7 хоногийн тайлан'),
+      wkScope:T('total_wk_scope','Шүүлтээс үл хамаарна — өгөгдлийн сүүлийн БҮТЭН 7 хоног (Даваа–Ням)'),
+      orgsTitle:T('total_orgs_title','Тээвэрлэгчээр (тонноор)'),
+      weekChartTitle:T('total_week_chart_title','7 хоногоор: тээвэрлэлтийн төрөл (тонн)'),
+      weekChartLegend:T('total_week_chart_legend','Сүүлийн 8 бүтэн 7 хоног · багана бүр — нэг чиглэлийн ачаа · тэнхлэг тэгээс · бүдэг тууз — бичлэггүй 7 хоног.'),
+      splitTitle:T('total_split_title','Тээвэрлэгчээр — сонгосон хугацаа (тонн)'),
+      noWeekly:T('total_no_weekly','7 хоногийн тайлан ачаалагдаагүй — мэдээлэл алга.')};
+    const out={freightIsTotal:true,freightTotT:txt,freightTotHasWeekly:false,freightTotNoWeekly:true};
+    if(!tm.hasOrgs) return {...out,freightTotHasSplit:false};
+    /* Сонгосон хугацааны тээвэрлэгчийн задаргаа (нийлбэр = KPI-ийн «Нийт ачаа») */
+    const top=Math.max(1,...tm.split.map(o=>o.tonnes));
+    const split=tm.split.map(o=>({name:o.code+' · '+o.name,color:o.color,value:fmt(o.tonnes),pct:tm.splitTotal>0?o.pct.toFixed(1)+'%':'',
+      width:(o.tonnes/top*100).toFixed(0)+'%',
+      sub:fmt(o.wagons)+' '+wUnit+' · '+T('total_last_record','сүүлийн бичлэг')+' '+(o.lastDate||dash)}));
+    Object.assign(out,{freightTotHasSplit:true,freightTotSplit:split,
+      freightTotSplitTotal:T('total','Нийт')+': '+fmt(tm.splitTotal)+' '+tUnit,
+      freightTotSplitJustify:split.length<=5?'space-evenly':'flex-start'});
+    const wk=tm.weekly;
+    if(!wk) return out;
+    const last=wk.last, prev=wk.prev;
+    const kpis=[
+      {label:T('total_kpi_week','Сүүлийн 7 хоног'),value:last.missing?dash:fmt(last.tonnes),sub:range(last)+' · '+tUnit},
+      {label:T('total_kpi_ytd','Оны эхнээс өссөн дүн'),value:wk.ytd?fmt(wk.ytd.tonnes):dash,
+        sub:wk.ytd?(md(wk.ytd.from)+'–'+md(wk.ytd.to)+' '+wk.ytd.year+' · '+tUnit):''},
+      {label:T('total_kpi_wow','Өмнөх 7 хоногоос'),value:sg(wk.wow),
+        sub:wk.wow==null?T('total_kpi_wow_none','харьцуулах бүтэн 7 хоног алга'):(range(prev)+': '+fmt(prev.tonnes)+' '+tUnit)},
+      {label:T('total_kpi_yoy','Өмнөх оны мөн үеэс'),value:sg(wk.yoy),
+        sub:wk.yoy==null?T('total_kpi_yoy_none','өмнөх оны мөн үеийн мэдээ алга'):
+          (T('total_kpi_yoy_sub','{year} оны мөн үе: {value} тонн').replace('{year}',wk.prevYtd.year).replace('{value}',fmt(wk.prevYtd.tonnes)))}
+    ];
+    kpis.forEach(k=>{k.tone=/^\+/.test(k.value)?'#0FA37F':/^-/.test(k.value)?'#E2574C':'var(--ink)';});
+    /* Тээвэрлэгчийн хоцрогдол — 7 хоногт 0, он дамнасан харьцуулалт дутуу (тоо зохиохгүй, ил хэлнэ) */
+    const staleNote=wk.stale.length?T('total_stale_note','{orgs}: сүүлийн бичлэг {date} — 7 хоногийн дүн ба харьцуулалтад энэ хугацаанаас хойш ороогүй.')
+      .replace('{orgs}',wk.stale.map(o=>o.code).join(', ')).replace('{date}',wk.stale.map(o=>o.lastDate||dash).join(', ')):'';
+    const present=FREIGHT_DIRS.filter(d=>wk.weeks.some(x=>!x.missing&&(+x[d+'_tonnes']||0)>0));
+    const dirs=present.map(d=>({key:d,label:dirName(d),color:FREIGHT_COLORS[d]}));
+    const chart=buildFreightWeekChart(wk.weeks,dirs,{tonne:T('unit_short','т'),none:T('chart_none','мэдээлэл алга')});
+    const orgLegend=tm.orgs.map(o=>{const a=wk.weekOrgs.list.find(x=>x.code===o.code), b=wk.ytdOrgs.list.find(x=>x.code===o.code);
+      return {code:o.code,name:o.name,color:o.color,
+        week:fmt(a.tonnes)+(wk.weekOrgs.total>0?' · '+a.pct.toFixed(1)+'%':''),
+        ytd:fmt(b.tonnes)+(wk.ytdOrgs.total>0?' · '+b.pct.toFixed(1)+'%':''),
+        tip:o.name+' — '+T('total_kpi_week','Сүүлийн 7 хоног')+': '+fmt(a.tonnes)+' '+tUnit+' · '+T('total_kpi_ytd','Оны эхнээс өссөн дүн')+': '+fmt(b.tonnes)+' '+tUnit};});
+    return {...out,freightTotHasWeekly:true,freightTotNoWeekly:false,
+      freightTotRange:range(last)+' '+String(last.week_end||'').slice(0,4),
+      freightTotKpis:kpis,freightTotStale:staleNote,freightTotHasStale:!!staleNote,
+      freightTotWeekDonut:donut(wk.weekOrgs.list),freightTotYtdDonut:donut(wk.ytdOrgs.list),
+      freightTotWeekCap:T('total_kpi_week','Сүүлийн 7 хоног'),freightTotYtdCap:T('total_kpi_ytd','Оны эхнээс өссөн дүн'),
+      freightTotOrgLegend:orgLegend,freightTotLegendHead:T('total_legend_head','7 хоног / оны эхнээс (тонн · %)'),
+      freightTotWeekChart:chart,freightTotWeekLegend:dirs.map(d=>({label:d.label,color:d.color}))};
   }
   buildDocDetail(){
     const cat=this.state.docCat, list=DOCS[cat]||[];
@@ -11864,6 +12173,10 @@ class Component extends DCLogic {
       (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name)))&&
       Array.isArray(dsSec.c1d)&&dsSec.c1d.some(v=>+v>0);
     const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue,dsel.source==='railPax'):null;
+    /* DG-P: трендийн картын хугацаа — c1d-ийн БОДИТ бичлэгтэй сарууд (c1dYear-ээр).
+       Дутуу сар цуваанаас хасагдсан бол тэмдэглэнэ. Цуваа хоосон бол «мэдээлэл алга». */
+    const dsTrendKeys=(dsHasTrend&&dsSec.c1dYear)?dsSec.c1d.map((v,i)=>(+v>0?dsSec.c1dYear+'-'+String(i+1).padStart(2,'0'):null)).filter(Boolean):[];
+    const dsTrendPeriod=chartPeriodText({periodKeys:dsTrendKeys,partialN:0,partialDropped:!!dsSec._partialDropped},(k,fb)=>stxt('chart.'+k,fb));
     /* 7 хоногийн гүйцэтгэл — датасэт тус бүрийн 7 хоногийн цуврал эх
        сурвалжаас ирдэггүй. Өмнө нь датасэтийн НЭРНИЙ hash-аас тоо, нэгж,
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
@@ -12089,6 +12402,7 @@ class Component extends DCLogic {
       rail_pax:()=>stxt('pv_scope.note_rail_pax','KPI, харьцаа, сарын график ба эрэмбэ энэ шүүлтийг дагана. Чиглэл ба борлуулалтын сувгийн задаргаа сараар задрахгүй тул хамаарахгүй.'),
       rail_wagon:()=>stxt('pv_scope.note_rail_wagon','Станцын жагсаалт зөвхөн шүүлтэд таарсан станцуудыг харуулна (Төлөв нь хүснэгтийн сүүлийн хоногийнх, жагсаалтын тоо сонгосон хугацааных). KPI, харьцаа, вагоны төрөл, сарын график станцаар задрахгүй тул хамаарахгүй.'),
       rail_freight_ubtz:()=>stxt('pv_scope.note_rail_freight','Өртөөний эрэмбэ (ба нэгтгэлийн хүснэгт) зөвхөн шүүлтэд таарсан өртөөнүүдийг харуулна. KPI, чиглэлийн харьцаа, ачааны төрөл, сарын график өртөөгөөр задрахгүй тул хамаарахгүй.'),
+      rail_freight_all:()=>stxt('pv_scope.note_rail_freight_all','Өртөөний эрэмбэ зөвхөн шүүлтэд таарсан өртөөнүүдийг харуулна. KPI, тээвэрлэгчийн задаргаа, чиглэлийн харьцаа, ачааны төрөл, сарын болон 7 хоногийн график өртөөгөөр задрахгүй тул хамаарахгүй.'),
       rail_freight_mtz:()=>stxt('pv_scope.note_rail_freight','Өртөөний эрэмбэ (ба нэгтгэлийн хүснэгт) зөвхөн шүүлтэд таарсан өртөөнүүдийг харуулна. KPI, чиглэлийн харьцаа, ачааны төрөл, сарын график өртөөгөөр задрахгүй тул хамаарахгүй.'),
       road_inspect:()=>stxt('pv_scope.note_road_inspect','Аймгийн эрэмбэ ба газрын зураг энэ шүүлтийг дагана. KPI, хоногийн ба гаригийн график, шалтгаан аймгаар задрахгүй тул хамаарахгүй.')}[String(pvSc.schemaKey||'').replace(/__raw$/,'')]
       ||(()=>stxt('pv_scope.note_default','Энэ шүүлт зөвхөн хүснэгтэд хамаарна.'));
@@ -12144,6 +12458,7 @@ class Component extends DCLogic {
           mark:it.on?'✓':'✕'}))
       })),
       c1:dsHasTrend?(SECTORS[dsel.sector].c1+((dsel.source==='railPax'&&dsSec.c1dYear)?' · '+dsSec.c1dYear:'')):stxt('detail.no_series_title','ЧИГ ХАНДЛАГА'),
+      trendPeriod:dsTrendPeriod,
       hasTrend:dsHasTrend,noTrend:!dsHasTrend,
       noTrendNote:stxt('status.no_series','чиг хандлагын цуваа алга'),
       trend:dsTrend||{yTicks:[],xTicks:[]},
