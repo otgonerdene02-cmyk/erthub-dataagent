@@ -2358,6 +2358,91 @@
     </div>
     </sc-if>
 
+    <!-- Авто тээврийн зорчигч тээврийн мэдээ (Veritech 15401437) — нэгдсэн шүүлт + KPI. Ачаа,
+         вагон, зорчигчийн самбартай ижил стандарт (толгой → шүүлт → KPI → хүснэгт → график).
+         Эх сурвалж: /api/sectors/road/passengers/history. Түүх ирээгүй бол зөвхөн
+         "мэдээлэл алга" — тоо зохиохгүй. Нийслэлийн нийтийн тээвэр эх сурвалжид алга (ил хэлнэ). -->
+    <sc-if value="{{ detail.isRoadPaxDetail }}">
+    <sc-if value="{{ detail.roadPaxF.show }}">
+      <div data-roadpax-filter="1" style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">{{ detail.roadPaxT.filterTitle }}</div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.roadPaxT.fYear }}</div>
+          <sc-for list="{{ detail.roadPaxF.yearChips }}" as="ry" hint-placeholder-count="5">
+            <button sc-camel-on-click="{{ ry.pick }}" style="{{ ry.style }}">{{ ry.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.roadPaxT.fMonth }}</div>
+          <button sc-camel-on-click="{{ detail.roadPaxF.monthAllPick }}" style="{{ detail.roadPaxF.monthAllStyle }}">{{ detail.roadPaxF.allLabel }}</button>
+          <sc-for list="{{ detail.roadPaxF.monthChips }}" as="rm" hint-placeholder-count="12">
+            <button sc-camel-on-click="{{ rm.pick }}" style="{{ rm.style }}">{{ rm.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding-top:2px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.roadPaxT.fInterval }}</div>
+          <span style="font-size:11.5px;color:var(--ink2);white-space:nowrap;">{{ detail.roadPaxT.fByMonth }}</span>
+          <input type="number" value="{{ detail.roadPaxF.mFrom }}" sc-camel-on-input="{{ detail.roadPaxF.onMFrom }}" min="1" max="12" placeholder="1" style="{{ detail.roadPaxF.inputStyle }}">
+          <span style="font-size:11.5px;color:var(--ink3);">—</span>
+          <input type="number" value="{{ detail.roadPaxF.mTo }}" sc-camel-on-input="{{ detail.roadPaxF.onMTo }}" min="1" max="12" placeholder="12" style="{{ detail.roadPaxF.inputStyle }}">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;margin-left:4px;">{{ detail.roadPaxF.summary }}</span>
+          <sc-if value="{{ detail.roadPaxF.dirty }}">
+            <button sc-camel-on-click="{{ detail.roadPaxF.reset }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.roadPaxT.fReset }}</button>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+    <div data-roadpax-an="1" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);font-weight:600;white-space:nowrap;">{{ detail.roadPaxT.head }}</div>
+        <sc-if value="{{ detail.roadPaxHasData }}">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">{{ detail.roadPaxScope }}</span>
+        </sc-if>
+      </div>
+      <sc-if value="{{ detail.roadPaxNoData }}">
+        <div style="background:var(--surface2);border:1px dashed var(--line2);border-radius:14px;padding:18px 20px;font-size:13px;color:var(--ink2);line-height:1.5;">{{ detail.roadPaxT.noData }}</div>
+      </sc-if>
+      <sc-if value="{{ detail.roadPaxHasData }}">
+        <sc-if value="{{ detail.roadPaxHasScopeNote }}">
+          <div data-roadpax-scope="1" style="font-size:12px;color:var(--ink3);line-height:1.55;margin-bottom:14px;">{{ detail.roadPaxScopeNote }}</div>
+        </sc-if>
+        <!-- Сүүлийн 7 хоног (ЗТХЯ-ны зурган тайлангийн гол үзүүлэлтүүд) — KPI хэсэгт, хүснэгтийн ӨМНӨ.
+             Шүүлтээс үл хамаарна (өгөгдлийн сүүлийн бүтэн Даваа–Ням). -->
+        <sc-if value="{{ detail.roadPaxHasWeekly }}">
+          <div data-roadpax-week="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:20px 22px;display:flex;flex-direction:column;margin-bottom:16px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+                <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">{{ detail.roadPaxT.wkTitle }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);font-weight:600;">{{ detail.roadPaxWkRange }}</div>
+              </div>
+              <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:2px 0 4px;">{{ detail.roadPaxWkPeriod }}</div>
+              <div style="font-size:11px;color:var(--ink3);line-height:1.5;margin-bottom:14px;">{{ detail.roadPaxT.wkScope }}</div>
+              <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;">
+                <sc-for list="{{ detail.roadPaxWkKpis }}" as="tk" hint-placeholder-count="4">
+                  <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);">{{ tk.label }}</div>
+                    <div class="eh-ftk-v" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:{{ tk.tone }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ tk.value }}</div>
+                    <div style="font-size:11px;color:var(--ink3);line-height:1.4;">{{ tk.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ detail.roadPaxWkHasNote }}"><div data-roadpax-wknote="1" style="margin-top:12px;font-size:11.5px;line-height:1.5;color:var(--ink3);">ⓘ {{ detail.roadPaxWkNote }}</div></sc-if>
+            </div>
+        </sc-if>
+        <div data-roadpax-capital="1" style="font-size:12px;color:var(--ink3);line-height:1.55;margin-bottom:14px;">ⓘ {{ detail.roadPaxCapitalNote }}</div>
+        <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px;">
+          <sc-for list="{{ detail.roadPaxKpis }}" as="rk" hint-placeholder-count="6">
+            <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px;">
+              <div style="font-size:9.5px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ rk.label }}</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.02em;">{{ rk.value }}</div>
+              <div style="font-size:11px;color:var(--ink3);margin-top:2px;">{{ rk.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+
     <!-- САЛБАРЫН НЭГТГЭЛ (агаар + төмөр зам → цаашид авто тээвэр) — нэгдсэн шүүлт + KPI +
          хамрах хүрээ. Бусад датасэттэй ижил стандарт (толгой → шүүлт → KPI → хүснэгт → график).
          Эх сурвалж: /api/sectors/total/history (gold.sector_daily_total); алга бол салбарын
@@ -3264,6 +3349,263 @@
             </div>
           </div>
         </sc-if></sc-if>
+      </div>
+    </sc-if></sc-if>
+
+    <!-- Авто тээврийн зорчигч — 7 хоногийн тайлан (зурган тайлангийн загвар) ба графикууд.
+         Хүснэгтийн ДАРАА (UI стандарт ORD); мөр бүр ижил өндөр (eh-row + stretch).
+         7 хоногийн хэсэг шүүлтээс үл хамаарна — хугацаа нь өөрийн мөрөнд (DG-P). -->
+    <sc-if value="{{ detail.isRoadPaxDetail }}"><sc-if value="{{ detail.roadPaxHasData }}">
+      <div data-roadpax-charts="1">
+        <sc-if value="{{ detail.roadPaxHasWeekly }}">
+          <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+            <div data-roadpax-wktypes="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
+              <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.roadPaxT.wkTypesTitle }}</div>
+              <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.roadPaxWkPeriod }}</div>
+              <div style="display:flex;flex-wrap:wrap;justify-content:space-around;gap:16px;flex:1 1 auto;align-items:center;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+                  <svg sc-camel-view-box="0 0 100 100" style="width:112px;height:112px;">
+                    <sc-for list="{{ detail.roadPaxWkWeekDonut }}" as="od" hint-placeholder-count="4">
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="{{ od.color }}" stroke-width="13" stroke-dasharray="{{ od.dash }}" stroke-dashoffset="{{ od.offset }}" transform="rotate(-90 50 50)"><title>{{ od.tip }}</title></circle>
+                    </sc-for>
+                  </svg>
+                  <div style="font-size:11.5px;color:var(--ink2);text-align:center;">{{ detail.roadPaxWkWeekCap }}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+                  <svg sc-camel-view-box="0 0 100 100" style="width:112px;height:112px;">
+                    <sc-for list="{{ detail.roadPaxWkYtdDonut }}" as="od" hint-placeholder-count="4">
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="{{ od.color }}" stroke-width="13" stroke-dasharray="{{ od.dash }}" stroke-dashoffset="{{ od.offset }}" transform="rotate(-90 50 50)"><title>{{ od.tip }}</title></circle>
+                    </sc-for>
+                  </svg>
+                  <div style="font-size:11.5px;color:var(--ink2);text-align:center;">{{ detail.roadPaxWkYtdCap }}</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);text-align:right;">{{ detail.roadPaxWkLegendHead }}</div>
+                <sc-for list="{{ detail.roadPaxWkLegend }}" as="ol" hint-placeholder-count="4">
+                  <div data-tip="{{ ol.tip }}" style="display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;font-size:12px;">
+                    <span style="width:9px;height:9px;border-radius:3px;background:{{ ol.color }};flex-shrink:0;"></span>
+                    <span style="color:var(--ink2);flex:1 1 130px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ol.name }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;margin-left:auto;">{{ ol.week }} / {{ ol.ytd }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div data-roadpax-donut="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.roadPaxT.donutTitle }}</div>
+            <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.chartPeriod }}</div>
+            <div style="display:flex;align-items:center;gap:20px;flex:1 1 auto;flex-wrap:wrap;justify-content:center;">
+              <svg sc-camel-view-box="0 0 100 100" style="width:120px;height:120px;flex-shrink:0;">
+                <sc-for list="{{ detail.roadPaxDonut }}" as="fd" hint-placeholder-count="4">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="{{ fd.color }}" stroke-width="13" stroke-dasharray="{{ fd.dash }}" stroke-dashoffset="{{ fd.offset }}" transform="rotate(-90 50 50)"><title>{{ fd.tip }}</title></circle>
+                </sc-for>
+              </svg>
+              <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
+                <sc-for list="{{ detail.roadPaxDonut }}" as="fd" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:9px;" data-tip="{{ fd.tip }}">
+                    <div style="width:9px;height:9px;border-radius:3px;background:{{ fd.color }};flex-shrink:0;"></div>
+                    <div style="font-size:13px;color:var(--ink2);flex:1;">{{ fd.label }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink);">{{ fd.pctLabel }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{ detail.roadPaxDonutHasNote }}"><div style="margin-top:12px;font-size:11.5px;line-height:1.5;color:var(--ink3);">ⓘ {{ detail.roadPaxDonutNote }}</div></sc-if>
+          </div>
+          </div>
+
+          <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin:4px 0 12px;">{{ detail.roadPaxT.wkTypeCardsHead }}</div>
+          <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:{{ detail.roadPaxTypeCols }};gap:16px;margin-bottom:16px;align-items:stretch;">
+            <sc-for list="{{ detail.roadPaxTypeCards }}" as="tc" hint-placeholder-count="4">
+              <div data-roadpax-typecard="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;">
+                <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;"><span style="width:9px;height:9px;border-radius:3px;background:{{ tc.color }};flex-shrink:0;"></span>{{ tc.title }}</div>
+                <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:0 0 8px;">{{ detail.roadPaxWkPeriod }}</div>
+                <svg sc-camel-view-box="0 0 320 170" style="width:100%;height:auto;display:block;">
+                  <line x1="{{ tc.chart.axisX1 }}" y1="{{ tc.chart.baseY }}" x2="{{ tc.chart.axisX2 }}" y2="{{ tc.chart.baseY }}" stroke="var(--line)" stroke-width="1"></line>
+                  <sc-for list="{{ tc.chart.bars }}" as="tb" hint-placeholder-count="8">
+                    <rect x="{{ tb.x }}" y="{{ tb.y }}" width="{{ tb.w }}" height="{{ tb.h }}" fill="{{ tb.fill }}" opacity="{{ tb.op }}" rx="2"><title>{{ tb.tip }}</title></rect>
+                  </sc-for>
+                  <sc-for list="{{ tc.chart.labels }}" as="tl" hint-placeholder-count="8">
+                    <foreignObject x="{{ tl.fx }}" y="{{ tl.fy }}" width="48" height="14" pointer-events="none">
+                      <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9px;color:var(--ink2);font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap;">{{ tl.label }}</div>
+                    </foreignObject>
+                  </sc-for>
+                  <sc-for list="{{ tc.chart.xTicks }}" as="tx" hint-placeholder-count="8">
+                    <foreignObject x="{{ tx.fx }}" y="{{ tx.fy }}" width="48" height="14" pointer-events="none">
+                      <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:8.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;white-space:nowrap;">{{ tx.label }}</div>
+                    </foreignObject>
+                  </sc-for>
+                </svg>
+                <div class="eh-g-2c" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+                  <sc-for list="{{ tc.kpis }}" as="tk" hint-placeholder-count="4">
+                    <div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0;">
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ tk.label }}</div>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:{{ tk.tone }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px;">{{ tk.value }}</div>
+                      <div style="font-size:10.5px;color:var(--ink3);line-height:1.35;margin-top:2px;">{{ tk.sub }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ detail.roadPaxNoWeekly }}">
+          <div style="font-size:12px;color:var(--ink3);margin-bottom:12px;">{{ detail.roadPaxT.noWeekly }}</div>
+        </sc-if>
+
+        <div style="margin-bottom:16px;">
+          <div data-roadpax-chart="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.roadPaxT.chartTitle }}</div>
+            <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.chartPeriod }}</div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-bottom:8px;">{{ detail.roadPaxT.chartLegend }}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:10px;font-size:11px;color:var(--ink2);">
+              <sc-for list="{{ detail.roadPaxLegend }}" as="fl" hint-placeholder-count="4">
+                <span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:9px;height:9px;border-radius:3px;background:{{ fl.color }};"></span>{{ fl.label }}</span>
+              </sc-for>
+            </div>
+            <svg sc-camel-view-box="0 0 640 230" style="width:100%;height:auto;display:block;">
+              <sc-for list="{{ detail.roadPaxChart.yTicksLeft }}" as="yt" hint-placeholder-count="5">
+                <line x1="{{ detail.roadPaxChart.axisX1 }}" y1="{{ yt.y }}" x2="{{ detail.roadPaxChart.axisX2 }}" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
+                <foreignObject x="0" y="{{ yt.fy }}" width="54" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.roadPaxChart.yTicksRight }}" as="yt2" hint-placeholder-count="5">
+                <foreignObject x="{{ yt2.fx }}" y="{{ yt2.fy }}" width="54" height="14">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:{{ detail.roadPaxLineColor }};font-family:'JetBrains Mono',monospace;text-align:left;padding-left:6px;">{{ yt2.label }}</div>
+                </foreignObject>
+              </sc-for>
+              <sc-for list="{{ detail.roadPaxChart.barRects }}" as="br" hint-placeholder-count="12">
+                <rect x="{{ br.x }}" y="{{ br.y }}" width="{{ br.w }}" height="{{ br.h }}" fill="{{ br.fill }}" opacity="{{ br.op }}" rx="1.5"><title>{{ br.tip }}</title></rect>
+              </sc-for>
+              <path d="{{ detail.roadPaxChart.line }}" fill="none" stroke="{{ detail.roadPaxLineColor }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"></path>
+              <sc-for list="{{ detail.roadPaxChart.dotPts }}" as="dp" hint-placeholder-count="12">
+                <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="2.8" fill="{{ dp.fill }}" stroke="{{ detail.roadPaxLineColor }}" stroke-width="1.6"><title>{{ dp.tip }}</title></circle>
+              </sc-for>
+              <sc-for list="{{ detail.roadPaxChart.xTicks }}" as="xt" hint-placeholder-count="6">
+                <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
+                </foreignObject>
+              </sc-for>
+            </svg>
+          </div>
+          
+        </div>
+
+        <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
+          <div data-roadpax-routes="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.roadPaxT.routesTitle }}</div>
+            <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.chartPeriod }}</div>
+            <div class="eh-fill-list"><div class="eh-fill-scroll">
+            <sc-if value="{{ detail.roadPaxHasRoutes }}">
+              <div style="display:flex;flex-direction:column;min-height:100%;">
+              <div style="display:flex;flex-direction:column;gap:10px;flex:1 1 auto;justify-content:{{ detail.roadPaxRoutesJustify }};">
+                <sc-for list="{{ detail.roadPaxRoutes }}" as="rr" hint-placeholder-count="10">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rr.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ rr.value }} · {{ rr.pct }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ rr.width }};border-radius:3px;background:{{ detail.color }};opacity:.8;"></div></div>
+                    <sc-if value="{{ rr.sub }}"><div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ rr.sub }}</div></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.roadPaxRoutesTotal }}</span>
+                <sc-if value="{{ detail.roadPaxRoutesMore.show }}">
+                  <button sc-camel-on-click="{{ detail.roadPaxRoutesMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.roadPaxRoutesMore.label }}</button>
+                </sc-if>
+              </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.roadPaxPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.roadPaxT.pending }}</div>
+            </sc-if>
+            </div></div>
+          </div>
+          <div data-roadpax-companies="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fill-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.roadPaxT.companiesTitle }}</div>
+            <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.chartPeriod }}</div>
+            <div class="eh-fill-list"><div class="eh-fill-scroll">
+            <sc-if value="{{ detail.roadPaxHasCompanies }}">
+              <div style="display:flex;flex-direction:column;min-height:100%;">
+              <div style="display:flex;flex-direction:column;gap:10px;flex:1 1 auto;justify-content:{{ detail.roadPaxCompaniesJustify }};">
+                <sc-for list="{{ detail.roadPaxCompanies }}" as="rr" hint-placeholder-count="10">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                      <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rr.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ rr.value }} · {{ rr.pct }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ rr.width }};border-radius:3px;background:{{ detail.color }};opacity:.8;"></div></div>
+                    <sc-if value="{{ rr.sub }}"><div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ rr.sub }}</div></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);">{{ detail.roadPaxCompaniesTotal }}</span>
+                <sc-if value="{{ detail.roadPaxCompaniesMore.show }}">
+                  <button sc-camel-on-click="{{ detail.roadPaxCompaniesMore.toggle }}" style="cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:11.5px;white-space:nowrap;">{{ detail.roadPaxCompaniesMore.label }}</button>
+                </sc-if>
+              </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ detail.roadPaxPending }}">
+              <div style="font-size:12px;color:var(--ink3);">{{ detail.roadPaxT.pending }}</div>
+            </sc-if>
+            </div></div>
+          </div>
+        </div>
+
+        <sc-if value="{{ detail.roadPaxSmallHas }}">
+        <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px;align-items:stretch;">
+          <div data-roadpax-channels="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fit-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.roadPaxT.channelsTitle }}</div>
+            <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.chartPeriod }}</div>
+            <div class="eh-fit-body" style="display:flex;flex-direction:column;gap:12px;justify-content:space-evenly;">
+              <sc-for list="{{ detail.roadPaxChannels }}" as="sr" hint-placeholder-count="4">
+                <div>
+                  <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                    <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ sr.name }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ sr.value }} · {{ sr.pct }}</span>
+                  </div>
+                  <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ sr.width }};border-radius:3px;background:{{ detail.color }};opacity:.8;"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div data-roadpax-ptypes="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fit-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.roadPaxT.ptypesTitle }}</div>
+            <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.chartPeriod }}</div>
+            <div class="eh-fit-body" style="display:flex;flex-direction:column;gap:12px;justify-content:space-evenly;">
+              <sc-for list="{{ detail.roadPaxPtypes }}" as="sr" hint-placeholder-count="4">
+                <div>
+                  <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                    <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ sr.name }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ sr.value }} · {{ sr.pct }}</span>
+                  </div>
+                  <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ sr.width }};border-radius:3px;background:{{ detail.color }};opacity:.8;"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div data-roadpax-vehicles="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fit-card">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.roadPaxT.vehiclesTitle }}</div>
+            <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-6px 0 12px;">{{ detail.chartPeriod }}</div>
+            <div class="eh-fit-body" style="display:flex;flex-direction:column;gap:12px;justify-content:space-evenly;">
+              <sc-for list="{{ detail.roadPaxVehicles }}" as="sr" hint-placeholder-count="4">
+                <div>
+                  <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px;">
+                    <span style="color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ sr.name }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ sr.value }} · {{ sr.pct }}</span>
+                  </div>
+                  <div style="height:6px;border-radius:3px;background:var(--surface2);"><div style="height:100%;width:{{ sr.width }};border-radius:3px;background:{{ detail.color }};opacity:.8;"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        </sc-if>
       </div>
     </sc-if></sc-if>
 
@@ -5369,12 +5711,13 @@ const BROWSE_TABS=[
    бүтэн хаягаар нь бичив. */
 const API_ENDPOINTS=[
   ['road','GET','/api/sectors/road/inspections','Техникийн хяналтын үзлэгийн мэдээ','Хоног','—','roadInspect'],
+  ['road','GET','/api/sectors/road/passengers/history','Авто тээврийн зорчигч тээврийн мэдээ (билет)','Хоног','—','roadPax'],
   ['rail','GET','/api/sectors/rail/wagon-loading','Ачилт буулгалтын хоногийн мэдээ (вагон)','Хоног','—','railWagon'],
   ['rail','GET','/api/sectors/rail/summary','Зорчигчийн галт тэрэгний сарын мэдээ','Сар','—','railPax'],
   ['rail','GET','/api/sectors/rail/freight/ubtz/history','Ачаа тээврийн мэдээ (УБТЗ ХНН)','Хоног','—','railFreightUbtz'],
   ['rail','GET','/api/sectors/rail/freight/mtz/history','Ачаа тээврийн мэдээ (МТЗ ТӨХК)','Хоног','—','railFreightMtz'],
   ['rail','GET','/api/sectors/rail/freight/all/history','Төмөр замын ачаа тээврийн нэгтгэл (УБТЗ + МТЗ)','Хоног','—','railFreightAll'],
-  ['total','GET','/api/sectors/total/history','Салбарын нэгтгэл — зорчигч, ачаа (агаар + төмөр зам)','Хоног','—','sectorTotal'],
+  ['total','GET','/api/sectors/total/history','Салбарын нэгтгэл — зорчигч, ачаа (агаар + авто + төмөр зам)','Хоног','—','sectorTotal'],
   ['air','GET','https://otgonerdene02-cmyk.github.io/veritech-flights-dashboard/flights-index.json','Агаарын тээврийн статистик (нислэгийн feed)','Өдөр','—','flights']
 ];
 const DEV_GUIDE=[
@@ -5490,7 +5833,9 @@ function airFlightColMatch(sel,cols){
    шошго нь "Нислэгийн төрөл"-ийн утга (13) — давхардуулахгүй. */
 const PV_COL_EXCLUDE={air:['ОУ/Дотоод','Чиглэл','Бүс нутаг','Төлөв'],
   /* «Салбарын код» = «Салбар»-ын техникийн код (air/rail) — ижил шүүлтийг давхардуулахгүй */
-  sector_total:['Салбарын код']};
+  sector_total:['Салбарын код'],
+  /* Авто тээврийн зорчигч: цагийн тэмдэг (огноо + цаг) ангилал биш — хугацааг нэгдсэн шүүлт (он/сар) шүүнэ */
+  road_pax:['Хөдлөх цаг','Төлөв өөрчлөгдсөн цаг']};
 /* Олон утгатай баганыг (агаар: Хот 157, Компани 47) эхлээд хамгийн олон
    мөртэй N утгаар товчилж, "+M бусад"-аар дэлгэнэ (CKAN facet-ийн "Show more"). */
 const PV_COL_TOP=12;
@@ -5566,6 +5911,14 @@ const DS_SCHEMA={
     notes:['Тээврийн салбар','Тайлант сар (YYYY-MM)','Сарын нийт зорчигч','Сарын нийт ачаа (тонн)',
       'Зорчигчийн мэдээ орсон өдөр','Ачааны мэдээ орсон өдөр','Бүтэн сар эсвэл дутуу сар'],
     rows:[]},
+  /* Авто тээврийн зорчигч — түүхий мөрийн endpoint (road-passengers = нэг мөр нэг билет)
+     ирэхгүй үеийн fallback: чиглэлээр нэгтгэсэн хүснэгт (syncRoadPaxTable — by_route-аас).
+     rows ХООСОН эхэлнэ — зохиомол мөр алга. */
+  road_pax:{head:['Чиглэл','Тээврийн төрөл','Зорчигч','Эзлэх хувь','Төлөв'],
+    types:['string','enum','int','float','enum'],
+    notes:['Билетийн чиглэл (эх системийн нэрээр)','Хот хооронд, улс хооронд, аймаг хооронд, орон нутаг',
+      'Сонгосон хугацаанд зорчсон билетийн тоо (буцаасныг хассан)','Чиглэлийн зорчигч нийтийн хэдэн хувь','Сонгосон хугацаанд зорчигч бүртгэгдсэн эсэх'],
+    rows:[]},
   rail_pax:{head:['Сар','Зорчигч','Төлөв'],
     types:['month','int','enum'], fmtInt:true,
     notes:['Тайлант сар (YYYY-MM) — өгөгдөл дутуу сар «Дутуу сар» гэж тэмдэглэгдэнэ',
@@ -5583,13 +5936,14 @@ const DS_SCHEMA={
    унтарсан) бол хүснэгт өмнөх нэгтгэлээрээ үлдэнэ (fallback). */
 const DS_ROWS_API={railWagon:'rail-wagon',railPax:'rail-pax',roadInspect:'road-inspections',
   railFreightUbtz:'rail-freight-ubtz',railFreightMtz:'rail-freight-mtz',railFreightAll:'rail-freight-all',
-  sectorTotal:'sector-total'};
+  sectorTotal:'sector-total',roadPax:'road-passengers'};
 const DS_ROWS_LIMIT=5000;
 /* FL3: хүснэгтийн баганын шүүлт KPI/графикийг ямар ТҮЛХҮҮРЭЭР хамрахыг
    (вагон = станц, зорчигч = сар 'YYYY-MM', үзлэг = аймаг) түүхий баганаас уншина.
    Нэгтгэлийн хүснэгтэд энэ нь 0-р багана байсан; түүхий мөрөнд 0-р багана огноо. */
-const DS_ROWS_SCOPE={railWagon:{col:'station_name'},railPax:{col:'record_date',len:7},roadInspect:{col:'branch_aimag'},railFreightUbtz:{col:'station_name'},railFreightMtz:{col:'station_name'},railFreightAll:{col:'station_name'},sectorTotal:{col:'sector_name'}};
-/* ↑ sectorTotal — «Салбар»-ын шүүлт KPI/графикийн салбарыг хамт шүүнэ (FL3) */
+const DS_ROWS_SCOPE={railWagon:{col:'station_name'},railPax:{col:'record_date',len:7},roadInspect:{col:'branch_aimag'},railFreightUbtz:{col:'station_name'},railFreightMtz:{col:'station_name'},railFreightAll:{col:'station_name'},sectorTotal:{col:'sector_name'},roadPax:{col:'route_type'}};
+/* ↑ sectorTotal — «Салбар»-ын шүүлт KPI/графикийн салбарыг хамт шүүнэ (FL3);
+     roadPax — «Тээврийн төрөл»-ийн шүүлт KPI/сарын график/харьцааг хамт шүүнэ */
 const DS_RAW_TYPES=['date','month','int','float','pct','pctchg','string','enum'];
 /* Шүүлтийн он/сар → татах огнооны цонх. yFrom==null = бүх он (сүүлийн мөрүүд). */
 function dsRowsWindow(yFrom,yTo,mFrom,mTo){
@@ -5825,6 +6179,9 @@ const SOURCES={
      Endpoint хараахан нээгдээгүй тул хариу null — мөр нь "мэдээлэл алга"
      хэвээр үлдэнэ. Зам нээгдмэгц ЭНЭ МӨР хөндөгдөхгүйгээр амьдарна. */
   roadVehReg:{label:'ЗТХЕГ · тээврийн хэрэгслийн бүртгэлийн мэдээ', load:app=>app.loadRoadVehicleRegistry()},
+  /* Авто тээврийн зорчигч тээврийн мэдээ (silver.road_passengers ← Veritech 15401437,
+     backend migrations/024). Түүх нэг удаа (бүх өдөр + 7 хоногийн тайлан). */
+  roadPax:{label:'АТҮТ · авто тээврийн зорчигч тээврийн мэдээ', load:app=>app.loadRoadPaxHistory()},
   /* Ачаа тээврийн мэдээ (silver.rail_freight ← Veritech 15399738 / 15439650).
      Түүх нэг удаа (бүх сар) — каталогийн «Сүүлийн бичлэг» ба анализын самбар. */
   railFreightUbtz:{label:'УБТЗ · ачаа тээврийн мэдээ', load:app=>app.loadFreightHistory('railFreightUbtz')},
@@ -5932,8 +6289,15 @@ const DATASETS=[
      өдөр × салбар). Авто тээврийн зорчигч ирэхэд VIEW-д нэг UNION — энэ мөр өөрчлөгдөхгүй.
      sector:'total' — псевдо-салбар (SECTORS-д enumerable биш); alsoSectors — каталогийн
      салбарын шүүлтэд эдгээр салбарт ч харагдана. */
-  {sector:'total',name:'Салбарын нэгтгэл — зорчигч, ачаа тээвэр',agency:'ИНЕГ · УБТЗ · МТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нийтийн API нээлттэй',desc:'Зам, тээврийн салбарын нэгдсэн мэдээ — агаарын тээвэр ба төмөр замын зорчигч, ачаа тээврийг салбар тус бүрээр (мөр бүр салбарын нэртэй) нэгтгэсэн. 7 хоногийн тайлан, оны эхнээс өссөн дүн, өмнөх оны мөн үетэй харьцуулалт, салбарын эзлэх хувь, сарын чиг хандлага. Авто тээврийн зорчигчийн мэдээ холбогдмогц энэ нэгтгэлд нэмэгдэнэ.',
-   schema:'sector_total',source:'sectorTotal',bind:{freq:'lastRecord'},alsoSectors:['air','rail','road']}
+  {sector:'total',name:'Салбарын нэгтгэл — зорчигч, ачаа тээвэр',agency:'ИНЕГ · УБТЗ · МТЗ · АТҮТ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нийтийн API нээлттэй',desc:'Зам, тээврийн салбарын нэгдсэн мэдээ — агаарын тээвэр, авто тээвэр ба төмөр замын зорчигч, ачаа тээврийг салбар тус бүрээр (мөр бүр салбарын нэртэй) нэгтгэсэн. 7 хоногийн тайлан, оны эхнээс өссөн дүн, өмнөх оны мөн үетэй харьцуулалт, салбарын эзлэх хувь, сарын чиг хандлага. Авто тээвэр — билеттэй (хот, улс хоорондын) зорчигч; нийслэлийн нийтийн тээвэр ороогүй.',
+   schema:'sector_total',source:'sectorTotal',bind:{freq:'lastRecord'},alsoSectors:['air','rail','road']},
+  /* Авто тээврийн зорчигч тээврийн мэдээ — Veritech 15401437 (2026-10-20). ТӨГСГӨЛД нэмэв:
+     content.json/нийтэлсэн overlay индексээр давхардана (BE36). Гарын авлагад
+     ороогүй ч ижил API-аар ирдэг; нэг мөр = нэг билет, зорчигч = «Хэвийн» билет.
+     Хамрах хүрээ: БИЛЕТТЭЙ (хот/улс/аймаг хоорондын, орон нутгийн) тээвэр — нийслэлийн
+     нийтийн тээвэр (автобусны карт) энэ эх сурвалжид АЛГА (тайланд ил хэлнэ). */
+  {sector:'road',name:'Авто тээврийн зорчигч тээврийн мэдээ',agency:'АТҮТ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нийтийн API нээлттэй',desc:'Хот хоорондын, улс хоорондын, аймаг хоорондын болон орон нутгийн автобусны зорчигч — билет бүрээр (чиглэл, суух/буух буудал, тээвэрлэгч, тээврийн хэрэгсэл, зорчигчийн ангилал, борлуулалтын суваг, төлөв). Зорчигч = зорчсон (буцаагаагүй) билет. 7 хоногийн тайлан, оны эхнээс өссөн дүн, тээврийн төрлөөр. Нийслэлийн нийтийн тээвэр энэ мэдээнд ороогүй.',
+   schema:'road_pax',source:'roadPax',bind:{freq:'lastRecord'}}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
 // ЗОХИОХГҮЙ, DATASETS/SERVICES-ийн бодит уртаас тооцоолно (KPI_UNIFIED-ийн
@@ -7891,6 +8255,10 @@ function sectorTotalFallback(p){
   const rp=p.railPax;
   if(rp&&rp.status==='ok') (rp.months||[]).forEach(m=>{ if(!(m&&m.month&&+m.days>0)) return;
     const r=row(m.month,'rail'); r.passengers=+m.passengers||0; r.passenger_days=+m.days; });
+  /* Авто тээвэр — билеттэй зорчигч (roadPax түүх): сар бүрийн «Хэвийн» билет */
+  const rd=p.roadPax;
+  if(rd&&rd.status==='ok') (rd.months||[]).forEach(m=>{ if(!(m&&m.month&&+m.days>0)) return;
+    const r=row(m.month,'road'); r.passengers=+m.passengers||0; r.passenger_days=+m.days; r.passenger_last=m.last_date||null; });
   const rf=p.railFreight;
   if(rf&&rf.status==='ok') (rf.months||[]).forEach(m=>{ if(!(m&&m.month&&+m.days>0)) return;
     const r=row(m.month,'rail'); r.freight_tonnes=+m.tonnes||0; r.freight_days=+m.days; r.freight_last=m.last_date||null; });
@@ -8059,6 +8427,198 @@ function sectorDonutArcs(list,unit){
     acc+=o.pct; return r;});
 }
 
+/* ── Авто тээврийн зорчигч тээврийн мэдээ (roadPax · Veritech 15401437) ──────────
+   backend: GET /api/sectors/road/passengers/history (migrations/024) — нэг мөр = нэг
+   билет; зорчигч = «Хэвийн» билет (буцаасан/устгасан нь зорчигч БИШ). Хөдлөх өдрөөр.
+   Өнөөдөр ба ирээдүйн аялал (урьдчилж зарсан) тайланд ОРОХГҮЙ — upcoming-д тусдаа.
+   Хамрах хүрээ: БИЛЕТТЭЙ тээвэр. Зурган тайлангийн «Нийслэл» (нийтийн тээврийн
+   карт) энэ эх сурвалжид АЛГА — тоо зохиохгүй, ил хэлнэ. */
+const ROAD_PAX_TYPE_COLORS={'Хот хооронд':'#3B82F6','Улс хооронд':'#14B8A6','Аймаг хооронд':'#F59E0B','Орон нутаг':'#A855F7'};
+const ROAD_PAX_EXTRA_COLORS=['#64748B','#EC4899','#84CC16'];
+const ROAD_PAX_REFUND_COLOR='#E2574C';
+/* Сар «бүтэн» = мэдээтэй өдөр нь сарын 90%+ (эх сурвалжид 2025 оны зарим сар цөөн өдөртэй) */
+const ROAD_PAX_COMPLETE_RATIO=0.9;
+/* «Өмнөх оноос» — дор хаяж ийм олон бүтэн хос сараар (ачаа тээврийн FREIGHT_YOY_MIN-тэй ижил) */
+const ROAD_PAX_YOY_MIN=3;
+/* Өдрийн мэдээ маргааш нь, ETL өдөрт нэг (04:20 УБ) */
+const ROAD_PAX_STALE_DAYS=3;
+function roadPaxTypeColor(t,i){
+  return ROAD_PAX_TYPE_COLORS[t]||ROAD_PAX_EXTRA_COLORS[(i||0)%ROAD_PAX_EXTRA_COLORS.length];
+}
+
+/* ЦЭВЭР (tests/run.js RPX). Тоо ЗОХИОХГҮЙ — түүх ирээгүй бол {hasData:false}.
+   mr = {from,to,keys}: keys = хүснэгтийн «Тээврийн төрөл»-ийн шүүлтэд таарсан төрлүүд
+   (FL3) — сарын зорчигч/буцаалт төрлөөр задардаг тул KPI, харьцаа, сарын график,
+   чиглэлийн эрэмбэ хамт шүүгдэнэ; тээвэрлэгч/суваг/ангилал төрлөөр задрахгүй. */
+function roadPaxAnalysisModel(all,sel,year,mr){
+  const ok=h=>h&&h.status==='ok'&&Array.isArray(h.months)&&h.months.length;
+  if(!ok(all)) return {hasData:false};
+  const n=v=>+v||0;
+  const keys=mr&&mr.keys?mr.keys:null;
+  const inScope=t=>!keys||(typeof keys.has==='function'?keys.has(t):keys.indexOf(t)>=0);
+  const allTypes=(Array.isArray(all.types)&&all.types.length?all.types:
+    [...new Set(all.months.flatMap(m=>Object.keys(m.by_type||{})))]).map(String);
+  const types=allTypes.filter(inScope);
+  const sorted=all.months.slice().sort((a,b)=>String(a.month)<String(b.month)?-1:String(a.month)>String(b.month)?1:0);
+  const lastKey=String(sorted[sorted.length-1].month);
+  const monthEnd=k=>{const p=String(k).split('-');return p[0]+'-'+p[1]+'-'+String(new Date(Date.UTC(+p[0],+p[1],0)).getUTCDate()).padStart(2,'0');};
+  const months=sorted.map(m=>{
+    const k=String(m.month), bt=m.by_type||{}, rt=m.refunded_by_type||{};
+    const pax=keys?types.reduce((t,x)=>t+n(bt[x]),0):n(m.passengers);
+    const ref=keys?types.reduce((t,x)=>t+n(rt[x]),0):n(m.refunded);
+    const dim=n(m.days_in_month)||+monthEnd(k).slice(8);
+    /* Дутуу: цувааны сүүлийн (дуусаагүй) сар ЭСВЭЛ мэдээтэй өдөр нь 90%-иас цөөн сар */
+    const partial=(k===lastKey&&!!m.last_date&&String(m.last_date)<monthEnd(k))||n(m.days)<dim*ROAD_PAX_COMPLETE_RATIO;
+    /* Өдрийн дундажийн хүртвэр — мэдээтэй өдрийн зорчигч (хуваарьтай ижил өдрийн олонлог); төрлийн
+       шүүлттэй үед зорчигчийг мэдээтэй/нийт харьцаагаар (backend төрлөөр задлаагүй) */
+    const covShare=n(m.passengers)>0&&m.passengers_covered!=null?n(m.passengers_covered)/n(m.passengers):1;
+    return {month:k,days:n(m.days),days_in_month:dim,last_date:m.last_date||null,passengers:pax,refunded:ref,
+      paxCovered:pax*covShare,
+      by_type:Object.fromEntries(types.map(t=>[t,n(bt[t])])),partial};
+  });
+  const years=[...new Set(months.map(m=>+m.month.slice(0,4)))].sort();
+  const yr=(year==='all'||year==null)?'all':+year;
+  const mFrom=Math.min(12,Math.max(1,+(mr&&mr.from)||1)), mTo=Math.min(12,Math.max(1,+(mr&&mr.to)||12));
+  const fullRange=mFrom===1&&mTo===12;
+  const mNo=m=>+m.month.slice(5,7);
+  const ms=months.filter(m=>(yr==='all'||+m.month.slice(0,4)===yr)&&mNo(m)>=mFrom&&mNo(m)<=mTo);
+  if(!ms.length||!types.length) return {hasData:false,years};
+  const sum=k=>ms.reduce((t,m)=>t+n(m[k]),0);
+  const passengers=sum('passengers'), refunded=sum('refunded'), days=sum('days');
+  const byType=types.map((t,i)=>({type:t,color:roadPaxTypeColor(t,i),passengers:ms.reduce((s,m)=>s+n(m.by_type[t]),0)}))
+    .map(x=>({...x,pct:passengers>0?x.passengers/passengers*100:0}));
+  const yc=yoyCompare(months,yr,mFrom,mTo,'passengers');
+  const few=!!(yc.yoy&&yc.yoy.months<ROAD_PAX_YOY_MIN), yoy=few?null:yc.yoy;
+  const yoyReason=yoy?'ok':few?'few':(!yc.year?'pick_year':(yc.hasPrevYear?'none':'no_prev_year'));
+  /* Эрэмбэ: бүтэн түүх + бүтэн хүрээ бол all, бусад үед шүүлтийн татлага (sel) */
+  const bd=(yr==='all'&&fullRange)?all:sel;
+  const hasBreakdown=!!(bd&&Array.isArray(bd.by_route));
+  const rank=(arr,f)=>(Array.isArray(arr)?arr:[]).filter(r=>!f||f(r)).map(r=>({
+    name:r.name==null?'':String(r.name).trim(),routeType:r.route_type==null?null:String(r.route_type),passengers:n(r.passengers)}))
+    .filter(r=>r.passengers>0).sort((a,b)=>b.passengers-a.passengers||(a.name<b.name?-1:1));
+  const routes=rank(bd&&bd.by_route,keys?(r=>inScope(String(r.route_type))):null);
+  const companies=rank(bd&&bd.by_company), channels=rank(bd&&bd.by_channel),
+    vehicles=rank(bd&&bd.by_vehicle), ptypes=rank(bd&&bd.by_passenger_type);
+  /* Цуваа: бүтэн хүрээтэй үед ДУНД нь өгөгдөлгүй сарыг хоосон слот (хугацааг шахахгүй) */
+  const series={labels:[],gap:[],refunded:[],types:Object.fromEntries(types.map(t=>[t,[]]))};
+  const mk=m=>{const p=m.month.split('-');return (+p[0])*12+(+p[1]-1);};
+  ms.forEach((m,i)=>{
+    if(fullRange&&i>0){
+      for(let k=mk(ms[i-1])+1;k<mk(m);k++){
+        const y=Math.floor(k/12), mo=k%12+1;
+        series.labels.push(String(y).slice(2)+'-'+String(mo).padStart(2,'0'));
+        series.gap.push(true); series.refunded.push(null); types.forEach(t=>series.types[t].push(null));
+      }
+    }
+    /* Мэдээтэй өдөргүй сар (эх сурвалжийн цонхны гадна, хожуу цөөн билет) — «мэдээлэл алга» тууз */
+    if(m.days===0){
+      series.labels.push(m.month.slice(2)); series.gap.push(true); series.refunded.push(null);
+      types.forEach(t=>series.types[t].push(null)); return;
+    }
+    series.labels.push(m.month.slice(2)+(m.partial?'*':''));
+    series.gap.push(false); series.refunded.push(m.refunded); types.forEach(t=>series.types[t].push(m.by_type[t]));
+  });
+  const lastMonth=months[months.length-1];
+  const sumList=l=>l.reduce((t,x)=>t+x.passengers,0);
+  /* Эх сурвалжийн цоорхой (мэдээгүй өдрүүд) — сонгосон сартай огтлолцсоныг л */
+  const inSel=d=>{const k=String(d).slice(0,7);return ms.some(m=>m.month===k);};
+  const gaps=((all.coverage&&Array.isArray(all.coverage.gaps))?all.coverage.gaps:[])
+    .filter(g=>g&&g.from&&g.to&&(inSel(g.from)||inSel(g.to)));
+  return {hasData:true,years,year:yr,mFrom,mTo,fullRange,monthCount:ms.length,coveredMonths:ms.filter(m=>m.days>0).length,days,gaps,
+    partialN:ms.filter(m=>m.partial&&m.days>0).length,
+    periodKeys:ms.map(m=>m.month),partialTo:(ms.slice().reverse().find(m=>m.partial)||{}).last_date||null,
+    passengers,refunded,refundPct:(passengers+refunded)>0?refunded/(passengers+refunded)*100:null,
+    perDay:days>0?ms.reduce((t,m)=>t+m.paxCovered,0)/days:null,
+    types,byType,yoy,yoyReason,prevYear:yc.year?yc.year-1:null,historyFrom:months[0].month,
+    lastDate:lastMonth.last_date||null,upcoming:all.upcoming||null,
+    routes,companies,channels,vehicles,ptypes,hasBreakdown,
+    routeTotal:sumList(routes),companyTotal:sumList(companies),channelTotal:sumList(channels),
+    vehicleTotal:sumList(vehicles),ptypeTotal:sumList(ptypes),
+    series};
+}
+
+/* 7 хоногийн тайлан (зурган тайлангийн загвар) — ЦЭВЭР (tests/run.js RPX). Шүүлтээс
+   үл хамаарна (backend weekly = сүүлийн БҮТЭН 8 Даваа–Ням). Харьцуулалт (%) хоёр тал
+   бүтэн байхад л: бичлэггүй долоо хоног 0 БИШ (missing), өмнөх оны мөн үеийн хамрах
+   хүрээ хангалтгүй (comparable:false) бол null + шалтгаан — эх сурвалжид 2024–2025 оны
+   ихэнх сар алга тул «-90%» гэж ХУДАЛ уналт харуулахгүй. */
+function roadPaxWeeklyModel(all){
+  const W=all&&all.status==='ok'?all.weekly:null;
+  if(!(W&&Array.isArray(W.weeks)&&W.weeks.length)) return null;
+  const n=v=>+v||0;
+  const pct=(a,b)=>(a!=null&&b>0)?(a/b-1)*100:null;
+  const weeks=W.weeks, last=weeks[weeks.length-1], prev=weeks.length>1?weeks[weeks.length-2]:null;
+  const types=(Array.isArray(W.types)?W.types:[]).map(String);
+  const val=(w,t)=>(!w||w.missing)?null:(t==null?n(w.passengers):n((w.by_type||{})[t]));
+  const py=W.prev_year_week||null, pyOk=!!(py&&py.comparable);
+  const ytd=W.ytd||null, pytd=W.prev_ytd||null, ytdOk=!!(pytd&&pytd.comparable);
+  const pick=(o,t)=>o?(t==null?n(o.passengers):n((o.by_type||{})[t])):null;
+  /* Бүтэн 7 хоног = 7 өдөр бүгд мэдээтэй (backend days = мэдээтэй өдөр). Хэсэгчилсэн 7 хоногийг
+     бүтэнтэй харьцуулбал эх сурвалжийн цоорхой «уналт» мэт харагдана. */
+  const full=w=>!!w&&!w.missing&&(w.days==null||+w.days>=7);
+  const block=(t)=>({
+    week:val(last,t),
+    wow:(full(prev)&&full(last))?pct(val(last,t),val(prev,t)):null,
+    prevWeek:full(prev)?val(prev,t):null,
+    ytd:pick(ytd,t),
+    yoy:pyOk&&full(last)?pct(val(last,t),pick(py,t)):null,
+    prevYearWeek:pyOk?pick(py,t):null,
+    ytdYoy:ytdOk?pct(pick(ytd,t),pick(pytd,t)):null,
+    series:weeks.map(w=>val(w,t))});
+  const total=block(null);
+  const perType=types.map((t,i)=>({type:t,color:roadPaxTypeColor(t,i),...block(t)}));
+  const shares=(get)=>{const list=perType.map(p=>({type:p.type,color:p.color,value:n(get(p))}));
+    const tot=list.reduce((s,x)=>s+x.value,0);
+    list.forEach(x=>{x.pct=tot>0?x.value/tot*100:0;});
+    return {list,total:tot};};
+  return {weekEnd:W.week_end,maxDate:W.max_date||null,weeks,last,prev,types,total,perType,
+    lastFull:full(last),prevFull:full(prev),partialWeeks:weeks.filter(w=>!w.missing&&!full(w)).length,
+    prevYearWeek:py,prevYtd:pytd,ytdInfo:ytd,pyComparable:pyOk,ytdComparable:ytdOk,
+    weekShares:shares(p=>p.week),ytdShares:shares(p=>p.ytd)};
+}
+
+/* Тээврийн төрөл бүрийн 7 хоногийн багана (зурган тайлан — нэг төрөл, 8 долоо хоног,
+   багана бүрийн дээр утга). Y 0-ээс; бичлэггүй долоо хоног — бүдэг тууз + «мэдээлэл
+   алга». Утгын шошго foreignObject (SVG <text>-д {{ }} харагддаггүй — runtime урхаг). */
+function buildRoadPaxWeekBars(weeks,values,color,words){
+  const W=Object.assign({unit:'зорчигч',none:'мэдээлэл алга',partial:'{d}/7 өдөр мэдээтэй'},words||{});
+  const w=320,h=170,padL=6,padR=6,padT=20,padB=30;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const nW=(weeks&&weeks.length)||0;
+  const base={w,h,baseY:(padT+plotH).toFixed(1),axisX1:padL,axisX2:w-padR};
+  if(!nW) return {...base,bars:[],labels:[],xTicks:[]};
+  const md=s=>String(s||'').slice(5).replace('-','.');
+  const lbl=i=>md(weeks[i].week_start)+'–'+md(weeks[i].week_end);
+  const vals=(values||[]).map(v=>v==null?null:+v||0);
+  const mx=Math.max.apply(null,vals.filter(v=>v!=null).concat([0]));
+  /* Y тэнхлэгийн шошгогүй (утга баганын дээр) тул «гоё» тоонд дугуйлахгүй — 100K хүртэл
+     дугуйлбал багана хагас өндөрт үлдэнэ. 0-ээс эхэлнэ (DG). */
+  const top=mx>0?mx*1.12:1;
+  const Y=x=>padT+plotH*(1-x/top);
+  const slot=plotW/nW, bw=Math.min(28,slot*0.62);
+  const fmt=x=>Math.round(x).toLocaleString('en-US');
+  const bars=[], labels=[];
+  weeks.forEach((wk,i)=>{
+    const v=vals[i];
+    if(v==null||wk.missing){
+      bars.push({x:(padL+i*slot).toFixed(1),y:padT.toFixed(1),w:slot.toFixed(1),h:plotH.toFixed(1),
+        fill:'rgba(130,142,168,0.14)',op:'1',tip:lbl(i)+' — '+W.none});
+      labels.push({fx:(padL+i*slot+slot/2-24).toFixed(1),fy:(padT+plotH-16).toFixed(1),label:W.noneShort||W.none});
+      return;
+    }
+    const y=Y(v);
+    /* Хэсэгчилсэн 7 хоног (эх сурвалжийн цоорхой) — бүдэг, tooltip-д хэдэн өдөр мэдээтэйг */
+    const part=wk.days!=null&&+wk.days<7;
+    bars.push({x:(padL+i*slot+(slot-bw)/2).toFixed(1),y:y.toFixed(1),w:bw.toFixed(1),
+      h:Math.max(v>0?0.8:0,padT+plotH-y).toFixed(1),fill:color,op:part?'.35':'.88',
+      tip:lbl(i)+' — '+fmt(v)+' '+W.unit+(part?' ('+W.partial.replace('{d}',wk.days)+')':'')});
+    labels.push({fx:(padL+i*slot+slot/2-24).toFixed(1),fy:(y-15).toFixed(1),label:fmt(v)});
+  });
+  const xTicks=weeks.map((_,i)=>({fx:(padL+i*slot+slot/2-24).toFixed(1),fy:(h-padB+6).toFixed(1),
+    label:md(weeks[i].week_start)}));
+  return {...base,bars,labels,xTicks};
+}
+
 /* Зорчигчийн сарын график — ОН/ОУ-ийг ЭЭЛЖ харуулсан багана (нийт = өндөр)
    + аяллын шугам (баруун тэнхлэг). Хоёр тэнхлэг БҮРД 0-ээс эхэлнэ; өмнөх
    dual-axis нь шугамын тэнхлэгийг 0-ээс эхлүүлдэггүй байсан тул өсөлтийг
@@ -8174,6 +8734,8 @@ class Component extends DCLogic {
     paxYear:'all', paxMFrom:1, paxMTo:12, paxRoutesExpanded:false, paxMonthsExpanded:false, paxHistVer:0,
     /* Ачаа тээвэр: датасэт (source) тус бүрийн шүүлт — хоёр датасэт өөр он хамардаг */
     freightSel:{}, freightHistVer:0, freightStationsExpanded:false, freightCargoExpanded:false,
+    /* Авто тээврийн зорчигч: шүүлт (он + сар) ба эрэмбийн дэлгэлт */
+    roadPaxSel:{}, roadPaxHistVer:0, roadPaxRoutesExpanded:false, roadPaxCompaniesExpanded:false,
     /* Салбарын нэгтгэл — шүүлт (он/сар), хувилбар; нүүрний d05-ийн хэмжүүр (зорчигч/ачаа) */
     sectorTotalSel:{}, sectorTotalVer:0, d05Measure:'passengers',
     airAiThread:null, airAiInput:'',
@@ -8726,6 +9288,69 @@ class Component extends DCLogic {
     sch.rows=m.stations.map(s=>[s.name,r1(s.tonnes),s.wagons,r1(s.dirs.transit),r1(s.dirs.export),r1(s.dirs.import),r1(s.dirs.domestic),
       tot>0?Math.round(s.tonnes/tot*1000)/10:0,'ok:'+stOk]);
   }
+  /* ── Авто тээврийн зорчигч (SOURCES.roadPax) ─────────────────────────────
+     Бүтэн түүх нэг удаа (бүх өдөр + 7 хоногийн тайлан); каталогийн «Сүүлийн бичлэг»
+     ЭНДЭЭС (backend-ийн сүүлийн аяллын өдөр — тоо зохиохгүй). 404/унтарсан бол null. */
+  async loadRoadPaxHistory(){
+    if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchRoadPassengersHistory) return;
+    const h=await EHBackend.fetchRoadPassengersHistory();
+    this._roadPaxAll=h; this._roadPaxSelData=null;
+    const m=roadPaxAnalysisModel(h,null,'all',null);
+    if(m.hasData&&m.lastDate){
+      const ys=m.years||[];
+      this.setSourceMeta('roadPax',{updatedAt:m.lastDate,updatedAtFull:m.lastDate,lastRecord:m.lastDate,
+        yearFrom:ys[0]||'',yearTo:ys[ys.length-1]||''});
+    }
+    this.setState(s=>({roadPaxHistVer:s.roadPaxHistVer+1}));
+  }
+  roadPaxUi(){
+    const u=this.state.roadPaxSel||{};
+    return {year:u.year==null?'all':u.year,mFrom:u.mFrom||1,mTo:u.mTo||12};
+  }
+  /* Он/сар сонголт → backend-ээс ЗӨВХӨН тэр хүрээг дахин татна (эрэмбэ шүүгдэнэ);
+     хоцорсон хариуг token-оор үл тооно. */
+  setRoadPaxSel(patch){
+    const nx={...this.roadPaxUi(),...patch};
+    nx.mFrom=Math.min(12,Math.max(1,parseInt(nx.mFrom,10)||1));
+    nx.mTo=Math.min(12,Math.max(1,parseInt(nx.mTo,10)||12));
+    if(nx.mFrom>nx.mTo){ const t=nx.mFrom; nx.mFrom=nx.mTo; nx.mTo=t; }
+    this.setState({roadPaxSel:nx,roadPaxRoutesExpanded:false,roadPaxCompaniesExpanded:false},()=>this.refetchRoadPax());
+  }
+  refetchRoadPax(){
+    const u=this.roadPaxUi();
+    const win=paxFetchWindow(this._roadPaxAll,u.year,{from:u.mFrom,to:u.mTo});
+    this._roadPaxSelData=null;
+    const tok=this._roadPaxTok=(this._roadPaxTok||0)+1;
+    if(!win||typeof EHBackend==='undefined'||!EHBackend.fetchRoadPassengersHistory){
+      this.setState(s=>({roadPaxHistVer:s.roadPaxHistVer+1}));
+      return;
+    }
+    EHBackend.fetchRoadPassengersHistory(win.from,win.to).then(d=>{
+      if(tok!==this._roadPaxTok) return;
+      this._roadPaxSelData=d;
+      this.setState(s=>({roadPaxHistVer:s.roadPaxHistVer+1}));
+    });
+  }
+  /* Түүхий мөрийн endpoint ирэхгүй үеийн хүснэгт (чиглэлээр) — анализтай ИЖИЛ хариу,
+     ИЖИЛ шүүлтээс. */
+  syncRoadPaxTable(){
+    const sch=DS_SCHEMA.road_pax;
+    if(!sch) return;
+    const u=this.roadPaxUi();
+    const m=roadPaxAnalysisModel(this._roadPaxAll,this._roadPaxSelData,u.year,{from:u.mFrom,to:u.mTo});
+    const h=(x,i)=>stxt('ds_schema_road_pax.head.'+i,x), nt=(x,i)=>stxt('ds_schema_road_pax.notes.'+i,x);
+    const DEF=['Чиглэл','Тээврийн төрөл','Зорчигч','Эзлэх хувь','Төлөв'];
+    sch.head=DEF.map(h);
+    sch.notes=sch.notes.map(nt);
+    if(!m.hasData||!m.hasBreakdown){ sch.rows=[]; return; }
+    const stOk=stxt('ds_schema_road_pax.st_ok','Зорчигч бүртгэгдсэн');
+    const tot=m.routeTotal||0;
+    const key=u.year+'|'+u.mFrom+'-'+u.mTo+'|'+m.routes.length+'|'+tot+'|'+stOk;
+    if(this._roadPaxTblKey===key&&sch.rows.length) return;
+    this._roadPaxTblKey=key;
+    sch.rows=m.routes.map(r=>[r.name||stxt('road_pax_an.unnamed','Нэр бичигдээгүй'),r.routeType||'',r.passengers,
+      tot>0?Math.round(r.passengers/tot*1000)/10:0,'ok:'+stOk]);
+  }
   /* ── Салбарын нэгтгэл (SOURCES.sectorTotal) ──────────────────────────────
      backend /api/sectors/total/history НЭГ удаа (бүх сар + weekly) — он/сарын шүүлт
      клиент талд (сар × салбарын хэдэн зуун мөр). Endpoint алга бол салбарын
@@ -8736,10 +9361,11 @@ class Component extends DCLogic {
     const h=EHBackend.fetchSectorTotal?await EHBackend.fetchSectorTotal():null;
     this._sectorTotalApi=(h&&h.status)?h:null;
     if(!(h&&h.status==='ok')){
-      const [rp,rf]=await Promise.all([
+      const [rp,rf,rd]=await Promise.all([
         EHBackend.fetchRailPassengersHistory?EHBackend.fetchRailPassengersHistory():null,
-        EHBackend.fetchRailFreightHistory?EHBackend.fetchRailFreightHistory('all'):null]);
-      this._sectorTotalParts={railPax:rp,railFreight:rf};
+        EHBackend.fetchRailFreightHistory?EHBackend.fetchRailFreightHistory('all'):null,
+        EHBackend.fetchRoadPassengersHistory?EHBackend.fetchRoadPassengersHistory():null]);
+      this._sectorTotalParts={railPax:rp,railFreight:rf,roadPax:rd};
     }
     this.updateSectorTotalMeta();
     this.setState(s=>({sectorTotalVer:(s.sectorTotalVer||0)+1}));
@@ -8751,12 +9377,12 @@ class Component extends DCLogic {
     if(!p) return a||null;
     const fc=this._flightsCache||{};
     const ys=Object.keys(fc).sort();
-    const key=ys.map(y=>y+':'+((fc[y]||[]).length)).join(',')+'|'+(p.railPax?1:0)+(p.railFreight?1:0);
+    const key=ys.map(y=>y+':'+((fc[y]||[]).length)).join(',')+'|'+(p.railPax?1:0)+(p.railFreight?1:0)+(p.roadPax?1:0);
     if(this._sectorTotalFb&&this._sectorTotalFbKey===key) return this._sectorTotalFb;
     let flights=[];
     ys.forEach(y=>{ flights=flights.concat(fc[y]||[]); });
     const nm=k=>stxt('sector_total.names.'+k,{air:'Агаарын тээвэр',road:'Авто тээвэр',rail:'Төмөр зам'}[k]);
-    this._sectorTotalFb=sectorTotalFallback({air:airMonthlyFromFlights(flights),railPax:p.railPax,railFreight:p.railFreight,
+    this._sectorTotalFb=sectorTotalFallback({air:airMonthlyFromFlights(flights),railPax:p.railPax,railFreight:p.railFreight,roadPax:p.roadPax,
       names:{air:nm('air'),road:nm('road'),rail:nm('rail')}});
     this._sectorTotalFbKey=key;
     return this._sectorTotalFb;
@@ -11088,8 +11714,16 @@ class Component extends DCLogic {
     if(sc.raw){
       const sp=DS_ROWS_SCOPE[dsel.source];
       ki=sp&&sc.keys?sc.keys.indexOf(sp.col):-1;
-      if(ki<0||sc.truncated) return none;
+      if(ki<0) return none;
       kl=sp.len||0;
+      /* Таслагдсан хүснэгт: зөвхөн ХАМРАХ баганыг өөрийг нь шүүсэн бол түлхүүр = сонгосон утга
+         (ачаалсан мөрөөс хамаарахгүй — бүтэн хугацааг зөв төлөөлнө). Авто тээврийн зорчигч
+         2.2 сая мөр — «Тээврийн төрөл = Улс хооронд» KPI-г хамт шүүнэ (2026-10-20 QA). */
+      if(sc.truncated){
+        if(kl||!ks.every(k=>String(k)===String(ki))) return none;
+        return {active:true,schemaKey,sel:{[ki]:selRaw[ki]},keys:new Set([String(selRaw[ki]).trim()]),
+          summary:(sc.head[ki]||'')+': '+selRaw[ki]};
+      }
     }
     const sel={}; ks.forEach(k=>{ sel[k]=selRaw[k]; });
     const ck=schemaKey+'|'+JSON.stringify(sel);
@@ -11295,6 +11929,7 @@ class Component extends DCLogic {
     if(source==='railPax') return dsRowsWindow(st.paxYear,st.paxYear,st.paxMFrom,st.paxMTo);
     if(FREIGHT_SOURCES[source]){ const u=this.freightUi(source); return dsRowsWindow(u.year,u.year,u.mFrom,u.mTo); }
     if(source==='sectorTotal'){ const u=this.sectorTotalUi(); return dsRowsWindow(u.year,u.year,u.mFrom,u.mTo); }
+    if(source==='roadPax'){ const u=this.roadPaxUi(); return dsRowsWindow(u.year,u.year,u.mFrom,u.mTo); }
     if(source==='roadInspect'){
       const s=this.roadInspectSel();
       return s?dsRowsWindow(s.yFrom,s.yTo,s.mFrom,s.mTo):dsRowsWindow(null);
@@ -11641,6 +12276,197 @@ class Component extends DCLogic {
       freightTotWeekCap:T('total_kpi_week','Сүүлийн 7 хоног'),freightTotYtdCap:T('total_kpi_ytd','Оны эхнээс өссөн дүн'),
       freightTotOrgLegend:orgLegend,freightTotLegendHead:T('total_legend_head','7 хоног / оны эхнээс (тонн · %)'),
       freightTotWeekChart:chart,freightTotWeekLegend:dirs.map(d=>({label:d.label,color:d.color}))};
+  }
+  /* Авто тээврийн зорчигчийн анализын самбар — roadPaxAnalysisModel() + roadPaxWeeklyModel()
+     (цэвэр) → темплейт. Текст: content.json → site.road_pax_an. Нэгдсэн шүүлт (он + сар) ба
+     хүснэгтийн «Тээврийн төрөл»-ийн шүүлт (FL3) KPI/харьцаа/сарын график/чиглэлд хамт;
+     7 хоногийн тайлан (зурган тайлангийн загвар) шүүлтээс үл хамаарна. */
+  buildRoadPaxAnalysis(dsel){
+    const T=(k,fb)=>stxt('road_pax_an.'+k,fb);
+    const u=this.roadPaxUi(), st=this.state;
+    const keys=this.pvColScope(dsel).keys;
+    const all=this._roadPaxAll, sel=this._roadPaxSelData;
+    const m=roadPaxAnalysisModel(all,sel,u.year,{from:u.mFrom,to:u.mTo,keys});
+    const fmt=v=>Math.round(v).toLocaleString('en-US');
+    const dash=T('dash','—'), pUnit=T('unit','зорчигч');
+    const base={isRoadPaxDetail:true,chartPeriod:chartPeriodText(m,T),roadPaxHasData:!!m.hasData,roadPaxNoData:!m.hasData,
+      roadPaxT:{head:T('head','Авто тээврийн зорчигчийн анализ'),
+        noData:T('no_data','Түүхийн мэдээлэл холбогдоогүй — зорчигчийн анализ харуулах боломжгүй.'),
+        donutTitle:T('donut_title','Тээврийн төрлөөр — сонгосон хугацаа'),
+        chartTitle:T('chart_title','Сараар: тээврийн төрөл бүрийн зорчигч ба буцаасан билет'),
+        chartLegend:T('chart_legend','Багана — тээврийн төрөл бүрийн зорчигч, зүүн тэнхлэг · шугам — буцаасан билет, баруун тэнхлэг · бүдэг багана — дутуу сар (*). Хоёр тэнхлэг тэгээс.'),
+        routesTitle:T('routes_title','Чиглэлээр (зорчигч)'),
+        companiesTitle:T('companies_title','Тээвэрлэгчээр (зорчигч)'),
+        channelsTitle:T('channels_title','Борлуулалтын сувгаар'),
+        ptypesTitle:T('ptypes_title','Зорчигчийн ангиллаар'),
+        vehiclesTitle:T('vehicles_title','Тээврийн хэрэгслийн төрлөөр'),
+        pending:T('breakdown_pending','Чиглэл, тээвэрлэгчийн задаргаа ачаалж байна…'),
+        filterTitle:T('f_head','Нэгдсэн шүүлт — KPI, хүснэгт, график (сүүлийн 7 хоногийн тайлангаас бусад)'),
+        fYear:T('f_year','Жил'),fMonth:T('f_month','Сар'),fInterval:T('f_interval','Интервал'),fByMonth:T('f_by_month','Сар'),
+        fReset:T('f_reset','Шүүлт арилгах'),
+        wkTitle:T('wk_title','Сүүлийн 7 хоног'),
+        wkScope:T('wk_scope','Өгөгдлийн сүүлийн бүтэн 7 хоног (Даваа–Ням), хөдлөх өдрөөр — дээрх шүүлтээс үл хамаарна'),
+        wkTypesTitle:T('wk_types_title','Тээврийн төрлөөр — сүүлийн 7 хоног ба оны эхнээс'),
+        wkTypeCardsHead:T('wk_type_cards_head','Тээврийн төрөл бүрээр — сүүлийн 8 бүтэн 7 хоног'),
+        noWeekly:T('no_weekly','7 хоногийн тайлан ачаалагдаагүй — мэдээлэл алга.')}};
+    const chip=(on)=>'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
+      +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);');
+    const yr=u.year==='all'?'all':+u.year;
+    const yearChips=[{label:T('years_all','Бүгд'),y:'all'}].concat((m.years||[]).map(y=>({label:String(y),y}))).map(c=>({
+      label:c.label,pick:()=>this.setRoadPaxSel({year:c.y}),style:chip(c.y===yr)}));
+    const monthChips=[1,2,3,4,5,6,7,8,9,10,11,12].map(mo=>({label:String(mo),
+      pick:()=>this.setRoadPaxSel({mFrom:mo,mTo:mo}),style:chip(u.mFrom===mo&&u.mTo===mo)}));
+    const inputStyle='width:64px;font-family:\'JetBrains Mono\',monospace;font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);';
+    const rangeOn=(u.mFrom===1&&u.mTo===12)?T('f_full_range','бүх сар'):((u.mFrom===u.mTo?String(u.mFrom):u.mFrom+'–'+u.mTo)+' '+T('f_month_unit','сар'));
+    const filterUi={show:!!st.pvFilterOpen&&!!(m.years&&m.years.length),yearChips,monthChips,allLabel:T('years_all','Бүгд'),
+      monthAllStyle:chip(u.mFrom===1&&u.mTo===12),monthAllPick:()=>this.setRoadPaxSel({mFrom:1,mTo:12}),
+      mFrom:String(u.mFrom),mTo:String(u.mTo),inputStyle,
+      onMFrom:(e)=>this.setRoadPaxSel({mFrom:e.target.value}),
+      onMTo:(e)=>this.setRoadPaxSel({mTo:e.target.value}),
+      summary:(yr==='all'?T('f_all_years','бүх жил'):String(yr))+' · '+rangeOn,
+      dirty:!(yr==='all'&&u.mFrom===1&&u.mTo===12),
+      reset:()=>this.setRoadPaxSel({year:'all',mFrom:1,mTo:12})};
+    const out={...base,roadPaxF:filterUi,...this.buildRoadPaxWeekly(dsel,T)};
+    if(!m.hasData&&keys) out.roadPaxT.noData=stxt('pv_scope.no_match','Хүснэгтийн шүүлтэд таарах мөр алга — шүүлтийг цэвэрлэнэ үү.');
+    if(!m.hasData&&all&&all.status==='ok'&&m.years) out.roadPaxT.noData=T('no_data_range','Сонгосон он, сард зорчигчийн бүртгэл алга — шүүлтийг өөрчилнө үү.');
+    if(!m.hasData) return out;
+    const share=t=>{const x=m.byType.find(b=>b.type===t);return x&&x.passengers>0?x:null;};
+    /* Хүснэгтийн «Тээврийн төрөл» шүүлтээр хасагдсан төрөл — «бүртгэгдээгүй» биш (FL3) */
+    const typeNone=t=>(keys&&!(typeof keys.has==='function'?keys.has(t):keys.indexOf(t)>=0))
+      ?T('kpi_type_filtered','хүснэгтийн шүүлтэд ороогүй'):T('kpi_type_none','энэ хугацаанд бүртгэгдээгүй');
+    const intercity=share('Хот хооронд'), intl=share('Улс хооронд');
+    const kpis=[
+      {label:T('kpi_pax','Нийт зорчигч'),value:fmt(m.passengers),sub:T('kpi_pax_sub','зорчсон билет (буцаасныг хассан)')},
+      {label:T('kpi_intercity','Хот хооронд'),value:intercity?fmt(intercity.passengers):dash,
+        sub:intercity?intercity.pct.toFixed(1)+'% '+T('kpi_share_sub','нийт зорчигчийн'):typeNone('Хот хооронд')},
+      {label:T('kpi_intl','Улс хооронд'),value:intl?fmt(intl.passengers):dash,
+        sub:intl?intl.pct.toFixed(1)+'% '+T('kpi_share_sub','нийт зорчигчийн'):typeNone('Улс хооронд')},
+      {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:T('kpi_per_day_sub','зорчигч / мэдээ орсон өдөр')},
+      {label:T('kpi_refund','Буцаасан билет'),value:m.refundPct==null?dash:m.refundPct.toFixed(1)+'%',
+        sub:fmt(m.refunded)+' '+T('kpi_refund_sub','билет — зорчигчид тооцоогүй')},
+      {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?((m.yoy.pct>0?'+':'')+m.yoy.pct.toFixed(1)+'%'):dash,
+        sub:m.yoy?(T('kpi_yoy_vs','{year} / {prev}').replace('{year}',m.yoy.year).replace('{prev}',m.yoy.prevYear)+' · '+m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):
+          m.yoyReason==='few'?T('kpi_yoy_few','харьцуулах бүтэн сар {min}-аас цөөн').replace('{min}',ROAD_PAX_YOY_MIN):yoyReasonText(m,T)}
+    ];
+    const circ=2*Math.PI*40;
+    let acc=0;
+    const donut=m.byType.filter(d=>d.passengers>0).map(d=>{const o={label:d.type,color:d.color,pctLabel:d.pct.toFixed(1)+'%',
+      tip:d.type+' — '+fmt(d.passengers)+' '+pUnit+' · '+d.pct.toFixed(1)+'%',
+      dash:(d.pct/100*circ).toFixed(1)+' '+circ.toFixed(1),offset:(-acc/100*circ).toFixed(1)};acc+=d.pct;return o;});
+    const donutNote=(typeof EHGlossary!=='undefined')?EHGlossary.ratioSanity(
+      m.byType.map(d=>({key:d.type,label:d.type,value:d.passengers})),{expected:m.byType.length}).issues.map(i=>i.msg).join(' '):'';
+    const unnamed=T('unnamed','Нэр бичигдээгүй');
+    const rankRows=(list,total,expanded,subFn,limit)=>{
+      const top=list.length?Math.max.apply(null,list.map(r=>r.passengers)):1;
+      return (expanded?list:list.slice(0,limit||10)).map(r=>({name:r.name||unnamed,value:fmt(r.passengers),
+        pct:total>0?(r.passengers/total*100).toFixed(1)+'%':'',sub:subFn?subFn(r):'',
+        width:(r.passengers/(top||1)*100).toFixed(0)+'%'}));
+    };
+    const more=(list,expanded,key)=>{const extra=Math.max(0,list.length-10);return {show:extra>0,expanded,
+      label:expanded?stxt('rank.collapse','△ Хураах'):('↕ '+extra+' '+stxt('rank.more_rows','нэмэлт мөр')),
+      toggle:()=>this.setState(s=>({[key]:!s[key]}))};};
+    const rtExp=!!st.roadPaxRoutesExpanded, cpExp=!!st.roadPaxCompaniesExpanded;
+    const routes=rankRows(m.routes,m.routeTotal,rtExp,r=>r.routeType||'');
+    const companies=rankRows(m.companies,m.companyTotal,cpExp,null);
+    const shortList=(list,total)=>rankRows(list,total,true,null);
+    const stacks=m.types.map((t,i)=>({key:t,label:t,color:roadPaxTypeColor(t,i),values:m.series.types[t]}));
+    const chart=buildFreightStackedChart(stacks,m.series.refunded,m.series.labels,m.series.gap,
+      {total:T('chart_total','нийт'),wagon:T('chart_refund','буцаасан билет'),tonne:pUnit,partial:T('partial_word','дутуу сар'),none:T('chart_none','мэдээлэл алга')});
+    /* Буцаалтын шугам — цэнхэр баганаас ялгагдах улаан (NEON.road нь баганатай ойролцоо) */
+    const lineColor=ROAD_PAX_REFUND_COLOR;
+    chart.dotPts.forEach(p=>{ if(!p.fill) p.fill=lineColor; });
+    const age=m.lastDate?dataAgeDays(m.lastDate):null;
+    const staleNote=(age!=null&&age>ROAD_PAX_STALE_DAYS)
+      ?T('stale_note','Сүүлийн аялал {date} — эх системд түүнээс хойш {days} хоног шинэ мэдээ бүртгэгдээгүй.')
+        .replace('{date}',m.lastDate).replace('{days}',fmt(age)):'';
+    const partialNote=m.partialN>0?T('partial_note','* — дутуу сар (харьцуулалтад ороогүй).'):'';
+    const up=m.upcoming;
+    const upNote=(up&&up.passengers>0)?T('upcoming_note','Өнөөдрөөс хойших аялалд урьдчилж зарсан {n} билет аялал болоогүй тул тайланд ороогүй.')
+      .replace('{n}',fmt(up.passengers)):'';
+    const gapNote=m.gaps.length?T('gap_note','Эх сурвалжид мэдээ алга: {list}.')
+      .replace('{list}',m.gaps.map(g=>g.from+' — '+g.to).join(', ')):'';
+    const scopeNote=[gapNote,staleNote,partialNote,upNote].filter(Boolean).join(' ');
+    return {...out,roadPaxKpis:kpis,
+      roadPaxScope:fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')+' · '+m.coveredMonths+' '+T('scope_months','сар'),
+      roadPaxScopeNote:scopeNote,roadPaxHasScopeNote:!!scopeNote,
+      roadPaxDonut:donut,roadPaxDonutNote:donutNote,roadPaxDonutHasNote:!!donutNote,
+      roadPaxChart:chart,roadPaxLineColor:lineColor,roadPaxLegend:stacks.map(s=>({label:s.label,color:s.color}))
+        .concat([{label:T('chart_refund_legend','Буцаасан билет (шугам)'),color:lineColor}]),
+      roadPaxRoutes:routes,roadPaxHasRoutes:routes.length>0,roadPaxRoutesJustify:routes.length<=5?'space-evenly':'flex-start',
+      roadPaxRoutesMore:more(m.routes,rtExp,'roadPaxRoutesExpanded'),
+      roadPaxRoutesTotal:T('total','Нийт')+': '+fmt(m.routeTotal)+' '+pUnit,
+      roadPaxCompanies:companies,roadPaxHasCompanies:companies.length>0,roadPaxCompaniesJustify:companies.length<=5?'space-evenly':'flex-start',
+      roadPaxCompaniesMore:more(m.companies,cpExp,'roadPaxCompaniesExpanded'),
+      roadPaxCompaniesTotal:T('total','Нийт')+': '+fmt(m.companyTotal)+' '+pUnit,
+      roadPaxChannels:shortList(m.channels,m.channelTotal),roadPaxPtypes:shortList(m.ptypes,m.ptypeTotal),
+      roadPaxVehicles:shortList(m.vehicles,m.vehicleTotal),
+      roadPaxSmallHas:m.channels.length+m.ptypes.length+m.vehicles.length>0,
+      roadPaxPending:!m.hasBreakdown};
+  }
+  /* 7 хоногийн тайлан (зурган тайлангийн загвар): нийт 4 KPI + төрлөөр 2 donut + төрөл
+     бүрийн 8 долоо хоногийн баганан график, 4 KPI. Мөн доод «7 хоногийн гүйцэтгэл» (wp)
+     картыг ЭНЭ тоогоор дүүргэнэ (төлөвлөгөөний эх сурвалж алга — hasPlan:false). */
+  buildRoadPaxWeekly(dsel,T){
+    const wk=roadPaxWeeklyModel(this._roadPaxAll);
+    const fmt=v=>Math.round(v).toLocaleString('en-US');
+    const dash=T('dash','—'), pUnit=T('unit','зорчигч');
+    const sg=p=>p==null?dash:((p>0?'+':'')+p.toFixed(1)+'%');
+    const tone=v=>/^\+/.test(v)?'#0FA37F':/^-/.test(v)?'#E2574C':'var(--ink)';
+    const capitalNote=T('capital_note','Зөвхөн билеттэй (хот, улс, аймаг хоорондын, орон нутгийн) тээвэр. «Нийслэл» (нийслэлийн нийтийн тээвэр) болон оны төлөвлөгөө энэ эх сурвалжид алга.');
+    if(!wk) return {roadPaxHasWeekly:false,roadPaxNoWeekly:true,roadPaxCapitalNote:capitalNote};
+    const md=s=>String(s||'').slice(5).replace('-','.');
+    const range=w=>w?md(w.week_start)+'–'+md(w.week_end):'';
+    const last=wk.last, prev=wk.prev, py=wk.prevYearWeek;
+    const pyRange=py?md(py.week_start)+'–'+md(py.week_end)+' '+String(py.week_start||'').slice(0,4):'';
+    const pyNone=(py&&+py.days>0&&!wk.pyComparable)
+      ?T('wk_yoy_thin','өмнөх оны мөн 7 хоногийн мэдээ дутуу')
+      :T('wk_yoy_none','өмнөх оны мөн 7 хоногийн мэдээ эх сурвалжид алга');
+    const yi=wk.ytdInfo;
+    const ytdMissing=yi&&yi.from&&yi.to?Math.max(0,Math.round((Date.parse(yi.to)-Date.parse(yi.from))/864e5)+1-(+yi.days||0)):0;
+    const kpiBlock=(b)=>[
+      {label:T('wk_kpi_week','7 хоног'),value:b.week==null?dash:fmt(b.week),sub:range(last)+' · '+pUnit},
+      {label:T('wk_kpi_ytd','Оны эхнээс өссөн дүн'),value:b.ytd==null?dash:fmt(b.ytd),
+        sub:wk.ytdInfo?(md(wk.ytdInfo.from)+'–'+md(wk.ytdInfo.to)+' '+wk.ytdInfo.year+(wk.ytdComparable&&b.ytdYoy!=null?' · '+T('wk_ytd_vs','өмнөх оноос')+' '+sg(b.ytdYoy):'')
+          /* Эх сурвалжийн цоорхой YTD-д — дүн бүтэн мэт харагдахгүй (статистикч QA 2026-10-20) */
+          +(ytdMissing>0?' · '+T('wk_ytd_gap','{n} өдөр мэдээгүй').replace('{n}',ytdMissing):'')):''},
+      {label:T('wk_kpi_wow','Өмнөх 7 хоногоос'),value:sg(b.wow),
+        sub:b.wow==null?((!wk.prevFull&&prev&&!prev.missing)?T('wk_wow_partial','өмнөх 7 хоногийн мэдээ дутуу'):T('wk_wow_none','харьцуулах бүтэн 7 хоног алга')):(range(prev)+': '+fmt(b.prevWeek))},
+      {label:T('wk_kpi_yoy','Өмнөх оны мөн үеэс'),value:sg(b.yoy),
+        sub:b.yoy==null?pyNone:(pyRange+': '+fmt(b.prevYearWeek))}
+    ].map(k=>({...k,tone:tone(k.value)}));
+    const circ=2*Math.PI*40;
+    const donut=sh=>{let acc=0;return sh.list.filter(o=>o.value>0).map(o=>{const r={color:o.color,
+      tip:o.type+' — '+fmt(o.value)+' '+pUnit+' · '+o.pct.toFixed(1)+'%',
+      dash:(o.pct/100*circ).toFixed(1)+' '+circ.toFixed(1),offset:(-acc/100*circ).toFixed(1)};acc+=o.pct;return r;});};
+    const legend=wk.perType.map(p=>{const a=wk.weekShares.list.find(x=>x.type===p.type), b=wk.ytdShares.list.find(x=>x.type===p.type);
+      return {name:p.type,color:p.color,
+        week:fmt(a.value)+(wk.weekShares.total>0?' · '+a.pct.toFixed(1)+'%':''),
+        ytd:fmt(b.value)+(wk.ytdShares.total>0?' · '+b.pct.toFixed(1)+'%':''),
+        tip:p.type+' — '+T('wk_kpi_week','7 хоног')+': '+fmt(a.value)+' '+pUnit+' · '+T('wk_kpi_ytd','Оны эхнээс өссөн дүн')+': '+fmt(b.value)+' '+pUnit};});
+    const cards=wk.perType.map(p=>({title:p.type,color:p.color,
+      chart:buildRoadPaxWeekBars(wk.weeks,p.series,p.color,{unit:pUnit,none:T('chart_none','мэдээлэл алга'),partial:T('wk_partial_days','{d}/7 өдөр мэдээтэй'),noneShort:T('wk_none_short','мэдээгүй')}),
+      kpis:kpiBlock(p)}));
+    /* «4+1» ганц орчигч карт гаргахгүй: 3 бол 3 багана, 4 бол 2×2 */
+    const nC=cards.length, cols=nC===3?3:nC>=2?2:1;
+    const wkPeriod=EHGlossary.weekSpan(wk.weeks[0].week_start,last.week_end,wk.weeks.length,
+      {words:{prefix:T('period_prefix','Хугацаа'),weeks:T('period_weeks','долоо хоног'),none:T('period_none','мэдээлэл алга')}}).text;
+    const partWkNote='';
+    const ytdNote0=(wk.prevYtd&&!wk.ytdComparable)?T('wk_ytd_thin','{year} оны мөн үеийн мэдээ эх сурвалжид бүрэн биш тул өмнөх онтой харьцуулаагүй.')
+      .replace('{year}',wk.prevYtd.year):'';
+    const ytdNote=[ytdNote0,partWkNote].filter(Boolean).join(' ');
+    const t0=wk.total;
+    /* Доод «7 хоногийн гүйцэтгэл» (wp) карт — ижил тоо, нэг эх сурвалж */
+    const wp={wpNoData:false,hasData:true,hasPlan:false,
+      total:t0.week==null?dash:fmt(t0.week),ytd:t0.ytd==null?dash:fmt(t0.ytd),
+      wow:sg(t0.wow),wowColor:tone(sg(t0.wow)),yoy:sg(t0.yoy),yoyColor:tone(sg(t0.yoy)),
+      planLabel:dash,planPctLabel:dash,planWidth:'0%',note:''};
+    return {roadPaxHasWeekly:true,roadPaxNoWeekly:false,roadPaxCapitalNote:capitalNote,
+      roadPaxWkRange:range(last)+' '+String(last.week_end||'').slice(0,4),roadPaxWkPeriod:wkPeriod,
+      roadPaxWkKpis:kpiBlock(t0),roadPaxWkWeekDonut:donut(wk.weekShares),roadPaxWkYtdDonut:donut(wk.ytdShares),
+      roadPaxWkWeekCap:T('wk_kpi_week','7 хоног')+' · '+range(last),roadPaxWkYtdCap:T('wk_kpi_ytd','Оны эхнээс өссөн дүн'),
+      roadPaxWkLegend:legend,roadPaxWkLegendHead:T('wk_legend_head','7 хоног / оны эхнээс (зорчигч · %)'),
+      roadPaxWkNote:ytdNote,roadPaxWkHasNote:!!ytdNote,
+      roadPaxTypeCards:cards,roadPaxTypeCols:'repeat('+cols+',minmax(0,1fr))',roadPaxWp:wp};
   }
   buildDocDetail(){
     const cat=this.state.docCat, list=DOCS[cat]||[];
@@ -12885,6 +13711,7 @@ class Component extends DCLogic {
     if(dsel.source==='railPax') this.syncPaxTable();
     if(FREIGHT_SOURCES[dsel.source]) this.syncFreightTable(dsel);
     if(dsel.source==='sectorTotal') this.syncSectorTotalTable();
+    if(dsel.source==='roadPax') this.syncRoadPaxTable();
     const dsEp=datasetEndpoint(dsel);
     const dsLang=this.state.dsApiLang||'curl';
     const dsMeta=this.sourceData(dsel.source).meta||null;
@@ -12952,6 +13779,10 @@ class Component extends DCLogic {
     const paxExtra=(dsel.source==='railPax'&&this.state.page==='detail')?this.buildPaxAnalysis():{};
     const isFreight=!!FREIGHT_SOURCES[dsel.source];
     const freightExtra=(isFreight&&this.state.page==='detail')?this.buildFreightAnalysis(dsel):{};
+    const isRoadPax=dsel.source==='roadPax';
+    const roadPaxExtra=(isRoadPax&&this.state.page==='detail')?this.buildRoadPaxAnalysis(dsel):{};
+    /* Доод «7 хоногийн гүйцэтгэл» карт — авто тээврийн зорчигчид 7 хоногийн тайлангаас */
+    if(roadPaxExtra.roadPaxWp) Object.assign(wp,roadPaxExtra.roadPaxWp);
     const isSumTotal=dsel.source==='sectorTotal';
     const stExtra=(isSumTotal&&this.state.page==='detail')?this.buildSectorTotalAnalysis(dsel):{};
     const rankEmptyNow=datasetRank(SECTORS[dsel.sector],dsel).length===0;
@@ -13165,6 +13996,7 @@ class Component extends DCLogic {
       rail_freight_ubtz:()=>stxt('pv_scope.note_rail_freight','Өртөөний эрэмбэ (ба нэгтгэлийн хүснэгт) зөвхөн шүүлтэд таарсан өртөөнүүдийг харуулна. KPI, чиглэлийн харьцаа, ачааны төрөл, сарын график өртөөгөөр задрахгүй тул хамаарахгүй.'),
       rail_freight_all:()=>stxt('pv_scope.note_rail_freight_all','Өртөөний эрэмбэ зөвхөн шүүлтэд таарсан өртөөнүүдийг харуулна. KPI, тээвэрлэгчийн задаргаа, чиглэлийн харьцаа, ачааны төрөл, сарын болон 7 хоногийн график өртөөгөөр задрахгүй тул хамаарахгүй.'),
       rail_freight_mtz:()=>stxt('pv_scope.note_rail_freight','Өртөөний эрэмбэ (ба нэгтгэлийн хүснэгт) зөвхөн шүүлтэд таарсан өртөөнүүдийг харуулна. KPI, чиглэлийн харьцаа, ачааны төрөл, сарын график өртөөгөөр задрахгүй тул хамаарахгүй.'),
+      road_pax:()=>stxt('pv_scope.note_road_pax','«Тээврийн төрөл»-ийн шүүлт KPI, тээврийн төрлийн харьцаа, сарын график ба чиглэлийн эрэмбэд хамаарна. Тээвэрлэгч, борлуулалтын суваг, зорчигчийн ангилал, 7 хоногийн тайлан төрлөөр задрахгүй тул хамаарахгүй.'),
       sector_total:()=>stxt('pv_scope.note_sector_total','«Салбар»-ын шүүлт KPI, сарын график, эзлэх хувь ба өмнөх оны харьцуулалтад хамаарна. 7 хоногийн тайлан бүх салбарын нийтээр тул хамаарахгүй.'),
       road_inspect:()=>stxt('pv_scope.note_road_inspect','Аймгийн эрэмбэ ба газрын зураг энэ шүүлтийг дагана. KPI, хоногийн ба гаригийн график, шалтгаан аймгаар задрахгүй тул хамаарахгүй.')}[String(pvSc.schemaKey||'').replace(/__raw$/,'')]
       ||(()=>stxt('pv_scope.note_default','Энэ шүүлт зөвхөн хүснэгтэд хамаарна.'));
@@ -13176,10 +14008,10 @@ class Component extends DCLogic {
       pvScope,
       t:detailT,
       dwpTitle,dwpFoot,dtbFoot,dstrTitle,dintTitle,dctyTitle,dtreeTitle,dmthTitle,dcgmTitle,dcgoTitle,daiTitle,daiFoot,dmapTitle,dmapFoot,ddqTitle,ddqFoot,
-      isAirDetail,...airExtra,...wagonExtra,...paxExtra,...freightExtra,...stExtra,/* UI стандарт (ROW): «Салбарын бүтэц» хоосон бол хоосон картыг графикийн хажууд
+      isAirDetail,...airExtra,...wagonExtra,...paxExtra,...freightExtra,...stExtra,...roadPaxExtra,/* UI стандарт (ROW): «Салбарын бүтэц» хоосон бол хоосон картыг графикийн хажууд
          БҮҮ зур (296px график | 99px «мэдээлэл алга» — зорчигчийн галт тэрэг) — график
          бүтэн мөрийг эзэлнэ. */
-      showRank:!(rankEmptyNow&&paxChannelsNow),showRankAlt:rankEmptyNow&&paxChannelsNow,notRoadInspect:!isRoadInspect&&!isFreight&&!isSumTotal,...roadExtra,
+      showRank:!(rankEmptyNow&&paxChannelsNow),showRankAlt:rankEmptyNow&&paxChannelsNow,notRoadInspect:!isRoadInspect&&!isFreight&&!isSumTotal&&!isRoadPax,...roadExtra,
       /* Хүснэгтийн дотор талын төлөвийн шүүлт: нэгдсэн шүүлт (түүх ирсэн
          үед дээд талд) байгаа датасэтэд ДАВХАРДАХГҮЙ. */
       /* Түүхий мөрийн хүснэгт (үзлэг) өөрийн баганын шүүлттэй — нэгдсэн хугацааны шүүлт байсан ч самбар нээгдэнэ */
