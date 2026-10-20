@@ -178,13 +178,17 @@
   /* Датасэтийн ТҮҮХИЙ мөр — эх сервисийн БҮХ багана (огноо ч мөн). Хариу:
      {status,columns:[{key,label,type}],rows:[[...]],total,truncated} эсвэл
      {status:'no_data'}. Endpoint deploy болоогүй (404) бол null — хүснэгт
-     өмнөх нэгтгэлээрээ үлдэнэ. key: rail-wagon / rail-pax / road-inspections. */
-  function fetchDatasetRows(key, from, to, limit) {
+     өмнөх нэгтгэлээрээ үлдэнэ. key: rail-wagon / rail-pax / road-inspections.
+     opts.params — баганын шүүлт (бэлэн query: in.<багана>=…&min.<багана>=…),
+     opts.facets — цонхны бүтэн датаас шүүлтийн сонголт (утга+тоо, мин/макс). */
+  function fetchDatasetRows(key, from, to, limit, opts) {
     if (!BASE) return Promise.resolve(null);
     var q = [];
     if (from) q.push('from=' + encodeURIComponent(from));
     if (to) q.push('to=' + encodeURIComponent(to));
     if (limit) q.push('limit=' + encodeURIComponent(limit));
+    if (opts && opts.facets) q.push('facets=1');
+    if (opts && opts.params) q.push(opts.params);
     return fetchJson(BASE + '/api/datasets/' + encodeURIComponent(key) + '/rows' + (q.length ? '?' + q.join('&') : ''))
       .catch(function (e) {
         console.info('[ErtHub] backend (datasets/' + key + '/rows) уншигдсангүй:', e.message);
