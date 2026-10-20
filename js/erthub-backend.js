@@ -92,6 +92,22 @@
       });
   }
 
+  /* Авто тээврийн зорчигч тээврийн мэдээний ТҮҮХ (Veritech 15401437, migrations/023):
+     {status,types[],months[{month,days,last_date,passengers,refunded,by_type{},refunded_by_type{}}],
+     by_route[],by_company[],by_channel[],by_vehicle[],by_passenger_type[],upcoming,weekly?}
+     эсвэл {status:'no_data'}. 404/унтарсан бол null → "мэдээлэл алга". */
+  function fetchRoadPassengersHistory(from, to) {
+    if (!BASE) return Promise.resolve(null);
+    var q = [];
+    if (from) q.push('from=' + encodeURIComponent(from));
+    if (to) q.push('to=' + encodeURIComponent(to));
+    return fetchJson(BASE + '/api/sectors/road/passengers/history' + (q.length ? '?' + q.join('&') : ''))
+      .catch(function (e) {
+        console.info('[ErtHub] backend (road/passengers/history) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
   /* Зорчигчийн галт тэрэгний ТҮҮХ — сар (ОН/ОУ), чиглэл, төрөл. from/to
      (YYYY-MM-DD) заавал биш. Хариу: {status,months[],by_route[],by_type[]}
      эсвэл {status:'no_data'}. 404/унтарсан бол null → "мэдээлэл алга". */
@@ -201,6 +217,7 @@
     fetchRailWagonHistory: fetchRailWagonHistory,
     fetchRailPassengersHistory: fetchRailPassengersHistory,
     fetchRailFreightHistory: fetchRailFreightHistory,
+    fetchRoadPassengersHistory: fetchRoadPassengersHistory,
     fetchRoadInspections: fetchRoadInspections,
     fetchRoadInspectionsHistory: fetchRoadInspectionsHistory,
     fetchVehicleRegistry: fetchVehicleRegistry,
