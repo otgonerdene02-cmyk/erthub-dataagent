@@ -71,6 +71,8 @@ body{margin:0;}
    Өмнө нь зөвхөн агаарт (.eh-fill) байсан тул галт тэрэг/вагон/үзлэг дээр
    198px donut | 964px жагсаалт гэх мэт зөрүү гарч байв. layout-audit: row-height-mismatch. */
 .eh-row, .eh-trend-rank.eh-fill { align-items: stretch !important; }
+/* EMP: чиг хандлагын цуваа алга үед хоосон картыг нууж, утгатай карт (Салбарын бүтэц) мөрийг ганцаар эзэлнэ */
+.eh-trend-rank[data-solo="1"] { grid-template-columns: minmax(0, 1fr) !important; }
 .eh-fill-card { display: flex; flex-direction: column; }
 .eh-fill-list { position: relative; flex: 1 1 0; min-height: 220px; }
 .eh-fill-scroll { position: absolute; inset: 0; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }

@@ -7909,6 +7909,24 @@ function groupDG() {
   check('DG-P10. Тренд картын хугацаа: detail.trendPeriod биндинг + c1dYear (агаар ч)',
     /trendPeriod:dsTrendPeriod/.test(idxP) && /{{ detail.trendPeriod }}/.test(idxP) && /SECTORS.air.c1dYear=year/.test(idxP));
 
+  /* DG-P11. Олон дутуу сар (вагон: эх сурвалжийн цоорхой 2025-12 + одоогийн сар) —
+     ганц «дутуу сар» гэвэл зөвхөн сүүлийн сар дутуу мэт уншигдана. */
+  check('DG-P11. 2 дутуу сар → «2 дутуу сар»; огноотой бол «(сүүлийнх … хүртэл)»',
+    G.periodSpan(['2025-12','2026-10'],{partialCount:2}).text === 'Хугацаа: 2025-12 — 2026-10 · 11 сар · 2 дутуу сар' &&
+    G.periodSpan(['2025-12','2026-10'],{partialCount:2,partialTo:'2026-10-19'}).text === 'Хугацаа: 2025-12 — 2026-10 · 11 сар · 2 дутуу сар (сүүлийнх 2026-10-19 хүртэл)',
+    G.periodSpan(['2025-12','2026-10'],{partialCount:2,partialTo:'2026-10-19'}).text);
+  check('DG-P11. partialTo нь СҮҮЛИЙН дутуу сарынх (find биш filter().pop())',
+    (idxP.match(/partialTo:\(ms\.filter\(m=>m\.partial\)\.pop\(\)\|\|\{\}\)\.last_date/g) || []).length === 3);
+  /* DG-P12. Нэг хоногийн агшин (вагоны «Салбарын бүтэц») — сарын хүрээ биш */
+  check('DG-P12. asOf → «Хугацаа: 2026-10-19 · сүүлийн бүрэн хоног»',
+    G.periodSpan([],{asOf:'2026-10-19'}).text === 'Хугацаа: 2026-10-19 · сүүлийн бүрэн хоног');
+  check('DG-P12. «Салбарын бүтэц» картын хугацаа rankPeriod-оос (агаар + вагоны _rankAsOf)',
+    /{{ detail.rankPeriod }}/.test(idxP) && /SECTORS\.rail\._rankAsOf=w\.date/.test(idxP) && /rankPeriod:isAirDetail\?/.test(idxP));
+  /* DG-P13. EMP: цуваагүй трендийн картыг утгатай картын хажууд зурахгүй */
+  check('DG-P13. Хоосон трендийн карт нуугдана (showTrendCard), мөр нэг баганатай (data-solo)',
+    /<sc-if value="{{ detail.showTrendCard }}">/.test(idxP) && /data-solo="{{ detail.trendRankSolo }}"/.test(idxP) &&
+    /showTrendCard:dsHasTrend\|\|rankEmptyNow&&!paxChannelsNow/.test(idxP));
+
   check('DG-P6. Текст overrides (words) — монгол үгийг орлуулж болно',
     G.periodSpan(['2024-01'], { words: { prefix: 'Period', months: 'mo' } }).text === 'Period: 2024-01 · 1 mo');
 
