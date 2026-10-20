@@ -7886,10 +7886,28 @@ function groupDG() {
      шүүлт солигдоход хугацаа өөрчлөгдөхгүй. */
   const idxP = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const nPer = (idxP.match(/data-chart-period="1"/g) || []).length;
-  check('DG-P8. Хугацааны мөр: rail freight 4 + wagon 4 + pax 5 + агаар 2 = 15 карт', nPer >= 15, 'n=' + nPer);
+  /* 22 = rail freight 4 + wagon 4 + pax 5 + агаар 8 (донут ОУ/ОН, улсын жагсаалт, тээвэрлэгчийн зах зээл,
+     ачааны жагсаалт, газрын зураг, treemap, сарын зорчигч, сарын ачаа) + трендийн карт 1 */
+  check('DG-P8. Хугацааны мөр: rail freight 4 + wagon 4 + pax 5 + агаар 8 + тренд 1 = 22 карт', nPer === 22, 'n=' + nPer);
   check('DG-P8. Тус бүр өгөгдлөөс уншина (chartPeriod / airPeriod биндинг)',
     /chartPeriod:chartPeriodText\(m,T\)/.test(idxP) && /airPeriod:chartPeriodText\(/.test(idxP) &&
     /{{ detail.chartPeriod }}/.test(idxP) && /{{ detail.airPeriod }}/.test(idxP));
+
+  /* DG-P9. Трендийн карт: c1d-ийн БОДИТ бичлэгтэй сарууд (0 = өгөгдөлгүй) → хүрээ нь
+     эхний/сүүлийн бодит сараас; дутуу сар хасагдсан бол тэмдэглэгдэнэ. */
+  const c1d=[0,5,6,0,7,0];
+  const trendKeys=c1d.map((v,i)=>(v>0?'2026-'+String(i+1).padStart(2,'0'):null)).filter(Boolean);
+  check('DG-P9. Тренд: 2026-02, 2026-03, 2026-05 бодит → «2026-02 — 2026-05 · 4 сар»',
+    G.periodSpan(trendKeys,{}).text === 'Хугацаа: 2026-02 — 2026-05 · 4 сар', G.periodSpan(trendKeys,{}).text);
+  check('DG-P9. Тренд: дутуу сар хасагдсан → «дутуу сар хасагдсан» (тоо зохиохгүй)',
+    G.periodSpan(trendKeys,{dropped:true}).text === 'Хугацаа: 2026-02 — 2026-05 · 4 сар · дутуу сар хасагдсан');
+  check('DG-P9. Тренд: цуваа хоосон → «мэдээлэл алга»',
+    /мэдээлэл алга/.test(G.periodSpan([],{}).text));
+  /* DG-P10. Агаарын картууд шүүлтийн сарын мужаар хязгаарлагдана (monthFrom..monthTo) */
+  check('DG-P10. Агаар: periodKeys шүүлтийн сарын мужаар хязгаарлана',
+    /\.filter\(\(_,i\)=>i\+1>=\(filters\.monthFrom\|\|1\)&&i\+1<=\(filters\.monthTo\|\|12\)\)/.test(idxP));
+  check('DG-P10. Тренд картын хугацаа: detail.trendPeriod биндинг + c1dYear (агаар ч)',
+    /trendPeriod:dsTrendPeriod/.test(idxP) && /{{ detail.trendPeriod }}/.test(idxP) && /SECTORS.air.c1dYear=year/.test(idxP));
 
   check('DG-P6. Текст overrides (words) — монгол үгийг орлуулж болно',
     G.periodSpan(['2024-01'], { words: { prefix: 'Period', months: 'mo' } }).text === 'Period: 2024-01 · 1 mo');
