@@ -170,6 +170,8 @@ function groupB() {
     if (/^hero\.diagram\.chips\.\d+$/.test(p)) return !/stxt\('hero\.diagram\.chips\./.test(src);
     if (/^hero\.diagram\.chip_bodies\.\d+$/.test(p)) return !/stxt\('hero\.diagram\.chip_bodies\./.test(src);
     /* nav-ийн шошгыг PAGES дээр давталтаар уншдаг тул түлхүүр нь ДИНАМИК */
+    /* DG-P: агаарын хугацааны мөр chartPeriodText()-ээр stxt('chart.'+k) гэж ДИНАМИК уншина */
+    if (/^chart\.(period_|scope_months$)/.test(p)) return !/stxt\('chart\.'\+k/.test(src);
     if (/^nav\./.test(p)) return !src.includes("stxt('nav.'+p.id");
     /* Богино нэрийг livestrip дотор ДИНАМИК түлхүүрээр уншина */
     if (/^sector_short\./.test(p)) return !src.includes("stxt('sector_short.'+k");
@@ -7858,6 +7860,39 @@ function groupDG() {
   check('DG1. js/erthub-glossary.js ачаалагдана (airFlightKind, ratioSanity, airPaxSplit)',
     !!G && typeof G.airFlightKind === 'function' && typeof G.ratioSanity === 'function' && typeof G.airPaxSplit === 'function');
   if (!G) return;
+
+  /* DG-P. Графикийн хугацаа (periodSpan): ЯГ тооцох боломжтой фикстур.
+     2022-01, 2022-02, 2022-05 (3 сар өгөгдөлгүй) → хүрээ 2022-01 — 2022-05 = 5 сар. */
+  const P = G.periodSpan(['2022-05', '2022-01', '2022-02'], {});
+  check('DG-P1. periodSpan: хүрээ эхнийг/сүүлийнхийг авна, хугацаа өгөгдөлгүй сараар ТАСРААГҮЙ',
+    P.from === '2022-01' && P.to === '2022-05' && P.count === 5,
+    JSON.stringify(P));
+  check('DG-P2. periodSpan текст: «Хугацаа: 2022-01 — 2022-05 · 5 сар»',
+    P.text === 'Хугацаа: 2022-01 — 2022-05 · 5 сар', P.text);
+  const P1 = G.periodSpan(['2026-08'], {});
+  check('DG-P3. Ганц сар → нэг огноо, «1 сар»',
+    P1.text === 'Хугацаа: 2026-08 · 1 сар', P1.text);
+  check('DG-P4. Хоосон түлхүүр → "мэдээлэл алга" (хугацаа зохиохгүй)',
+    G.periodSpan([], {}).count === 0 && /мэдээлэл алга/.test(G.periodSpan(null, {}).text));
+  const PP = G.periodSpan(['2026-09', '2026-10'], { partialTo: '2026-10-17' });
+  check('DG-P5. Дутуу сар → «дутуу сар (… хүртэл)» тэмдэглэгээ',
+    /дутуу сар \(2026-10-17 хүртэл\)$/.test(PP.text), PP.text);
+  check('DG-P7. Дутуу сар тоогоор (partialCount) → «дутуу сар», огноогүй; хасагдсан сар → «дутуу сар хасагдсан»',
+    G.periodSpan(['2026-09','2026-10'],{partialCount:1}).text === 'Хугацаа: 2026-09 — 2026-10 · 2 сар · дутуу сар' &&
+    G.periodSpan(['2026-01'],{dropped:true}).text === 'Хугацаа: 2026-01 · 1 сар · дутуу сар хасагдсан');
+
+  /* DG-P8. Хугацааны мөр БҮХ диаграммд: rail (freight, wagon, pax) + агаар.
+     Карт бүр `detail.chartPeriod` / `detail.airPeriod`-оос уншина; эс тэгвэл
+     шүүлт солигдоход хугацаа өөрчлөгдөхгүй. */
+  const idxP = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const nPer = (idxP.match(/data-chart-period="1"/g) || []).length;
+  check('DG-P8. Хугацааны мөр: rail freight 4 + wagon 4 + pax 5 + агаар 2 = 15 карт', nPer >= 15, 'n=' + nPer);
+  check('DG-P8. Тус бүр өгөгдлөөс уншина (chartPeriod / airPeriod биндинг)',
+    /chartPeriod:chartPeriodText\(m,T\)/.test(idxP) && /airPeriod:chartPeriodText\(/.test(idxP) &&
+    /{{ detail.chartPeriod }}/.test(idxP) && /{{ detail.airPeriod }}/.test(idxP));
+
+  check('DG-P6. Текст overrides (words) — монгол үгийг орлуулж болно',
+    G.periodSpan(['2024-01'], { words: { prefix: 'Period', months: 'mo' } }).text === 'Period: 2024-01 · 1 mo');
 
   /* DG2. Нэршлийн normalize: "Орон нутаг" = дотоод; латин/кирилл, зай, том жижиг */
   const K = G.airFlightKind;
