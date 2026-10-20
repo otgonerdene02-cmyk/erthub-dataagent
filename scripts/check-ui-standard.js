@@ -86,7 +86,7 @@ lines.forEach((l, i) => {
 
 /* ORD1 — дараалал: хүснэгт → график */
 const pvAt = html.indexOf('{{ detail.pvTitle }}');
-['data-wagon-charts', 'data-pax-charts'].forEach((k) => {
+['data-wagon-charts', 'data-pax-charts', 'data-sector-charts'].forEach((k) => {
   const at = html.indexOf(k + '="1"');
   if (at < 0) bad('ORD1', 0, k + ' блок олдсонгүй');
   else if (pvAt < 0 || at < pvAt) bad('ORD1', lineOf(at), k + ' нь датасэтийн хүснэгтийн ӨМНӨ байна — дараалал KPI → хүснэгт → график (агаар шиг)');
@@ -96,7 +96,7 @@ const tpl = html.slice(0, Math.max(0, html.indexOf('<script type="text/x-dc"')) 
 const dqAt = tpl.indexOf('data-ddq-block="1"');
 if (dqAt < 0) bad('ORD2', 0, 'data-ddq-block блок олдсонгүй');
 else {
-  ['{{ detail.pvTitle }}', 'data-wagon-charts="1"', 'data-pax-charts="1"', '{{ detail.dstrTitle }}', '{{ detail.daiTitle }}'].forEach((k) => {
+  ['{{ detail.pvTitle }}', 'data-wagon-charts="1"', 'data-pax-charts="1"', 'data-sector-charts="1"', '{{ detail.dstrTitle }}', '{{ detail.daiTitle }}'].forEach((k) => {
     const at = tpl.lastIndexOf(k);
     if (at > dqAt) bad('ORD2', lineOf(dqAt), 'чанарын үнэлгээ «' + k + '»-ийн ӨМНӨ байна — дараалал KPI → хүснэгт → график → чанарын үнэлгээ');
   });
