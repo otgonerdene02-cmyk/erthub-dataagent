@@ -104,6 +104,11 @@ module.exports = async function periodProbe(d0, w0, routes, decor) {
         });
         if (pe) { per = pe; card = p; break; }
         if (!card || !marks.some((o) => o !== m && card.contains(o.el))) card = p;
+        /* Картын хүрээ (border-radius ≥12px + хүрээ эсвэл сүүдэр) — мөр нь
+           картынхаа дотор байх ёстой; цааш алхвал хэсгийн/хөршийн мөрийг
+           «өөрийнх» гэж авч худал ногоон гарна (DG-P18) */
+        const cs = w.getComputedStyle(p);
+        if (parseFloat(cs.borderTopLeftRadius) >= 12 && (parseFloat(cs.borderTopWidth) > 0 || cs.boxShadow !== 'none')) { card = p; break; }
       }
       const key = per || card;
       if (seen.has(key) && per) return;
