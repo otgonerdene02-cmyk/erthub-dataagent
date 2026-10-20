@@ -176,8 +176,26 @@
       });
   }
 
+  /* САЛБАРЫН НЭГТГЭЛ — gold.sector_daily_total (backend migrations/022): өдөр ×
+     салбар, зорчигч ба ачаа (тонн). Хариу: {status,sectors[],months[],weekly{
+     passengers,freight_tonnes}} эсвэл {status:'no_data'}. weekly нь зөвхөн
+     шүүлтгүй дуудлагад. 404/унтарсан бол null → портал салбарын датасэтүүдээс
+     сарын нэгтгэлийг өөрөө нийлүүлнэ (sectorTotalFallback). */
+  function fetchSectorTotal(from, to) {
+    if (!BASE) return Promise.resolve(null);
+    var q = [];
+    if (from) q.push('from=' + encodeURIComponent(from));
+    if (to) q.push('to=' + encodeURIComponent(to));
+    return fetchJson(BASE + '/api/sectors/total/history' + (q.length ? '?' + q.join('&') : ''))
+      .catch(function (e) {
+        console.info('[ErtHub] backend (sectors/total/history) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
   window.EHBackend = {
     enabled: !!BASE,
+    fetchSectorTotal: fetchSectorTotal,
     fetchSectorSummary: fetchSectorSummary,
     fetchRailWagonLoading: fetchRailWagonLoading,
     fetchRailWagonHistory: fetchRailWagonHistory,
