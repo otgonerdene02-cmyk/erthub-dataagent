@@ -663,6 +663,13 @@ var INSP={state:'idle',date:null,count:null,failed:null,vehicles:null};
    ХОЁУЛАНД). Эх сурвалж бүр тусдаа төлөвтэй — нэг нь унасан ч бусад хэвийн. */
 var SERIES_METRIC={'rail.monthly_passenger_series':'rail'};
 var SERIES={};
+/* САЛБАРЫН НЭГТГЭЛ (/api/sectors/total/history → weekly) — нүүрний 02-р хэсэг
+   (w2p/w2c, w2pb/w2cb, w2px/w2cx). Сайтын weekSectorTotal()-тэй ИЖИЛ эх сурвалж:
+   ирсэн бол агаар ч, төмөр зам ч ЭНДЭЭС (нэг долоо хоногийн цонх); алга бол агаар
+   нь flights feed-ийн хуучин зам, төмөр зам «мэдээлэл алга». Метрик → [хэмжүүр, салбар]. */
+var ST={state:'idle',weekly:null};
+var ST_METRIC={'air.weekly_pax':['passengers','air'],'air.weekly_cargo':['freight_tonnes','air'],
+  'rail.weekly_pax':['passengers','rail'],'rail.weekly_cargo':['freight_tonnes','rail']};
 
 var $=function(i){return document.getElementById(i)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -876,6 +883,13 @@ function metricValue(mk){
     if(mk==='road.inspection_count'||mk==='road.inspection_kpi_set') return INSP.count;
     return null;
   }
+  /* 7 хоногийн метрик: нэгтгэл ирсэн бол ТҮҮНЭЭС (сайттай нэг цонх); төмөр зам
+     зөвхөн нэгтгэлээс. */
+  if(ST_METRIC[mk]){
+    var sw=stWeek(mk);
+    if(sw) return stWeekVal(sw.w.weeks[sw.w.weeks.length-1],sw.sec);
+    if(mk.indexOf('rail.')===0) return null;
+  }
   if(FEED.state!=='ready') return null;
   switch(mk){
     case 'air.flight_count_last_month': return FEED.lastMonthCount;
@@ -926,6 +940,43 @@ function loadRoadInspections(){
     INSP.vehicles=(d.vehicle_count==null)?null:Number(d.vehicle_count);
     INSP.state='ready';
   },function(){ INSP.state='error' });
+}
+/* Нэгтгэлийн хариу — сайтын weekSectorTotal()-тэй ИЖИЛ шалгуур (status==='ok' ба weekly). */
+function loadSectorTotalWeekly(){
+  if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchSectorTotal){ ST.state='off'; return Promise.resolve() }
+  ST.state='loading';
+  return EHBackend.fetchSectorTotal().then(function(d){
+    if(!d||d.status!=='ok'||!d.weekly){ ST.state='error'; return }
+    ST.weekly=d.weekly; ST.state='ready';
+  },function(){ ST.state='error' });
+}
+/* Метрикийн нэгтгэлийн 7 хоног: {w, sec} эсвэл null (нэгтгэл алга / салбар weekly-д алга). */
+function stWeek(mk){
+  var m=ST_METRIC[mk]; if(!m||ST.state!=='ready') return null;
+  var w=ST.weekly[m[0]];
+  if(!w||!Array.isArray(w.weeks)||!w.weeks.length||(w.sectors||[]).indexOf(m[1])<0) return null;
+  return {w:w,sec:m[1]};
+}
+function stWeekVal(x,sec){
+  if(!x||x.missing) return null;
+  var b=x.by_sector&&x.by_sector[sec];
+  return (b&&b.value!=null&&isFinite(Number(b.value)))?Number(b.value):null;
+}
+/* w2p/w2c-ийн багана — сайтын weekSectorReport().weeks-тэй ижил: долоо хоног бүрийн
+   нийлбэр ЗӨВХӨН холбогдсон (verified, нуугаагүй) слотын салбараар. Метрик салгавал
+   цуваа ӨӨРЧЛӨГДӨНӨ. Бичлэггүй долоо хоногийг алгасна (0 зохиохгүй). */
+function stWeeklySeries(id){
+  if(typeof valueSpecOf==='function'&&valueSpecOf(id)) return null;
+  var ps=sectorParts(id).filter(function(p){return p.q==='verified'&&stWeek(p.m)});
+  if(!ps.length) return null;
+  var w=stWeek(ps[0].m).w;
+  var out=[];
+  w.weeks.forEach(function(x){
+    var t=0;
+    for(var i=0;i<ps.length;i++){ var v=stWeekVal(x,ST_METRIC[ps[i].m][1]); if(v===null) return; t+=v; }
+    out.push({label:String(x.week_start||'').slice(5).replace('-','.'),v:Math.round(t)});
+  });
+  return out.length>1?out:null;
 }
 /* Сайтын sectorSummaryToSeries()-ийн толь: unit ЗААВАЛ, одоогийн (УБ) сар
    хасагдана, сүүлийн оны 1-р сараас завсаргүй. Зөрүүтэй бол preview ба сайт
@@ -2030,11 +2081,12 @@ function previewFor(id,mini){
     /* Багана нь СОНГОСОН МЕТРИКЭЭС хамаарна (metricAnySeries). Метрик
        салгасан эсвэл цуваагүй метрик сонгосон үед FEED-ийн хуучин
        өдрүүдийг ҮРГЭЛЖЛҮҮЛЭН зурахгүй — салбарын зурвас руу ухарна. */
-    var mkB=headMetric(id), days=metricAnySeries(mkB), isDay=!!metricDaily(mkB);
+    var mkB=headMetric(id), stS=stWeeklySeries(id), days=stS||metricAnySeries(mkB), isDay=!stS&&!!metricDaily(mkB);
     var chart=(days&&days.length>1)
       ? svgLine(days,accent,W,mini?26:40,true)+
         '<div class="pvax">'+esc(days[0].label)+' — '+esc(days[days.length-1].label)+
         ' · '+esc(isDay?utxt('preview.daily7','7 хоногийн өдөр тутам')
+                      :stS?(days.length+' '+utxt('preview.weekly','долоо хоног (Да–Ня) · салбаруудын нийт'))
                       :(days.length+' '+utxt('preview.points','цэг')))+'</div>'
       : (pv.length?svgBarsH(pv.slice(0,mini?3:5),W)
                  :'<div class="pvempty">'+esc(utxt('preview.no_series','цуваа алга'))+'</div>');
@@ -4926,7 +4978,7 @@ Promise.all([getJson('../metric_registry.json'),getJson('../content.json')])
   /* Урьдчилан харах картыг ЖИНХЭНЭ дата цэгээр зурахын тулд сайт өөрөө
      уншдаг feed-ийг ачаална. Амжилтгүй ч гэсэн хэрэгсэл БҮРЭН ажиллана —
      preview зөвхөн бүтцээ харуулж, "дата ачаалагдаагүй" гэж ил хэлнэ. */
-  Promise.all([loadFeed(),loadRailWagon(),loadRoadInspections(),loadSectorSeries()]).then(render);
+  Promise.all([loadFeed(),loadRailWagon(),loadRoadInspections(),loadSectorSeries(),loadSectorTotalWeekly()]).then(render);
 })
 .catch(function(err){
   showState('<h2>'+esc(utxt('boot.read_fail','Файл уншиж чадсангүй'))+'</h2><p>'+esc(err.message)+'</p>'+

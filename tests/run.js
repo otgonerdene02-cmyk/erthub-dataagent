@@ -4270,7 +4270,7 @@ async function groupBE() {
   check('BE16. Админ backend модулийг ачаална',
     /erthub-backend\.js/.test(read('admin/index.html')) && /backend-config\.js/.test(read('admin/index.html')));
   check('BE16. Админ вагон ачилтыг тусад нь (flights-ээс хамааралгүй) уншина',
-    /function loadRailWagon\(\)/.test(adm) && adm.includes('Promise.all([loadFeed(),loadRailWagon(),loadRoadInspections(),loadSectorSeries()])'));
+    /function loadRailWagon\(\)/.test(adm) && adm.includes('Promise.all([loadFeed(),loadRailWagon(),loadRoadInspections(),loadSectorSeries(),loadSectorTotalWeekly()])'));
   check('BE16. metricValue rail.wagon_* -г RAIL-ээс өгнө (FEED-ээс БИШ)',
     /mk\.indexOf\('rail\.wagon'\)===0/.test(adm) && /RAIL\.state!=='ready'/.test(adm));
   check('BE16. u07 preview огноог МЕТРИКЭЭС уншина (хатуу air шалгалт устсан)',
@@ -4854,7 +4854,7 @@ async function groupBE() {
   check('BE25. Админ metricSeries салбарын цувааг SERIES-ээс (flights FEED-ээс ХАМААРАХГҮЙ)',
     /if\(SERIES_METRIC\[mk\]\)\{ var ss=SERIES\[SERIES_METRIC\[mk\]\]; return \(ss&&ss\.state==='ready'\)\?ss\.series:null; \}\s*\n\s*if\(FEED\.state!=='ready'\) return null;/.test(adm25));
   check('BE25. Админ ДӨРВӨН эх сурвалжийг зэрэг ачаална (үзлэг нэмэгдсэн)',
-    adm25.includes('Promise.all([loadFeed(),loadRailWagon(),loadRoadInspections(),loadSectorSeries()])'));
+    adm25.includes('Promise.all([loadFeed(),loadRailWagon(),loadRoadInspections(),loadSectorSeries(),loadSectorTotalWeekly()])'));
   check('BE25. Админ rail.monthly_passenger_series → rail',
     /var SERIES_METRIC=\{'rail\.monthly_passenger_series':'rail'/.test(adm25));
   check('BE25. Line preview бусад verified слотын цувааг ч харуулна (rail холбоос тусна)',
@@ -5139,7 +5139,7 @@ async function groupBE() {
     JSON.stringify(weekAxis(null)) === JSON.stringify({ base: 0, top: 0, step: 1 }));
   check('BE47. Тэнхлэгийг /50 гэж ХАТУУ бичсэн хуучин мөр үлдээгүй',
     !/\(bmax-bmin\)\*0\.6\)\/50\)\*50/.test(dcScript()) &&
-    /const wax=weekAxis\(hasBars\?barVals:\[\]\);/.test(dcScript()));
+    /const wax=weekAxis\(okVals\);/.test(dcScript()));
 
   /* ── BE50. Коммунитийн НИЙТ тоо зохиомол байсан (2026-10-05) ──
      Санал/лайк нь зөвхөн тухайн хэрэглэгчийн session-д (this.state.cVotes)
@@ -5945,7 +5945,8 @@ async function groupBE() {
   const mv35 = adm.match(/function metricValue\(mk\)\{([\s\S]*?)\n\}/);
   const md35 = adm.match(/function metricDate\(mk\)\{([\s\S]*?)\n\}/);
   if (!mv35 || !md35) { bad('BE35. metricValue/metricDate олдсонгүй'); return; }
-  const mkMV = new Function('FEED', 'RAIL', 'INSP', 'return function(mk){' + mv35[1] + '}');
+  /* 7 хоногийн нэгтгэл (ST_METRIC/stWeek) энэ тестэд хамааралгүй — хоосон орчин. */
+  const mkMV = new Function('FEED', 'RAIL', 'INSP', 'var ST_METRIC={},stWeek=function(){return null},stWeekVal=stWeek;return function(mk){' + mv35[1] + '}');
   const mkMD = new Function('FEED', 'RAIL', 'INSP', 'return function(mk){' + md35[1] + '}');
   const FEED35 = { state: 'off' }, RAIL35 = { state: 'off' };
   const INSP_R = { state: 'ready', date: '2026-09-21', count: 2790, failed: 202, vehicles: 2692 };
@@ -8969,6 +8970,157 @@ function groupST() {
     (C.site.datasets || []).some(x => x.sector === 'total') && !!(C.site.pv_scope || {}).note_sector_total);
 }
 
+/* ──────────────────────────────── WK 7 ХОНОГИЙН ТАЙЛАН (нэгтгэлээс) ──────────────────────────────── */
+/* WK. Нүүрний 02-р хэсэг «7 хоногийн тайлан» (w2p/w2c, w2pb/w2cb, w2px/w2cx) салбарын
+   нэгтгэлийн weekly-ээс (2026-10-20). Регресс: донут агаарыг 100% гэж, төмөр замыг
+   «мэдээлэл алга» гэж харуулдаг байв. Гараар бодох фикстур (зорчигч):
+     10.05–10.11  агаар 100 · төмөр зам 300  = 400
+     10.12–10.18  агаар 150 · төмөр зам 350  = 500   → өмнөх 7 хоногоос +25.0%
+     оны эхнээс   агаар 1000 · төмөр зам 3000 = 4000 ; өмнөх он 900 + 2300 = 3200 → +25.0%
+     донут        агаар 150/500 = 30.0% · төмөр зам 70.0% · авто «—»
+     мөр          агаар 150 (+50.0%) · төмөр зам 350 (+16.7%)
+   Ачаа: агаар 1 т, төмөр зам 9999 т → агаар 0.01% → «<0.1%» (0.0% биш). */
+function groupWK() {
+  group('WK. 7 хоногийн тайлан — салбарын нэгтгэлээс (агаар + төмөр зам)');
+  const src = dcScript();
+  const idx = read('index.html');
+  const a = src.indexOf('/* ── САЛБАРЫН НЭГТГЭЛ (sectorTotal)'), b = src.indexOf('/* Зорчигчийн сарын график — ОН/ОУ-ийг ЭЭЛЖ');
+  const mB = src.match(/\n    const fmtWeekVal=\(n\)=>\{[\s\S]*?\n    const wPax=buildWeek\(/);
+  const mT = src.match(/\n  weekSectorTotal\(wt,widgetId\)\{([\s\S]*?)\n  \}\n/);
+  const mA = src.match(/\nfunction weekAxis\(vals\)\{[\s\S]*?\n\}\n/);
+  check('WK0. weekSectorReport · weekSectorTotal · buildWeek · weekAxis олдов', a > 0 && b > a && !!(mB && mT && mA));
+  if (!(a > 0 && b > a && mB && mT && mA)) return;
+  const NEON = { air: '#A', rail: '#R', road: '#D', water: '#W', public: '#P' };
+  const L = new Function('NEON', src.slice(a, b) + '\nreturn {weekSectorReport,stPct};')(NEON);
+  const wk = (s, e, air, rail, extra) => Object.assign({ week_start: s, week_end: e, missing: false, value: (air || 0) + (rail || 0),
+    by_sector: { air: { value: air, days: 7 }, rail: { value: rail, days: 7 } } }, extra || {});
+  const PAX = { sectors: ['air', 'rail'], comparable: ['air', 'rail'], stale: [], week_end: '2026-10-18',
+    weeks: [wk('2026-10-05', '2026-10-11', 100, 300), wk('2026-10-12', '2026-10-18', 150, 350)],
+    ytd: { year: 2026, by_sector: { air: { value: 1000 }, rail: { value: 3000 } } },
+    prev_ytd: { year: 2025, by_sector: { air: { value: 900 }, rail: { value: 2300 } } } };
+  const CARGO = { sectors: ['air', 'rail'], comparable: ['air', 'rail'], stale: ['rail'], week_end: '2026-10-18',
+    weeks: [wk('2026-10-05', '2026-10-11', 2, 9000), wk('2026-10-12', '2026-10-18', 1, 9999)],
+    ytd: { year: 2026, by_sector: { air: { value: 40 }, rail: { value: 400000 } } },
+    prev_ytd: { year: 2025, by_sector: { air: { value: 40 }, rail: { value: 400000 } } } };
+  const API = { status: 'ok', sectors: [], months: [{}], weekly: { passengers: PAX, freight_tonnes: CARGO } };
+
+  /* 1) Цэвэр функц */
+  const r = L.weekSectorReport(PAX, ['air', 'rail']);
+  check('WK1. weekSectorReport: нийт 500, өмнөх 7 хоногоос +25%, оны эхнээс 4000, өмнөх оны мөн үе +25%, мөр 150/350',
+    r.total === 500 && Math.abs(r.wow - 25) < 1e-9 && r.ytd === 4000 && Math.abs(r.yoy - 25) < 1e-9 &&
+    r.bySector.air.value === 150 && Math.abs(r.bySector.air.wow - 50) < 1e-9 && Math.abs(r.bySector.rail.wow - (350 / 300 - 1) * 100) < 1e-9 &&
+    JSON.stringify(r.weeks.map(x => x.value)) === '[400,500]', JSON.stringify(r));
+  const r1 = L.weekSectorReport(PAX, ['air']);
+  check('WK2. Зөвхөн бүртгэлтэй салбараар (агаар): нийт 150, оны эхнээс 1000, мөн үе 1000/900',
+    r1.total === 150 && r1.ytd === 1000 && Math.abs(r1.yoy - (1000 / 900 - 1) * 100) < 1e-9 && !r1.bySector.rail);
+  const pc = Object.assign({}, PAX, { comparable: ['rail'] });
+  const r2 = L.weekSectorReport(pc, ['air', 'rail']);
+  check('WK3. Өмнөх оны мөн үе ЗӨВХӨН comparable салбараар (төмөр зам 3000/2300)',
+    Math.abs(r2.yoy - (3000 / 2300 - 1) * 100) < 1e-9 && JSON.stringify(r2.yoyKeys) === '["rail"]');
+  const pm = JSON.parse(JSON.stringify(PAX)); pm.weeks[0].missing = true; pm.weeks[1].by_sector.rail = null;
+  const r3 = L.weekSectorReport(pm, ['air', 'rail']);
+  check('WK4. Бичлэггүй долоо хоног / салбар → null (0 зохиохгүй), харьцуулалт «—»',
+    r3.weeks[0].value === null && r3.total === null && r3.wow === null && r3.bySector.rail.value === null);
+  check('WK5. weekly алга / салбар weekly-д алга → null (хуучин зам)',
+    L.weekSectorReport(null, ['air']) === null && L.weekSectorReport(PAX, ['road']) === null);
+
+  /* 2) buildWeek — сайтын бодит код, гараар бодох фикстур дээр */
+  const WSTAT = (x) => [['Оны эхнээс', 'count'], ['Өмнөх 7 хоног', 'pct'], ['Өмнөх оны мөн үе', 'pct'], [x, 'count']];
+  const WD = (x) => ({ unit: 'мянган', total: '—', bar: [], color: '#B',
+    donut: { labels: ['Агаарын тээвэр', 'Авто/Нийтийн', 'Төмөр зам'], data: [0, 0, 0], colors: ['#1', '#2', '#3'] },
+    stats: WSTAT(x), plan: { label: '', pct: 0 } });
+  const SECTORS = { air: { label: 'Агаарын тээвэр' }, road: { label: 'Авто зам' }, rail: { label: 'Төмөр зам' },
+    water: { label: 'Ус, далайн тээвэр' }, public: { label: 'Нийтийн тээвэр' } };
+  const GLYPH = { air: 'a', road: 'd', rail: 'r', water: 'w', public: 'p' };
+  const SECTOR_DELTA = { pax: ['road', 'rail', 'air', 'water'].map(k => [k, '—', '', 0]), cargo: ['road', 'rail', 'air', 'water'].map(k => [k, '—', '', 0]) };
+  const weekAxis = new Function(mA[0] + '\nreturn weekAxis;')();
+  const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+  const mk = new Function('WEEK_LABELS', 'weekAxis', 'stxt', 'EHChart', 'EHGlossary', 'SECTORS', 'GLYPH', 'NEON', 'SECTOR_DELTA', 'stPct', 'weeklyAir',
+    'return function(){' + mB[0].replace(/\n    const wPax=buildWeek\($/, '') + '\nreturn buildWeek;}');
+  const wst = new Function('weekSectorReport', 'return function(wt,widgetId){' + mT[1] + '}')(L.weekSectorReport);
+  const REGQ = { w2p: ['air', 'rail'], w2pb: ['air', 'rail'], w2px: ['air', 'rail'], w2c: ['air', 'rail'], w2cb: ['air', 'rail'], w2cx: ['air', 'rail'] };
+  const ctx = (api, regq, spec) => ({
+    valueSpecRaw: () => spec || null, lastFullWeekWindow: () => null, weekFlightsSum: () => null, txt: () => '',
+    planQuality: () => ({ quality: 'none', label: 'мэдээлэл алга' }), sectorHidden: () => false,
+    sectorQuality: (id, k) => ((regq[id] || []).includes(k) ? { quality: 'verified' } : { quality: 'none', label: 'мэдээлэл алга' }),
+    sectorTotalData: () => api, weekSectorTotal: wst });
+  const AIR = { pax: 1234, cargo: 5, paxDeltaPct: 5, cargoDeltaPct: -2, dailyPax: [1, 2, 3, 4, 5, 6, 7], dailyCargo: [1, 1, 1, 1, 1, 1, 1],
+    dailyLabels: ['10.12', '10.13', '10.14', '10.15', '10.16', '10.17', '10.18'] };
+  const BW = (api, regq, air, spec) => mk(['x'], weekAxis, (p, x) => x, { accessor: () => (f) => f.pax }, G, SECTORS, GLYPH, NEON, SECTOR_DELTA, L.stPct, air)
+    .call(ctx(api, regq, spec));
+  const P = BW(API, REGQ, AIR)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
+  const sh = k => P.share.find(x => x.label === k), dl = k => P.delta.find(x => x.label === SECTORS[k].label);
+  check('WK6. Нийт дүн = агаар + төмөр зам (500), нэгж «хүн», тайлбар долоо хоног + салбаруудыг нэрлэнэ',
+    P.total === '500' && P.unit === 'хүн' && /10\.12–10\.18/.test(P.airOnlyNote) && /Агаарын тээвэр \+ Төмөр зам/.test(P.airOnlyNote), P.total + ' | ' + P.airOnlyNote);
+  check('WK7. Донут/share (регресс): агаар 30.0%, төмөр зам 70.0%, авто «—»; «зөвхөн агаар 100%» тайлбар ГАРАХГҮЙ',
+    sh('Агаарын тээвэр').pctText === '30.0%' && sh('Төмөр зам').pctText === '70.0%' && sh('Авто/Нийтийн').pctText === '—' &&
+    sh('Төмөр зам').tip === 'Төмөр зам — 350 (70.0%)' && P.shareNote === '', JSON.stringify(P.share.map(x => [x.label, x.pctText])) + ' ' + P.shareNote);
+  check('WK8. Статистик: оны эхнээс 4.0K, өмнөх 7 хоног +25.0%, өмнөх оны мөн үе +25.0%; тээвэрлэгч — нэгтгэлд алга',
+    P.stats[0].v === '4.0K' && P.stats[1].v === '+25.0%' && P.stats[2].v === '+25.0%' && P.stats[2].mockTag === '' &&
+    /мэдээлэл алга/.test(P.stats[3].mockTag), JSON.stringify(P.stats));
+  check('WK9. Харьцуулалтын мөр: төмөр зам 350 (+16.7%), агаар 150 (+50.0%) — нийт дүнтэй нэг цонх; авто «мэдээлэл алга»',
+    dl('rail').value === '350' && dl('rail').delta === '+16.7%' && dl('air').value === '150' && dl('air').delta === '+50.0%' &&
+    /мэдээлэл алга/.test(dl('road').mockTag) && dl('rail').mockTag === '', JSON.stringify(P.delta.map(x => [x.label, x.value, x.delta, x.mockTag])));
+  check('WK10. Багана = 8 хүртэлх долоо хоногийн нийт: утга, огноо (Да), tooltip «хүрээ — утга нэгж», тэнхлэгт «долоо хоногийн эхний өдөр»',
+    JSON.stringify(P.bars.map(x => [x.label, x.value])) === '[["10.05","400"],["10.12","500"]]' &&
+    P.bars[1].tip === '10.12–10.18 — 500 хүн' && P.bars[1].isPeak && /долоо хоногийн эхний өдөр/.test(P.base) && /дундаж 450/.test(P.avgRef.label),
+    JSON.stringify(P.bars) + ' ' + P.base);
+  const P1 = BW(API, Object.assign({}, REGQ, { w2p: ['air'], w2px: ['air'] }), AIR)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
+  check('WK11. Бүртгэлээс төмөр замыг салгавал (w2p/w2px) нийт = агаар 150, мөр «мэдээлэл алга» — админ ба сайт нэг дүрэм',
+    P1.total === '150' && /мэдээлэл алга/.test(P1.delta.find(x => x.label === 'Төмөр зам').mockTag) && /Зөвхөн агаар/.test(P1.airOnlyNote),
+    P1.total + ' ' + P1.airOnlyNote);
+  const C = BW(API, REGQ, AIR)('cargo', WD('Чиглэл'), 'w2c', 'w2cx');
+  check('WK12. Ачаа: агаар 1/10000 т → «<0.1%» (0.0% биш), нэгж «тонн», дутуу салбарыг тайлбарт нэрлэнэ',
+    C.share[0].pctText === '<0.1%' && C.unit === 'тонн' && C.total === '10.0K' && /Төмөр зам — сүүлийн 7 хоногийн мэдээ дутуу/.test(C.airOnlyNote),
+    JSON.stringify(C.share.map(x => x.pctText)) + ' ' + C.airOnlyNote);
+  const O = BW(null, REGQ, AIR)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
+  check('WK13. Нэгтгэл алга → ЯГ хуучин агаарын зам: 1.2K, өдрийн 7 багана, агаар 100% + ил тайлбар',
+    O.total === '1.2K' && O.bars.length === 7 && O.bars[0].label === '10.12' && O.share[0].pctText === '100.0%' && /100%/.test(O.shareNote) &&
+    O.stats[1].v === '+5.0%' && /Зөвхөн агаар/.test(O.airOnlyNote), JSON.stringify([O.total, O.bars.length, O.shareNote]));
+  check('WK14. Нэгтгэл алга ч бүртгэлд төмөр зам verified → «+0.0%» ЗОХИОХГҮЙ, «0 · мэдээлэл алга»',
+    O.delta.find(x => x.label === 'Төмөр зам').delta === '—' && /мэдээлэл алга/.test(O.delta.find(x => x.label === 'Төмөр зам').mockTag),
+    JSON.stringify(O.delta));
+  const S = BW(API, REGQ, AIR, { dataset: 'air_flights', measure: 'pax' })('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
+  check('WK15. Утгын тохиргоо (агаарын хэмжигдэхүүн) сонгосон бол нэгтгэлийн горим ИДЭВХГҮЙ (хуучин зам)',
+    S.bars.length === 7 && !/долоо хоногийн эхний өдөр/.test(S.base));
+
+  /* 3) Админы preview — сайттай НЭГ эх сурвалж, нэг дүрэм */
+  const adm = adminScript();
+  const sa = adm.indexOf('var ST={state:'), sb = adm.indexOf('/* Сайтын sectorSummaryToSeries()-ийн толь');
+  const fA = adm.match(/\nfunction loadSectorTotalWeekly\(\)\{[\s\S]*?\n\}\n[\s\S]*?\nfunction stWeeklySeries\(id\)\{[\s\S]*?\n\}\n/);
+  check('WK16. Админ: нэгтгэлийг ачаална (loadSectorTotalWeekly), 4 метрик ST_METRIC-д', sa > 0 && !!fA &&
+    /Promise\.all\(\[loadFeed\(\),[^\]]*loadSectorTotalWeekly\(\)\]\)/.test(adm) && /'rail\.weekly_pax':\['passengers','rail'\]/.test(adm) &&
+    /'rail\.weekly_cargo':\['freight_tonnes','rail'\]/.test(adm));
+  if (sa > 0 && fA) {
+    const decl = adm.slice(sa, adm.indexOf('\n', adm.indexOf("'rail.weekly_pax':['passengers','rail']")) + 1);
+    const env = new Function('parts', 'spec', decl + fA[0] +
+      '\nfunction sectorParts(){return parts}\nfunction valueSpecOf(){return spec}\nST.weekly=arguments[2];ST.state="ready";' +
+      '\nreturn {stWeek:stWeek,stWeekVal:stWeekVal,stWeeklySeries:stWeeklySeries};');
+    const parts = [{ k: 'air', q: 'verified', m: 'air.weekly_pax' }, { k: 'rail', q: 'verified', m: 'rail.weekly_pax' }, { k: 'road', q: 'none', m: null }];
+    const E = env(parts, null, API.weekly);
+    const ser = E.stWeeklySeries('w2p');
+    const lastRail = E.stWeekVal(API.weekly.passengers.weeks[1], 'rail');
+    check('WK17. Админы preview = сайт: багана [400, 500] (10.05, 10.12), төмөр зам 350 — ижил фикстур',
+      JSON.stringify(ser) === JSON.stringify([{ label: '10.05', v: 400 }, { label: '10.12', v: 500 }]) && lastRail === 350, JSON.stringify(ser));
+    const E2 = env(parts.slice(0, 1), null, API.weekly);
+    check('WK18. Админ: төмөр замын слотыг салгавал багана ӨӨРЧЛӨГДӨНӨ [100, 150]; утгын тохиргоотой бол нэгтгэлийн цуваа алга',
+      JSON.stringify(E2.stWeeklySeries('w2p').map(x => x.v)) === '[100,150]' && env(parts, { measure: 'pax' }, API.weekly).stWeeklySeries('w2p') === null);
+  }
+  /* 4) Бүртгэл — гурван виджетийн бүлэг төмөр замтай */
+  const R = readJson('metric_registry.json');
+  const ok = (id, k, m) => { const s = (R.widgets[id].sectors || {})[k]; return !!s && s.quality === 'verified' && s.metric === m; };
+  check('WK19. Registry: w2p/w2px/w2pb.rail = rail.weekly_pax, w2c/w2cx/w2cb.rail = rail.weekly_cargo (verified), авто none; метрик тодорхойлолттой, салбар хооронд нэмэгдэнэ (additive — админы grain анхааруулга гарахгүй)',
+    ['w2p', 'w2px', 'w2pb'].every(id => ok(id, 'rail', 'rail.weekly_pax')) && ['w2c', 'w2cx', 'w2cb'].every(id => ok(id, 'rail', 'rail.weekly_cargo')) &&
+    R.widgets.w2pb.sectors.road.quality === 'none' && !R.widgets.w2pb.sectors.other &&
+    R.metrics['rail.weekly_pax'].unit === R.metrics['air.weekly_pax'].unit && R.metrics['rail.weekly_cargo'].unit === R.metrics['air.weekly_cargo'].unit &&
+    ['air.weekly_pax', 'air.weekly_cargo', 'rail.weekly_pax', 'rail.weekly_cargo'].every(k => R.metrics[k].additive === true));
+  const CJ = readJson('content.json');
+  check('WK20. content.json: site.week.axis_weeks / sectors_note ({from},{to},{names}) / stale_note, ui.preview.weekly',
+    /\{from\}/.test(CJ.site.week.sectors_note || '') && /\{names\}/.test(CJ.site.week.sectors_note) && /\{names\}/.test(CJ.site.week.stale_note || '') &&
+    !!CJ.site.week.axis_weeks && !!CJ.ui.preview.weekly);
+  check('WK21. Темплейт: 7 хоногийн багана бүрт <title> tooltip (HV)', (idx.match(/barGrow \.6s var\(--ease\) both;"><title>\{\{ wb\.tip \}\}<\/title>/g) || []).length === 2);
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -8998,12 +9150,13 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=UI')) { groupUI(); }
   else if (process.argv.includes('--only=FR')) { groupFR(); }
   else if (process.argv.includes('--only=ST')) { groupST(); }
+  else if (process.argv.includes('--only=WK')) { groupWK(); }
   else if (process.argv.includes('--only=RPX')) { groupRPX(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupFR(); groupST(); groupRPX(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupFR(); groupST(); groupWK(); groupRPX(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
