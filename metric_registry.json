@@ -1,7 +1,7 @@
 {
   "$schema": "erthub-metrics/v1",
   "version": "0.1.0",
-  "updated": "2026-09-24",
+  "updated": "2026-10-20",
   "note": "H3 шатны хамгийн анхны хэрэгжилт байсан. 2026-09-18: rail-ийн вагон ачилт (k04/ls/u07) амьд холбогдов. 2026-09-19: холбогдоогүй слот бүрийн would_need-ийг backend-ийн БОДИТ төлөвөөр (API тандалт + docs/etl-scheduling.md) шинэчлэв — \"эх сурвалж тодорхойгүй\" гэсэн ерөнхий үгийн оронд ЯГ ЮУ дутууг (датасэт, indicator, толь, transform, нэгж) нэрлэв. Гол хэв маяг (2026-09-24-нд шинэчлэв): rail passengers ба road inspections silver-т буусан (АМЬД); rail freight зөвхөн bronze-д (толь + silver + endpoint дутуу); road vehicle_registry-д толь ШААРДЛАГАГҮЙ нь батлагдсан ч таталт эвдэрсэн; sea/transit салбарт эх систем ОГТ холбогдоогүй. 2026-09-23: road-ийн техникийн хяналтын үзлэг (k04/ls/u07) амьд холбогдов — толь + эх системийн xlsx экспортоор (2,790 мөр) баталсан silver.road_inspections (backend migration 012). Үлдсэн road слотууд (t05/d05/w2*) нь ӨӨР хэмжигдэхүүн шаарддаг тул would_need-д ЯГ ЮУ дутууг нэрлэв. 2026-09-24: vehicle_registry-г bronze дээр probe хийлээ — түүний блокер нь ТОЛЬ БИШ (багана нэрээрээ уншигдана), харин ТАТАЛТ: 1,941,092 мөрийн 2,000 нь л ирдэг (эх сервэр ижил хуудсыг давтана). Иймд энэ датасэтийн төлөв: толь хүлээхээ больсон, таталтын засвар хүлээж байна. 2026-09-24: w2p/w2px/w2c/w2cx/d05-ийн rail слотуудын would_need-ийг бодит төлөвөөр солив — зорчигчийн ӨДРИЙН silver аль хэдийн байгаа тул тэдгээрийн блокер нь \"толь\" БИШ, ГАНЦ endpoint. 2026-09-24 (2): datasets{} блок нэмэгдэв — датасэтийн БҮРЭН БАЙДАЛ (completeness) ба слотын blocked_by холбоос машинаар уншигдана; метрикийн period_coverage нь сарын цувааны дүрмийг НЭГ газар зарлаж, rail/air-ийн хоёр өөр зан төлөвийг нэгтгэв.",
   "widgets": {
     "hero_fl": {
@@ -171,10 +171,8 @@
           "blocked_by": "road.veritech.vehicle_registry"
         },
         "rail": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.passengers → silver.rail_operations АЛЬ ХЭДИЙН амьд (толь + transform + gold бэлэн, migrations/007-008; t05.rail нь 2026-09-24-нд verified, /api/sectors/rail/summary нь unit:\"зорчигч\"-оор сарын дүн өгч байна). silver-ийн grain нь ӨДРИЙН түвшинтэй (dataset_id + record_date + train_no + line_name) тул 7 хоногийн цонх ГАРГАХ БОЛОМЖТОЙ — толь ч, шинэ transform ч ШААРДЛАГАГҮЙ. Дутуу нь ГАНЦ зүйл: өдрийн задаргаа буцаадаг endpoint (жиш. GET /api/sectors/rail/passengers, by_day[] — road/inspections-ийн загвараар). Одоогийн summary нь gold-ийн САРЫН нэгтгэл тул энэ слотод хүрэлцэхгүй."
+          "metric": "rail.weekly_pax",
+          "quality": "verified"
         },
         "water": {
           "metric": null,
@@ -195,7 +193,7 @@
         "label": "мэдээлэл алга",
         "would_need": "Долоо хоногийн зорчигчийн улсын төлөвлөгөө — ямар ч эх системд (Veritech-ийн 6 датасэтэд ч) байхгүй. Төлөвлөгөөний тоо гараар оруулах бол тусдаа эх сурвалж/хүснэгт шаардана."
       },
-      "note": "Нийт дүн болон 7 хоногийн өдөр тутмын багана (bar) аль аль нь air.weekly_pax-тай ЯГ ижил эх сурвалжаас (weeklyAirStats/weekFlightsSum, өдөр тус бүрээр) тооцогдоно (H5). Доод статистикийн 'Өмнөх 7 хоног' мөр мөн realDeltaPct-тэй адил бодит хувь; 'Оны эхнээс'/'Өмнөх оны мөн үе'/'Тээвэрлэгч' одоогоор эх сурвалжгүй тул 0/'—' + мэдээлэл алга."
+      "note": "2026-10-20: салбарын нэгтгэл (/api/sectors/total/history weekly) ирсэн үед нийт дүн = агаар + төмөр зам (бүртгэлд verified салбар), багана = сүүлийн 8 долоо хоногийн нийт (Да–Ня), Өмнөх 7 хоног / Оны эхнээс / Өмнөх оны мөн үе — weekly-ээс (мөн үе нь зөвхөн comparable салбараар). Нэгтгэл алга эсвэл утгын тохиргоо сонгосон бол хуучин агаарын зам: Нийт дүн болон 7 хоногийн өдөр тутмын багана (bar) аль аль нь air.weekly_pax-тай ЯГ ижил эх сурвалжаас (weeklyAirStats/weekFlightsSum, өдөр тус бүрээр) тооцогдоно (H5). Доод статистикийн 'Өмнөх 7 хоног' мөр мөн realDeltaPct-тэй адил бодит хувь; 'Оны эхнээс'/'Өмнөх оны мөн үе'/'Тээвэрлэгч' одоогоор эх сурвалжгүй тул 0/'—' + мэдээлэл алга."
     },
     "w2pb": {
       "sectors": {
@@ -203,14 +201,19 @@
           "metric": "air.weekly_pax",
           "quality": "verified"
         },
-        "other": {
+        "rail": {
+          "metric": "rail.weekly_pax",
+          "quality": "verified"
+        },
+        "road": {
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "7 хоногийн зорчигчийн төрлийн задаргаа — w2p-тэй ИЖИЛ эх сурвалж дээр тогтоно (авто/төмөр зам/нийтийн тээврийн өдрийн зорчигч). Одоогоор гурвуулаа алга."
+          "would_need": "Авто замын 7 хоногийн зорчигчийн дата эх сурвалжид алга (Veritech-ийн road датасэтүүд нь техникийн үзлэг ба тээврийн хэрэгслийн бүртгэл).",
+          "blocked_by": "road.veritech.vehicle_registry"
         }
       },
-      "note": "Төрлийн хуваарь донут — index0 (Агаарын тээвэр) сегмент w2p-ийн ЯГ ТЭР air.weekly_pax утгатай холбогдсон (H5). Бусад 2 сегмент (Авто/Нийтийн, Төмөр зам) 0 тул air 100% гарна."
+      "note": "Төрлийн хуваарь донут — сегмент бүр салбарын нэгтгэлийн (gold.sector_daily_total) ЯГ ТЭР долоо хоногийн тоо: агаар, төмөр зам; авто — мэдээлэл алга. Нэгтгэл ирээгүй бол агаар (feed) 100% + ил тайлбар."
     },
     "w2px": {
       "sectors": {
@@ -226,10 +229,8 @@
           "blocked_by": "road.veritech.vehicle_registry"
         },
         "rail": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.passengers → silver.rail_operations АЛЬ ХЭДИЙН амьд (толь + transform + gold бэлэн, migrations/007-008; t05.rail нь 2026-09-24-нд verified, /api/sectors/rail/summary нь unit:\"зорчигч\"-оор сарын дүн өгч байна). silver-ийн grain нь ӨДРИЙН түвшинтэй (dataset_id + record_date + train_no + line_name) тул 7 хоногийн цонх ГАРГАХ БОЛОМЖТОЙ — толь ч, шинэ transform ч ШААРДЛАГАГҮЙ. Дутуу нь ГАНЦ зүйл: өдрийн задаргаа буцаадаг endpoint (жиш. GET /api/sectors/rail/passengers, by_day[] — road/inspections-ийн загвараар). Одоогийн summary нь gold-ийн САРЫН нэгтгэл тул энэ слотод хүрэлцэхгүй."
+          "metric": "rail.weekly_pax",
+          "quality": "verified"
         },
         "water": {
           "metric": null,
@@ -244,7 +245,7 @@
           "would_need": "Backend-д \"transit\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/transit/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (НТГ) хэрэгтэй, transform биш."
         }
       },
-      "note": "air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
+      "note": "2026-10-20: агаар, төмөр замын мөр салбарын нэгтгэлийн ижил долоо хоногоос (өөрчлөлт = өмнөх долоо хоногтой). air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
     },
     "w2c": {
       "sectors": {
@@ -260,11 +261,8 @@
           "blocked_by": "road.veritech.vehicle_registry"
         },
         "rail": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.freight_ubtz (15399738) 2026-10-19-нөөс silver.rail_freight-д буув (backend migration 020, 2022-01-ээс хойш, өдөр × өртөө × ачаа, 4 чиглэл × вагон/тонн) ба /api/sectors/rail/freight/ubtz/history нь САРЫН нэгтгэл өгнө — портал дээр «Ачаа тээврийн мэдээ (УБТЗ ХНН)» датасэтийн хуудсанд амьд. Энэ 7 ХОНОГИЙН слотод дутуу нь ганц зүйл: өдрийн (эсвэл 7 хоногийн) нэгтгэлтэй endpoint — сарын нэгтгэлийг 7 хоногийн тэнхлэгт тавибал хуудас ХУДАЛ уншигдана. Вагон ачилт (15443222) нь ВАГОНЫ ТОО — тонн БИШ тул энэ слотод тавьж болохгүй.",
-          "blocked_by": "rail.veritech.freight_ubtz"
+          "metric": "rail.weekly_cargo",
+          "quality": "verified"
         },
         "water": {
           "metric": null,
@@ -285,7 +283,7 @@
         "label": "мэдээлэл алга",
         "would_need": "Долоо хоногийн ачааны улсын төлөвлөгөө — ямар ч эх системд байхгүй (w2p.plan-тай ижил)."
       },
-      "note": "Нийт дүн болон 7 хоногийн өдөр тутмын багана (bar) аль аль нь air.weekly_cargo-той ЯГ ижил эх сурвалжаас (weeklyAirStats/weekFlightsSum, өдөр тус бүрээр) тооцогдоно (H5). Доод статистикийн 'Өмнөх 7 хоног' мөр мөн realDeltaPct-тэй адил бодит хувь; 'Оны эхнээс'/'Өмнөх оны мөн үе'/'Чиглэл' одоогоор эх сурвалжгүй тул 0/'—' + мэдээлэл алга."
+      "note": "2026-10-20: салбарын нэгтгэл (/api/sectors/total/history weekly) ирсэн үед нийт дүн = агаар + төмөр зам (бүртгэлд verified салбар), багана = сүүлийн 8 долоо хоногийн нийт (Да–Ня), Өмнөх 7 хоног / Оны эхнээс / Өмнөх оны мөн үе — weekly-ээс (мөн үе нь зөвхөн comparable салбараар). Нэгтгэл алга эсвэл утгын тохиргоо сонгосон бол хуучин агаарын зам: Нийт дүн болон 7 хоногийн өдөр тутмын багана (bar) аль аль нь air.weekly_cargo-той ЯГ ижил эх сурвалжаас (weeklyAirStats/weekFlightsSum, өдөр тус бүрээр) тооцогдоно (H5). Доод статистикийн 'Өмнөх 7 хоног' мөр мөн realDeltaPct-тэй адил бодит хувь; 'Оны эхнээс'/'Өмнөх оны мөн үе'/'Чиглэл' одоогоор эх сурвалжгүй тул 0/'—' + мэдээлэл алга."
     },
     "w2cb": {
       "sectors": {
@@ -293,14 +291,19 @@
           "metric": "air.weekly_cargo",
           "quality": "verified"
         },
-        "other": {
+        "rail": {
+          "metric": "rail.weekly_cargo",
+          "quality": "verified"
+        },
+        "road": {
           "metric": null,
           "quality": "none",
           "label": "мэдээлэл алга",
-          "would_need": "7 хоногийн ачааны төрлийн задаргаа — w2c-тэй ИЖИЛ эх сурвалж дээр тогтоно. Одоогоор алга."
+          "would_need": "Авто замын 7 хоногийн ачааны дата эх сурвалжид алга (Veritech-ийн road датасэтүүд нь техникийн үзлэг ба тээврийн хэрэгслийн бүртгэл).",
+          "blocked_by": "road.veritech.vehicle_registry"
         }
       },
-      "note": "Төрлийн хуваарь донут — index0 (Агаарын тээвэр) сегмент w2c-ийн ЯГ ТЭР air.weekly_cargo утгатай холбогдсон (H5). Бусад 2 сегмент (Авто/Нийтийн, Төмөр зам) 0 тул air 100% гарна."
+      "note": "Төрлийн хуваарь донут — сегмент бүр салбарын нэгтгэлийн ЯГ ТЭР долоо хоногийн ачаа (тонн): агаар, төмөр зам; авто — мэдээлэл алга. Нэгтгэл ирээгүй бол агаар (feed) 100% + ил тайлбар."
     },
     "w2cx": {
       "sectors": {
@@ -316,11 +319,8 @@
           "blocked_by": "road.veritech.vehicle_registry"
         },
         "rail": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "rail.veritech.freight_ubtz (15399738) 2026-10-19-нөөс silver.rail_freight-д буув (backend migration 020, 2022-01-ээс хойш, өдөр × өртөө × ачаа, 4 чиглэл × вагон/тонн) ба /api/sectors/rail/freight/ubtz/history нь САРЫН нэгтгэл өгнө — портал дээр «Ачаа тээврийн мэдээ (УБТЗ ХНН)» датасэтийн хуудсанд амьд. Энэ 7 ХОНОГИЙН слотод дутуу нь ганц зүйл: өдрийн (эсвэл 7 хоногийн) нэгтгэлтэй endpoint — сарын нэгтгэлийг 7 хоногийн тэнхлэгт тавибал хуудас ХУДАЛ уншигдана. Вагон ачилт (15443222) нь ВАГОНЫ ТОО — тонн БИШ тул энэ слотод тавьж болохгүй.",
-          "blocked_by": "rail.veritech.freight_ubtz"
+          "metric": "rail.weekly_cargo",
+          "quality": "verified"
         },
         "water": {
           "metric": null,
@@ -335,7 +335,7 @@
           "would_need": "Нийтийн тээвэрт ачаа хамааралгүй — зориуд хоосон."
         }
       },
-      "note": "air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
+      "note": "2026-10-20: агаар, төмөр замын мөр салбарын нэгтгэлийн ижил долоо хоногоос (өөрчлөлт = өмнөх долоо хоногтой). air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
     },
     "ai08": {
       "metric": null,
@@ -457,9 +457,9 @@
       "filter": "lastFullWeekWindow(0) — feed-ийн хамгийн сүүлийн бичлэгээс ӨМНӨХ бүтэн 7 хоног",
       "transform": "",
       "unit": "хүн",
-      "additive": false,
+      "additive": true,
       "quality": "verified",
-      "period_note": "Одоогийн (дутуу) өдрийг оруулахгүй, hero_fl-ийн 'сүүлийн бүтэн сар' зарчимтай адил. WoW хувь lastFullWeekWindow(1)-тэй харьцуулна."
+      "period_note": "Одоогийн (дутуу) өдрийг оруулахгүй, hero_fl-ийн 'сүүлийн бүтэн сар' зарчимтай адил. WoW хувь lastFullWeekWindow(1)-тэй харьцуулна. 2026-10-20: салбарын нэгтгэл (/api/sectors/total/history weekly) ирсэн үед нүүрний 02-р хэсэг ба админы preview агаарын утгыг ч НЭГТГЭЛЭЭС (Да–Ня долоо хоног) авна — төмөр замтай нэг цонх, нийлбэр нь таарна. Нэгтгэл алга эсвэл утгын тохиргоо (value) сонгосон бол дээрх feed-ийн зам."
     },
     "air.weekly_cargo": {
       "name": "7 хоногийн нийт ачааны хэмжээ",
@@ -470,9 +470,9 @@
       "filter": "lastFullWeekWindow(0) — feed-ийн хамгийн сүүлийн бичлэгээс ӨМНӨХ бүтэн 7 хоног",
       "transform": "",
       "unit": "тонн",
-      "additive": false,
+      "additive": true,
       "quality": "verified",
-      "period_note": "cargo талбар аль хэдийн тонноор (cargoKg-ийн 1000-д хуваасантай тэнцүү). WoW хувь lastFullWeekWindow(1)-тэй харьцуулна."
+      "period_note": "cargo талбар аль хэдийн тонноор (cargoKg-ийн 1000-д хуваасантай тэнцүү). WoW хувь lastFullWeekWindow(1)-тэй харьцуулна. 2026-10-20: салбарын нэгтгэл (/api/sectors/total/history weekly) ирсэн үед нүүрний 02-р хэсэг ба админы preview агаарын утгыг ч НЭГТГЭЛЭЭС (Да–Ня долоо хоног) авна — төмөр замтай нэг цонх, нийлбэр нь таарна. Нэгтгэл алга эсвэл утгын тохиргоо (value) сонгосон бол дээрх feed-ийн зам."
     },
     "rail.wagon_loading": {
       "name": "Төмөр замын вагон ачилтын хоногийн мэдээ",
@@ -529,6 +529,32 @@
         "grain": "month",
         "excludes_current": true
       }
+    },
+    "rail.weekly_pax": {
+      "name": "7 хоногийн нийт зорчигчийн тоо — төмөр зам",
+      "source": "weekSectorTotal/weekSectorReport (index.html) ← EHBackend.fetchSectorTotal → GET /api/sectors/total/history → weekly",
+      "dataset": "gold.sector_daily_total",
+      "column": "passengers (sector = rail)",
+      "agg": "SUM",
+      "filter": "Сүүлийн БҮТЭН долоо хоног (Да–Ня, backend weekly.week_end) — gold.sector_daily_total. Өмнөх 7 хоногийн хувь = weekly.weeks-ийн сүүлийн хоёр долоо хоног; оны эхнээс = weekly.ytd; өмнөх оны мөн үе = weekly.prev_ytd (зөвхөн comparable салбар).",
+      "transform": "",
+      "unit": "хүн",
+      "additive": true,
+      "quality": "verified",
+      "period_note": "2026-10-20: нүүрний 02-р хэсэг (w2p/w2px/w2pb) салбарын нэгтгэлээс — агаар + төмөр зам нэг долоо хоногийн цонхоор. АНХААР: УБТЗ-ийн эх системд давхар бүртгэл (дахин оруулалт) байгаа — 2026-10-12…18 долоо хоног 44,644 болж хөөрөгдсөн; засвар backend-д тусдаа (migration 023). Нэгтгэл ирээгүй бол сайт агаарын хуучин замаар (weeklyAirStats), энэ слот «мэдээлэл алга»."
+    },
+    "rail.weekly_cargo": {
+      "name": "7 хоногийн нийт ачааны хэмжээ — төмөр зам",
+      "source": "weekSectorTotal/weekSectorReport (index.html) ← EHBackend.fetchSectorTotal → GET /api/sectors/total/history → weekly",
+      "dataset": "gold.sector_daily_total",
+      "column": "freight_tonnes (sector = rail; gold.rail_freight_total — УБТЗ + МТЗ)",
+      "agg": "SUM",
+      "filter": "Сүүлийн БҮТЭН долоо хоног (Да–Ня, backend weekly.week_end) — gold.sector_daily_total. Өмнөх 7 хоногийн хувь = weekly.weeks-ийн сүүлийн хоёр долоо хоног; оны эхнээс = weekly.ytd; өмнөх оны мөн үе = weekly.prev_ytd (зөвхөн comparable салбар).",
+      "transform": "",
+      "unit": "тонн",
+      "additive": true,
+      "quality": "verified",
+      "period_note": "2026-10-20: нүүрний 02-р хэсэг (w2c/w2cx/w2cb) салбарын нэгтгэлээс — агаарын ачаа (тонн) + төмөр замын ачаа (тонн). Нэгтгэл ирээгүй бол «мэдээлэл алга»."
     },
     "road.inspection_count": {
       "name": "Техникийн хяналтын үзлэгийн хоногийн тоо",
