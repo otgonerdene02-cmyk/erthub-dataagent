@@ -801,7 +801,7 @@
       </div>
       <div class="eh-ls-grid" style="display:grid;grid-template-columns:repeat({{ lsCols }},minmax(0,1fr));gap:0;">
         <sc-for list="{{ livestrip }}" as="ls" hint-placeholder-count="5">
-          <button sc-camel-on-click="{{ ls.select }}" style="{{ ls.cellStyle }}">
+          <button data-sector-tab="{{ ls.key }}" sc-camel-on-click="{{ ls.select }}" style="{{ ls.cellStyle }}">
             <div style="{{ ls.railStyle }}"></div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
               <span style="font-size:12px;line-height:1;flex-shrink:0;">{{ ls.glyph }}</span>
@@ -835,6 +835,7 @@
       <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
         <div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekPaxPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2p" data-eh-field="title">{{ w2pTitle }}</span>{{ w2pMark }} · {{ weekPaxUnit }}</div></div>
+          <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-2px 0 8px;">{{ weekPaxPeriod }}</div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;">{{ weekPaxTotal }}</div>
           <sc-if value="{{ weekPaxAirOnlyNote }}">
           <div style="font-size:10.5px;color:var(--ink3);margin-top:6px;max-width:340px;">{{ weekPaxAirOnlyNote }}</div>
@@ -929,6 +930,7 @@
       <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
         <div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekCargoPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2c" data-eh-field="title">{{ w2cTitle }}</span>{{ w2cMark }} · {{ weekCargoUnit }}</div></div>
+          <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-2px 0 8px;">{{ weekCargoPeriod }}</div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;">{{ weekCargoTotal }}</div>
           <sc-if value="{{ weekCargoAirOnlyNote }}">
           <div style="font-size:10.5px;color:var(--ink3);margin-top:6px;max-width:340px;">{{ weekCargoAirOnlyNote }}</div>
@@ -1085,7 +1087,7 @@
             </div>
           </div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);opacity:.8;margin-top:12px;padding:0 22px;white-space:nowrap;"><span data-eh-card="k04" data-eh-field="foot" style="{{ k.footBaseStyle }}">{{ k04Foot }}</span><span style="{{ k.footNoteStyle }}">{{ k.footNote }}</span></div>
-          <svg sc-camel-view-box="0 0 120 32" sc-camel-preserve-aspect-ratio="none" style="width:100%;height:46px;display:block;margin-top:4px;">
+          <svg data-period-exempt="KPI spark — хугацаа нь картын хөлд (k04Foot)" sc-camel-view-box="0 0 120 32" sc-camel-preserve-aspect-ratio="none" style="width:100%;height:46px;display:block;margin-top:4px;">
             <defs>
               <linearGradient id="kpiFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="{{ activeColor }}" stop-opacity="0.32"></stop>
@@ -1122,6 +1124,7 @@
           <sc-if value="{{ trend.dataNote }}"><span style="color:var(--ink2);font-weight:600;">{{ trend.dataNote }}</span></sc-if>
         </div>
       </div>
+      <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ trendPeriod }}</div>
       <sc-if value="{{ trend.noData }}">
         <div style="height:210px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ trend.noDataNote }}</div>
       </sc-if>
@@ -1194,6 +1197,7 @@
     </div>
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;backdrop-filter:blur(14px);display:flex;flex-direction:column;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ activeColor }};flex-shrink:0;box-shadow:0 0 8px {{ activeColor }};"></span><span data-eh-card="d05" data-eh-field="title">{{ d05Title }}</span></div>
+      <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-8px 0 12px;">{{ donut.period }}</div>
       <div style="flex:1;display:flex;align-items:center;justify-content:center;">
         <svg sc-camel-view-box="0 0 120 120" style="width:150px;height:150px;">
           <circle cx="60" cy="60" r="46" fill="none" stroke="var(--surface2)" stroke-width="17"></circle>
@@ -1228,6 +1232,7 @@
         <div data-eh-card="i06" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);flex:1;min-width:0;">{{ i06Title }}</div>
         <button sc-camel-on-click="{{ f07.toggle }}" aria-label="{{ sA11yFilter }}" style="{{ f07.btnStyle }}">⚗</button>
       </div>
+      <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-8px 0 12px;">{{ comparePeriod }}</div>
       <sc-if value="{{ f07.open }}">
       <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;">
         <sc-for list="{{ compareChips }}" as="cc" hint-placeholder-count="5">
@@ -1273,6 +1278,7 @@
 
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;display:flex;flex-direction:column;">
       <div data-eh-card="r06" data-eh-field="title" style="font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ r06Title }}</div>
+      <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ comparePeriod }}</div>
       <div style="display:flex;flex-direction:column;">
         <sc-for list="{{ compareRank }}" as="cr" hint-placeholder-count="5">
           <div style="{{ cr.rowStyle }}">
@@ -2416,6 +2422,7 @@
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.period.title }}</span></div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">{{ detail.ri.period.scope }}</div>
       </div>
+      <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ detail.ri.perPeriod }}</div>
       <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px;">
         <sc-for list="{{ detail.ri.period.kpis }}" as="pk" hint-placeholder-count="4">
           <div style="background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:14px 15px;">
@@ -3079,6 +3086,7 @@
                 <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">{{ detail.freightTotT.wkTitle }}</div>
                 <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);font-weight:600;">{{ detail.freightTotRange }}</div>
               </div>
+              <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:2px 0 4px;">{{ detail.freightTotPerWeek }}</div>
               <div style="font-size:11px;color:var(--ink3);line-height:1.5;margin-bottom:14px;">{{ detail.freightTotT.wkScope }}</div>
               <div class="eh-g-2c" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1 1 auto;">
                 <sc-for list="{{ detail.freightTotKpis }}" as="tk" hint-placeholder-count="4">
@@ -3101,6 +3109,7 @@
                     </sc-for>
                   </svg>
                   <div style="font-size:11.5px;color:var(--ink2);text-align:center;">{{ detail.freightTotWeekCap }}</div>
+                  <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);text-align:center;margin-top:-4px;max-width:200px;">{{ detail.freightTotPerWeek }}</div>
                 </div>
                 <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
                   <svg sc-camel-view-box="0 0 100 100" style="width:112px;height:112px;">
@@ -3109,6 +3118,7 @@
                     </sc-for>
                   </svg>
                   <div style="font-size:11.5px;color:var(--ink2);text-align:center;">{{ detail.freightTotYtdCap }}</div>
+                  <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);text-align:center;margin-top:-4px;max-width:200px;">{{ detail.freightTotPerYtd }}</div>
                 </div>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);">
@@ -3127,6 +3137,7 @@
           <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
             <div data-freight-weekchart="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
               <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">{{ detail.freightTotT.weekChartTitle }}</div>
+              <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:0px 0 8px;">{{ detail.freightTotPerWeeks }}</div>
               <div style="font-size:10.5px;color:var(--ink3);margin-bottom:8px;">{{ detail.freightTotT.weekChartLegend }}</div>
               <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:10px;font-size:11px;color:var(--ink2);">
                 <sc-for list="{{ detail.freightTotWeekLegend }}" as="wl" hint-placeholder-count="4">
@@ -3152,6 +3163,7 @@
             </div>
             <div data-freight-split="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fit-card">
               <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.freightTotT.splitTitle }}</div>
+              <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-8px 0 12px;">{{ detail.chartPeriod }}</div>
               <div class="eh-fit-body" style="display:flex;flex-direction:column;gap:12px;justify-content:{{ detail.freightTotSplitJustify }};">
                 <sc-for list="{{ detail.freightTotSplit }}" as="ts" hint-placeholder-count="2">
                   <div>
@@ -3172,6 +3184,7 @@
           <div style="font-size:12px;color:var(--ink3);margin-bottom:10px;">{{ detail.freightTotT.noWeekly }}</div>
           <div data-freight-split="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
             <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;">{{ detail.freightTotT.splitTitle }}</div>
+              <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-8px 0 12px;">{{ detail.chartPeriod }}</div>
             <div style="display:flex;flex-direction:column;gap:12px;">
               <sc-for list="{{ detail.freightTotSplit }}" as="ts" hint-placeholder-count="2">
                 <div>
@@ -3469,6 +3482,7 @@
     <div class="eh-ri-row" style="display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.mapTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ detail.ri.perAim }}</div>
         <sc-if value="{{ detail.ri.map.ready }}">
           <svg viewBox="0 0 520 360" style="width:100%;height:auto;display:block;">
             <sc-for list="{{ detail.ri.map.regions }}" as="rg" hint-placeholder-count="24">
@@ -3491,6 +3505,7 @@
       </div>
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fit-card">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.rankTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ detail.ri.perAim }}</div>
         <div class="eh-fit-body" style="display:flex;flex-direction:column;gap:11px;">
           <sc-for list="{{ detail.ri.rank }}" as="ra" hint-placeholder-count="10">
             <div>
@@ -3509,6 +3524,7 @@
 
     <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;margin-bottom:16px;">
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.dailyTitle }}</span></div>
+      <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ detail.ri.perDaily }}</div>
       <svg sc-camel-view-box="0 0 720 250" style="width:100%;height:auto;display:block;">
         <sc-for list="{{ detail.ri.daily.yTicks }}" as="yt" hint-placeholder-count="3">
           <line x1="44" y1="{{ yt.y }}" x2="712" y2="{{ yt.y }}" stroke="var(--line)" stroke-width="1"></line>
@@ -3533,6 +3549,7 @@
     <div class="eh-ri-row eh-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;">
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;" class="eh-fit-card">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.catsTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ detail.ri.perCats }}</div>
         <div class="eh-fit-body" style="display:flex;flex-direction:column;gap:11px;">
           <sc-for list="{{ detail.ri.cats }}" as="rc" hint-placeholder-count="6">
             <div>
@@ -3548,6 +3565,7 @@
       </div>
       <div style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span>{{ detail.ri.weekTitle }}</span></div>
+        <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ detail.ri.perWeek }}</div>
         <svg sc-camel-view-box="0 0 360 200" style="width:100%;height:auto;display:block;">
           <sc-for list="{{ detail.ri.week.bars }}" as="wb" hint-placeholder-count="7">
             <rect x="{{ wb.x }}" y="{{ wb.y }}" width="{{ wb.w }}" height="{{ wb.h }}" fill="{{ wb.color }}" fill-opacity=".75" rx="3"><title>{{ wb.label }}: {{ wb.value }}</title></rect>
@@ -3846,7 +3864,7 @@
       </div>
       </sc-if>
       <sc-if value="{{ detail.wp.wpNoData }}"><div data-wp-nodata="1" style="margin-top:-6px;font-size:11.5px;color:var(--ink3);line-height:1.45;">{{ detail.wp.note }}</div></sc-if>
-      <div data-ddq-block="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
+      <div data-ddq-block="1" data-period-exempt="чанарын оноо — хугацааны өгөгдөл биш" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
         <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="ddq" data-eh-field="title">{{ detail.ddqTitle }}</span></div>
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--line);">
           <sc-if value="{{ detail.dqKnown }}">
@@ -7386,9 +7404,9 @@ function freightAnalysisModel(all,sel,year,mr){
 function chartPeriodText(m,T){
   const W={prefix:T('period_prefix','Хугацаа'),months:T('scope_months','сар'),partial:T('period_partial','дутуу сар'),
     through:T('period_through','хүртэл'),none:T('period_none','мэдээлэл алга'),dropped:T('period_dropped','дутуу сар хасагдсан'),
-    last:T('period_last','сүүлийнх'),day:T('period_day','сүүлийн бүрэн хоног')};
+    last:T('period_last','сүүлийнх'),day:(m&&m.asOfWord)||T('period_day','сүүлийн бүрэн хоног'),days:T('period_days','хоног')};
   return EHGlossary.periodSpan((m&&m.periodKeys)||[],{partialTo:m&&m.partialTo,partialCount:m&&m.partialN,asOf:m&&m.asOf,
-    dropped:!!(m&&m.partialDropped),words:W}).text;
+    dayFrom:m&&m.dayFrom,dayTo:m&&m.dayTo,dropped:!!(m&&m.partialDropped),words:W}).text;
 }
 
 /* Ачааны сарын график — чиглэл бүр давхарласан багана (тонн, зүүн тэнхлэг)
@@ -8542,6 +8560,20 @@ class Component extends DCLogic {
     ri.period=FU.period;
     ri.scopeNote=FU.scopeNote;
     ri.hasScopeNote=!!FU.scopeNote;
+    /* DG-P: карт бүрийн ӨӨРИЙН хугацаа. Шүүлт (PM) байвал аймаг/шалтгаан/гариг нь
+       сонгосон сарууд; үгүй бол backend-ийн цонх — аймаг, шалтгаан = СҮҮЛИЙН хоног
+       (record_date = max), хоногийн цуваа ба гариг = сүүлийн 30 хоног. Хоногийн
+       цуваа шүүлтэд хамаарахгүй (гарчигт ч бичсэн) тул үргэлж 30 хоног. */
+    const TP=(k,fb)=>stxt('chart.'+k,fb);
+    const riDays=((w&&w.byDay)||[]).map(d=>d&&String(d.date||'').slice(0,10)).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    const perDays=chartPeriodText(riDays.length?{dayFrom:riDays[0],dayTo:riDays[riDays.length-1]}:{},TP);
+    const perMonths=PM?chartPeriodText({periodKeys:P.months.map(m=>m.month),partialN:PM.partialCount},TP):'';
+    const perLatest=chartPeriodText(w&&w.date?{asOf:String(w.date).slice(0,10),asOfWord:TP('period_snapshot','хоногийн мэдээ')}:{},TP);
+    ri.perPeriod=perMonths;
+    ri.perDaily=perDays;
+    ri.perWeek=PM?perMonths:perDays;
+    ri.perAim=PM?perMonths:perLatest;
+    ri.perCats=PM?perMonths:perLatest;
     /* Өгөгдөл алга — шаардлагатай бүх хэсгийг хоосон хэлбэрээр өгнө (шаблон
        хоосон массив/объект дээр унахгүй; мэдээлэл алга гэдгийг ri.noData харуулна). */
     if(!A) return {isRoadInspect:true,riF:FU.riF,ri:{...ri,lines:[],kpis:[],rank:[],cats:[],hasRest:false,rankRest:'',
@@ -10847,7 +10879,14 @@ class Component extends DCLogic {
         week:fmt(a.tonnes)+(wk.weekOrgs.total>0?' · '+a.pct.toFixed(1)+'%':''),
         ytd:fmt(b.tonnes)+(wk.ytdOrgs.total>0?' · '+b.pct.toFixed(1)+'%':''),
         tip:o.name+' — '+T('total_kpi_week','Сүүлийн 7 хоног')+': '+fmt(a.tonnes)+' '+tUnit+' · '+T('total_kpi_ytd','Оны эхнээс өссөн дүн')+': '+fmt(b.tonnes)+' '+tUnit};});
+    /* DG-P: 7 хоног, оны эхнээс, 8 долоо хоногийн цуваа — тус бүр ӨӨРИЙН хоногийн муж */
+    const TP=(k,fb)=>stxt('chart.'+k,fb);
+    const wkFull=wk.weeks.filter(x=>x&&x.week_start&&x.week_end);
+    const perWeek=chartPeriodText({dayFrom:last.week_start,dayTo:last.week_end},TP);
+    const perYtd=chartPeriodText(wk.ytd?{dayFrom:wk.ytd.from,dayTo:wk.ytd.to}:{},TP);
+    const perWeeks=chartPeriodText(wkFull.length?{dayFrom:wkFull[0].week_start,dayTo:wkFull[wkFull.length-1].week_end}:{},TP);
     return {...out,freightTotHasWeekly:true,freightTotNoWeekly:false,
+      freightTotPerWeek:perWeek,freightTotPerYtd:perYtd,freightTotPerWeeks:perWeeks,
       freightTotRange:range(last)+' '+String(last.week_end||'').slice(0,4),
       freightTotKpis:kpis,freightTotStale:staleNote,freightTotHasStale:!!staleNote,
       freightTotWeekDonut:donut(wk.weekOrgs.list),freightTotYtdDonut:donut(wk.ytdOrgs.list),
@@ -11646,7 +11685,13 @@ class Component extends DCLogic {
       const airOnlyNote=(realVal!=null&&otherSectorsNone)
         ?stxt('status.air_only','Зөвхөн агаарын тээврийн эх сурвалж холбогдсон. Бусад салбар холбогдох бүрд нийт дүнд нэмэгдэнэ.')
         :'';
-      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,shareNote,stats,plan,unit,total,delta,airOnlyNote};
+      /* DG-P: 7 хоногийн ЯГ ТЭР цонх (lastFullWeekWindow(0)) — өдрийн багана
+         ирээгүй бол хугацаа зохиохгүй («мэдээлэл алга»). */
+      const wWin=realDaily?this.lastFullWeekWindow(0):null;
+      const ymd=d=>d.year+'-'+String(d.month).padStart(2,'0')+'-'+String(d.day).padStart(2,'0');
+      const period=chartPeriodText(wWin&&wWin.length?{dayFrom:ymd(wWin[0]),dayTo:ymd(wWin[wWin.length-1])}:{},
+        (k,fb)=>stxt('chart.'+k,fb));
+      return {bars:barsMarked,base:wbase,yTicks,avgRef,donut,share,shareNote,stats,plan,unit,total,delta,airOnlyNote,period};
     };
     const wPax=buildWeek('pax',WEEK_DATA.pax,'w2p','w2px'), wCargo=buildWeek('cargo',WEEK_DATA.cargo,'w2c','w2cx');
 
@@ -11831,7 +11876,10 @@ class Component extends DCLogic {
           spark:sp,area:sp+' L120,32 L0,32 Z'};
       }),
       weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekPaxShareNote:wPax.shareNote,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekCargoShareNote:wCargo.shareNote,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,weekPaxDeltaCols:String(Math.max(1,wPax.delta.length)),weekPaxAirOnlyNote:wPax.airOnlyNote,
-      section02MockNote,
+      section02MockNote,weekPaxPeriod:wPax.period,weekCargoPeriod:wCargo.period,
+      /* DG-P: i06/r06 — compareWindow-ын он, 1..months (бүх салбарт бүтэн сарууд) */
+      comparePeriod:chartPeriodText(cw.year?{periodKeys:Array.from({length:months},(_,i)=>cw.year+'-'+String(i+1).padStart(2,'0'))}:{},
+        (k,fb)=>stxt('chart.'+k,fb)),
       w2pMark:section02Marks.w2p,w2pbMark:section02Marks.w2pb,w2pxMark:section02Marks.w2px,
       w2cMark:section02Marks.w2c,w2cbMark:section02Marks.w2cb,w2cxMark:section02Marks.w2cx,
       weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,weekCargoDeltaCols:String(Math.max(1,wCargo.delta.length)),weekCargoAirOnlyNote:wCargo.airOnlyNote,
@@ -12772,6 +12820,18 @@ class Component extends DCLogic {
       datasetCount:datasetsAll.length+' өгөгдөл',dsListShowPager,dsListPageLabel,dsListPrev,dsListNext,
       docCount:docs.length+' баримт'};
   }
+  /* DG-P: нүүрний салбарын карт (d05)-ын хугацаа — салбарын KPI/цувааны эх
+     хугацаа: агаар = шүүлтийн сарын муж (monthly.periodKeys), бусад нь амьд
+     сарын цувааны бодит бичлэгтэй сарууд. Цуваагүй бол «мэдээлэл алга». */
+  homeSectorPeriod(k){
+    const TP=(a,fb)=>stxt('chart.'+a,fb), s=SECTORS[k];
+    if(!s) return chartPeriodText({},TP);
+    if(k==='air'&&s.monthly) return chartPeriodText(s.monthly,TP);
+    if(s._liveSeries&&s.c1dYear&&Array.isArray(s.c1d))
+      return chartPeriodText({periodKeys:s.c1d.map((v,i)=>+v>0?s.c1dYear+'-'+String(i+1).padStart(2,'0'):null).filter(Boolean),
+        partialDropped:!!s._partialDropped},TP);
+    return chartPeriodText({},TP);
+  }
   buildDonut(activeKey){
     // Салбар бүрийн нэгж өөр (км, нислэг, чиглэл) тул шууд нэмж хувь бодох
     // нь буруу байсан — иймд verified бус (registry: widgets.d05.sectors)
@@ -12815,7 +12875,15 @@ class Component extends DCLogic {
     }
     const act=raw.find(r=>r.key===activeKey)||raw[0];
     const activePct=(act.v/total*100).toFixed(0);
-    return {arcs,activePct,activePctLabel:(act.live?activePct+'%':'—'),activeName:act.label,note,hasNote:!!note};
+    /* DG-P: донутын хугацаа = холбогдсон салбар бүрийн KPI-ийн хугацаа. Салбарууд
+       өөр хугацаатай бол салбараар нь нэрлэнэ (нэг мужид шахахгүй). */
+    const liveKeys=raw.filter(r=>r.live).map(r=>r.key);
+    const pers=liveKeys.map(k=>this.homeSectorPeriod(k));
+    const uniq=[...new Set(pers)];
+    const period=uniq.length===1?uniq[0]
+      :uniq.length?liveKeys.map((k,i)=>SECTORS[k].label+' — '+pers[i]).join(' · ')
+      :this.homeSectorPeriod(null);
+    return {period,arcs,activePct,activePctLabel:(act.live?activePct+'%':'—'),activeName:act.label,note,hasNote:!!note};
   }
   buildGlobe(){
     const d3=window.d3;
@@ -13594,6 +13662,12 @@ class Component extends DCLogic {
     trend.noData=!t05Verified;
     trend.noDataNote=stxt('status.no_series','чиг хандлагын цуваа алга');
     if(t05Verified) trend.showForecast=true;
+    /* DG-P: t05-ийн хугацаа — зурсан цувааны БОДИТ бичлэгтэй сарууд (c1dYear-ээр).
+       win нь 1 сараас цөөн бол бүтэн c1d зурагддаг (дээрх buildTrendChart-тай ижил). */
+    const t05Src=t05Ser||(win.length>1?win:s.c1d), t05Off=(!t05Ser&&win.length>1)?mfr-1:0;
+    const t05Period=chartPeriodText((t05Verified&&s.c1dYear)?{
+      periodKeys:t05Src.map((v,i)=>+v>0?s.c1dYear+'-'+String(t05Off+i+1).padStart(2,'0'):null).filter(Boolean),
+      partialDropped:!t05Ser&&!!s._partialDropped&&(win.length<=1||mto>s.c1d.length)}:{},(k,fb)=>stxt('chart.'+k,fb));
     const wsum=win.reduce((a,b)=>a+b,0), wavg=win.length?Math.round(wsum/win.length):0;
     const mSel={cx:0,cy:0,value:'',label:'',has:false};
     const particles=Array.from({length:14},(_,i)=>{
@@ -13826,7 +13900,7 @@ class Component extends DCLogic {
       sectorTabs,
       orbitDots,
       globe:this.buildGlobe(),
-      donut:this.buildDonut(key),
+      donut:this.buildDonut(key),trendPeriod:t05Period,
       ...this.buildPageVals(),
       ...this.buildExtras(),
       ...this.buildTable(),

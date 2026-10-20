@@ -689,6 +689,8 @@
       "period_dropped": "дутуу сар хасагдсан",
       "period_last": "сүүлийнх",
       "period_day": "сүүлийн бүрэн хоног",
+      "period_days": "хоног",
+      "period_snapshot": "хоногийн мэдээ",
       "scope_months": "сар",
       "legend_flights": "нислэг",
       "legend_flights_axis": "нислэгийн тоо (баруун тэнхлэг)",
