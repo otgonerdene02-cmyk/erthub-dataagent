@@ -186,6 +186,65 @@
         ytd: Object.assign({ year: y, from: y + '-01-01', to: iso(we) }, ytdOrg(1)),
         prev_ytd: Object.assign({ year: y - 1, from: (y - 1) + '-01-01', to: (y - 1) + iso(we).slice(4) }, ytdOrg(0.88)) } };
   }
+  /* САЛБАРЫН НЭГТГЭЛ (/api/sectors/total/history, gold.sector_daily_total) — агаар
+     (flights фикстураас), төмөр зам (зорчигч = railHistory, ачаа = freightTotal); авто —
+     эх сурвалжгүй (толинд бий, мөргүй). weekly — хэмжүүр бүрээр сүүлийн бүтэн 8 долоо хоног. */
+  var ST_NAMES = { air: 'Агаарын тээвэр', road: 'Авто тээвэр', rail: 'Төмөр зам' };
+  function sectorTotal(u) {
+    var mf = (u || '').match(/[?&]from=(\d{4}-\d{2})/), mt = (u || '').match(/[?&]to=(\d{4}-\d{2})/);
+    var rows = [], idx = {};
+    var row = function (month, sec, dimv) { var k = month + '|' + sec; if (!idx[k]) { idx[k] = { month: month, sector: sec,
+      days_in_month: dimv, passengers: null, freight_tonnes: null, passenger_days: 0, freight_days: 0, passenger_last: null, freight_last: null };
+      rows.push(idx[k]); } return idx[k]; };
+    [Y - 1, Y].forEach(function (y) {
+      var by = {};
+      flights(y).flights.forEach(function (f) { var k = y + '-' + pad(f.month);
+        var o = by[k] || (by[k] = { p: 0, c: 0, d: {}, ld: 0 }); o.p += f.pax; o.c += (f.cargoKg || 0) / 1000; o.d[f.day] = 1; o.ld = Math.max(o.ld, f.day); });
+      Object.keys(by).forEach(function (k) { var o = by[k], r = row(k, 'air', dim(+k.slice(0, 4), +k.slice(5, 7)));
+        var nd = Object.keys(o.d).length;
+        r.passengers = o.p; r.passenger_days = nd; r.passenger_last = k + '-' + pad(o.ld);
+        r.freight_tonnes = Math.round(o.c * 1000) / 1000; r.freight_days = nd; r.freight_last = r.passenger_last; });
+    });
+    railHistory().months.forEach(function (m) { var r = row(m.month, 'rail', m.days_in_month);
+      r.passengers = m.passengers; r.passenger_days = m.days; r.passenger_last = m.month + '-' + pad(m.days); });
+    freightTotal().months.forEach(function (m) { var r = row(m.month, 'rail', m.days_in_month);
+      r.freight_tonnes = m.tonnes; r.freight_days = m.days; r.freight_last = m.last_date; });
+    rows.sort(function (a, b) { return a.month < b.month ? -1 : a.month > b.month ? 1 : (a.sector < b.sector ? -1 : 1); });
+    if (mf || mt) rows = rows.filter(function (r) { return (!mf || r.month >= mf[1]) && (!mt || r.month <= mt[1]); });
+    var edge = function (sec, k, first) { var rs = rows.filter(function (r) { return r.sector === sec && r[k] !== null; });
+      if (!rs.length) return null; var r = first ? rs[0] : rs[rs.length - 1];
+      return first ? r.month + '-01' : r[k === 'passengers' ? 'passenger_last' : 'freight_last']; };
+    var sectors = ['air', 'road', 'rail'].map(function (s) { var pl = edge(s, 'passengers'), fl = edge(s, 'freight_tonnes');
+      var tot = function (k) { var rs = rows.filter(function (r) { return r.sector === s && r[k] !== null; });
+        return rs.length ? rs.reduce(function (a, r) { return a + r[k]; }, 0) : null; };
+      return { sector: s, name: ST_NAMES[s], passengers_first: edge(s, 'passengers', true), passengers_last: pl,
+        freight_first: edge(s, 'freight_tonnes', true), freight_last: fl, has_passengers: !!pl, has_freight: !!fl,
+        passengers: tot('passengers'), freight_tonnes: tot('freight_tonnes') }; });
+    var out = { sector: 'total', metric: 'sector_total_history', status: rows.length ? 'ok' : 'no_data', view: 'gold.sector_daily_total',
+      units: { passengers: 'зорчигч', freight_tonnes: 'тонн' }, sectors: sectors, months: rows };
+    if (!mf && !mt) {
+      var lastDay = new Date(Date.UTC(Y, M - 1, D - 1));
+      var we = new Date(lastDay.getTime() - (lastDay.getUTCDay() % 7) * 864e5);
+      var iso = function (d) { return d.toISOString().slice(0, 10); };
+      var y = +iso(we).slice(0, 4);
+      var wk = function (k, base) {
+        var weeks = [];
+        for (var i = 7; i >= 0; i--) {
+          var ws = new Date(we.getTime() - (i * 7 + 6) * 864e5), wend = new Date(we.getTime() - i * 7 * 864e5);
+          var b = { air: { value: wave(i, base[0], base[0] * 0.12), days: 7 }, rail: { value: wave(i + 2, base[1], base[1] * 0.1), days: 7 } };
+          weeks.push({ week_start: iso(ws), week_end: iso(wend), missing: false, value: b.air.value + b.rail.value, by_sector: b });
+        }
+        var ytd = { air: { value: base[0] * 41, days: 280 }, rail: { value: base[1] * 41, days: 280 } };
+        var prev = { air: { value: Math.round(base[0] * 38.5), days: 280 }, rail: { value: Math.round(base[1] * 40.2), days: 280 } };
+        return { measure: k, max_date: iso(lastDay), ref_date: iso(lastDay), week_end: iso(we), sectors: ['air', 'rail'], stale: [], weeks: weeks,
+          ytd: { year: y, from: y + '-01-01', to: iso(we), value: ytd.air.value + ytd.rail.value, by_sector: ytd },
+          prev_ytd: { year: y - 1, from: (y - 1) + '-01-01', to: (y - 1) + iso(we).slice(4), by_sector: prev },
+          comparable: ['air', 'rail'], yoy_cur: ytd.air.value + ytd.rail.value, yoy_prev: prev.air.value + prev.rail.value };
+      };
+      out.weekly = { passengers: wk('passengers', [28000, 29000]), freight_tonnes: wk('freight_tonnes', [180, 520000]) };
+    }
+    return out;
+  }
   function flightsIndex() { return { years: [{ year: Y }, { year: Y - 1 }] }; }
   function flights(year) {
     var carr = ['MIAT', 'Airchina', 'Hunnu Air', 'Aero Mongolia'];
@@ -276,6 +335,13 @@
           rows.push([d, 'МТЗ', 'Монголын төмөр зам ТӨХК', String(1844091747960000 + j * 10 + i), 'Монголын төмөр зам ТӨХК', s, 'Нүүрс',
             null, null, null, null, 0, 0, 20 + i, Math.round((20 + i) * 66.1 * 100) / 100]); }); });
       }
+    } else if (key === 'sector-total') {
+      columns = [['record_date', 'Огноо', 'date'], ['sector_code', 'Салбарын код', 'string'], ['sector_name', 'Салбар', 'string'],
+        ['passengers', 'Зорчигч', 'int'], ['freight_tonnes', 'Ачаа (тонн)', 'float'], ['passenger_records', 'Зорчигчийн эх бичлэг', 'int'],
+        ['freight_records', 'Ачааны эх бичлэг', 'int'], ['sources', 'Эх сурвалж', 'string']];
+      days.slice(0, 20).forEach(function (d, j) {
+        rows.push([d, 'air', 'Агаарын тээвэр', 5200 + j * 37, Math.round((26 + (j % 5)) * 1000) / 1000 + 20, 40 + j % 6, 40 + j % 6, 'Агаарын тээврийн статистик (ИНЕГ)']);
+        rows.push([d, 'rail', 'Төмөр зам', 4100 + j * 21, 78000 + j * 311.5, 28 + j % 4, 2400 + j * 3, 'Ачаа тээврийн мэдээ (УБТЗ, МТЗ), Зорчигчийн галт тэрэгний мэдээ (УБТЗ)']); });
     } else return 404;
     return { status: rows.length ? 'ok' : 'no_data', dataset: key, total: rows.length, truncated: false,
       columns: columns.map(function (c) { return { key: c[0], label: c[1], type: c[2] }; }), rows: rows };
@@ -291,6 +357,7 @@
     if (fo) return ranged(u, fo[1] === 'all' ? freightTotal() : freightHistory(fo[1]), 'tonnes', []);
     if (u.indexOf('/api/sectors/rail/passengers/history') >= 0)
       return ranged(u, railHistory(), 'passengers', [['by_route', 'passengers']]);
+    if (u.indexOf('/api/sectors/total/history') >= 0) return sectorTotal(u);
     if (u.indexOf('/api/sectors/rail/passengers/history') >= 0) return railHistory();
     if (u.indexOf('/api/sectors/rail/summary') >= 0) return railSummary();
     if (u.indexOf('/api/sectors/rail/wagon-loading/history') >= 0) return wagonHistory();

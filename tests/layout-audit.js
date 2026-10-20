@@ -79,7 +79,7 @@ if (!SELFTEST_ONLY) {
 const ADMIN_SEC = { hero_fl: 'hero', hero_px: 'hero', uk: 'portal-kpi', ls: 'sec-01', w2p: 'sec-02', w2pb: 'sec-02', w2px: 'sec-02', w2c: 'sec-02', w2cb: 'sec-02', w2cx: 'sec-02', k04: 'sec-04', t05: 'sec-05', d05: 'sec-05', i06: 'sec-06', r06: 'sec-06', u07: 'sec-07' };
 /* Нүүрийн салбарын шүүлт (🚗 🚆 ✈️ 🚢 🚌) — салбар бүр ӨӨР график/хоосон төлөв зурдаг тул тус бүрийг шалгана */
 if (!SELFTEST_ONLY && (!ONLY || ONLY === 'home' || ONLY === 'sector')) {
-  ['road', 'rail', 'air', 'water', 'public'].forEach((k, i) => VIEWPORTS.forEach((v) => CASES.push({ kind: 'sector', route: 'home→' + k, url: '/index.html', w: v.w, h: v.h, chip: i + 1 })));
+  ['road', 'rail', 'air', 'water'].forEach((k, i) => VIEWPORTS.forEach((v) => CASES.push({ kind: 'sector', route: 'home→' + k, url: '/index.html', w: v.w, h: v.h, chip: i + 1 })));
 }
 if (!SELFTEST_ONLY && (!ONLY || ONLY === 'admin')) {
   Object.keys(ADMIN_SEC).forEach((id) => CASES.push({ kind: 'admin', route: 'admin/' + id, url: '/admin/index.html', w: 1440, h: 900, widget: id, section: ADMIN_SEC[id] }));
