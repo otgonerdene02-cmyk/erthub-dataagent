@@ -7831,7 +7831,7 @@ function groupUI() {
     check('RAW7. Хүснэгт төлөвгүй үед pill ба «Төлөвөөр» мөр нуугдана',
       html.indexOf('<sc-if value="{{ pr.hasStatus }}">') > 0 && html.indexOf('<sc-if value="{{ detail.pvHasStatus }}">') > 0);
     check('RAW8. EHBackend.fetchDatasetRows → /api/datasets/<key>/rows',
-      /function fetchDatasetRows\(key, from, to, limit\)/.test(read('js/erthub-backend.js')) &&
+      /function fetchDatasetRows\(key, from, to, limit(, opts)?\)/.test(read('js/erthub-backend.js')) &&
       read('js/erthub-backend.js').indexOf("'/api/datasets/'") > 0);
     /* FL3 × RAW: баганын шүүлт KPI-г хамрах түлхүүр — түүхий мөрийн 0-р багана ОГНОО
        тул датасэт бүр түлхүүр баганаа зарлана; таслагдсан хариу KPI-г хамруулахгүй. */
@@ -8420,7 +8420,164 @@ async function groupFL() {
       riPanel.includes('<sc-if value="{{ detail.riStatusRow }}">') &&
       dcScript().includes("riStatusRow:sf!=='all'||!fCols.some(c=>c.index===sc.head.length-1)"));
   }
+
+  /* FL19–FL24. Шүүлтийн ХЭЛБЭР + серверийн facet (2026-10-20 хэрэглэгч: «нэгтгэлийн
+     хүснэгтэд шинэ Тээвэрлэгч багана шүүлтэд алга; ачааг min–max-аар; олон утгатай
+     текстийг бичиж сонгох»). Шалтгаан: шүүлтийн сонголтыг ачаалсан сүүлийн 5,000
+     мөрөөс (148,196-аас) гаргадаг байсан — МТЗ (сүүлийн бичлэг 2026-02-01) тэр
+     цонхонд ороогүй тул багана 1 утгатай болж шүүлтээс хасагдаж байв.
+     Гараар бодох фикстур: 5 мөр, багана 0 Огноо, 1 Код, 2 Нэр (Код-той 1:1),
+     3 Өртөө (14 утга, 16 мөр → хайлт), 4 Тонн (float), 5 ID. */
+  {
+    const st = ['А1', 'Б2', 'В3', 'Г4', 'Д5', 'Е6', 'Ж7', 'З8', 'И9', 'К10', 'Л11', 'М12', 'Н13', 'О14'];
+    const head = ['Огноо', 'Код', 'Нэр', 'Өртөө', 'Тонн', 'ID'];
+    const types = ['date', 'string', 'string', 'string', 'float', 'string'];
+    const rows = st.map((s, i) => ['2026-10-0' + (1 + i % 9), i < 10 ? 'УБТЗ' : 'МТЗ', i < 10 ? 'Улаанбаатар' : 'Монгол', s, i * 10, 'id' + i, '']);
+    /* Өртөө давтагдана (ID биш): А1, Б2 хоёр дахь удаа (УБТЗ, 5 ба 15 тонн) */
+    rows.push(['2026-10-01', 'УБТЗ', 'Улаанбаатар', 'А1', 5, 'idx1', ''], ['2026-10-02', 'УБТЗ', 'Улаанбаатар', 'Б2', 15, 'idx2', '']);
+    const fc = G.filterColumns(head, types, rows, { ranges: true, dedupe: true, chipMax: 12 });
+    check('FL19. Хэлбэр: Код → chips (2 утга), Өртөө → search (14 > 12), Тонн → range; ID ба огноо орохгүй',
+      JSON.stringify(fc.map(c => [c.name, c.kind])) === JSON.stringify([['Код', 'chips'], ['Өртөө', 'search'], ['Тонн', 'range']]),
+      JSON.stringify(fc.map(c => [c.name, c.kind])));
+    check('FL19. dedupe: Нэр нь Кодтой ижил хуваалттай (12/4) → нэг шүүлт; dedupe-гүй бол хоёулаа',
+      !fc.some(c => c.name === 'Нэр') && G.filterColumns(head, types, rows).some(c => c.name === 'Нэр'));
+    const tr = fc.find(c => c.kind === 'range');
+    check('FL19. range: мин 0, макс 130 (датаас)', tr && tr.min === 0 && tr.max === 130, JSON.stringify(tr));
+    check('FL19. ranges-гүй (анхдагч) бол тоон багана шүүлтэд орохгүй (FL7-ийн гэрээ)',
+      !G.filterColumns(head, types, rows).some(c => c.kind === 'range'));
+    /* FL20. Серверийн facet: ачаалсан мөрөнд МТЗ АЛГА ч facet-д байвал сонголтод гарна */
+    const loaded = rows.slice(0, 10).concat(rows.slice(14));
+    check('FL20. facet-гүй: ачаалсан мөр зөвхөн УБТЗ → Код шүүлтээс хасагдана (засварын өмнөх алдаа)',
+      !G.filterColumns(head, types, loaded).some(c => c.name === 'Код'));
+    const fz = { code: { kind: 'cat', values: [['УБТЗ', 140000], ['МТЗ', 8000]] }, name: { kind: 'cat', values: [['Улаанбаатар', 140000], ['Монгол', 8000]] },
+      ton: { kind: 'range', min: 0, max: 6311.1 } };
+    const ff = G.filterColumns(head, types, loaded, { facets: fz, keys: ['record_date', 'code', 'name', 'station', 'ton', 'id'], ranges: true, dedupe: true });
+    const fcode = ff.find(c => c.name === 'Код');
+    check('FL20. facet-тэй: Код = [МТЗ, УБТЗ], тоо нь бүтэн датаас (8000 / 140000)',
+      fcode && JSON.stringify(fcode.values) === '["МТЗ","УБТЗ"]' && fcode.counts['МТЗ'] === 8000, JSON.stringify(fcode));
+    check('FL20. facet-тэй: Тонн хүрээ серверийнх (0–6311.1); facet-гүй багана (Өртөө, ID) орохгүй',
+      ff.some(c => c.kind === 'range' && c.max === 6311.1) && !ff.some(c => c.name === 'Өртөө' || c.name === 'ID') && !ff.some(c => c.name === 'Нэр'),
+      JSON.stringify(ff.map(c => c.name)));
+    /* FL21. condMatch — сервертэй ижил дүрэм */
+    const pick = sel => rows.filter(r => G.rowMatchesCols(r, sel)).map(r => r[3]).join(',');
+    check('FL21. {in:[МТЗ]} → Л11..О14', pick({ 1: { in: ['МТЗ'] } }) === 'Л11,М12,Н13,О14', pick({ 1: { in: ['МТЗ'] } }));
+    check('FL21. {in:[А1, Д5]} (олныг сонгох) → А1,Д5,А1', pick({ 3: { in: ['А1', 'Д5'] } }) === 'А1,Д5,А1');
+    check('FL21. {min:100} → Л11..О14 (хил оролцоно: Л11 = 100)', pick({ 4: { min: 100 } }) === 'Л11,М12,Н13,О14');
+    check('FL21. {min:"20", max:"40"} (бичсэн текст) → В3,Г4,Д5', pick({ 4: { min: '20', max: '40' } }) === 'В3,Г4,Д5');
+    check('FL21. Хүрээ + ангилал AND: МТЗ ба ≤ 105 → Л11', pick({ 1: { in: ['МТЗ'] }, 4: { max: 105 } }) === 'Л11');
+    check('FL21. Хоосон cond ({in:[]}, {min:""}) = шүүлтгүй', pick({ 1: { in: [] }, 4: { min: '' } }).split(',').length === 16 &&
+      !G.condActive({ in: [] }) && !G.condActive({ min: '' }) && G.condActive({ max: 0 }));
+    check('FL21. Тоо биш нүд хүрээнд таарахгүй; «1,234» мянгатын тусгаарлагчтай уншигдана',
+      !G.condMatch('', { min: 0 }) && !G.condMatch('abc', { max: 5 }) && G.condMatch('1,234', { min: 1000, max: 1234 }));
+    /* FL22. Хайлтын санал */
+    const sg = G.facetSuggest(['Дархан-I', 'Сайндархан', 'Дархан-II', 'Эрдэнэт'], { 'Дархан-I': 5, 'Сайндархан': 50, 'Дархан-II': 9, 'Эрдэнэт': 1 }, 'дар', ['Дархан-II'], 8);
+    check('FL22. facetSuggest: жижиг үсгээр, эхлэлээр таарсан нь түрүүнд, сонгосныг хасна',
+      JSON.stringify(sg.list) === '["Дархан-I","Сайндархан"]' && sg.total === 2, JSON.stringify(sg));
+    check('FL22. Хоосон текст → мөрийн тоогоор буурах «top values»',
+      JSON.stringify(G.facetSuggest(['а', 'б', 'в'], { а: 1, б: 3, в: 2 }, '', [], 2).list) === '["б","в"]');
+  }
+  /* FL23. Серверийн query (index.html dsSrvParams) — тогтвортой дараалал, кодлогдсон */
+  {
+    const m = dcScript().match(/\nfunction dsSrvParams\(sel\)\{([\s\S]*?)\n\}/);
+    if (!m) bad('FL23. dsSrvParams() олдсонгүй');
+    else {
+      const P = new Function('sel', m[1]);
+      check('FL23. in (эрэмбэлж, кодлож) + min/max; хоосон/хуучин хэлбэр алгасна',
+        P({ org_code: { in: ['УБТЗ', 'МТЗ'] }, export_tonnes: { min: '10', max: '' }, x: 'хуучин', y: { in: [] } }) ===
+          'min.export_tonnes=10&in.org_code=' + encodeURIComponent('МТЗ') + '&in.org_code=' + encodeURIComponent('УБТЗ'),
+        P({ org_code: { in: ['УБТЗ', 'МТЗ'] }, export_tonnes: { min: '10', max: '' } }));
+      check('FL23. Сонголтгүй → хоосон (серверийн шүүлтгүй хүсэлт)', P({}) === '' && P(null) === '');
+    }
+    const src = dcScript();
+    check('FL24. dsRawSchema: facet дэмждэг үед л серверийн шүүлт, бичих явцад 350мс хүлээнэ',
+      /const ps=fz\[wk\]\?dsSrvParams\(/.test(src) && /setTimeout\(\(\)=>\{ this\._dsRowsPend=null;/.test(src));
+    check('FL24. Сонголтын түлхүүр — түүхий мөрөнд баганын ТҮЛХҮҮР (шүүсэн хариунд индекс шилждэг)',
+      src.includes("const colId=ci=>sc.raw&&sc.keys?sc.keys[ci]:String(ci);"));
+  }
   await groupFLCoverage(G);
+  await groupFLFacetLive();
+}
+
+/* FL25. Регресс — ЯГ хэрэглэгчийн гүйлгээ, жинхэнэ хөтчөөр (?fx=1): нэгтгэлийн
+   хүснэгтийн эхний хуудас (50 мөр, таслагдсан) зөвхөн УБТЗ. «Тээвэрлэгч» шүүлтэд
+   МТЗ гарч, сонгоход серверээс МТЗ-ийн мөр ирнэ; «Дотоод (тонн)» доод 1300 →
+   зөвхөн МТЗ (1322 / 1388.1); «Ачааны нэр» нь chip-ийн хана биш бичиж хайх. */
+async function groupFLFacetLive() {
+  if (!CHROME) { skipped('FL25 серверийн facet шүүлт (хөтөч)', 'Chrome олдсонгүй'); return; }
+  const ds = flDatasets(read('index.html'));
+  const it = ds.find((d) => d.schemaKey === 'rail_freight_all');
+  if (!it) { bad('FL25. rail_freight_all датасэт олдсонгүй'); return; }
+  const probe = async function (d, w, slug) {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const v = f(); if (v) return v; await sleep(150); } return null; };
+    w.location.hash = '#/browse/' + slug;
+    const table = () => d.querySelector('[data-eh-table]');
+    const body = () => { const t = table(); return t && t.children[1] ? [...t.children[1].children] : []; };
+    const head = () => [...table().children[0].querySelectorAll('button')].map((b) => b.textContent.replace(/[↑↓]/g, '').trim());
+    if (!await until(() => body().length > 0 && head().includes('Тээвэрлэгч'), 20000)) return { __err: 'хүснэгт зурагдсангүй' };
+    const fb = [...d.querySelectorAll('button')].find((b) => b.textContent.includes('▽'));
+    if (fb) fb.click();
+    if (!await until(() => d.querySelector('[data-fl-col="Тээвэрлэгч"]'), 8000)) return { __err: 'Тээвэрлэгч шүүлт алга', cols: [...d.querySelectorAll('[data-fl-col]')].map((e) => e.getAttribute('data-fl-col')) };
+    const oi = head().indexOf('Тээвэрлэгч');
+    const orgs = () => body().map((r) => r.children[oi] && r.children[oi].textContent.trim());
+    const out = { cols: [...d.querySelectorAll('[data-fl-col]')].map((e) => e.getAttribute('data-fl-col')) };
+    out.firstMtz = orgs().filter((x) => x === 'МТЗ').length;
+    out.firstN = body().length;
+    out.chips = [...d.querySelectorAll('[data-fl-col="Тээвэрлэгч"] button')].map((b) => b.textContent.trim());
+    out.cargoSearch = !!d.querySelector('[data-fl-col="Ачааны нэр"] input[data-fl-search]');
+    [...d.querySelectorAll('[data-fl-col="Тээвэрлэгч"] button')].find((b) => /^МТЗ/.test(b.textContent.trim())).click();
+    await until(() => body().length && orgs().every((x) => x === 'МТЗ'), 6000);
+    out.afterMtz = orgs();
+    d.querySelector('[data-fl-clear]').click();
+    await until(() => orgs().some((x) => x === 'УБТЗ'), 6000);
+    /* 8 тоон багана > PV_RANGE_TOP (6) — эхлээд нуугдсан хэсэг */
+    out.rangeHidden = !d.querySelector('[data-fl-min="Дотоод (тонн)"]');
+    const more = d.querySelector('[data-fl-range-more]');
+    if (more) { more.click(); await sleep(300); }
+    const inp = d.querySelector('[data-fl-min="Дотоод (тонн)"]');
+    out.hasRange = !!inp;
+    if (inp) {
+      inp.value = '1300'; inp.dispatchEvent(new Event('input', { bubbles: true }));
+      const ti = head().indexOf('Дотоод (тонн)');
+      await until(() => body().length && orgs().every((x) => x === 'МТЗ'), 6000);
+      out.afterRange = body().map((r) => r.children[ti].textContent.trim());
+      d.querySelector('[data-fl-clear]').click();
+      await sleep(400);
+    }
+    const s = d.querySelector('[data-fl-col="Ачааны нэр"] input[data-fl-search]');
+    if (s) {
+      s.value = 'цем'; s.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(400);
+      const sug = [...d.querySelectorAll('[data-fl-col="Ачааны нэр"] button')].find((b) => /^Цемент/.test(b.textContent.trim()));
+      out.sugg = !!sug;
+      if (sug) {
+        sug.click();
+        const ci = head().indexOf('Ачааны нэр');
+        await until(() => body().length && body().every((r) => r.children[ci].textContent.trim() === 'Цемент'), 6000);
+        out.afterCargo = [...new Set(body().map((r) => r.children[ci].textContent.trim()))];
+      }
+    }
+    return out;
+  };
+  const srv = serve();
+  const prevSrc = PROBE_SRC;
+  PROBE_SRC = '/index.html?fx=1';
+  let R;
+  try {
+    R = await runProbe('async function(d,w){return (' + probe.toString() + ')(d,w,' + JSON.stringify(it.slug) + ');}', 60000);
+  } finally { PROBE_SRC = prevSrc; srv.close(); }
+  if (!R || R.__err) { bad('FL25. Серверийн facet шүүлтийн probe', JSON.stringify(R)); return; }
+  check('FL25. Эхний хуудас (таслагдсан) МТЗ-гүй ч «Тээвэрлэгч» шүүлтэд МТЗ гарна (facet бүтэн датаас)',
+    R.firstMtz === 0 && R.firstN > 0 && R.chips.some((c) => /^МТЗ/.test(c)) && R.chips.some((c) => /^УБТЗ/.test(c)), JSON.stringify(R));
+  check('FL25. Давхар багана (Тээвэрлэгчийн нэр, Байгууллага) тусдаа шүүлт болохгүй',
+    !R.cols.includes('Тээвэрлэгчийн нэр') && !R.cols.includes('Байгууллага'), JSON.stringify(R.cols));
+  check('FL25. МТЗ сонгоход серверээс зөвхөн МТЗ-ийн мөр (8) ирнэ',
+    R.afterMtz.length === 8 && R.afterMtz.every((x) => x === 'МТЗ'), JSON.stringify(R.afterMtz));
+  check('FL25. Тоон хүрээ 6-аас олон бол товчилно («+N бусад»-аар дэлгэнэ)', R.rangeHidden === true && R.hasRange === true);
+  check('FL25. «Дотоод (тонн)» доод 1300 → зөвхөн 1,322 / 1,388.1 (МТЗ)',
+    R.hasRange && R.afterRange.length === 8 && R.afterRange.every((v) => v === '1,322' || v === '1,388.1'), JSON.stringify(R.afterRange));
+  check('FL25. «Ачааны нэр» бичиж хайх: «цем» → Цемент санал → зөвхөн Цемент',
+    R.cargoSearch && R.sugg && JSON.stringify(R.afterCargo) === '["Цемент"]', JSON.stringify([R.cargoSearch, R.sugg, R.afterCargo]));
 }
 
 /* FL11–FL12. Шүүлтийн бүрдэл АВТОМАТ: датасэт БҮРИЙН хүснэгт (DS_SCHEMA ба
@@ -8473,7 +8630,7 @@ async function flCoverageProbe(d, w, list, warm) {
   let calls = [];
   G.filterColumns = function (head, types, rows, opts) {
     calls.push({ head: (head || []).slice(), types: (types || []).slice(), rows: rows || [],
-      exclude: (opts && opts.exclude) || [] });
+      exclude: (opts && opts.exclude) || [], opts: opts || {} });
     return orig.apply(this, arguments);
   };
   const domHead = () => {
@@ -8509,7 +8666,9 @@ async function flCoverageProbe(d, w, list, warm) {
     }
     out.push({ slug: it.slug, name: it.name, schemaKey: it.schemaKey, domHead: dh,
       head: last ? last.head : null, rows: last ? last.rows.length : 0, exclude: last ? last.exclude : [],
-      exp: last ? orig(last.head, last.types, last.rows).map((c) => c.name) : [],
+      /* Хуудасны ЯГ тохиргоо (facet, тоон хүрээ, давхар баганыг нэгтгэх), зөвхөн exclude-гүй */
+      /* Тоон хүрээ (range) нь ангилал биш — FL11 ангилалтай баганын бүрдлийг шалгана (хүрээ FL25) */
+      exp: last ? orig(last.head, last.types, last.rows, Object.assign({}, last.opts, { exclude: [] })).filter((c) => c.kind !== 'range').map((c) => c.name) : [],
       domCols: [...d.querySelectorAll('[data-fl-col]')].map((e) => e.getAttribute('data-fl-col')),
       panel: !!d.querySelector('.eh-fl-row') });
   }

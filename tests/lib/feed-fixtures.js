@@ -395,7 +395,10 @@
       if (fa) {
         columns.splice(1, 0, ['org_code', 'Тээвэрлэгч', 'string'], ['org_name', 'Тээвэрлэгчийн нэр', 'string']);
         rows = rows.map(function (r) { return [r[0], 'УБТЗ', 'Улаанбаатар төмөр зам ХНН'].concat(r.slice(1)); });
-        days.slice(0, 4).forEach(function (d, j) { ['Цогтцэций', 'Төмөртэй'].forEach(function (s, i) {
+        /* МТЗ-ийн мөр УБТЗ-ийнхээс ХУУЧИН огноотой (амьд дата: МТЗ сүүлийн бичлэг
+           2026-02-01) — таслагдсан эхний хуудсанд ордоггүй, зөвхөн серверийн
+           шүүлтээр (in.org_code=МТЗ) гарна (FX_ROWS_CAP, FL19). */
+        days.slice(14, 18).forEach(function (d, j) { ['Цогтцэций', 'Төмөртэй'].forEach(function (s, i) {
           rows.push([d, 'МТЗ', 'Монголын төмөр зам ТӨХК', String(1844091747960000 + j * 10 + i), 'Монголын төмөр зам ТӨХК', s, 'Нүүрс',
             null, null, null, null, 0, 0, 20 + i, Math.round((20 + i) * 66.1 * 100) / 100]); }); });
       }
@@ -421,8 +424,59 @@
         rows.push([d, 'air', 'Агаарын тээвэр', 5200 + j * 37, Math.round((26 + (j % 5)) * 1000) / 1000 + 20, 40 + j % 6, 40 + j % 6, 'Агаарын тээврийн статистик (ИНЕГ)']);
         rows.push([d, 'rail', 'Төмөр зам', 4100 + j * 21, 78000 + j * 311.5, 28 + j % 4, 2400 + j * 3, 'Ачаа тээврийн мэдээ (УБТЗ, МТЗ), Зорчигчийн галт тэрэгний мэдээ (УБТЗ)']); });
     } else return 404;
-    return { status: rows.length ? 'ok' : 'no_data', dataset: key, total: rows.length, truncated: false,
-      columns: columns.map(function (c) { return { key: c[0], label: c[1], type: c[2] }; }), rows: rows };
+    return rowsContract(u, key, columns, rows);
+  }
+  /* Backend-ийн гэрээ (etransport-backend datasetRows.js): баганын шүүлт in./min./max.,
+     facets=1 → цонхны БҮТЭН мөрөөс (шүүлтгүй) ангилал [[утга, тоо]] ба тоон {min,max},
+     огноогоор буурах эрэмбэ, limit-ээр таслана. Нэгтгэлийн датасэт (rail-freight-all)
+     амьд дээрх шиг ТАСЛАГДСАН (5,000 / 148,196) — хуудас ачаалсан мөрөөсөө биш
+     facet-ээс шүүлтийн сонголт гаргахыг шалгана. */
+  var FX_ROWS_CAP = { 'rail-freight-all': 50 };
+  function rowsContract(u, key, columns, rows) {
+    var qs = (String(u).split('?')[1] || '').split('&').filter(Boolean).map(function (p) {
+      var i = p.indexOf('=');
+      return [decodeURIComponent(i < 0 ? p : p.slice(0, i)), decodeURIComponent(i < 0 ? '' : p.slice(i + 1))];
+    });
+    var keys = columns.map(function (c) { return c[0]; });
+    var inF = {}, lo = {}, hi = {}, any = false;
+    qs.forEach(function (kv) {
+      var m = /^(in|min|max)\.(.+)$/.exec(kv[0]);
+      var ci = m ? keys.indexOf(m[2]) : -1;
+      if (ci < 0 || kv[1] === '') return;
+      any = true;
+      if (m[1] === 'in') (inF[ci] = inF[ci] || []).push(kv[1].trim());
+      else (m[1] === 'min' ? lo : hi)[ci] = +kv[1];
+    });
+    var txt = function (v) { return v == null ? '' : String(v).trim(); };
+    var out = rows.filter(function (r) {
+      for (var a in inF) if (inF[a].indexOf(txt(r[a])) < 0) return false;
+      for (var b in lo) if (r[b] == null || +r[b] < lo[b]) return false;
+      for (var c in hi) if (r[c] == null || +r[c] > hi[c]) return false;
+      return true;
+    }).sort(function (x, y) { return x[0] < y[0] ? 1 : x[0] > y[0] ? -1 : 0; });
+    var cap = FX_ROWS_CAP[key] || 5000, lim = +((qs.find(function (kv) { return kv[0] === 'limit'; }) || [])[1]) || 5000;
+    var page = out.slice(0, Math.min(cap, lim));
+    var res = { status: rows.length ? 'ok' : 'no_data', dataset: key, total: out.length, truncated: page.length < out.length,
+      columns: columns.map(function (c) { return { key: c[0], label: c[1], type: c[2] }; }), rows: page };
+    if (any) { res.filtered = true; res.status = 'ok'; }
+    if (qs.some(function (kv) { return kv[0] === 'facets' && kv[1] === '1'; })) {
+      var fz = {};
+      columns.forEach(function (c, i) {
+        if (c[2] === 'string') {
+          var n = {}, filled = 0;
+          rows.forEach(function (r) { var v = txt(r[i]); if (!v) return; filled++; n[v] = (n[v] || 0) + 1; });
+          var vs = Object.keys(n);
+          if (vs.length >= 2 && vs.length <= 1000 && vs.length < filled)
+            fz[c[0]] = { kind: 'cat', values: vs.sort(function (a, b) { return n[b] - n[a] || (a < b ? -1 : 1); }).map(function (v) { return [v, n[v]]; }) };
+        } else if (c[2] === 'int' || c[2] === 'float') {
+          var nums = rows.map(function (r) { return r[i]; }).filter(function (v) { return v != null && v !== ''; }).map(Number);
+          if (nums.length && Math.min.apply(null, nums) < Math.max.apply(null, nums))
+            fz[c[0]] = { kind: 'range', min: Math.min.apply(null, nums), max: Math.max.apply(null, nums) };
+        }
+      });
+      res.facets = fz;
+    }
+    return res;
   }
   function route(url) {
     var u = String(url);
