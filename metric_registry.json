@@ -28,11 +28,6 @@
           "metric": null,
           "quality": "mock",
           "would_need": "Backend-д \"sea\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/sea/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (Далайн захиргаа) хэрэгтэй, transform биш."
-        },
-        "public": {
-          "metric": null,
-          "quality": "mock",
-          "would_need": "Backend-д \"transit\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/transit/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (НТГ) хэрэгтэй, transform биш."
         }
       },
       "note": "SECTORS[activeSector].kpis (8 мөр) — air сонгосон үед бүгд applyRealFlightsData-аас, бусад үед бүгд статик. kpis[0] (НИЙТ НИСЛЭГ) нь hero_fl-тэй яг ижил air.flight_count_last_month; kpis[1-7] нь тухайн үеийн Sector-хуудасны Он/Сар шүүлтээр тодорхойлогдох жилийн эхнээс өнөөдрийг хүртэлх нийлбэр — өөр цонхтой ч тус бүрийн шошго (compareLabel) үнэн зөв тул зөрчилгүй. 2026-09-18: rail нь УБТЗ-ийн вагон ачилтын хоногийн мэдээнд холбогдов — 3 мөр (ачилт/буулгалт/станц), гурвуулаа НЭГ хоногийн дүн тул мөр хооронд цонхны зөрчил алга. Үлдсэн 3 салбар статик хэвээр. 2026-09-22: rail-д 4 дэх мөр \"ЗОРЧИГЧ / САР\" (сүүлийн бүтэн сар, MoM — өмнөх оны дата алга тул YoY биш) нэмэгдэв; spark нь бодит сарын цуваа."
@@ -55,21 +50,16 @@
           "metric": null,
           "quality": "mock",
           "would_need": "Backend-д \"sea\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/sea/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (Далайн захиргаа) хэрэгтэй, transform биш."
-        },
-        "public": {
-          "metric": null,
-          "quality": "mock",
-          "would_need": "Backend-д \"transit\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/transit/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (НТГ) хэрэгтэй, transform биш."
         }
       },
       "note": "livestrip — SECTORS[k].kpis[0] л уншина. air: k04-ийн kpis[0]-тэй яг ижил (hero_fl-тэй ижил метрик). rail: k04.rail-ийн kpis[0]-тэй яг ижил (хоногийн ачсан вагон) — нэгж нь \"вагон\", \"км\" БИШ."
     },
     "hero_px": {
       "sectors": {
-        "public": {
+        "road": {
           "metric": null,
           "quality": "mock",
-          "would_need": "Нийтийн тээврийн ӨДРИЙН зорчигчийн тоо. Backend-д \"transit\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/transit/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (НТГ) хэрэгтэй, transform биш. Мөн өдрийн нарийвчлалтай эх дата шаардана (сарын нэгтгэл хүрэлцэхгүй)."
+          "would_need": "Өдрийн нийт зорчигчийн тоо (бүх салбар) — салбарын нэгтгэлийн (gold.sector_daily_total) сүүлийн бүтэн өдрөөс тооцох ажил хүлээгдэж байна. Хотын доторх автобусны мэдээ эх сурвалжид алга (2026-10-21-нд «Нийтийн тээвэр» салбарыг хассан)."
         }
       },
       "note": "312K хатуу статик хэвээр үлдэнэ. hero_px-д БүҮ ХүР гэсэн заавар мөрдөгдсөн — код өөрчлөгдөөгүй."
@@ -87,12 +77,6 @@
         "road": {
           "metric": "road.feed_updated_at",
           "quality": "verified"
-        },
-        "public": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Backend-д \"transit\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/transit/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (НТГ) хэрэгтэй, transform биш. Иймд шинэчлэлтийн огноо гаргах эх сурвалж ч алга."
         },
         "water": {
           "metric": null,
@@ -125,12 +109,6 @@
           "quality": "none",
           "label": "мэдээлэл алга",
           "would_need": "Backend-д \"sea\" салбарт ЯМАР Ч эх систем холбогдоогүй — эхлээд эх сурвалж (Далайн захиргаа) хэрэгтэй."
-        },
-        "public": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Backend-д \"transit\" салбарт ЯМАР Ч эх систем холбогдоогүй — эхлээд эх сурвалж (НТГ) хэрэгтэй."
         }
       },
       "note": "Идэвхтэй салбарын SECTORS[k].c1d-г зурна. 2026-09-22: ХАВТГАЙ (sectors:[\"air\"]) хэлбэрээс САЛБАРЫН слот руу — rail нь бодит сарын зорчигчтой болов. Сайт seriesVerified()-ээр registry + _liveSeries хоёуланг шална: registry verified ч цуваа ирээгүй бол статик демо муруйг амьд гэж зурахгүй."
@@ -164,11 +142,8 @@
           "quality": "verified"
         },
         "road": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Эх сурвалж 2026-10-20-нөөс БИЙ: road.veritech.passengers (15401437, билеттэй хот/улс хоорондын зорчигч) — /api/sectors/road/passengers/history-ийн weekly (сүүлийн бүтэн 7 хоног, төрлөөр) ба салбарын нэгтгэл (/api/sectors/total/history, road). Энэ слотыг холбоход дутуу нь: нүүрний 7 хоногийн тайланг салбарын нэгтгэлээс тэжээх (w2p/w2pb) ажил — нийслэлийн нийтийн тээвэр эх сурвалжид алга гэдгийг шошгонд ил хэлнэ.",
-          "blocked_by": "road.veritech.vehicle_registry"
+          "metric": "road.weekly_pax",
+          "quality": "verified"
         },
         "rail": {
           "metric": "rail.weekly_pax",
@@ -179,12 +154,6 @@
           "quality": "none",
           "label": "мэдээлэл алга",
           "would_need": "Backend-д \"sea\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/sea/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (Далайн захиргаа) хэрэгтэй, transform биш."
-        },
-        "public": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Backend-д \"transit\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/transit/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (НТГ) хэрэгтэй, transform биш."
         }
       },
       "plan": {
@@ -206,11 +175,8 @@
           "quality": "verified"
         },
         "road": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Авто замын 7 хоногийн зорчигчийн дата эх сурвалжид алга (Veritech-ийн road датасэтүүд нь техникийн үзлэг ба тээврийн хэрэгслийн бүртгэл).",
-          "blocked_by": "road.veritech.vehicle_registry"
+          "metric": "road.weekly_pax",
+          "quality": "verified"
         }
       },
       "note": "Төрлийн хуваарь донут — сегмент бүр салбарын нэгтгэлийн (gold.sector_daily_total) ЯГ ТЭР долоо хоногийн тоо: агаар, төмөр зам; авто — мэдээлэл алга. Нэгтгэл ирээгүй бол агаар (feed) 100% + ил тайлбар."
@@ -222,11 +188,8 @@
           "quality": "verified"
         },
         "road": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "w2p.road-той ижил: эх сурвалж бий болсон (road.veritech.passengers) — нүүрний тайланг салбарын нэгтгэлээс тэжээх ажил хүлээгдэж байна.",
-          "blocked_by": "road.veritech.vehicle_registry"
+          "metric": "road.weekly_pax",
+          "quality": "verified"
         },
         "rail": {
           "metric": "rail.weekly_pax",
@@ -237,12 +200,6 @@
           "quality": "none",
           "label": "мэдээлэл алга",
           "would_need": "Backend-д \"sea\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/sea/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (Далайн захиргаа) хэрэгтэй, transform биш."
-        },
-        "public": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Backend-д \"transit\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/transit/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (НТГ) хэрэгтэй, transform биш."
         }
       },
       "note": "2026-10-20: агаар, төмөр замын мөр салбарын нэгтгэлийн ижил долоо хоногоос (өөрчлөлт = өмнөх долоо хоногтой). air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
@@ -269,12 +226,6 @@
           "quality": "none",
           "label": "мэдээлэл алга",
           "would_need": "Backend-д \"sea\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/sea/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (Далайн захиргаа) хэрэгтэй, transform биш."
-        },
-        "public": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Нийтийн тээвэрт ачаа хамааралгүй — энэ слот зориуд хоосон (хэмжүүр өөрөө утгагүй)."
         }
       },
       "plan": {
@@ -327,12 +278,6 @@
           "quality": "none",
           "label": "мэдээлэл алга",
           "would_need": "Backend-д \"sea\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/sea/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (Далайн захиргаа) хэрэгтэй, transform биш."
-        },
-        "public": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Нийтийн тээвэрт ачаа хамааралгүй — зориуд хоосон."
         }
       },
       "note": "2026-10-20: агаар, төмөр замын мөр салбарын нэгтгэлийн ижил долоо хоногоос (өөрчлөлт = өмнөх долоо хоногтой). air мөр — WoW хувиас weekFlightsSum(offsetWeeks=1)-тэй харьцуулсан бодит хувь. Бусад 4 мөр 0 + мэдээлэл алга."
@@ -367,12 +312,6 @@
           "quality": "none",
           "label": "мэдээлэл алга",
           "would_need": "Backend-д \"sea\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/sea/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (Далайн захиргаа) хэрэгтэй, transform биш."
-        },
-        "public": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Backend-д \"transit\" салбар бүртгэлтэй ч ЯМАР Ч эх систем холбогдоогүй — /api/sectors/transit/datasets хоосон массив, /summary no_data. Эхлээд эх сурвалж (НТГ) хэрэгтэй, transform биш."
         }
       },
       "note": "Донутын нийлбэр өөр нэгжтэй утгуудыг (км, нислэг, чиглэл) шууд нэмж тооцдог байсан тул зөвхөн verified (air) салбарыг бодит утгаар, бусдыг 0-ээр авч тооцно — 0+0+0+0+air=air тул air 100% гарна, энэ нь одоогийн бодит холболтын байдал."
@@ -594,6 +533,19 @@
       "additive": false,
       "quality": "verified",
       "period_note": "Энэ нь татсан цаг БИШ, ӨГӨГДЛИЙН сүүлийн хоног (CREATEDDATE = системд бүртгэсэн цаг нь тусдаа талбар, silver-т registered_date). rail.feed_updated_at-тай ижил зарчим."
+    },
+    "road.weekly_pax": {
+      "name": "7 хоногийн нийт зорчигчийн тоо — авто тээвэр",
+      "source": "weekSectorTotal/weekSectorReport (index.html) ← EHBackend.fetchSectorTotal → GET /api/sectors/total/history → weekly",
+      "dataset": "gold.sector_daily_total",
+      "column": "passengers (sector = road)",
+      "agg": "SUM",
+      "filter": "Сүүлийн БҮТЭН долоо хоног (Да–Ня, backend weekly.week_end) — gold.sector_daily_total. Өмнөх 7 хоногийн хувь = weekly.weeks-ийн сүүлийн хоёр долоо хоног; оны эхнээс = weekly.ytd; өмнөх оны мөн үе = weekly.prev_ytd (зөвхөн comparable салбар).",
+      "transform": "",
+      "unit": "хүн",
+      "additive": true,
+      "quality": "verified",
+      "period_note": "2026-10-21: авто тээвэр = билеттэй автобусны зорчигч (road.veritech.passengers, «Хэвийн» билет, хөдлөх өдрөөр) — салбарын нэгтгэлд (migration 024) нэмэгдсэн. Хотын доторх автобус эх сурвалжид алга. Эх сурвалж цонхоор ачаалагдсан тул цоорхойтой долоо хоногийг (/api/sectors/road/passengers/history → coverage.gaps) нийлбэрт оруулахгүй — «дутуу» гэж тэмдэглэнэ."
     }
   },
   "datasets": {
