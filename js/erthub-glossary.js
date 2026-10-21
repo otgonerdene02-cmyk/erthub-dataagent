@@ -222,11 +222,22 @@
     return { from: from, to: to, count: count, text: parts.join(' · ') };
   }
 
+  /* (5б) 7 хоногийн графикийн хугацаа — сарын бус, ӨДРИЙН муж: «Хугацаа: 2026-08-24 —
+     2026-10-18 · 8 долоо хоног». from/to = 'YYYY-MM-DD' (эхний Даваа, сүүлийн Ням).
+     Огноо буруу/хоосон бол хугацаа ЗОХИОХГҮЙ — "мэдээлэл алга". */
+  function weekSpan(from, to, nWeeks, opts) {
+    var o = opts || {};
+    var w = Object.assign({ prefix: 'Хугацаа', weeks: 'долоо хоног', none: 'мэдээлэл алга' }, o.words || {});
+    var ok = function (d) { return /^\d{4}-\d{2}-\d{2}$/.test(String(d || '')); };
+    if (!ok(from) || !ok(to) || !(nWeeks > 0)) return { from: '', to: '', count: 0, text: w.prefix + ': ' + w.none };
+    return { from: from, to: to, count: nWeeks, text: w.prefix + ': ' + from + ' — ' + to + ' · ' + nWeeks + ' ' + w.weeks };
+  }
+
   var api = {
     airPaxSplit: airPaxSplit, norm: norm, airFlightKind: airFlightKind, KIND_LABEL: KIND_LABEL, AIR_KIND: AIR_KIND,
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,
-    filterColumns: filterColumns, rowMatchesCols: rowMatchesCols, periodSpan: periodSpan
+    filterColumns: filterColumns, rowMatchesCols: rowMatchesCols, periodSpan: periodSpan, weekSpan: weekSpan
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.EHGlossary = api;

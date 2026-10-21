@@ -52,7 +52,8 @@ module.exports = async function periodProbe(d0, w0, routes, decor) {
        (б) босоо — `bottom:0` + хувийн өндөртэй багана (7 хоногийн тайлан).
        Бүлэг = ≥3 багана нийлдэг хамгийн ойрын эцэг. */
     const bars = [...d.querySelectorAll('div[style]')].filter((e) => {
-      if (e.children.length) return false;
+      /* Хүүхэдгүй, эсвэл ганц hover <title>-тэй (HV стандарт) багана */
+      if ([...e.children].some((c) => c.tagName.toUpperCase() !== 'TITLE')) return false;
       const st = e.getAttribute('style') || '', r = e.getBoundingClientRect();
       if (r.height <= 0) return false;
       /* 0%-ийн багана (жиш. «мэдээлэл алга» салбар) өргөнгүй ч жагсаалтын мөр */
