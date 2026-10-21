@@ -2563,14 +2563,54 @@
              дотор талын самбар нуугддаг тул баганын мөрүүд ЭНД гарна. -->
         <sc-for list="{{ detail.pvColFilters }}" as="cf" hint-placeholder-count="0">
           <div class="eh-fl-row" data-fl-col="{{ cf.name }}" style="display:flex;align-items:flex-start;gap:9px;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-top:8px;min-width:52px;flex-shrink:0;line-height:1.35;">{{ cf.name }}</div>
-            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;max-height:156px;overflow-y:auto;min-width:0;flex:1;">
-              <sc-for list="{{ cf.chips }}" as="cc" hint-placeholder-count="3">
-                <button sc-camel-on-click="{{ cc.pick }}" style="{{ cc.style }}">{{ cc.label }}</button>
-              </sc-for>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-top:8px;min-width:52px;max-width:150px;flex-shrink:0;line-height:1.35;">{{ cf.name }}</div>
+            <div style="display:flex;flex-direction:column;gap:7px;min-width:0;flex:1;">
+              <sc-if value="{{ cf.isChips }}">
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                <sc-for list="{{ cf.chips }}" as="cc" hint-placeholder-count="3">
+                  <button sc-camel-on-click="{{ cc.pick }}" style="{{ cc.style }}">{{ cc.label }}<span style="margin-left:6px;opacity:.62;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;">{{ cc.count }}</span></button>
+                </sc-for>
+              </div>
+              </sc-if>
+              <sc-if value="{{ cf.isSearch }}">
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                <sc-for list="{{ cf.picked }}" as="cp" hint-placeholder-count="0">
+                  <button sc-camel-on-click="{{ cp.remove }}" style="{{ cp.style }}">{{ cp.label }}</button>
+                </sc-for>
+                <input type="search" data-fl-search="{{ cf.name }}" value="{{ cf.search.value }}" sc-camel-on-input="{{ cf.search.onInput }}" placeholder="{{ cf.search.placeholder }}" style="flex:1 1 220px;min-width:0;max-width:340px;box-sizing:border-box;font-family:inherit;font-size:12.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:9px;padding:7px 11px;outline:none;">
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                <sc-for list="{{ cf.sugg }}" as="cs" hint-placeholder-count="0">
+                  <button sc-camel-on-click="{{ cs.pick }}" style="{{ cs.style }}">{{ cs.label }}<span style="margin-left:6px;opacity:.62;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;">{{ cs.count }}</span></button>
+                </sc-for>
+              </div>
+              <sc-if value="{{ cf.hasSuggNote }}"><div style="font-size:11px;color:var(--ink3);line-height:1.4;">{{ cf.suggNote }}</div></sc-if>
+              </sc-if>
             </div>
           </div>
         </sc-for>
+        <sc-if value="{{ detail.pvHasRanges }}">
+        <div class="eh-fl-row" style="display:flex;align-items:flex-start;gap:9px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-top:8px;min-width:52px;max-width:150px;flex-shrink:0;line-height:1.35;">{{ detail.pvRangesLabel }}</div>
+          <div class="eh-fl-ranges" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 18px;min-width:0;flex:1;">
+            <sc-for list="{{ detail.pvColRanges }}" as="cr" hint-placeholder-count="0">
+              <div data-fl-col="{{ cr.name }}" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                <span style="font-size:11.5px;color:var(--ink2);flex:1;min-width:0;line-height:1.3;">{{ cr.name }}</span>
+                <input type="number" data-fl-min="{{ cr.name }}" value="{{ cr.range.min }}" sc-camel-on-input="{{ cr.range.onMin }}" placeholder="{{ cr.range.phMin }}" style="width:108px;flex-shrink:0;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;outline:none;">
+                <span style="font-size:11.5px;color:var(--ink3);">—</span>
+                <input type="number" data-fl-max="{{ cr.name }}" value="{{ cr.range.max }}" sc-camel-on-input="{{ cr.range.onMax }}" placeholder="{{ cr.range.phMax }}" style="width:108px;flex-shrink:0;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;outline:none;">
+              </div>
+            </sc-for>
+            <sc-if value="{{ detail.pvRangesMore }}"><div style="display:flex;align-items:center;"><button data-fl-range-more="1" sc-camel-on-click="{{ detail.pvRangesToggle }}" style="cursor:pointer;font-family:inherit;font-size:11.5px;border-radius:999px;padding:6px 13px;border:1px dashed var(--line2);background:none;color:var(--ink3);white-space:nowrap;">{{ detail.pvRangesMoreLabel }}</button></div></sc-if>
+          </div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ detail.pvColActive }}">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <button data-fl-clear="1" sc-camel-on-click="{{ detail.pvColClear }}" style="cursor:pointer;font-family:inherit;font-size:11.5px;border-radius:999px;padding:6px 13px;border:1px dashed var(--line2);background:none;color:var(--ink2);white-space:nowrap;">{{ detail.pvColClearLabel }}</button>
+          <sc-if value="{{ detail.pvLoading }}"><span style="font-size:11px;color:var(--ink3);">{{ detail.pvLoadingLabel }}</span></sc-if>
+        </div>
+        </sc-if>
       </div>
     </sc-if>
     <sc-if value="{{ detail.ri.period.show }}">
@@ -2832,13 +2872,53 @@
           <sc-for list="{{ detail.pvColFilters }}" as="cf" hint-placeholder-count="0">
             <div class="eh-fl-row" data-fl-col="{{ cf.name }}" style="display:flex;align-items:flex-start;gap:9px;">
               <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-top:8px;width:112px;flex-shrink:0;line-height:1.35;">{{ cf.name }}:</div>
-              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;max-height:156px;overflow-y:auto;min-width:0;flex:1;">
-                <sc-for list="{{ cf.chips }}" as="cc" hint-placeholder-count="3">
-                  <button sc-camel-on-click="{{ cc.pick }}" style="{{ cc.style }}">{{ cc.label }}</button>
-                </sc-for>
+              <div style="display:flex;flex-direction:column;gap:7px;min-width:0;flex:1;">
+                <sc-if value="{{ cf.isChips }}">
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                  <sc-for list="{{ cf.chips }}" as="cc" hint-placeholder-count="3">
+                    <button sc-camel-on-click="{{ cc.pick }}" style="{{ cc.style }}">{{ cc.label }}<span style="margin-left:6px;opacity:.62;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;">{{ cc.count }}</span></button>
+                  </sc-for>
+                </div>
+                </sc-if>
+                <sc-if value="{{ cf.isSearch }}">
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                  <sc-for list="{{ cf.picked }}" as="cp" hint-placeholder-count="0">
+                    <button sc-camel-on-click="{{ cp.remove }}" style="{{ cp.style }}">{{ cp.label }}</button>
+                  </sc-for>
+                  <input type="search" data-fl-search="{{ cf.name }}" value="{{ cf.search.value }}" sc-camel-on-input="{{ cf.search.onInput }}" placeholder="{{ cf.search.placeholder }}" style="flex:1 1 220px;min-width:0;max-width:340px;box-sizing:border-box;font-family:inherit;font-size:12.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:9px;padding:7px 11px;outline:none;">
+                </div>
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                  <sc-for list="{{ cf.sugg }}" as="cs" hint-placeholder-count="0">
+                    <button sc-camel-on-click="{{ cs.pick }}" style="{{ cs.style }}">{{ cs.label }}<span style="margin-left:6px;opacity:.62;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;">{{ cs.count }}</span></button>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ cf.hasSuggNote }}"><div style="font-size:11px;color:var(--ink3);line-height:1.4;">{{ cf.suggNote }}</div></sc-if>
+                </sc-if>
               </div>
             </div>
           </sc-for>
+          <sc-if value="{{ detail.pvHasRanges }}">
+          <div class="eh-fl-row" style="display:flex;align-items:flex-start;gap:9px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-top:8px;width:112px;flex-shrink:0;line-height:1.35;">{{ detail.pvRangesLabel }}:</div>
+            <div class="eh-fl-ranges" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 18px;min-width:0;flex:1;">
+              <sc-for list="{{ detail.pvColRanges }}" as="cr" hint-placeholder-count="0">
+                <div data-fl-col="{{ cr.name }}" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                  <span style="font-size:11.5px;color:var(--ink2);flex:1;min-width:0;line-height:1.3;">{{ cr.name }}</span>
+                  <input type="number" data-fl-min="{{ cr.name }}" value="{{ cr.range.min }}" sc-camel-on-input="{{ cr.range.onMin }}" placeholder="{{ cr.range.phMin }}" style="width:108px;flex-shrink:0;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;outline:none;">
+                  <span style="font-size:11.5px;color:var(--ink3);">—</span>
+                  <input type="number" data-fl-max="{{ cr.name }}" value="{{ cr.range.max }}" sc-camel-on-input="{{ cr.range.onMax }}" placeholder="{{ cr.range.phMax }}" style="width:108px;flex-shrink:0;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;outline:none;">
+                </div>
+              </sc-for>
+              <sc-if value="{{ detail.pvRangesMore }}"><div style="display:flex;align-items:center;"><button data-fl-range-more="1" sc-camel-on-click="{{ detail.pvRangesToggle }}" style="cursor:pointer;font-family:inherit;font-size:11.5px;border-radius:999px;padding:6px 13px;border:1px dashed var(--line2);background:none;color:var(--ink3);white-space:nowrap;">{{ detail.pvRangesMoreLabel }}</button></div></sc-if>
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ detail.pvColActive }}">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button data-fl-clear="1" sc-camel-on-click="{{ detail.pvColClear }}" style="cursor:pointer;font-family:inherit;font-size:11.5px;border-radius:999px;padding:6px 13px;border:1px dashed var(--line2);background:none;color:var(--ink2);white-space:nowrap;">{{ detail.pvColClearLabel }}</button>
+            <sc-if value="{{ detail.pvLoading }}"><span style="font-size:11px;color:var(--ink3);">{{ detail.pvLoadingLabel }}</span></sc-if>
+          </div>
+          </sc-if>
         </div>
       </sc-if>
       <div style="overflow-x:auto;">
@@ -5814,7 +5894,10 @@ const ERAS=[
    EHGlossary.rowMatchesCols-той ижил (trim) харьцуулна — хүснэгт, KPI, график нэг
    нислэгийн олонлогоор тайлбарлагдана. Сүүлийн багана (Төлөв) = нислэгийн төрөл. */
 function airFlightColMatch(sel,cols){
-  const ks=Object.keys(sel||{}).filter(k=>sel[k]);
+  /* cond нь 'утга' | {in:[…]} | {min,max} — EHGlossary.condMatch (хүснэгттэй ижил дүрэм) */
+  const G=typeof EHGlossary!=='undefined'&&EHGlossary.condMatch?EHGlossary:null;
+  const on=c=>G?G.condActive(c):!!c;
+  const ks=Object.keys(sel||{}).filter(k=>on(sel[k]));
   if(!ks.length) return null;
   const last=cols.length-1;
   return f=>{
@@ -5822,7 +5905,8 @@ function airFlightColMatch(sel,cols){
     for(const k of ks){
       const ci=+k;
       const v=ci===last?(f.flightType||'Тогтмол'):(cols[ci]&&cols[ci][3]?cols[ci][3](f,d):'');
-      if(String(v==null?'':v).trim()!==String(sel[k]).trim()) return false;
+      const t=String(v==null?'':v).trim();
+      if(G?!G.condMatch(t,sel[k]):t!==String(sel[k]).trim()) return false;
     }
     return true;
   };
@@ -5836,9 +5920,12 @@ const PV_COL_EXCLUDE={air:['ОУ/Дотоод','Чиглэл','Бүс нутаг
   sector_total:['Салбарын код'],
   /* Авто тээврийн зорчигч: цагийн тэмдэг (огноо + цаг) ангилал биш — хугацааг нэгдсэн шүүлт (он/сар) шүүнэ */
   road_pax:['Хөдлөх цаг','Төлөв өөрчлөгдсөн цаг']};
-/* Олон утгатай баганыг (агаар: Хот 157, Компани 47) эхлээд хамгийн олон
-   мөртэй N утгаар товчилж, "+M бусад"-аар дэлгэнэ (CKAN facet-ийн "Show more"). */
+/* ≤N утгатай багана chip-ээр (нэг товшилт), олон утгатай нь (агаар: Хот 157,
+   Компани 47; ачаа: Өртөө 45, Ачааны нэр 90) БИЧИЖ ХАЙХ талбараар — 100+ chip-ийн
+   хана биш. Хайлтын доор эхний PV_COL_SUGGEST санал (OpenDataSoft facet search). */
 const PV_COL_TOP=12;
+const PV_COL_SUGGEST=8;
+const PV_RANGE_TOP=6;
 const DS_SCHEMA={
   /* Вагон ачилт — САЛБАРЫН биш ДАТАСЭТИЙН схем. rail-д 3 датасэт байгаа
      тул DS_SCHEMA.rail-ыг дарж бичвэл нөгөө хоёр нь худал болно. rows нь
@@ -5954,6 +6041,31 @@ function dsRowsWindow(yFrom,yTo,mFrom,mTo){
   return {from:Math.min(y0,y1)+'-'+pad(mf)+'-01',
     to:Math.max(y0,y1)+'-'+pad(mt)+'-'+pad(new Date(Date.UTC(Math.max(y0,y1),mt,0)).getUTCDate()),mFrom:mf,mTo:mt};
 }
+/* Шүүлтийн сонголтын товч бичвэр («Тээвэрлэгч: МТЗ», «Экспорт (тонн): 100–500»). */
+function pvCondText(c){
+  if(c==null||c==='') return '';
+  if(typeof c!=='object') return String(c);
+  if(Array.isArray(c.in)&&c.in.length) return c.in.length>3?c.in.slice(0,3).join(', ')+' +'+(c.in.length-3):c.in.join(', ');
+  const has=b=>c[b]!=null&&c[b]!=='';
+  if(has('min')&&has('max')) return fmtNum(+c.min)+'–'+fmtNum(+c.max);
+  if(has('min')) return '≥ '+fmtNum(+c.min);
+  if(has('max')) return '≤ '+fmtNum(+c.max);
+  return '';
+}
+/* Баганын шүүлт (түүхий хүснэгт, {баганын түлхүүр: cond}) → серверийн query.
+   ЦЭВЭР. Түлхүүрийн дарааллаар — ижил сонголт = ижил кэшийн түлхүүр.
+   {in:[…]} → in.<багана>=утга (давтана), {min,max} → min./max.<багана>. */
+function dsSrvParams(sel){
+  const q=[];
+  Object.keys(sel||{}).sort().forEach(k=>{
+    const c=sel[k];
+    if(!c||typeof c!=='object') return;
+    const e=encodeURIComponent;
+    (Array.isArray(c.in)?c.in.slice().sort():[]).forEach(v=>q.push('in.'+e(k)+'='+e(v)));
+    ['min','max'].forEach(b=>{ if(c[b]!=null&&c[b]!==''&&isFinite(+c[b])) q.push(b+'.'+e(k)+'='+e(String(+c[b]))); });
+  });
+  return q.join('&');
+}
 /* /api/datasets/:key/rows хариу → DS_SCHEMA хэлбэр. ЦЭВЭР (tests/run.js RAW).
    Мөр бүрийн сүүлд хоосон "төлөв" нүд (хүснэгтийн гэрээ) — түүхий мөрөнд
    төлөв ЗОХИОХГҮЙ, pill харагдахгүй. Сарын хүрээ (mFrom–mTo) огнооны
@@ -5973,7 +6085,8 @@ function datasetRowsToSchema(json,mFrom,mTo,noteLabel){
   const rows=json.rows.filter(inRange).map(r=>r.concat(['']));
   /* Багана шошгоо бүтэн харуулах өргөнтэй (толгой mono, том үсэг ~7.8px/тэмдэгт); олон багана бол хэвтээ гүйлгэнэ */
   const widths=cols.map((c,i)=>types[i]==='date'?106:Math.max(96,Math.min(250,Math.round(String(c.label||c.key).length*7.8+22))));
-  return {raw:true,keys:cols.map(c=>c.key),head:cols.map(c=>String(c.label||c.key)),types,widths,
+  return {raw:true,facets:json.facets&&typeof json.facets==='object'?json.facets:null,filtered:!!json.filtered,
+    keys:cols.map(c=>c.key),head:cols.map(c=>String(c.label||c.key)),types,widths,
     notes:cols.map(c=>(noteLabel||'')+(noteLabel?': ':'')+c.key),rows,
     total:+json.total||json.rows.length,loaded:json.rows.length,truncated:!!json.truncated};
 }
@@ -8782,7 +8895,7 @@ class Component extends DCLogic {
       }catch(e){}
       return 'light';
     })(),
-    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', vehTab:VEHREG_TAB_DEFAULT, globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', pvColFilter:{}, pvColMore:{}, weekTab:'pax', aiIndex:0, compareOff:'', fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'stage', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
+    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', vehTab:VEHREG_TAB_DEFAULT, globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', pvColFilter:{}, pvColTyped:{}, weekTab:'pax', aiIndex:0, compareOff:'', fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'stage', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
 
 /* ── ХАЯГ ↔ ХУУДАС ─────────────────────────────────────────────────
      Өмнө нь хуудас солигдоход хаяг ОГТ өөрчлөгддөггүй байв. Үүнээс болж:
@@ -11568,15 +11681,22 @@ class Component extends DCLogic {
        (EHGlossary.filterColumns). sc.rows солигдох хүртэл кэшлэнэ (агаар 80мянга+ мөр).
        Нэгдсэн шүүлт аль хэдийн шүүдэг баганыг давхардуулахгүй (PV_COL_EXCLUDE). */
     const G=(typeof EHGlossary!=='undefined')?EHGlossary:null;
-    if(!this._pvDimCache||this._pvDimCache.key!==schemaKey||this._pvDimCache.src!==sc.rows){
-      this._pvDimCache={key:schemaKey,src:sc.rows,
-        cols:G?G.filterColumns(sc.head,sc.types,sc.rows,{exclude:PV_COL_EXCLUDE[baseKey]}):[]};
+    /* Түүхий хүснэгт серверийн facet-тэй бол сонголт нь ЦОНХНЫ БҮТЭН датаас (sc.facets),
+       үгүй бол ачаалсан мөрөөс. Тоон багана → мин–макс, олон утгатай → бичиж хайх,
+       ижил хуваалттай давхар багана (Тээвэрлэгч ↔ Тээвэрлэгчийн нэр) → нэг. */
+    if(!this._pvDimCache||this._pvDimCache.key!==schemaKey||this._pvDimCache.src!==sc.rows||this._pvDimCache.fz!==sc.facets){
+      this._pvDimCache={key:schemaKey,src:sc.rows,fz:sc.facets,
+        cols:G?G.filterColumns(sc.head,sc.types,sc.rows,{exclude:PV_COL_EXCLUDE[baseKey],
+          facets:sc.facets||null,keys:sc.keys||null,ranges:true,dedupe:true,maxDistinct:1000,chipMax:PV_COL_TOP}):[]};
     }
     const fCols=this._pvDimCache.cols;
+    /* Сонголтын түлхүүр: түүхий мөрөнд баганын ТҮЛХҮҮР (индекс шилжиж болно), бусад нь индекс */
+    const colId=ci=>sc.raw&&sc.keys?sc.keys[ci]:String(ci);
     const colSel={};
     const selRaw=(this.state.pvColFilter||{})[schemaKey]||{};
-    fCols.forEach(c=>{ if(selRaw[c.index]) colSel[c.index]=selRaw[c.index]; });
+    fCols.forEach(c=>{ const v=selRaw[colId(c.index)]; if(G&&G.condActive(v)) colSel[c.index]=v; });
     const colSelKey=JSON.stringify(colSel);
+    const colActive=Object.keys(selRaw).some(k=>G&&G.condActive(selRaw[k]));
     // Шүүлт+эрэмбийг кэшлэнэ. Агаарын feed "Бүгд" он дээр 80мянга+ мөртэй
     // болдог тул үүнийг render бүрт (theme солих, hover, өөр ямар ч
     // setState) дахин бодвол UI мэдэгдэхүйц удаашрана. sc.rows-ийн объект
@@ -11682,32 +11802,28 @@ class Component extends DCLogic {
         style:'cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);'
           +(sf===x[0]?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);')
       })),
-      pvColFilters:fCols.map(c=>{
-        const cur=colSel[c.index]||'';
-        // Сонгосон утга шинэ датанд алга бол (он солигдсон г.м.) chip-ээ
-        // үлдээнэ — эс тэгвэл "0 мөр"-ийн шалтгаан харагдахгүй, буцааж болохгүй.
-        const all=cur&&c.values.indexOf(cur)===-1?[cur].concat(c.values):c.values;
-        const moreKey=schemaKey+'|'+c.index;
-        const open=!!(this.state.pvColMore||{})[moreKey];
-        const long=c.values.length>PV_COL_TOP;
-        // Товчлолт: давтамжаар эхний N, сонгосон утга заавал харагдана; дараа нь
-        // дэлгэсэн үеийнхтэй ижил (цагаан толгойн) дарааллаар.
-        let vals=all;
-        if(long&&!open){
-          const top=c.values.slice().sort((a,b)=>(c.counts[b]||0)-(c.counts[a]||0)).slice(0,PV_COL_TOP);
-          if(cur&&top.indexOf(cur)===-1) top.push(cur);
-          vals=all.filter(v=>top.indexOf(v)!==-1);
-        }
-        const base='cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);';
-        const chip=(label,v)=>({label,pick:()=>this.setPvColFilter(schemaKey,c.index,v),
-          style:base+(cur===v?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);')});
-        const chips=[chip(stxt('detail.col_all','Бүгд'),'')].concat(vals.map(v=>chip(v,v)));
-        if(long) chips.push({
-          label:open?stxt('detail.col_less','Хураах'):stxt('detail.col_more','+{n} бусад').replace('{n}',String(all.length-vals.length)),
-          pick:()=>this.setState(s=>({pvColMore:Object.assign({},s.pvColMore||{},{[moreKey]:!open})})),
-          style:base+'border:1px dashed var(--line2);background:none;color:var(--ink3);'});
-        return {name:c.name,chips};
-      }),
+      pvColActive:colActive,
+      pvColClear:()=>this.clearPvColFilter(schemaKey),
+      pvColClearLabel:stxt('detail.col_clear','Шүүлтийг цэвэрлэх'),
+      /* Шүүсэн хариу серверээс ирж байна (бүтэн датаар) */
+      pvLoading:!!(sc.raw&&this._dsRawPending&&colActive),
+      pvLoadingLabel:stxt('detail.col_loading','Бүтэн датаас шүүж байна…'),
+      /* Ангилал (chip/хайлт) нэг мөр бүрт; тоон хүрээ нь доор нь нягт сүлжээнд */
+      ...(()=>{
+        const ui=fCols.map(c=>this.pvColFilterUi(schemaKey,c,colId(c.index),selRaw[colId(c.index)],
+          /* Мөрийн тоо: серверийн facet = цонхны бүтэн дата; ачаалсан мөр таслагдсан бол худал тул харуулахгүй */
+          !!sc.facets||!sc.truncated));
+        const rg=ui.filter(u=>u.isRange);
+        /* Олон тоон баганатай датасэт (вагон 28) — эхний PV_RANGE_TOP, бусдыг дэлгэнэ;
+           дэлгээгүй хэсэгт идэвхтэй хязгаар байвал нээлттэй (шалтгаан нуугдахгүй) */
+        const hid=rg.slice(PV_RANGE_TOP);
+        const open=!!(this.state.pvRangeOpen||{})[schemaKey]||hid.some(u=>u.range.min!==''||u.range.max!=='');
+        return {pvColFilters:ui.filter(u=>!u.isRange),pvColRanges:open?rg:rg.slice(0,PV_RANGE_TOP),pvHasRanges:rg.length>0,
+          pvRangesLabel:stxt('detail.col_ranges','Тоон утгын хязгаар (доод — дээд)'),
+          pvRangesMore:hid.length>0,
+          pvRangesMoreLabel:open?stxt('detail.col_less','Хураах'):stxt('detail.col_more','+{n} бусад').replace('{n}',String(hid.length)),
+          pvRangesToggle:()=>this.setState(s=>({pvRangeOpen:Object.assign({},s.pvRangeOpen||{},{[schemaKey]:!open})}))};
+      })(),
       /* Нэгдсэн шүүлтийн (үзлэг) «Төлөв» мөр: сүүлийн төлөвийн багана баганын
          шүүлтэд гарсан бол ДАВХАРДУУЛАХГҮЙ — баганын шүүлт нь KPI/эрэмбийг ч
          дагуулдаг (FL3). Ерөнхий төлөв сонгогдсон үед буцаах боломжтой үлдэнэ. */
@@ -11718,19 +11834,78 @@ class Component extends DCLogic {
   /* FL — баганын шүүлтийн сонголт: датасэт (schemaKey) тус бүрд тусдаа,
      хоосон утга = "Бүгд" (түлхүүрийг хасна). */
   setPvColFilter(schemaKey,ci,v){
+    /* ci = баганын id (түүхий мөрөнд түлхүүр, бусад нь индекс); v = cond
+       ('утга' | {in:[…]} | {min,max}) — идэвхгүй бол түлхүүрийг хасна */
+    const on=typeof EHGlossary!=='undefined'&&EHGlossary.condActive?EHGlossary.condActive(v):!!v;
     this.setState(s=>{
       const all=Object.assign({},s.pvColFilter||{});
       const cur=Object.assign({},all[schemaKey]||{});
-      if(v) cur[ci]=v; else delete cur[ci];
+      if(on) cur[ci]=v; else delete cur[ci];
       all[schemaKey]=cur;
       return {pvColFilter:all,dsPage:0};
     },()=>{ if(schemaKey==='air') this.recomputeAirData(); });
+  }
+  /* Нэг баганын шүүлтийн UI — төрлөөр нь (EHGlossary.filterColumns kind):
+       chips  — олныг зэрэг сонгох chip (+ мөрийн тоо), «Бүгд» = цэвэрлэх
+       search — бичиж хайх талбар + санал (эхний PV_COL_SUGGEST, «Таарсан бүгд»),
+                сонгосон утга хасах боломжтой chip
+       range  — доод/дээд тоо (хоосон = хязгааргүй), placeholder = датаны мин/макс
+     cond-ийн хэлбэр нь {in:[…]} / {min,max} — сервер (dsSrvParams) ба клиент
+     (rowMatchesCols) ижил дүрмээр шүүнэ. */
+  pvColFilterUi(schemaKey,c,id,cond,showCount){
+    const G=EHGlossary;
+    const base='cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);';
+    const on='border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;';
+    const off='border:1px solid var(--line);background:var(--surface);color:var(--ink2);';
+    const cnt=v=>showCount&&c.counts&&c.counts[v]!=null?fmtNum(c.counts[v]):'';
+    const out={name:c.name,isChips:c.kind==='chips',isSearch:c.kind==='search',isRange:c.kind==='range',
+      chips:[],picked:[],sugg:[],hasSuggNote:false,suggNote:''};
+    if(c.kind==='range'){
+      const r=cond&&typeof cond==='object'?cond:{};
+      const set=b=>e=>{
+        const v=String(e.target.value||'').trim();
+        const nx=Object.assign({},r,{[b]:v});
+        if(v==='') delete nx[b];
+        this.setPvColFilter(schemaKey,id,Object.keys(nx).length?nx:'');
+      };
+      out.range={min:r.min==null?'':r.min,max:r.max==null?'':r.max,onMin:set('min'),onMax:set('max'),
+        phMin:stxt('detail.col_min','Доод')+' '+fmtNum(c.min),phMax:stxt('detail.col_max','Дээд')+' '+fmtNum(c.max)};
+      return out;
+    }
+    /* Сонгосон утгууд (хуучин нэг утгын хэлбэр ч) — шинэ датанд алга ч харагдана,
+       эс тэгвэл "0 мөр"-ийн шалтгаан нуугдана */
+    const picked=typeof cond==='string'&&cond?[cond]:(cond&&Array.isArray(cond.in)?cond.in:[]);
+    const put=list=>this.setPvColFilter(schemaKey,id,list.length?{in:list}:'');
+    const toggle=v=>put(picked.indexOf(v)===-1?picked.concat([v]):picked.filter(x=>x!==v));
+    if(c.kind==='chips'){
+      const vals=picked.filter(v=>c.values.indexOf(v)===-1).concat(c.values);
+      out.chips=[{label:stxt('detail.col_all','Бүгд'),count:'',pick:()=>put([]),style:base+(picked.length?off:on)}]
+        .concat(vals.map(v=>({label:v,count:cnt(v),pick:()=>toggle(v),style:base+(picked.indexOf(v)!==-1?on:off)})));
+      return out;
+    }
+    const tk=schemaKey+'|'+id;
+    const typed=(this.state.pvColTyped||{})[tk]||'';
+    const setTyped=t=>this.setState(s=>({pvColTyped:Object.assign({},s.pvColTyped||{},{[tk]:t})}));
+    out.search={value:typed,onInput:e=>setTyped(e.target.value),
+      placeholder:stxt('detail.col_search_ph','{n} утгаас бичиж хайх…').replace('{n}',fmtNum(c.values.length))};
+    out.picked=picked.map(v=>({label:v+' ✕',remove:()=>toggle(v),style:base+on}));
+    const sg=G.facetSuggest(c.values,c.counts,typed,picked,PV_COL_SUGGEST);
+    out.sugg=sg.list.map(v=>({label:v,count:cnt(v),pick:()=>{ toggle(v); if(typed) setTyped(''); },style:base+off}));
+    if(typed.trim()&&sg.total>1) out.sugg.push({label:stxt('detail.col_add_all','Таарсан бүгдийг нэмэх ({n})').replace('{n}',fmtNum(sg.total)),count:'',
+      pick:()=>{ put(picked.concat(sg.all.slice(0,1000))); setTyped(''); },style:base+'border:1px dashed var(--line2);background:none;color:var(--ink2);'});
+    if(typed.trim()&&!sg.total){ out.hasSuggNote=true; out.suggNote=stxt('detail.col_no_match','«{q}» агуулсан утга алга').replace('{q}',typed.trim()); }
+    else if(sg.total>sg.list.length){ out.hasSuggNote=true;
+      out.suggNote=stxt('detail.col_sugg_more','Эхний {n} нь харагдаж байна — нарийсгахын тулд бичнэ үү').replace('{n}',String(sg.list.length)); }
+    return out;
   }
   clearPvColFilter(schemaKey){
     this.setState(s=>{
       const all=Object.assign({},s.pvColFilter||{});
       delete all[schemaKey];
-      return {pvColFilter:all,dsPage:0};
+      /* Хайлтын талбарт бичсэн (сонгоогүй) текст ч арилна */
+      const typed={};
+      Object.keys(s.pvColTyped||{}).forEach(k=>{ if(k.indexOf(schemaKey+'|')!==0) typed[k]=s.pvColTyped[k]; });
+      return {pvColFilter:all,pvColTyped:typed,dsPage:0};
     },()=>{ if(schemaKey==='air') this.recomputeAirData(); });
   }
   /* FL3 — хүснэгтийн баганын шүүлт KPI/графикт: идэвхтэй сонголт ба таарсан
@@ -11748,7 +11923,10 @@ class Component extends DCLogic {
     const schemaKey=sc.raw?baseKey+'__raw':baseKey;
     const selRaw=(this.state.pvColFilter||{})[schemaKey]||{};
     const dc=this._pvDimCache&&this._pvDimCache.key===schemaKey?this._pvDimCache.cols:null;
-    const ks=Object.keys(selRaw).filter(k=>selRaw[k]&&(!dc||dc.some(c=>String(c.index)===k)));
+    /* Сонголтын id → баганын индекс (түүхий мөрөнд id = баганын түлхүүр) */
+    const idx=k=>sc.raw&&sc.keys?sc.keys.indexOf(k):+k;
+    const ks=Object.keys(selRaw).filter(k=>EHGlossary.condActive(selRaw[k])&&idx(k)>=0&&(!dc||dc.some(c=>c.index===idx(k))))
+      .map(k=>({k,i:idx(k)}));
     if(!ks.length) return none;
     /* Түүхий мөр: хамрах түлхүүр нь зарласан багана. Таслагдсан (сүүлийн N мөр)
        бол KPI-г ХАМРУУЛАХГҮЙ — ачаалсан хэсгээс гаргасан түлхүүр бүтэн хугацааг
@@ -11768,7 +11946,7 @@ class Component extends DCLogic {
           summary:(sc.head[ki]||'')+': '+selRaw[ki]};
       }
     }
-    const sel={}; ks.forEach(k=>{ sel[k]=selRaw[k]; });
+    const sel={}; ks.forEach(o=>{ sel[o.i]=selRaw[o.k]; });
     const ck=schemaKey+'|'+JSON.stringify(sel);
     const c=this._pvScopeCache;
     if(!c||c.ck!==ck||c.src!==sc.rows){
@@ -11777,7 +11955,7 @@ class Component extends DCLogic {
       this._pvScopeCache={ck,src:sc.rows,keys};
     }
     return {active:true,schemaKey,sel,keys:this._pvScopeCache.keys,
-      summary:ks.map(k=>(sc.head[k]||'')+': '+sel[k]).join(' · ')};
+      summary:ks.map(o=>(sc.head[o.i]||'')+': '+pvCondText(sel[o.i])).join(' · ')};
   }
   pvScopeKeys(){
     return this.pvColScope(DATASETS[this.state.dsIndex]||DATASETS[0]).keys;
@@ -11987,19 +12165,55 @@ class Component extends DCLogic {
     const w=this.dsRowsWin(dsel.source);
     const wk=key+'|'+w.from+'|'+w.to;
     const c=this._dsRows||(this._dsRows={});
-    if(!(wk in c)){
-      c[wk]=undefined;
-      EHBackend.fetchDatasetRows(key,w.from,w.to,DS_ROWS_LIMIT).then(j=>{
-        c[wk]=j||null;
-        this.setState(s=>({dsRowsVer:(s.dsRowsVer||0)+1}));
+    /* Facet (шүүлтийн сонголт) — цонх бүрд НЭГ удаа, эхний хариутай хамт. null =
+       backend facet дэмждэггүй (хуучин) → шүүлт ачаалсан мөр дээр (өмнөх шиг). */
+    const fz=this._dsFacets||(this._dsFacets={});
+    const last=this._dsRowsLast||(this._dsRowsLast={});
+    /* Баганын шүүлт СЕРВЕР талд: ачаалсан 5,000 мөрөөс гадуурх утга (МТЗ) ч
+       бүтэн датаас шүүгдэнэ. Сонголт pvColFilter[<схем>__raw]-д баганын
+       ТҮЛХҮҮРЭЭР (шүүсэн хариунд хоосон багана хасагдаж индекс шилждэг). */
+    const ps=fz[wk]?dsSrvParams((this.state.pvColFilter||{})[(dsel.schema||dsel.sector)+'__raw']):'';
+    const rk=wk+'|'+ps;
+    const bump=()=>this.setState(s=>({dsRowsVer:(s.dsRowsVer||0)+1}));
+    /* Facet ТУСДАА хүсэлт (limit=1): үзлэгийн 910k мөр дээр анх ~10 сек (сервер
+       10 мин кэшлэнэ) — хүснэгтийн мөр түүнийг хүлээхгүй. */
+    const fzp=this._dsFacetsPend||(this._dsFacetsPend={});
+    if(!(wk in fz)&&!fzp[wk]){
+      fzp[wk]=true;
+      EHBackend.fetchDatasetRows(key,w.from,w.to,1,{facets:true}).then(j=>{
+        fz[wk]=j&&j.facets&&typeof j.facets==='object'?j.facets:null;
+        bump();
       });
     }
-    const j=c[wk];
+    const go=()=>{
+      c[rk]=undefined;
+      EHBackend.fetchDatasetRows(key,w.from,w.to,DS_ROWS_LIMIT,{params:ps}).then(j=>{
+        c[rk]=j||null;
+        if(j) last[wk]=rk;
+        bump();
+      });
+    };
+    if(!(rk in c)){
+      /* Бичих/тоо оруулах явцад хүсэлт бүр явуулахгүй — 350мс тогтворжсоны дараа */
+      if(!ps) go();
+      else if(this._dsRowsPend!==rk){
+        this._dsRowsPend=rk;
+        clearTimeout(this._dsRowsT);
+        this._dsRowsT=setTimeout(()=>{ this._dsRowsPend=null; if(!(rk in c)) go(); },350);
+      }
+    }
+    /* Шүүсэн хариу ирэх хүртэл өмнөх хариуг харуулна (клиент шүүлт түүн дээр) */
+    const j=c[rk]||(last[wk]?c[last[wk]]:null);
+    this._dsRawPending=c[rk]===undefined;
     if(!j) return null;
     const note=stxt('detail.raw_field_note','Эх талбар');
     const sk=wk+'|'+w.mFrom+'|'+w.mTo+'|'+note;
-    if(!this._dsRawSc||this._dsRawSc.k!==sk||this._dsRawSc.j!==j)
-      this._dsRawSc={k:sk,j,sc:datasetRowsToSchema(j,w.mFrom,w.mTo,note)};
+    const fzw=fz[wk]||null;
+    if(!this._dsRawSc||this._dsRawSc.k!==sk||this._dsRawSc.j!==j||this._dsRawSc.fz!==fzw){
+      const sc=datasetRowsToSchema(j,w.mFrom,w.mTo,note);
+      if(sc) sc.facets=fzw;
+      this._dsRawSc={k:sk,j,fz:fzw,sc};
+    }
     return this._dsRawSc.sc;
   }
   paxTableSchema(){
