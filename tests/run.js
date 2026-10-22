@@ -7865,6 +7865,69 @@ function groupUI() {
   }
 }
 
+/* DG-P16–P18. Хугацааны мөрийн БҮРДЭЛ — жинхэнэ хөтчөөр хуудас бүрийг фикстурын
+   өгөгдөлтэй (?fx=1) зурж, график/диаграм/эрэмбийн жагсаалт БҮР [data-chart-period]
+   мөртэй эсэхийг tests/lib/period-probe.js-ээр тулгана. Шинэ карт нэмээд мөрөө
+   мартвал энд унана (DG-P8-ийн тоо зөвхөн темплейтийг тоолдог). */
+async function groupDGP() {
+  group('DG-P. Графикийн хугацааны мөр — бүх хуудсанд (хөтөч)');
+  if (!CHROME) { skipped('DG-P16–P18 (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
+  const probe = require(path.join(ROOT, 'tests', 'lib', 'period-probe.js'));
+  const conP = readJson('content.json');
+  const slugP = (d) => d.sector + '__' + String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  const base = '/index.html?fx=1#/';
+  const routes = [base, base + '|[data-sector-tab="air"]', base + '|[data-sector-tab="rail"]',
+    base + 'browse', base + 'community', base + 'history', base + 'news',
+    base + 'vehreg/ops', base + 'vehreg/structure', base + 'vehreg/fuel', base + 'vehreg/plate']
+    .concat((conP.site.datasets || []).map((d) => base + 'browse/' + encodeURIComponent(slugP(d))));
+  const DECOR = ['ErtHub AI CORE', 'НЭЭЛТТЭЙ ӨГӨГДӨЛ', 'COMMUNITY', 'САЛБАРЫН ТҮҮХ', 'ШИНЭЧЛЭЛ', 'Монголын зам'];
+  const run = (rs) => runProbe('async function(d,w){return (' + probe.toString() + ')(d,w,' +
+    JSON.stringify(rs) + ',' + JSON.stringify(DECOR) + ')}', 60000 + rs.length * 15000);
+  const srv = serve();
+  try {
+    PROBE_SRC = base;
+    const R = await run(routes);
+    if (R.__err) { bad('DG-P16. Хугацааны проб ажиллав', R.__err); return; }
+    const errs = Object.keys(R).filter((k) => !Array.isArray(R[k])).map((k) => k + ': ' + R[k].__err);
+    check('DG-P16. Бүх хуудас ачаалагдав (' + routes.length + ')', errs.length === 0, errs.join(' | '));
+    const all = [].concat(...Object.keys(R).filter((k) => Array.isArray(R[k])).map((k) => R[k].map((r) => ({ ...r, route: decodeURIComponent(k) }))));
+    const miss = all.filter((r) => !r.ok).map((r) => r.route.replace('/index.html?fx=1#/', '') + ' → ' + r.kind + ' «' + r.title.slice(0, 50) + '»');
+    /* Хоосон ногоон БИШ: фикстураар одоо 57 карт зурагддаг — хэт цөөн бол проб эвдэрсэн */
+    check('DG-P16. График/жагсаалт хангалттай олон шалгагдав (' + all.length + ' ≥ 50)', all.length >= 50, 'n=' + all.length);
+    check('DG-P16. Хугацааны мөргүй график/жагсаалт АЛГА', miss.length === 0, miss.slice(0, 8).join(' | '));
+    const junk = all.filter((r) => r.ok && (/undefined|NaN|null/.test(r.period) || !/Хугацаа: /.test(r.period))).map((r) => r.period);
+    check('DG-P16. Мөрийн текст «Хугацаа: …», NaN/undefined алга', junk.length === 0, junk.slice(0, 4).join(' | '));
+    const rowsOf = (frag) => all.filter((r) => r.route.indexOf(frag) >= 0 && r.ok);
+    /* DG-P17. Утгад тохирсон хугацаа: хоногийн цуваа → «N хоног», сарын цуваа → «N сар» */
+    const road = rowsOf('road__');
+    check('DG-P17. Үзлэг: 30 хоногийн цуваа «хоног»-оор, бусад нь сараар/хоногоор (' + road.length + ' карт)',
+      road.length >= 5 && road.some((r) => /· \d+ хоног$/.test(r.period)) && road.some((r) => /· \d+ сар/.test(r.period)),
+      road.map((r) => r.period).join(' | '));
+    const tot = rowsOf('нэгтгэл');
+    check('DG-P17. Ачааны нэгтгэл: 7 хоног / 8 долоо хоног хоногийн мужаар',
+      tot.filter((r) => /· \d+ хоног/.test(r.period)).length >= 2, tot.map((r) => r.period).join(' | '));
+    const home = rowsOf('#/') .filter((r) => r.route === '/index.html?fx=1#/');
+    check('DG-P17. Нүүр: 7 хоногийн тайлан «7 хоног» (нэгтгэлтэй бол «N долоо хоног»), индекс/эрэмбэ сараар',
+      home.some((r) => /· (7 хоног|\d+ долоо хоног)$/.test(r.period)) && home.some((r) => /· \d+ сар/.test(r.period)),
+      home.map((r) => r.period).join(' | '));
+
+    /* DG-P18. Шалгагч өөрөө: үзлэгийн 30 хоногийн мөрийг хассан хуулбар дээр УНАХ ёстой */
+    const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const broken = src.replace(/[^\n]*\{\{ detail\.ri\.perDaily \}\}[^\n]*\n/, '');
+    if (broken === src) { bad('DG-P18. Эвдэх мөр олдлоо', 'perDaily мөр алга'); return; }
+    SERVE_OVERRIDE = { '/index.html': broken };
+    const roadRoute = routes.find((r) => r.indexOf('road__') >= 0);
+    const B = await run([roadRoute]);
+    const bRows = Array.isArray(B[roadRoute]) ? B[roadRoute] : [];
+    check('DG-P18. Мөр хасагдсан хуулбар дээр проб «хугацаагүй» гэж барина',
+      bRows.some((r) => !r.ok), JSON.stringify(B).slice(0, 200));
+  } finally {
+    SERVE_OVERRIDE = null;
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ── RPX. Авто тээврийн зорчигч тээврийн мэдээ (roadPax · Veritech 15401437) ──────────
    Гараар бодох фикстур (нүдээр "зөв харагдана" гэж батлахгүй):
      2025-08 бүтэн 31/31: Хот 250 · Улс 50 = 300 (буцаалт Хот 20 · Улс 10)
@@ -8100,11 +8163,15 @@ function groupDG() {
      шүүлт солигдоход хугацаа өөрчлөгдөхгүй. */
   const idxP = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const nPer = (idxP.match(/data-chart-period="1"/g) || []).length;
-  /* 22 = rail freight 4 + wagon 4 + pax 5 + агаар 8 (донут ОУ/ОН, улсын жагсаалт, тээвэрлэгчийн зах зээл,
-     ачааны жагсаалт, газрын зураг, treemap, сарын зорчигч, сарын ачаа) + трендийн карт 1;
+  /* 45 = rail freight 4 + wagon 4 + pax 5 + агаар 8 (донут ОУ/ОН, улсын жагсаалт, тээвэрлэгчийн зах зээл,
+     ачааны жагсаалт, газрын зураг, treemap, сарын зорчигч, сарын ачаа) + трендийн карт 1
+     + үзлэг 6 (нэгтгэл, газрын зураг, аймаг, 30 хоног, шалтгаан, гариг)
+     + ачааны нэгтгэл 6 (7 хоногийн тайлан, 2 донут, 8 долоо хоног, тээвэрлэгч ×2 салаа)
+     + нүүр 6 (w2p, w2c, t05, d05, i06, r06)
+     + салбарын нэгтгэл 5 (7 хоногийн карт, 8 долоо хоног, сараар — хэмжүүр бүрт sc-for; эзлэх хувь, өмнөх оны мөн үе).
      + авто тээврийн зорчигч 10 (7 хоногийн тайлан, төрлийн донут, төрлийн карт (sc-for), сарын график,
-     харьцаа, чиглэл, тээвэрлэгч, суваг, ангилал, ТХ) = 32 */
-  check('DG-P8. Хугацааны мөр: rail freight 4 + wagon 4 + pax 5 + агаар 8 + тренд 1 + авто зорчигч 10 = 32 карт', nPer === 32, 'n=' + nPer);
+     харьцаа, чиглэл, тээвэрлэгч, суваг, ангилал, ТХ). Бүрдлийг DG-P16 браузераар тулгана. */
+  check('DG-P8. Хугацааны мөр: 22 + үзлэг 6 + ачааны нэгтгэл 6 + нүүр 6 + салбарын нэгтгэл 5 + авто зорчигч 10 = 55 карт', nPer === 55, 'n=' + nPer);
   check('DG-P8. Тус бүр өгөгдлөөс уншина (chartPeriod / airPeriod биндинг)',
     /chartPeriod:chartPeriodText\(m,T\)/.test(idxP) && /airPeriod:chartPeriodText\(/.test(idxP) &&
     /{{ detail.chartPeriod }}/.test(idxP) && /{{ detail.airPeriod }}/.test(idxP));
@@ -8124,6 +8191,61 @@ function groupDG() {
     /\.filter\(\(_,i\)=>i\+1>=\(filters\.monthFrom\|\|1\)&&i\+1<=\(filters\.monthTo\|\|12\)\)/.test(idxP));
   check('DG-P10. Тренд картын хугацаа: detail.trendPeriod биндинг + c1dYear (агаар ч)',
     /trendPeriod:dsTrendPeriod/.test(idxP) && /{{ detail.trendPeriod }}/.test(idxP) && /SECTORS.air.c1dYear=year/.test(idxP));
+
+  /* DG-P11. Олон дутуу сар (вагон: эх сурвалжийн цоорхой 2025-12 + одоогийн сар) —
+     ганц «дутуу сар» гэвэл зөвхөн сүүлийн сар дутуу мэт уншигдана. */
+  check('DG-P11. 2 дутуу сар → «2 дутуу сар»; огноотой бол «(сүүлийнх … хүртэл)»',
+    G.periodSpan(['2025-12','2026-10'],{partialCount:2}).text === 'Хугацаа: 2025-12 — 2026-10 · 11 сар · 2 дутуу сар' &&
+    G.periodSpan(['2025-12','2026-10'],{partialCount:2,partialTo:'2026-10-19'}).text === 'Хугацаа: 2025-12 — 2026-10 · 11 сар · 2 дутуу сар (сүүлийнх 2026-10-19 хүртэл)',
+    G.periodSpan(['2025-12','2026-10'],{partialCount:2,partialTo:'2026-10-19'}).text);
+  check('DG-P11. partialTo нь СҮҮЛИЙН дутуу сарынх (find биш filter().pop())',
+    (idxP.match(/partialTo:\(ms\.filter\(m=>m\.partial\)\.pop\(\)\|\|\{\}\)\.last_date/g) || []).length === 3);
+  /* DG-P12. Нэг хоногийн агшин (вагоны «Салбарын бүтэц») — сарын хүрээ биш */
+  check('DG-P12. asOf → «Хугацаа: 2026-10-19 · сүүлийн бүрэн хоног»',
+    G.periodSpan([],{asOf:'2026-10-19'}).text === 'Хугацаа: 2026-10-19 · сүүлийн бүрэн хоног');
+  check('DG-P12. «Салбарын бүтэц» картын хугацаа rankPeriod-оос (агаар + вагоны _rankAsOf)',
+    /{{ detail.rankPeriod }}/.test(idxP) && /SECTORS\.rail\._rankAsOf=w\.date/.test(idxP) && /rankPeriod:isAirDetail\?/.test(idxP));
+  /* DG-P13. EMP: цуваагүй трендийн картыг утгатай картын хажууд зурахгүй */
+  check('DG-P13. Хоосон трендийн карт нуугдана (showTrendCard), мөр нэг баганатай (data-solo)',
+    /<sc-if value="{{ detail.showTrendCard }}">/.test(idxP) && /data-solo="{{ detail.trendRankSolo }}"/.test(idxP) &&
+    /showTrendCard:dsHasTrend\|\|rankEmptyNow&&!paxChannelsNow/.test(idxP));
+
+  /* DG-P14. Хоногийн муж (7 хоногийн тайлан, 30 хоногийн цуваа) — сарын хүрээ биш.
+     2026-10-12..18 = 7 календарийн хоног; сарын зааг: 2026-09-21..10-19 = 29 хоног. */
+  check('DG-P14. dayFrom/dayTo → «Хугацаа: 2026-10-12 — 2026-10-18 · 7 хоног»',
+    G.periodSpan([], { dayFrom: '2026-10-12', dayTo: '2026-10-18' }).text === 'Хугацаа: 2026-10-12 — 2026-10-18 · 7 хоног',
+    G.periodSpan([], { dayFrom: '2026-10-12', dayTo: '2026-10-18' }).text);
+  check('DG-P14. Сарын зааг давсан муж: 2026-09-21 — 2026-10-19 = 29 хоног; урвуу дарааллыг эрэмбэлнэ',
+    G.periodSpan([], { dayFrom: '2026-10-19', dayTo: '2026-09-21' }).count === 29 &&
+    G.periodSpan([], { dayFrom: '2026-10-19', dayTo: '2026-09-21' }).from === '2026-09-21');
+  check('DG-P14. Ганц хоног → «1 хоног»; эвдэрсэн огноо → «мэдээлэл алга» (зохиохгүй)',
+    G.periodSpan([], { dayFrom: '2026-10-19', dayTo: '2026-10-19' }).text === 'Хугацаа: 2026-10-19 · 1 хоног' &&
+    G.periodSpan([], { dayFrom: '2026-10', dayTo: 'x' }).text === 'Хугацаа: мэдээлэл алга');
+  check('DG-P14. asOf-ийн үгийг солино (үзлэг: «хоногийн мэдээ» — бүрэн хоног гэж батлахгүй)',
+    G.periodSpan([], { asOf: '2026-10-19', words: { day: 'хоногийн мэдээ' } }).text === 'Хугацаа: 2026-10-19 · хоногийн мэдээ');
+  /* DG-P14. Долоо хоногийн цуваа (нүүрний 7 хоногийн график нэгтгэлтэй үед, салбарын нэгтгэлийн 8 долоо хоног):
+     2026-08-24 (Да) — 2026-10-18 (Ня) = 8 долоо хоног — «56 хоног» биш */
+  const cptM = idxP.match(/\nfunction chartPeriodText\(m,T\)\{([\s\S]*?)\n\}/);
+  const CPT14 = cptM ? new Function('EHGlossary', 'm', 'T', cptM[1]) : null;
+  const tW = (k, fb) => fb;
+  check('DG-P14. chartPeriodText(nWeeks) → «Хугацаа: 2026-08-24 — 2026-10-18 · 8 долоо хоног»; nWeeks-гүй бол хоног хэвээр',
+    !!CPT14 && CPT14(G, { dayFrom: '2026-08-24', dayTo: '2026-10-18', nWeeks: 8 }, tW) === 'Хугацаа: 2026-08-24 — 2026-10-18 · 8 долоо хоног' &&
+    CPT14(G, { dayFrom: '2026-10-12', dayTo: '2026-10-18' }, tW) === 'Хугацаа: 2026-10-12 — 2026-10-18 · 7 хоног' &&
+    CPT14(G, { dayFrom: '', dayTo: '2026-10-18', nWeeks: 8 }, tW) === 'Хугацаа: мэдээлэл алга',
+    cptM ? CPT14(G, { dayFrom: '2026-08-24', dayTo: '2026-10-18', nWeeks: 8 }, tW) : 'chartPeriodText олдсонгүй');
+  /* DG-P15. Шинэ картууд ӨӨРИЙН загвараас уншина (хатуу текст биш) */
+  check('DG-P15. Үзлэг: аймаг/шалтгаан = шүүлтийн сарууд эсвэл СҮҮЛИЙН хоног; 30 хоног = byDay муж',
+    /ri\.perAim=PM\?perMonths:perLatest/.test(idxP) && /ri\.perDaily=perDays/.test(idxP) &&
+    /{{ detail\.ri\.perDaily }}/.test(idxP) && /{{ detail\.ri\.perAim }}/.test(idxP) && /{{ detail\.ri\.perPeriod }}/.test(idxP));
+  check('DG-P15. Ачааны нэгтгэл: 7 хоног / оны эхнээс / 8 долоо хоног тус бүр өөрийн муж',
+    /perWeek=chartPeriodText\(\{dayFrom:last\.week_start,dayTo:last\.week_end\}/.test(idxP) &&
+    /{{ detail\.freightTotPerYtd }}/.test(idxP) && /{{ detail\.freightTotPerWeeks }}/.test(idxP));
+  check('DG-P15. Нүүр: 7 хоног = lastFullWeekWindow(0) (нэгтгэлтэй бол долоо хоногийн цуваа), i06/r06 = compareWindow, t05 = зурсан цуваа',
+    /const wWin=!stW&&realDaily\?this\.lastFullWeekWindow\(0\):null/.test(idxP) && /nWeeks:stW\.weeks\.length/.test(idxP) && /comparePeriod:chartPeriodText\(cw\.year\?/.test(idxP) &&
+    /{{ weekPaxPeriod }}/.test(idxP) && /{{ trendPeriod }}/.test(idxP) && /{{ donut\.period }}/.test(idxP) &&
+    (idxP.match(/{{ comparePeriod }}/g) || []).length === 2);
+  check('DG-P15. Хугацаанаас чөлөөлсөн элемент бүр ШАЛТГААНтай (data-period-exempt="…")',
+    (idxP.match(/data-period-exempt="[^"]{8,}"/g) || []).length === (idxP.match(/data-period-exempt=/g) || []).length);
 
   check('DG-P6. Текст overrides (words) — монгол үгийг орлуулж болно',
     G.periodSpan(['2024-01'], { words: { prefix: 'Period', months: 'mo' } }).text === 'Period: 2024-01 · 1 mo');
@@ -8230,6 +8352,7 @@ function groupDG() {
     const ctx = (live) => ({
       visibleSectorKeys: () => ['air', 'rail', 'road'],
       valueFromSpec: () => null,
+      homeSectorPeriod: (k) => 'Хугацаа: ' + (k || 'мэдээлэл алга'),
       kpiVerified: (w, k) => live.includes(k)
     });
     const one = mkD.call(ctx(['air']), 'air');
@@ -9073,11 +9196,14 @@ function groupST() {
       road: { label: 'Авто зам', kpis: [['x', '9']] }, water: { label: 'Ус, далайн тээвэр', kpis: [['x', '1']] } };
     const NE = { air: '#1', rail: '#2', road: '#3', water: '#4' };
     const st = (p, x) => x;
-    const SHARE = new Function('SECTORS', 'NEON', 'stxt', 'sectorTotalModel', 'return function(keys){' + mS[1] + '}')(SEC, NE, st, L.sectorTotalModel);
+    /* DG-P: index.html-ийн chartPeriodText-тэй ижил (periodSpan) — донутын хугацааны мөрийг шалгана */
+    const GL = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+    const CPT = (m) => GL.periodSpan((m && m.periodKeys) || [], { dayFrom: m && m.dayFrom, dayTo: m && m.dayTo, partialTo: m && m.partialTo, partialCount: m && m.partialN }).text;
+    const SHARE = new Function('SECTORS', 'NEON', 'stxt', 'sectorTotalModel', 'chartPeriodText', 'return function(keys){' + mS[1] + '}')(SEC, NE, st, L.sectorTotalModel, CPT);
     const D = new Function('SECTORS', 'NEON', 'stxt', 'EHGlossary', 'return function(activeKey){' + mD[1] + '}')(SEC, NE, st, require(path.join(ROOT, 'js', 'erthub-glossary.js')));
     const apiW = Object.assign({}, API, { weekly: { passengers: { ytd: { year: 2026, from: '2026-01-01', to: '2026-10-18', by_sector: { air: { value: 100 }, rail: { value: 300 } } } } } });
     const ctx = (api, meas) => ({ state: { d05Measure: meas }, setState() {}, visibleSectorKeys: () => ['road', 'rail', 'air', 'water'],
-      valueFromSpec: () => null, kpiVerified: (w, k) => k === 'air', sectorTotalData: () => api,
+      valueFromSpec: () => null, kpiVerified: (w, k) => k === 'air', sectorTotalData: () => api, homeSectorPeriod: () => 'Хугацаа: KPI',
       sectorShareFromTotal(keys) { return SHARE.call(this, keys); } });
     const d = D.call(ctx(apiW, 'passengers'), 'road');
     const pct = k => (d.arcs.find(x => x.label === SEC[k].label) || {}).pctText;
@@ -9087,6 +9213,8 @@ function groupST() {
     check('ST14. d05: хугацаа + хэмжүүр нэрлэгдсэн, мэдээгүй салбар жагсаагдсан; идэвхтэй (авто) мэдээгүй бол төвд хамгийн том салбар',
       /2026 оны эхнээс \(01\.01–10\.18\)/.test(d.note) && /зорчигчоор/.test(d.note) && /Авто зам, Ус, далайн тээвэр — мэдээлэл алга/.test(d.note) &&
       d.activeName === 'Төмөр зам' && d.activePctLabel === '75%' && d.hasMeasure && d.measureChips.length === 2, d.note + ' | ' + d.activeName);
+    check('ST13. d05 хугацааны мөр (DG-P) = нэгтгэлийн оны эхнээс муж: «2026-01-01 — 2026-10-18 · 291 хоног»',
+      d.period === 'Хугацаа: 2026-01-01 — 2026-10-18 · 291 хоног', d.period);
     const dF = D.call(ctx(API, 'freight_tonnes'), 'rail');
     check('ST15. d05 «Ачаа» (weekly алга → сүүлийн оны сарын нэгтгэл): төмөр зам 1700/1704 т',
       (dF.arcs.find(x => x.label === 'Төмөр зам') || {}).pct === (1700 / 1704 * 100).toFixed(1) && /2026 он/.test(dF.note) && /ачаагаар/.test(dF.note),
@@ -9194,7 +9322,7 @@ function groupWK() {
   const SECTOR_DELTA = { pax: ['road', 'rail', 'air', 'water'].map(k => [k, '—', '', 0]), cargo: ['road', 'rail', 'air', 'water'].map(k => [k, '—', '', 0]) };
   const weekAxis = new Function(mA[0] + '\nreturn weekAxis;')();
   const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
-  const mk = new Function('WEEK_LABELS', 'weekAxis', 'stxt', 'EHChart', 'EHGlossary', 'SECTORS', 'GLYPH', 'NEON', 'SECTOR_DELTA', 'stPct', 'weeklyAir',
+  const mk = new Function('WEEK_LABELS', 'weekAxis', 'stxt', 'EHChart', 'EHGlossary', 'SECTORS', 'GLYPH', 'NEON', 'SECTOR_DELTA', 'stPct', 'weeklyAir', 'chartPeriodText',
     'return function(){' + mB[0].replace(/\n    const wPax=buildWeek\($/, '') + '\nreturn buildWeek;}');
   const wst = new Function('weekSectorReport', 'return function(wt,widgetId){' + mT[1] + '}')(L.weekSectorReport);
   const REGQ = { w2p: ['air', 'rail'], w2pb: ['air', 'rail'], w2px: ['air', 'rail'], w2c: ['air', 'rail'], w2cb: ['air', 'rail'], w2cx: ['air', 'rail'] };
@@ -9205,7 +9333,10 @@ function groupWK() {
     sectorTotalData: () => api, weekSectorTotal: wst });
   const AIR = { pax: 1234, cargo: 5, paxDeltaPct: 5, cargoDeltaPct: -2, dailyPax: [1, 2, 3, 4, 5, 6, 7], dailyCargo: [1, 1, 1, 1, 1, 1, 1],
     dailyLabels: ['10.12', '10.13', '10.14', '10.15', '10.16', '10.17', '10.18'] };
-  const BW = (api, regq, air, spec) => mk(['x'], weekAxis, (p, x) => x, { accessor: () => (f) => f.pax }, G, SECTORS, GLYPH, NEON, SECTOR_DELTA, L.stPct, air)
+  /* DG-P: сайтын chartPeriodText (нэгтгэлд долоо хоногийн цуваа → «N долоо хоног») */
+  const cptWK = read('index.html').match(/\nfunction chartPeriodText\(m,T\)\{([\s\S]*?)\n\}/);
+  const CPTWK = (m, T) => new Function('EHGlossary', 'm', 'T', cptWK[1])(G, m, T);
+  const BW = (api, regq, air, spec) => mk(['x'], weekAxis, (p, x) => x, { accessor: () => (f) => f.pax }, G, SECTORS, GLYPH, NEON, SECTOR_DELTA, L.stPct, air, CPTWK)
     .call(ctx(api, regq, spec));
   const P = BW(API, REGQ, AIR)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
   const sh = k => P.share.find(x => x.label === k), dl = k => P.delta.find(x => x.label === SECTORS[k].label);
@@ -9224,6 +9355,8 @@ function groupWK() {
     JSON.stringify(P.bars.map(x => [x.label, x.value])) === '[["10.05","400"],["10.12","500"]]' &&
     P.bars[1].tip === '10.12–10.18 — 500 хүн' && P.bars[1].isPeak && /долоо хоногийн эхний өдөр/.test(P.base) && /дундаж 450/.test(P.avgRef.label),
     JSON.stringify(P.bars) + ' ' + P.base);
+  check('WK10. Хугацааны мөр (DG-P) = баганын долоо хоногууд: «· 2 долоо хоног» (хоногийн тоо биш)',
+    /^Хугацаа: \d{4}-10-05 — \d{4}-10-18 · 2 долоо хоног$/.test(P.period), P.period);
   const P1 = BW(API, Object.assign({}, REGQ, { w2p: ['air'], w2px: ['air'] }), AIR)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
   check('WK11. Бүртгэлээс төмөр замыг салгавал (w2p/w2px) нийт = агаар 150, мөр «мэдээлэл алга» — админ ба сайт нэг дүрэм',
     P1.total === '150' && /мэдээлэл алга/.test(P1.delta.find(x => x.label === 'Төмөр зам').mockTag) && /Зөвхөн агаар/.test(P1.airOnlyNote),
@@ -9303,7 +9436,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=I3')) { await groupI3(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
-  else if (process.argv.includes('--only=DG')) { groupDG(); }
+  else if (process.argv.includes('--only=DG')) { groupDG(); await groupDGP(); }
   else if (process.argv.includes('--only=FL')) { await groupFL(); }
   else if (process.argv.includes('--only=AF')) { await groupAF(); }
   else if (process.argv.includes('--only=UI')) { groupUI(); }
@@ -9315,7 +9448,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupFR(); groupST(); groupWK(); groupRPX(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupFR(); groupST(); await groupDGP(); groupWK(); groupRPX(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));

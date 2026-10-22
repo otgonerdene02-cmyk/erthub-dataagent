@@ -279,7 +279,21 @@
      Сарын түлхүүр хоосон бол хугацаа ЗОХИОХГҮЙ — "мэдээлэл алга". */
   function periodSpan(keys, opts) {
     var o = opts || {};
-    var w = Object.assign({ prefix: 'Хугацаа', months: 'сар', partial: 'дутуу сар', through: 'хүртэл', none: 'мэдээлэл алга', dropped: 'дутуу сар хасагдсан' }, o.words || {});
+    var w = Object.assign({ prefix: 'Хугацаа', months: 'сар', partial: 'дутуу сар', through: 'хүртэл', none: 'мэдээлэл алга', dropped: 'дутуу сар хасагдсан', last: 'сүүлийнх', day: 'сүүлийн бүрэн хоног', days: 'хоног' }, o.words || {});
+    /* Нэг хоногийн агшин (жиш. вагоны «Салбарын бүтэц» = сүүлийн бүрэн хоногийн
+       станцын задаргаа) — сарын хүрээ БИШ тул тусад нь нэрлэнэ. */
+    if (o.asOf) return { from: o.asOf, to: o.asOf, count: 0, text: w.prefix + ': ' + o.asOf + ' · ' + w.day };
+    /* Хоногийн муж (7 хоногийн тайлан, 30 хоногийн цуваа) — сарын хүрээ БИШ:
+       «Хугацаа: 2026-10-12 — 2026-10-18 · 7 хоног». Тоо нь календарийн хоног. */
+    if (o.dayFrom || o.dayTo) {
+      var re = /^\d{4}-\d{2}-\d{2}$/;
+      var a = String(o.dayFrom || o.dayTo).slice(0, 10), b = String(o.dayTo || o.dayFrom).slice(0, 10);
+      if (!re.test(a) || !re.test(b)) return { from: '', to: '', count: 0, text: w.prefix + ': ' + w.none };
+      if (a > b) { var t = a; a = b; b = t; }
+      var nd = Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000) + 1;
+      return { from: a, to: b, count: nd,
+        text: w.prefix + ': ' + (a === b ? a : a + ' — ' + b) + ' · ' + nd + ' ' + (w.days || 'хоног') };
+    }
     var list = (keys || []).map(function (k) { return String(k).slice(0, 7); })
       .filter(function (k) { return /^\d{4}-\d{2}$/.test(k); }).sort();
     if (!list.length) return { from: '', to: '', count: 0, text: w.prefix + ': ' + w.none };
@@ -287,8 +301,12 @@
     var count = (+to.slice(0, 4) * 12 + +to.slice(5, 7)) - (+from.slice(0, 4) * 12 + +from.slice(5, 7)) + 1;
     var span = from === to ? from : from + ' — ' + to;
     var parts = [w.prefix + ': ' + span, count + ' ' + w.months];
-    if (o.partialTo) parts.push(w.partial + ' (' + o.partialTo + ' ' + w.through + ')');
-    else if (o.partialCount) parts.push(w.partial);
+    /* Хэд хэдэн дутуу сар (жиш. вагон: эх сурвалжийн цоорхой + одоогийн сар) —
+       ганц «дутуу сар» гэвэл зөвхөн сүүлийн сар дутуу мэт уншигдана. */
+    var pn = +o.partialCount || 0;
+    if (pn > 1) parts.push(pn + ' ' + w.partial + (o.partialTo ? ' (' + w.last + ' ' + o.partialTo + ' ' + w.through + ')' : ''));
+    else if (o.partialTo) parts.push(w.partial + ' (' + o.partialTo + ' ' + w.through + ')');
+    else if (pn) parts.push(w.partial);
     if (o.dropped) parts.push(w.dropped);
     return { from: from, to: to, count: count, text: parts.join(' · ') };
   }
