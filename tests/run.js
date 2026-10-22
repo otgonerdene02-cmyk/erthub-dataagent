@@ -8487,6 +8487,24 @@ function groupRPX() {
     mg.gaps.length === 1 && mg.gaps[0].from === '2026-08-22');
   check('RPX29. Цоорхойн тайлбар ба урьдчилсан билетийн тэмдэглэл (алдаатай алс ирээдүйн огноог нэрлэхгүй)',
     src.includes("T('gap_note',") && !/upcoming_note','[^']*\{to\}/.test(src));
+  /* Регресс (хэрэглэгч 2026-10-22): он/сар сонгоход to=2026-12-31 явж урьдчилж зарсан ирээдүйн (2027/2030
+     хүртэл) билет хүснэгт, шүүлтийн тоонд гарч байв. Цонх өчигдрөөр (УБ) таслагдана. */
+  const capM = src.match(/\nfunction dsCapWindow\(w,maxDay\)\{([\s\S]*?)\n\}/);
+  const CAP = capM ? new Function('w', 'maxDay', capM[1]) : null;
+  check('RPX32. dsCapWindow: 2026 он → to=өчигдөр; өмнөх он хэвээр; «Бүгд» (to=null) → to=өчигдөр',
+    !!CAP && CAP({ from: '2026-01-01', to: '2026-12-31' }, '2026-10-21').to === '2026-10-21' &&
+    CAP({ from: '2025-01-01', to: '2025-12-31' }, '2026-10-21').to === '2025-12-31' &&
+    CAP({ from: null, to: null }, '2026-10-21').to === '2026-10-21' && CAP({ from: null, to: null }, '2026-10-21').from === null);
+  check('RPX32. Авто зорчигчийн түүхий мөрийн цонх dsCapWindow-оор (УБ-ийн өчигдөр) таслагдана',
+    /if\(source==='roadPax'\)\{[^}]*\s*return dsCapWindow\(dsRowsWindow\(/.test(src) && src.includes('ubStamp(new Date(Date.now()-864e5).toISOString()).date'));
+  /* Регресс (хэрэглэгч 2026-10-22): «2026-08-22 — 09-15 мэдээ алга» гэсэн ч хүснэгтэд 08-22-ны 695 билет
+     харагдана — цоорхой нь бичлэггүй биш, өдрийн зорчигч босгоос доош. Тайлбар босго, хоног, зорчигчийг нэрлэнэ. */
+  const mt = AM(Object.assign({}, ALL, { coverage: { threshold: 717.4, gaps: [{ from: '2026-08-22', to: '2026-09-15', days: 25, passengers: 2921 }] } }), null, 2026);
+  check('RPX33. Цоорхойн босго модельд (717.4 → 718); coverage-гүй бол null', mt.gapThreshold === 718 && AM(ALL, null, 2026).gapThreshold === null, mt.gapThreshold);
+  const gn = content.site.road_pax_an.gap_note || '', gi = content.site.road_pax_an.gap_item || '';
+  check('RPX34. Цоорхойн тайлбар «мэдээ алга» гэхгүй — босго {min}, хоног {days}, зорчигч {n}-ийг нэрлэнэ',
+    !/алга/.test(gn) && gn.includes('{min}') && gn.includes('{list}') && ['{from}', '{to}', '{days}', '{n}'].every((k) => gi.includes(k)) &&
+    src.includes("T('gap_item',"), gn + ' | ' + gi);
   /* Регресс (статистикч QA 2026-10-20): 2.2 сая мөр — хүснэгт ҮРГЭЛЖ таслагдсан тул «Тээврийн төрөл»-ийн
      шүүлт KPI-д огт хүрдэггүй байв. Хамрах баганыг өөрийг нь шүүсэн бол түлхүүр = сонгосон утга. */
   check('RPX30. Таслагдсан хүснэгтэд хамрах баганын шүүлт KPI-г шүүнэ (түлхүүр = сонгосон утга); өөр багана — хамаарахгүй',

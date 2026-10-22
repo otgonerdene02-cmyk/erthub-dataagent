@@ -6091,6 +6091,14 @@ function dsRowsWindow(yFrom,yTo,mFrom,mTo){
   return {from:Math.min(y0,y1)+'-'+pad(mf)+'-01',
     to:Math.max(y0,y1)+'-'+pad(mt)+'-'+pad(new Date(Date.UTC(Math.max(y0,y1),mt,0)).getUTCDate()),mFrom:mf,mTo:mt};
 }
+/* Ирээдүйн огноотой мөр (урьдчилж зарсан билет, эх системийн алдаатай 2027/2030
+   огноо) хүснэгт, шүүлтийн тоо, Excel-д ОРОХГҮЙ — тайлан (history) ч өнөөдрөөс
+   хойшхийг тоолдоггүй. Backend зөвхөн to-гүй үед өчигдрөөр хязгаарладаг тул он/сар
+   сонгоход (to=2026-12-31) ирээдүй орж ирдэг байв (2026-10-22). ЦЭВЭР. */
+function dsCapWindow(w,maxDay){
+  if(!maxDay||(w.to&&w.to<=maxDay)) return w;
+  return {...w,to:maxDay};
+}
 /* Шүүлтийн сонголтын товч бичвэр («Тээвэрлэгч: МТЗ», «Экспорт (тонн): 100–500»). */
 function pvCondText(c){
   if(c==null||c==='') return '';
@@ -8765,7 +8773,8 @@ function roadPaxAnalysisModel(all,sel,year,mr){
   const inSel=d=>{const k=String(d).slice(0,7);return ms.some(m=>m.month===k);};
   const gaps=((all.coverage&&Array.isArray(all.coverage.gaps))?all.coverage.gaps:[])
     .filter(g=>g&&g.from&&g.to&&(inSel(g.from)||inSel(g.to)));
-  return {hasData:true,years,year:yr,mFrom,mTo,fullRange,monthCount:ms.length,coveredMonths:ms.filter(m=>m.days>0).length,days,gaps,
+  const gapThreshold=all.coverage&&isFinite(+all.coverage.threshold)?Math.ceil(+all.coverage.threshold):null;
+  return {hasData:true,years,year:yr,mFrom,mTo,fullRange,monthCount:ms.length,coveredMonths:ms.filter(m=>m.days>0).length,days,gaps,gapThreshold,
     partialN:ms.filter(m=>m.partial&&m.days>0).length,
     periodKeys:ms.map(m=>m.month),partialTo:(ms.slice().reverse().find(m=>m.partial)||{}).last_date||null,
     passengers,refunded,refundPct:(passengers+refunded)>0?refunded/(passengers+refunded)*100:null,
@@ -12297,7 +12306,8 @@ class Component extends DCLogic {
     if(source==='railPax') return dsRowsWindow(st.paxYear,st.paxYear,st.paxMFrom,st.paxMTo);
     if(FREIGHT_SOURCES[source]){ const u=this.freightUi(source); return dsRowsWindow(u.year,u.year,u.mFrom,u.mTo); }
     if(source==='sectorTotal'){ const u=this.sectorTotalUi(); return dsRowsWindow(u.year,u.year,u.mFrom,u.mTo); }
-    if(source==='roadPax'){ const u=this.roadPaxUi(); return dsRowsWindow(u.year,u.year,u.mFrom,u.mTo); }
+    if(source==='roadPax'){ const u=this.roadPaxUi();
+      return dsCapWindow(dsRowsWindow(u.year,u.year,u.mFrom,u.mTo),ubStamp(new Date(Date.now()-864e5).toISOString()).date); }
     if(source==='roadInspect'){
       const s=this.roadInspectSel();
       return s?dsRowsWindow(s.yFrom,s.yTo,s.mFrom,s.mTo):dsRowsWindow(null);
@@ -12796,8 +12806,14 @@ class Component extends DCLogic {
     const up=m.upcoming;
     const upNote=(up&&up.passengers>0)?T('upcoming_note','Өнөөдрөөс хойших аялалд урьдчилж зарсан {n} билет аялал болоогүй тул тайланд ороогүй.')
       .replace('{n}',fmt(up.passengers)):'';
-    const gapNote=m.gaps.length?T('gap_note','Эх сурвалжид мэдээ алга: {list}.')
-      .replace('{list}',m.gaps.map(g=>g.from+' — '+g.to).join(', ')):'';
+    /* Цоорхой = бичлэг ОГТ алга биш: өдрийн зорчигч босгоос (хэвийн өдрийн 10%) доош.
+       Жиш. 2026-08-22…09-15: өдөрт 13–695 билет (хэвийн 4–9 мянга) — «алга» гэвэл
+       хүснэгтэд тэр өдрийн мөр харагдаж зөрчилдөнө (2026-10-22). */
+    const thr=m.gapThreshold!=null?fmt(m.gapThreshold):'';
+    const gapNote=m.gaps.length?T('gap_note','Эх сурвалж дараах хугацааны мэдээг бүрэн ачаалаагүй (өдөрт {min}-аас цөөн зорчигч бүртгэгдсэн) — тайлан, харьцуулалтад бүтэн өдөр гэж тооцоогүй: {list}.')
+      .replace('{min}',thr)
+      .replace('{list}',m.gaps.map(g=>T('gap_item','{from} — {to} ({days} хоног, {n} зорчигч)')
+        .replace('{from}',g.from).replace('{to}',g.to).replace('{days}',fmt(g.days||0)).replace('{n}',fmt(g.passengers||0))).join(', ')):'';
     const scopeNote=[gapNote,staleNote,partialNote,upNote].filter(Boolean).join(' ');
     return {...out,roadPaxKpis:kpis,
       roadPaxScope:fmt(m.days)+' '+T('scope_days','өдрийн мэдээ')+' · '+m.coveredMonths+' '+T('scope_months','сар'),
