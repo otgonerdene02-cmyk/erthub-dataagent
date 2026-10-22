@@ -9651,32 +9651,14 @@ class Component extends DCLogic {
   }
   sectorShareFromTotal(keys){
     const api=this.sectorTotalData?this.sectorTotalData():null;
-    if(!(api&&api.status==='ok')) return null;
     const meas=this.state.d05Measure==='freight_tonnes'?'freight_tonnes':'passengers';
-    const T=(k,fb)=>stxt('sector_total.'+k,fb);
-    const W=api.weekly&&api.weekly[meas];
-    const by={};
-    let period='',perYear='';
-    if(W&&W.ytd&&W.ytd.by_sector){
-      Object.keys(W.ytd.by_sector).forEach(k=>{ const b=W.ytd.by_sector[k]; if(b&&b.value!=null) by[k]=+b.value; });
-      const md=s=>String(s||'').slice(5).replace('-','.');
-      period=T('d05_period_ytd','{year} оны эхнээс ({from}–{to})').replace('{year}',W.ytd.year).replace('{from}',md(W.ytd.from)).replace('{to}',md(W.ytd.to));
-    }else{
-      const m0=sectorTotalModel(api,'all',null);
-      const y=m0.years[m0.years.length-1];
-      if(!y) return null;
-      const m=sectorTotalModel(api,y,{from:1,to:12});
-      m.measures[meas].bySec.forEach(s=>{ if(s.value!=null) by[s.key]=s.value; });
-      perYear=y;
-      period=T('d05_period_year','{year} он (сарын нэгтгэл)').replace('{year}',y);
-    }
-    const raw=keys.map(k=>{ const v=by[k]; return {key:k,label:SECTORS[k].label,color:NEON[k],v:v>0?v:0,live:v>0}; });
+    /* Дүн, хугацаа, тэмдэглэл — EHGlossary.sectorShare (админы d05 preview-тэй НЭГ функц) */
+    const sh=EHGlossary.sectorShare(api,meas,(k,fb)=>stxt('sector_total.'+k,fb));
+    if(!sh) return null;
+    const raw=keys.map(k=>{ const v=sh.by[k]; return {key:k,label:SECTORS[k].label,color:NEON[k],v:v>0?v:0,live:v>0}; });
     if(!raw.some(r=>r.live)) return null;
-    const unit=meas==='passengers'?T('unit_pax','зорчигч'):T('unit_tonne','тонн');
     /* DG-P: донутын хугацааны мөр — оны эхнээс бол хоногийн муж, эс бөгөөс тухайн оны өгөгдөлтэй сарууд */
-    const chartPeriod=chartPeriodText(W&&W.ytd&&W.ytd.by_sector?{dayFrom:W.ytd.from,dayTo:W.ytd.to}
-      :{periodKeys:[...new Set((api.months||[]).map(r=>String(r.month)).filter(m=>m.slice(0,4)===String(perYear)))]},(k,fb)=>stxt('chart.'+k,fb));
-    return {raw,meas,unit,chartPeriod,period:period+' · '+(meas==='passengers'?T('by_pax','зорчигчоор'):T('by_freight','ачаагаар (тонн)'))};
+    return {raw,meas,unit:sh.unit,chartPeriod:chartPeriodText(sh.periodModel,(k,fb)=>stxt('chart.'+k,fb)),period:sh.period};
   }
   /* Салбарын нэгтгэлийн анализын самбар — sectorTotalModel / sectorWeeklyView (цэвэр) →
      темплейт. Текст: content.json → site.sector_total. Шүүлт (он + сар) KPI, сарын

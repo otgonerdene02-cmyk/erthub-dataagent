@@ -337,12 +337,52 @@
       dayFrom: m && m.dayFrom, dayTo: m && m.dayTo, dropped: !!(m && m.partialDropped), words: W }).text;
   }
 
+  /* (5г) Нүүрний «Салбарын харьцаа» (d05) — салбарын нэгтгэлээс (/api/sectors/total/history)
+     салбар бүрийн НИЙТЛЭГ нэгжийн дүн. Сайт (sectorShareFromTotal) ба админы preview
+     ХОЁУЛАА ЭНИЙГ дуудна — preview ба сайт өөр хувь, өөр хугацаа зурахгүй.
+     weekly[measure].ytd байвал оны эхнээс өссөн дүн (идэвхтэй салбар бүр ИЖИЛ огноогоор);
+     алга бол хамгийн сүүлийн оны сарын нэгтгэл (sectorTotalModel-ийн ижил дүрэм: зөвхөн
+     api.sectors-ийн салбар, утга ба өдөртэй сар). T(түлхүүр, fallback) = site.sector_total.
+     Буцаана: {meas, by:{салбар:дүн}, unit, period (тэмдэглэлийн текст), periodModel
+     (chartPeriod-ийн загвар)} эсвэл null (нэгтгэл алга — тоо ЗОХИОХГҮЙ). */
+  function sectorShare(apiRes, measure, T) {
+    var t = typeof T === 'function' ? T : function (k, fb) { return fb; };
+    if (!(apiRes && apiRes.status === 'ok')) return null;
+    var meas = measure === 'freight_tonnes' ? 'freight_tonnes' : 'passengers';
+    var W = apiRes.weekly && apiRes.weekly[meas], by = {}, period, model;
+    if (W && W.ytd && W.ytd.by_sector) {
+      Object.keys(W.ytd.by_sector).forEach(function (k) { var b = W.ytd.by_sector[k]; if (b && b.value != null) by[k] = +b.value; });
+      var md = function (s) { return String(s || '').slice(5).replace('-', '.'); };
+      period = t('d05_period_ytd', '{year} оны эхнээс ({from}–{to})').replace('{year}', W.ytd.year)
+        .replace('{from}', md(W.ytd.from)).replace('{to}', md(W.ytd.to));
+      model = { dayFrom: W.ytd.from, dayTo: W.ytd.to };
+    } else {
+      var months = Array.isArray(apiRes.months) ? apiRes.months : [];
+      var y = 0;
+      months.forEach(function (r) { var v = +String(r.month).slice(0, 4); if (v > y) y = v; });
+      if (!y) return null;
+      var secs = {}, dayKey = meas === 'passengers' ? 'passenger_days' : 'freight_days', seen = {}, keys = [];
+      (apiRes.sectors || []).forEach(function (s) { secs[s.sector] = 1; });
+      months.forEach(function (r) {
+        var m = String(r.month);
+        if (m.slice(0, 4) !== String(y)) return;
+        if (!seen[m]) { seen[m] = 1; keys.push(m); }
+        if (!secs[r.sector] || r[meas] === null || r[meas] === undefined || !(+r[dayKey])) return;
+        by[r.sector] = (by[r.sector] || 0) + (+r[meas] || 0);
+      });
+      period = t('d05_period_year', '{year} он (сарын нэгтгэл)').replace('{year}', y);
+      model = { periodKeys: keys };
+    }
+    return { meas: meas, by: by, unit: meas === 'passengers' ? t('unit_pax', 'зорчигч') : t('unit_tonne', 'тонн'), periodModel: model,
+      period: period + ' · ' + (meas === 'passengers' ? t('by_pax', 'зорчигчоор') : t('by_freight', 'ачаагаар (тонн)')) };
+  }
+
   var api = {
     airPaxSplit: airPaxSplit, norm: norm, airFlightKind: airFlightKind, KIND_LABEL: KIND_LABEL, AIR_KIND: AIR_KIND,
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,
     filterColumns: filterColumns, rowMatchesCols: rowMatchesCols, periodSpan: periodSpan, weekSpan: weekSpan, chartPeriod: chartPeriod,
-    condActive: condActive, condMatch: condMatch, facetSuggest: facetSuggest, numOf: numOf
+    sectorShare: sectorShare, condActive: condActive, condMatch: condMatch, facetSuggest: facetSuggest, numOf: numOf
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.EHGlossary = api;

@@ -7959,7 +7959,8 @@ async function groupDGA() {
   const DT = (now) => { class FD extends Date { constructor(...a) { if (a.length) super(...a); else super(now); } static now() { return now; } } return FD; };
   const mkKit = (env) => new Function('CON', 'REG', 'FEED', 'ST', 'SERIES', 'SERIES_METRIC', 'RAIL', 'INSP', 'ST_METRIC', 'MONTHS', 'Date',
     'valueSpecOf', 'slotsOf', 'slotVal', 'qualityOf', 'sectorParts', 'widgetValueRes', 'headMetric', 'esc', 'EHGlossary',
-    parts.join('') + 'return {computeSeries:computeSeries,pvPeriodText:pvPeriodText,pvWeekModel:pvWeekModel};')(
+    parts.join('') + 'return {computeSeries:computeSeries,pvPeriodText:pvPeriodText,pvWeekModel:pvWeekModel,pvD05Share:pvD05Share,' +
+    'setMeas:function(m){PV_D05_MEAS=m}};')(
     env.CON || { site: { chart: {} } }, { metrics: {} }, env.FEED, env.ST || { state: 'off' }, env.SERIES || {},
     { 'rail.monthly_passenger_series': 'rail' }, env.RAIL || { state: 'off' }, env.INSP || { state: 'off' },
     { 'air.weekly_pax': ['passengers', 'air'], 'air.weekly_cargo': ['freight_tonnes', 'air'], 'rail.weekly_pax': ['passengers', 'rail'], 'rail.weekly_cargo': ['freight_tonnes', 'rail'] },
@@ -8004,7 +8005,7 @@ async function groupDGA() {
   const wk = (a, b, miss) => ({ week_start: a, week_end: b, missing: !!miss, by_sector: miss ? {} : { air: { value: 5 }, rail: { value: 7 } } });
   const WP = { sectors: ['air', 'rail'], weeks: [wk('2026-09-28', '2026-10-04'), wk('2026-10-05', '2026-10-11', true), wk('2026-10-12', '2026-10-18')] };
   const KS = mkKit({ FEED, ST: { state: 'ready', weekly: { passengers: WP } } });
-  const sr = new Function('w', 'keys', 'gaps', wsr[1])(WP, ['air']);
+  const sr = new Function('w', 'keys', 'gaps', wsr[1])(WP, ['air'], null);
   const siteW = G.chartPeriod({ dayFrom: sr.weeks[0].start, dayTo: sr.weeks[sr.weeks.length - 1].end, nWeeks: sr.weeks.length }, (k, fb) => fb);
   const w2 = ['w2p', 'w2pb', 'w2px'].map((id) => KS.pvPeriodText(id));
   check('DG-P22. 02-р хэсэг (зорчигч): нэгтгэлийн бүх долоо хоног — гараар 2026-09-28 — 2026-10-18 · 3 долоо хоног',
@@ -8034,6 +8035,64 @@ async function groupDGA() {
   check('DG-P24. Үг нь content.json site.chart.period_*-ээс (засварлахад preview дагана)',
     KW.pvPeriodText('t05') === 'ZZП: 2026-01 — 2026-09 · 9 ZZС · ZZХ', KW.pvPeriodText('t05'));
 
+  /* DG-P26. d05 + САЛБАРЫН НЭГТГЭЛ (2026-10-22): админы preview = сайтын sectorShareFromTotal +
+     buildDonut (НЭГ функц EHGlossary.sectorShare). Гараар бодох фикстур:
+       зорчигч (weekly.ytd 2026-01-01…10-18): агаар 100, төмөр зам 300 → 25.0% / 75.0%, нийт 100%
+       ачаа (weekly алга → 2026 оны сарын нэгтгэл): агаар 4, төмөр зам 1700 (02-р сар null — тооцохгүй),
+         2025-12 (өмнөх он) орохгүй → 4/1704 = 0.2%, 1700/1704 = 99.8%; хугацаа 2026-01 — 2026-02 · 2 сар */
+  const mD = site.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  buildGlobe\(\)/);
+  const mS = site.match(/\n  sectorShareFromTotal\(keys\)\{([\s\S]*?)\n  \}\n/);
+  check('DG-P26. Сайтын buildDonut + sectorShareFromTotal олдов, хоёр тал EHGlossary.sectorShare-ээр',
+    !!(mD && mS) && /EHGlossary\.sectorShare\(/.test(mS ? mS[1] : '') && /EHGlossary\.sectorShare\(/.test(parts[3]));
+  if (mD && mS) {
+    const STAPI = { status: 'ok', sectors: [{ sector: 'air' }, { sector: 'rail' }, { sector: 'road' }],
+      months: [{ month: '2025-12', sector: 'air', passengers: 999, passenger_days: 31, freight_tonnes: 999, freight_days: 31 },
+        { month: '2026-01', sector: 'air', passengers: 100, passenger_days: 31, freight_tonnes: 4, freight_days: 31 },
+        { month: '2026-01', sector: 'rail', passengers: 300, passenger_days: 31, freight_tonnes: 1700, freight_days: 31 },
+        { month: '2026-02', sector: 'rail', passengers: 100, passenger_days: 28, freight_tonnes: null, freight_days: 0 }],
+      weekly: { passengers: { ytd: { year: 2026, from: '2026-01-01', to: '2026-10-18', by_sector: { air: { value: 100 }, rail: { value: 300 } } } } } };
+    const NM = { air: 'Агаар', road: 'Авто', rail: 'Төмөр зам', water: 'Ус' };
+    const P4 = ['air', 'road', 'rail', 'water'].map((k) => ({ k, n: NM[k], c: '#' + k, q: k === 'air' ? 'verified' : 'none', v: k === 'air' ? 56 : 0, m: k === 'air' ? 'air.flight_count_last_month' : null }));
+    const SEC4 = {}; Object.keys(NM).forEach((k) => { SEC4[k] = { label: NM[k], kpis: [['x', '1']] }; });
+    const NE4 = { air: '#air', road: '#road', rail: '#rail', water: '#water' };
+    const stx = (p, fb) => fb, CPT = (m, T) => G.chartPeriod(m, T);
+    const SHARE = new Function('SECTORS', 'NEON', 'stxt', 'chartPeriodText', 'EHGlossary', 'return function(keys){' + mS[1] + '}')(SEC4, NE4, stx, CPT, G);
+    const DON = new Function('SECTORS', 'NEON', 'stxt', 'EHGlossary', 'return function(activeKey){' + mD[1] + '}')(SEC4, NE4, stx, G);
+    const siteD = (meas, keys) => DON.call({ state: { d05Measure: meas }, setState() {}, visibleSectorKeys: () => keys, valueFromSpec: () => null,
+      kpiVerified: () => false, sectorTotalData: () => STAPI, homeSectorPeriod: () => 'X', sectorShareFromTotal(k) { return SHARE.call(this, k); } }, 'air');
+    const admD = (meas, ps) => { const K = mkKit({ FEED, ST: { state: 'ready', weekly: STAPI.weekly, api: STAPI }, sectorParts: () => ps }); K.setMeas(meas);
+      return { sh: K.pvD05Share('d05'), per: K.pvPeriodText('d05') }; };
+    const cmp = (meas, keys) => { const s = siteD(meas, keys), a = admD(meas, P4.filter((p) => keys.indexOf(p.k) >= 0));
+      const sp = s.arcs.map((x) => x.label + ':' + x.pctText).join(','), ap = a.sh ? a.sh.raw.map((r) => r.n + ':' + (r.live ? r.pct.toFixed(1) + '%' : '—')).join(',') : '';
+      return { s, a, sp, ap, sum: a.sh ? a.sh.raw.reduce((t, r) => t + r.pct, 0) : 0 }; };
+    const X = cmp('passengers', ['air', 'road', 'rail', 'water']);
+    check('DG-P26. Зорчигч (оны эхнээс): агаар 25.0%, төмөр зам 75.0%, авто/ус «—», нийлбэр 100% — админ = сайт',
+      X.ap === 'Агаар:25.0%,Авто:—,Төмөр зам:75.0%,Ус:—' && X.ap === X.sp && Math.abs(X.sum - 100) < 1e-9, X.ap + ' ≠ ' + X.sp);
+    check('DG-P26. Зорчигч: хугацааны мөр «2026-01-01 — 2026-10-18 · 291 хоног», тэмдэглэл — админ = сайт',
+      X.a.per === 'Хугацаа: 2026-01-01 — 2026-10-18 · 291 хоног' && X.a.per === X.s.period &&
+      X.a.sh.note === '2026 оны эхнээс (01.01–10.18) · зорчигчоор · Авто, Ус — мэдээлэл алга' && X.a.sh.note === X.s.note && X.a.sh.unit === 'зорчигч',
+      [X.a.per, X.s.period, X.a.sh && X.a.sh.note, X.s.note].join(' | '));
+    const F = cmp('freight_tonnes', ['air', 'road', 'rail', 'water']);
+    check('DG-P26. Ачаа (weekly алга → 2026 оны сарын нэгтгэл): 4/1704 = 0.2%, 1700/1704 = 99.8%, «2026-01 — 2026-02 · 2 сар» — админ = сайт',
+      F.ap === 'Агаар:0.2%,Авто:—,Төмөр зам:99.8%,Ус:—' && F.ap === F.sp && Math.abs(F.sum - 100) < 1e-9 &&
+      F.a.per === 'Хугацаа: 2026-01 — 2026-02 · 2 сар' && F.a.per === F.s.period && F.a.sh.note === F.s.note && /^2026 он \(сарын нэгтгэл\) · ачаагаар \(тонн\)/.test(F.a.sh.note),
+      [F.ap, F.sp, F.a.per, F.s.period, F.a.sh && F.a.sh.note, F.s.note].join(' | '));
+    const H = cmp('passengers', ['air', 'road', 'rail']);
+    check('DG-P26. Нуусан салбар (ус) донутад ч, тэмдэглэлд ч орохгүй — админ = сайт',
+      H.ap === 'Агаар:25.0%,Авто:—,Төмөр зам:75.0%' && H.ap === H.sp && H.a.sh.note === H.s.note && !/Ус/.test(H.a.sh.note), H.ap + ' | ' + H.a.sh.note);
+    const O = cmp('passengers', ['air', 'road']);
+    check('DG-P26. Ганц мэдээтэй салбар 100% → сайттай ижил «зөвхөн … салбар» анхааруулга (зохиомол биш гэдгийг хэлнэ)',
+      O.ap === 'Агаар:100.0%,Авто:—' && O.ap === O.sp && O.a.sh.note === O.s.note && /Зөвхөн «Агаар»/.test(O.a.sh.note), O.a.sh.note + ' | ' + O.s.note);
+    const N = admD('passengers', P4.filter((p) => p.k === 'road' || p.k === 'water'));
+    const KF = mkKit({ FEED, sectorParts: () => P1, ST: { state: 'error', api: null } });
+    check('DG-P26. Нэгтгэл алга эсвэл мэдээтэй салбар алга → null (хуучин агаарын зам, тоо зохиохгүй)',
+      N.sh === null && KF.pvD05Share('d05') === null && KF.pvPeriodText('d05') === 'Хугацаа: 2026-09 · 1 сар', KF.pvPeriodText('d05'));
+    const KT = mkKit({ FEED, ST: { state: 'ready', weekly: STAPI.weekly, api: STAPI }, sectorParts: () => P4,
+      CON: { site: { chart: {}, sector_total: { d05_period_ytd: 'ZZ{year}', by_pax: 'ZZP', d05_off: 'ZZ{names}' } } } });
+    check('DG-P26. Тэмдэглэлийн үг content.json site.sector_total-оос (засварлахад preview дагана)',
+      (KT.pvD05Share('d05') || {}).note === 'ZZ2026 · ZZP · ZZАвто, Ус', (KT.pvD05Share('d05') || {}).note);
+  }
+
   /* (б) Хөтөч: нүүр (агаарын таб) ба админы 16 виджет — ИЖИЛ фикстур */
   if (!CHROME) { skipped('DG-P25 (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
   const PROBE = `async function(d,w){
@@ -8045,6 +8104,16 @@ async function groupDGA() {
     Object.keys(SRC).forEach(id=>{ const t=d.querySelector('[data-eh-card="'+SRC[id]+'"]'); if(!t){ site[id]=null; return; }
       const q=[].slice.call(d.querySelectorAll('[data-chart-period]')).find(x=>t.compareDocumentPosition(x)&4);
       site[id]=q?q.textContent.trim():null; });
+    const pctOf=s=>{ const m=String(s||'').match(/([\\d.]+%)$/); return m?m[1]:'—'; };
+    const srt=o=>Object.keys(o).sort().map(k=>k+':'+o[k]);
+    const d05={site:null,admin:null,note:null,anote:null};
+    const dn=d.querySelector('[data-dg-note="d05"]');
+    if(dn){ d05.note=dn.textContent.trim(); let box=dn;
+      while(box&&box.querySelectorAll('circle').length<3) box=box.parentElement;
+      const o={}; if(box) [].slice.call(box.querySelectorAll('circle')).forEach(c=>{
+        const tt=c.getAttribute('data-tip')||(c.querySelector('title')||{}).textContent||''; if(!tt) return;
+        const i=tt.indexOf(' — '); if(i>0) o[tt.slice(0,i)]=pctOf(tt); });
+      d05.site=srt(o); }
     const fr=w.frameElement; fr.src='/admin/index.html?fx=1';
     let a=null;
     for(let i=0;i<80;i++){ await sleep(250); try{ a=fr.contentDocument; }catch(e){ a=null; }
@@ -8059,13 +8128,16 @@ async function groupDGA() {
     const line=()=>{ const e=a.querySelector('#pvhost [data-chart-period]'); return e?e.textContent.trim():''; };
     const admin={};
     Object.keys(SEC).forEach(id=>{ admin[id]=go(id)?line():'NAV'; });
+    if(go('d05')){ const o={}; [].slice.call(a.querySelectorAll('#pvhost .pvrow')).forEach(r=>{
+        o[(r.querySelector('span')||{}).textContent]=pctOf((r.querySelector('b')||{}).textContent); });
+      d05.admin=srt(o); const an=a.querySelector('#pvhost [data-pvd05="note"]'); d05.anote=an?an.textContent.trim():null; }
     const ed={};
     if(go('w2p')){ const f=a.querySelector('.e-fm [data-sf="chart.period_prefix"]');
       ed.field=!!f;
       if(f){ const ov=f.value; f.value='ZZPERZZ'; f.dispatchEvent(new fr.contentWindow.Event('input',{bubbles:true}));
         ed.live=line(); f.value=ov; f.dispatchEvent(new fr.contentWindow.Event('input',{bubbles:true})); ed.back=line(); } }
     ed.dirty=(a.getElementById('dirtyMsg')||{}).textContent||'';
-    return {site,admin,ed};
+    return {site,admin,ed,d05};
   }`;
   const srv = serve();
   try {
@@ -8073,13 +8145,17 @@ async function groupDGA() {
     const R = await runProbe(PROBE, 120000);
     if (R.__err) { bad('DG-P25. Хөтчийн проб ажиллав', R.__err); return; }
     const S = R.site || {}, A = R.admin || {};
-    /* d05: сайт салбарын нэгтгэлийн «оны эхнээс» хувийг, админ preview агаарын сүүлийн бүтэн
-       сарын нислэгийг зурдаг (өөр өгөгдөл) — мөр нь тус бүрийн ЗУРСАН өгөгдлийг хэлнэ. */
-    const same = ['w2p', 'w2pb', 'w2px', 'w2c', 'w2cb', 'w2cx', 't05', 'i06', 'r06'];
+    /* d05: сайт ба админ хоёулаа салбарын нэгтгэлийн «оны эхнээс» хувийг (EHGlossary.sectorShare) зурна */
+    const same = ['w2p', 'w2pb', 'w2px', 'w2c', 'w2cb', 'w2cx', 't05', 'd05', 'i06', 'r06'];
     const diff = same.filter((id) => !S[id] || S[id] !== A[id]).map((id) => id + ': сайт «' + S[id] + '» · админ «' + A[id] + '»');
-    check('DG-P25. Админы preview-ийн мөр = нүүрний картын мөр (9 виджет, ?fx=1)', diff.length === 0, diff.join(' | '));
-    check('DG-P25. d05 preview-д мөр бий («Хугацаа: YYYY-MM · 1 сар» — зурсан утгын сар)',
-      /^Хугацаа: \d{4}-\d{2} · 1 сар$/.test(A.d05 || ''), A.d05);
+    check('DG-P25. Админы preview-ийн мөр = нүүрний картын мөр (10 виджет, ?fx=1)', diff.length === 0, diff.join(' | '));
+    check('DG-P25. d05 preview-д нэгтгэлийн оны эхнээс муж («Хугацаа: YYYY-01-01 — YYYY-MM-DD · N хоног»)',
+      /^Хугацаа: (\d{4})-01-01 — \1-\d{2}-\d{2} · \d+ хоног$/.test(A.d05 || ''), A.d05);
+    /* Донутын хувь ба тэмдэглэл — сайтын картын легенд = админы preview-ийн мөр (ИЖИЛ фикстур) */
+    const d5 = R.d05 || {};
+    check('DG-P25. d05 донутын хувь, тэмдэглэл: админ = сайт (?fx=1)',
+      !!d5.site && d5.site.length > 1 && JSON.stringify(d5.site) === JSON.stringify(d5.admin) && !!d5.note && d5.note === d5.anote,
+      JSON.stringify(d5));
     const extra = ['hero_fl', 'hero_px', 'ls', 'k04', 'uk', 'u07'].filter((id) => A[id] !== '');
     check('DG-P25. Хугацааны мөргүй виджет preview-д мөр гаргахгүй (сайттай ижил)', extra.length === 0, extra.map((id) => id + ':' + A[id]).join(' | '));
     const ed = R.ed || {};
@@ -9456,7 +9532,7 @@ function groupST() {
     /* DG-P: index.html-ийн chartPeriodText-тэй ижил (periodSpan) — донутын хугацааны мөрийг шалгана */
     const GL = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
     const CPT = (m) => GL.periodSpan((m && m.periodKeys) || [], { dayFrom: m && m.dayFrom, dayTo: m && m.dayTo, partialTo: m && m.partialTo, partialCount: m && m.partialN }).text;
-    const SHARE = new Function('SECTORS', 'NEON', 'stxt', 'sectorTotalModel', 'chartPeriodText', 'return function(keys){' + mS[1] + '}')(SEC, NE, st, L.sectorTotalModel, CPT);
+    const SHARE = new Function('SECTORS', 'NEON', 'stxt', 'sectorTotalModel', 'chartPeriodText', 'EHGlossary', 'return function(keys){' + mS[1] + '}')(SEC, NE, st, L.sectorTotalModel, CPT, GL);
     const D = new Function('SECTORS', 'NEON', 'stxt', 'EHGlossary', 'return function(activeKey){' + mD[1] + '}')(SEC, NE, st, require(path.join(ROOT, 'js', 'erthub-glossary.js')));
     const apiW = Object.assign({}, API, { weekly: { passengers: { ytd: { year: 2026, from: '2026-01-01', to: '2026-10-18', by_sector: { air: { value: 100 }, rail: { value: 300 } } } } } });
     const ctx = (api, meas) => ({ state: { d05Measure: meas }, setState() {}, visibleSectorKeys: () => ['road', 'rail', 'air', 'water'],

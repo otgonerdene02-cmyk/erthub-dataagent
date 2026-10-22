@@ -268,6 +268,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .pvrow i{width:7px;height:7px;border-radius:2px;flex:none}
 .pvrow span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pvrow b{color:#0C1428;font-weight:600;white-space:nowrap}
+.pvmeasrow{display:flex;gap:6px;margin:0 0 10px}
+.pvmeas{cursor:pointer;font-family:inherit;border-radius:999px;padding:4px 11px;font-size:11px;white-space:nowrap;
+  border:1px solid var(--line);background:#fff;color:var(--ink2)}
+.pvmeas.on{border-color:#0C1428;background:#0C1428;color:#EEF3FA;font-weight:600}
 .pvax{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:8.5px;color:#7D8CA8;margin-top:5px}
 /* DG-P: сайтын картын «Хугацаа: …» мөр — гарчгаас 6px доор (sp-top margin-bottom 13px) */
 .pvper{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:#7D8CA8;margin:-7px 0 12px;overflow-wrap:anywhere}
@@ -672,7 +676,7 @@ var SERIES={};
    (w2p/w2c, w2pb/w2cb, w2px/w2cx). Сайтын weekSectorTotal()-тэй ИЖИЛ эх сурвалж:
    ирсэн бол агаар ч, төмөр зам ч ЭНДЭЭС (нэг долоо хоногийн цонх); алга бол агаар
    нь flights feed-ийн хуучин зам, төмөр зам «мэдээлэл алга». Метрик → [хэмжүүр, салбар]. */
-var ST={state:'idle',weekly:null};
+var ST={state:'idle',weekly:null,api:null};
 var ST_METRIC={'air.weekly_pax':['passengers','air'],'air.weekly_cargo':['freight_tonnes','air'],
   'rail.weekly_pax':['passengers','rail'],'rail.weekly_cargo':['freight_tonnes','rail'],
   'road.weekly_pax':['passengers','road']};
@@ -978,6 +982,8 @@ function loadSectorTotalWeekly(){
   },function(){ ST.gaps=null }):Promise.resolve();
   return Promise.all([EHBackend.fetchSectorTotal(),gp]).then(function(r){
     var d=r[0];
+    /* d05 (EHGlossary.sectorShare) — weekly алга ч сарын нэгтгэлээр зурна (сайттай ижил) */
+    ST.api=(d&&d.status==='ok')?d:null;
     if(!d||d.status!=='ok'||!d.weekly){ ST.state='error'; return }
     ST.weekly=d.weekly; ST.state='ready';
   },function(){ ST.state='error' });
@@ -2020,9 +2026,38 @@ function pvMetricModel(mk){
   if(mk&&mk.indexOf('road.inspection')===0) return (INSP.state==='ready'&&INSP.date)?{asOf:String(INSP.date).slice(0,10)}:{};
   return {};
 }
-/* d05 — сайтын buildDonut(): холбогдсон салбар бүрийн хугацаа; ижил бол нэг мөр,
-   өөр бол салбараар нь нэрлэнэ (нэг мужид шахахгүй). */
+/* d05 «Салбарын харьцаа» — сайтын sectorShareFromTotal() + buildDonut(): салбарын
+   нэгтгэл (ST.api) ирсэн бол НИЙТЛЭГ нэгжээр (зорчигч / ачаа тонн) EHGlossary.sectorShare-
+   ээс — сайттай НЭГ функц: ижил салбар (нуусан слот хасагдана, сайтын visibleSectorKeys),
+   ижил дүн/хувь, ижил тэмдэглэл, ижил хугацааны мөр. Хэмжүүрийн чип (PV_D05_MEAS) нь
+   сайтын d05Measure. Нэгтгэл алга эсвэл мэдээтэй салбар алга бол null → хуучин зам. */
+var PV_D05_MEAS='passengers';
+function pvSiteT(grp,k,fb){
+  var c=CON&&CON.site&&CON.site[grp], v=c&&c[k];
+  return (v==null||v==='')?fb:v;
+}
+function pvD05Share(id){
+  if(id!=='d05'||!ST.api||typeof EHGlossary==='undefined'||!EHGlossary.sectorShare) return null;
+  var sh=EHGlossary.sectorShare(ST.api,PV_D05_MEAS,function(k,fb){return pvSiteT('sector_total',k,fb)});
+  if(!sh) return null;
+  var raw=sectorParts(id).map(function(p){var v=sh.by[p.k];return {k:p.k,n:p.n,c:p.c,v:v>0?v:0,live:v>0}});
+  if(!raw.some(function(r){return r.live})) return null;
+  var tot=raw.reduce(function(a,r){return a+r.v},0)||1;
+  raw.forEach(function(r){r.pct=r.v/tot*100});
+  /* Тэмдэглэл — сайтын buildDonut(): хугацаа + хэмжүүр, мэдээгүй салбар, ганц салбар 100% */
+  var off=raw.filter(function(r){return !r.live}).map(function(r){return r.n});
+  var san=EHGlossary.ratioSanity(raw.map(function(r){return {key:r.k,label:r.n,value:r.v}}),{expected:raw.length});
+  var only=raw.filter(function(r){return r.v>0})[0];
+  var warn=san.issues.some(function(i){return i.code==='single'})
+    ?pvSiteT('status','share_single','Зөвхөн «{name}» салбар холбогдсон тул 100% гарч байна — бусад салбарын мэдээлэл алга. Энэ нь бүх салбарын бодит харьцаа БИШ.').replace('{name}',only?only.n:''):'';
+  var note=sh.period+(off.length?' · '+pvSiteT('sector_total','d05_off','{names} — мэдээлэл алга').replace('{names}',off.join(', ')):'')+(warn?' · '+warn:'');
+  return {raw:raw,meas:sh.meas,unit:sh.unit,note:note,period:EHGlossary.chartPeriod(sh.periodModel,pvT)};
+}
+/* d05 (нэгтгэлгүй үед) — сайтын buildDonut()-ийн хуучин зам: холбогдсон салбар бүрийн
+   хугацаа; ижил бол нэг мөр, өөр бол салбараар нь нэрлэнэ (нэг мужид шахахгүй). */
 function pvPartsText(id){
+  var sh=pvD05Share(id);
+  if(sh) return sh.period;
   var vr=widgetValueRes(id);
   var ps=sectorParts(id).filter(function(p){return p.q==='verified'&&p.v});
   if(!ps.length) return EHGlossary.chartPeriod({},pvT);
@@ -2180,6 +2215,18 @@ function previewFor(id,mini){
     body=ser2&&ser2.length>1
       ? svgLine(ser2,accent,W,H,true)+'<div class="pvax">'+ser2.length+' '+esc(utxt('preview.points','цэг'))+' · '+esc(utxt('preview.bar','багана'))+'</div>'
       : '<div class="pvempty">'+esc(utxt('preview.no_data','дата алга'))+'</div>';
+  } else if(kind==='donut'&&pvD05Share(id)){
+    /* d05 — салбарын нэгтгэлээс (сайттай ИЖИЛ дүн, хувь, хэмжүүр, тэмдэглэл) */
+    var sh5=pvD05Share(id), mchip=function(k,lb){
+      return '<button type="button" class="pvmeas'+(sh5.meas===k?' on':'')+'" data-pvmeas="'+k+'">'+esc(lb)+'</button>'};
+    body=(mini?'':'<div class="pvmeasrow">'+mchip('passengers',pvSiteT('sector_total','m_pax_short','Зорчигч'))+
+        mchip('freight_tonnes',pvSiteT('sector_total','m_freight_short','Ачаа'))+'</div>')+
+      '<div style="display:flex;align-items:center;gap:'+(mini?9:14)+'px">'+
+      svgDonut(sh5.raw.map(function(r){return {v:r.v,c:r.c}}),mini?42:70)+
+      '<div style="min-width:0;flex:1">'+sh5.raw.slice(0,mini?3:5).map(function(r){
+        return '<div class="pvrow" data-pvk="'+esc(r.k||'')+'"><i style="background:'+r.c+'"></i>'+
+          '<span>'+esc(r.n)+'</span><b>'+(r.live?esc(nf(Math.round(r.v)))+' '+esc(sh5.unit)+' · '+r.pct.toFixed(1)+'%':'—')+'</b></div>'}).join('')+
+      '</div></div>'+(mini?'':'<div class="pvax" data-pvd05="note">'+esc(sh5.note)+'</div>');
   } else if(kind==='donut'){
     var parts=sectorParts(id);
     if(!parts.length){ /* хавтгай виджет — эх виджетийнхээ бүтцийг өвлөнө */
@@ -2195,7 +2242,10 @@ function previewFor(id,mini){
         var pct=tot?(p.v/tot*100):0;
         return '<div class="pvrow" data-pvk="'+esc(p.k||'')+'"><i style="background:'+p.c+'"></i>'+
           '<span>'+esc(p.n)+'</span><b>'+(p.v?esc(nf(p.v))+' · ':'')+pct.toFixed(0)+'%</b></div>'}).join('')+
-      '</div></div>';
+      '</div></div>'+
+      /* d05: нэгтгэл ирээгүй — хуучин зам гэдгийг ил хэлнэ (сайт нэгтгэлтэй үед өөр дүн зурна) */
+      ((id==='d05'&&!mini&&ST.state!=='loading')?'<div class="pvax" data-pvd05="fallback">'+
+        esc(utxt('preview.d05_fallback','Салбарын нэгтгэл (/api/sectors/total/history) ачаалагдаагүй — агаарын тээврийн зам (registry-ийн метрик). Нэгтгэл ирсэн үед сайт ба preview салбаруудын зорчигч/ачааны оны эхнээс хувийг зурна.'))+'</div>':'');
   } else if(kind==='bignum'){
     /* w2p/w2c — сайт дээр ТОМ ТОО + доор нь 7 хоногийн БОСОО баганан
        график. Өдрийн бодит дүнг FEED.dayPax/dayCargo-оос авна (сайтын
@@ -3835,6 +3885,10 @@ function chromeFields(id){
   out.push('chart.period_prefix','chart.scope_months','chart.period_weeks','chart.period_days',
            'chart.period_dropped','chart.period_partial','chart.period_through','chart.period_none',
            'chart.period_day','chart.period_last');
+  /* (4в) d05 — салбарын нэгтгэлийн хувь (сайтын sectorShareFromTotal/buildDonut-тай НЭГ текст) */
+  out.push('sector_total.d05_period_ytd','sector_total.d05_period_year','sector_total.d05_off',
+           'sector_total.m_pax_short','sector_total.m_freight_short','sector_total.by_pax','sector_total.by_freight',
+           'sector_total.unit_pax','sector_total.unit_tonne','status.share_single','ui.preview.d05_fallback');
   /* (5) ҮХМЭЛ ТАЛБАР ҮҮСГЭХГҮЙ: зам бүрийг pathAffectsPreview()-ээр
          шалгаж, preview-д ҮНЭХЭЭР нөлөөлдгийг нь л үлдээнэ. Нөхцөл
          (метрик, дата, хэлбэр) өөрчлөгдөхөд жагсаалт өөрөө дагана. */
@@ -4400,6 +4454,9 @@ function toast(t){
 /* ══════════════════ ҮЙЛДЭЛ ══════════════════ */
 document.addEventListener('click',function(e){
   var t=e.target, el;
+  /* d05 preview-ийн хэмжүүр (сайтын d05Measure чип) — зөвхөн preview-г дахин зурна */
+  if((el=t.closest&&t.closest('[data-pvmeas]'))){
+    PV_D05_MEAS=el.dataset.pvmeas==='freight_tonnes'?'freight_tonnes':'passengers'; repaintPreview(); return}
   if(t.id==='fClear'){
     S.wq='';S.wQuality='all';S.wPage='all';S.wViz='all';render();return}
   /* ── Сайтын текст: бүлэг хураах/дэлгэх, хуудсаар шүүх ── */
