@@ -128,6 +128,10 @@ const FIXTURES = {
   'texts-overlap': { expect: ['text-overlap'], html:
     '<div style="' + CARD + 'width:300px;height:60px;position:relative"><span style="position:absolute;left:10px;top:10px">Давхцсан нэр</span>' +
     '<span style="position:absolute;left:30px;top:12px">1,234</span></div>' },
+  'week-labels-overlap-small': { expect: ['label-row-overlap'], html:
+    /* Гар утас: 7 хоногийн баганын утга «571,206» ~33px баганад 9px давхцсан (text-overlap-ийн 30%-иас доош) */
+    '<div class="eh-wk" style="display:flex;gap:4px;width:110px">' +
+    ['571,206', '561,952', '521,477'].map((v) => '<div style="flex:1;min-width:0;text-align:center;white-space:nowrap;font:10.5px monospace"><span>' + v + '</span></div>').join('') + '</div>' },
   'raw-nan-text': { expect: ['raw-leak'], html: '<div style="' + CARD + 'width:300px">Нийт: NaN нислэг</div>' },
   'raw-nan-svg': { expect: ['raw-leak'], html:
     '<svg viewBox="0 0 100 40" style="width:300px;height:auto"><path d="M0 40 L NaN 10" stroke="#09f" fill="none"/></svg>' },
