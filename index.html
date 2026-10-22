@@ -4527,7 +4527,7 @@
           <div data-wp-val="wow" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.wowColor }};">{{ detail.wp.wow }}</div>
         </div>
         <div>
-          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Өмнөх оны мөн үеийн харьцуулалт</div>
+          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">{{ detail.wp.yoyLabel }}</div>
           <div data-wp-val="yoy" style="font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:{{ detail.wp.yoyColor }};">{{ detail.wp.yoy }}</div>
         </div>
       </div>
@@ -8060,6 +8060,30 @@ function yoyReasonText(m,T){
   return T('kpi_yoy_none','харьцуулах бүтэн сар алга');
 }
 
+/* EMP: «Өмнөх оноос» гарахгүй үед (эх сурвалжид өмнөх оны бүтэн сар алга/цөөн) «—» хоосон
+   карт БИШ — сонгосон хүрээний сүүлийн хоёр ДАРААЛСАН БҮТЭН сарын харьцуулалт. Авто зорчигч,
+   ачаа тээвэр ХОЁУЛАА (tests RPX32, FR). Хос алга бол null — карт хуучин тайлбартаа үлдэнэ. */
+function monthOverMonth(ms,key,isFull){
+  const mk=m=>{const p=String(m.month).split('-');return (+p[0])*12+(+p[1]-1);};
+  for(let i=ms.length-1;i>0;i--){
+    const a=ms[i], b=ms[i-1];
+    if(isFull(a)&&isFull(b)&&+b[key]>0&&mk(a)-mk(b)===1)
+      return {month:a.month,prevMonth:b.month,cur:+a[key],prev:+b[key],pct:(a[key]/b[key]-1)*100};
+  }
+  return null;
+}
+/* «Өмнөх оноос» KPI — YoY байвал түүнийг, үгүй бол «Өмнөх сараас» (шалтгааныг хэлнэ), аль нь ч
+   алга бол «—» + шалтгаан. T = самбарын stxt ('road_pax_an.' / 'freight_an.'). */
+function momOrYoyKpi(m,T,dash,minPairs){
+  const sg=p=>(p>0?'+':'')+p.toFixed(1)+'%';
+  if(!m.yoy&&m.mom) return {label:T('kpi_mom','Өмнөх сараас'),value:sg(m.mom.pct),
+    sub:T('kpi_mom_vs','{month} / {prev}').replace('{month}',m.mom.month).replace('{prev}',m.mom.prevMonth)
+      +' · '+T('kpi_mom_why','өмнөх онтой харьцуулах бүтэн сар хүрэлцэхгүй')};
+  return {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?sg(m.yoy.pct):dash,
+    sub:m.yoy?(T('kpi_yoy_vs','{year} / {prev}').replace('{year}',m.yoy.year).replace('{prev}',m.yoy.prevYear)+' · '+m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):
+      m.yoyReason==='few'?T('kpi_yoy_few','харьцуулах бүтэн сар {min}-аас цөөн').replace('{min}',minPairs):yoyReasonText(m,T)};
+}
+
 /* ── Ачаа тээврийн мэдээ (УБТЗ ХНН 15399738 · МТЗ ТӨХК 15439650) ───────────
    backend: GET /api/sectors/rail/freight/:org/history (migrations/020) —
    сар бүрийн 4 чиглэл (транзит/экспорт/импорт/дотоод) × вагон/тонн, өртөө,
@@ -8119,6 +8143,8 @@ function freightAnalysisModel(all,sel,year,mr){
   const yc=yoyCompare(months,yr,mFrom,mTo,'tonnes');
   const few=!!(yc.yoy&&yc.yoy.months<FREIGHT_YOY_MIN), yoy=few?null:yc.yoy;
   const yoyReason=yoy?'ok':few?'few':(!yc.year?'pick_year':(yc.hasPrevYear?'none':'no_prev_year'));
+  /* МТЗ 2026-02-оос шинэчлэгдээгүй — YoY алга үед «Өмнөх сараас» (EMP) */
+  const mom=monthOverMonth(ms,'tonnes',m=>!m.partial&&+m.days>0);
   const bd=(yr==='all'&&fullRange)?all:sel;
   const keys=mr&&mr.keys;
   const total=r=>FREIGHT_DIRS.reduce((t,d)=>t+n(r[d+'_tonnes']),0);
@@ -8164,7 +8190,7 @@ function freightAnalysisModel(all,sel,year,mr){
     partialN:ms.filter(m=>m.partial).length,
     periodKeys:ms.map(m=>m.month),partialTo:(ms.filter(m=>m.partial).pop()||{}).last_date||null,
     tonnes,wagons,perWagon:wagons>0?tonnes/wagons:null,perDay:days>0?tonnes/days:null,
-    dirs,present,yoy,yoyReason,prevYear:yc.year?yc.year-1:null,historyFrom:months[0].month,
+    dirs,present,yoy,yoyReason,mom,prevYear:yc.year?yc.year-1:null,historyFrom:months[0].month,
     lastDate:lastMonth.last_date||null,
     stations,cargo,hasBreakdown,
     stationTotal:stations.reduce((t,s)=>t+s.tonnes,0),cargoTotal:cargo.reduce((t,c)=>t+c.tonnes,0),
@@ -8692,6 +8718,8 @@ function roadPaxAnalysisModel(all,sel,year,mr){
   const yc=yoyCompare(months,yr,mFrom,mTo,'passengers');
   const few=!!(yc.yoy&&yc.yoy.months<ROAD_PAX_YOY_MIN), yoy=few?null:yc.yoy;
   const yoyReason=yoy?'ok':few?'few':(!yc.year?'pick_year':(yc.hasPrevYear?'none':'no_prev_year'));
+  /* Эх сурвалжид 2025 онд 2 л сар — YoY алга үед «Өмнөх сараас» (EMP) */
+  const mom=monthOverMonth(ms,'passengers',m=>!m.partial&&m.days>0);
   /* Эрэмбэ: бүтэн түүх + бүтэн хүрээ бол all, бусад үед шүүлтийн татлага (sel) */
   const bd=(yr==='all'&&fullRange)?all:sel;
   const hasBreakdown=!!(bd&&Array.isArray(bd.by_route));
@@ -8731,7 +8759,7 @@ function roadPaxAnalysisModel(all,sel,year,mr){
     periodKeys:ms.map(m=>m.month),partialTo:(ms.slice().reverse().find(m=>m.partial)||{}).last_date||null,
     passengers,refunded,refundPct:(passengers+refunded)>0?refunded/(passengers+refunded)*100:null,
     perDay:days>0?ms.reduce((t,m)=>t+m.paxCovered,0)/days:null,
-    types,byType,yoy,yoyReason,prevYear:yc.year?yc.year-1:null,historyFrom:months[0].month,
+    types,byType,yoy,yoyReason,mom,prevYear:yc.year?yc.year-1:null,historyFrom:months[0].month,
     lastDate:lastMonth.last_date||null,upcoming:all.upcoming||null,
     routes,companies,channels,vehicles,ptypes,hasBreakdown,
     routeTotal:sumList(routes),companyTotal:sumList(companies),channelTotal:sumList(channels),
@@ -8758,8 +8786,14 @@ function roadPaxWeeklyModel(all){
   /* Бүтэн 7 хоног = 7 өдөр бүгд мэдээтэй (backend days = мэдээтэй өдөр). Хэсэгчилсэн 7 хоногийг
      бүтэнтэй харьцуулбал эх сурвалжийн цоорхой «уналт» мэт харагдана. */
   const full=w=>!!w&&!w.missing&&(w.days==null||+w.days>=7);
+  /* EMP: өмнөх оны мөн 7 хоног эх сурвалжид алга/дутуу үед «—» хоосон карт БИШ — сүүлийн
+     7 хоногийг цувааны өмнөх БҮТЭН 7 хоногуудын дундажтай (дор хаяж 3) харьцуулна */
+  const hist=weeks.slice(0,-1).filter(full);
+  const avgOf=t=>hist.length>=3?hist.reduce((s,w)=>s+val(w,t),0)/hist.length:null;
   const block=(t)=>({
     week:val(last,t),
+    avgPrev:avgOf(t),avgN:hist.length,
+    vsAvg:full(last)?pct(val(last,t),avgOf(t)):null,
     wow:(full(prev)&&full(last))?pct(val(last,t),val(prev,t)):null,
     prevWeek:full(prev)?val(prev,t):null,
     ytd:pick(ytd,t),
@@ -12498,9 +12532,7 @@ class Component extends DCLogic {
       {label:T('kpi_per_wagon','Вагон бүрийн дундаж'),value:m.perWagon==null?dash:m.perWagon.toFixed(1),sub:T('kpi_per_wagon_sub','тонн / вагон')},
       {label:T('kpi_export','Экспортын эзлэх хувь'),value:exp?exp.pct.toFixed(1)+'%':dash,sub:exp?T('kpi_export_sub','нийт ачааны (тонноор)'):T('kpi_export_none','экспорт бүртгэгдээгүй')},
       {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:T('kpi_per_day_sub','тонн / мэдээ орсон өдөр')},
-      {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?((m.yoy.pct>0?'+':'')+m.yoy.pct.toFixed(1)+'%'):dash,
-        sub:m.yoy?(T('kpi_yoy_vs','{year} / {prev}').replace('{year}',m.yoy.year).replace('{prev}',m.yoy.prevYear)+' · '+m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):
-          m.yoyReason==='few'?T('kpi_yoy_few','харьцуулах бүтэн сар {min}-аас цөөн').replace('{min}',FREIGHT_YOY_MIN):yoyReasonText(m,T)}
+      momOrYoyKpi(m,T,dash,FREIGHT_YOY_MIN)
     ];
     const circ=2*Math.PI*40;
     let acc=0;
@@ -12693,9 +12725,7 @@ class Component extends DCLogic {
       {label:T('kpi_per_day','Өдрийн дундаж'),value:m.perDay==null?dash:fmt(m.perDay),sub:T('kpi_per_day_sub','зорчигч / мэдээ орсон өдөр')},
       {label:T('kpi_refund','Буцаасан билет'),value:m.refundPct==null?dash:m.refundPct.toFixed(1)+'%',
         sub:fmt(m.refunded)+' '+T('kpi_refund_sub','билет — зорчигчид тооцоогүй')},
-      {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?((m.yoy.pct>0?'+':'')+m.yoy.pct.toFixed(1)+'%'):dash,
-        sub:m.yoy?(T('kpi_yoy_vs','{year} / {prev}').replace('{year}',m.yoy.year).replace('{prev}',m.yoy.prevYear)+' · '+m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):
-          m.yoyReason==='few'?T('kpi_yoy_few','харьцуулах бүтэн сар {min}-аас цөөн').replace('{min}',ROAD_PAX_YOY_MIN):yoyReasonText(m,T)}
+      momOrYoyKpi(m,T,dash,ROAD_PAX_YOY_MIN)
     ];
     const circ=2*Math.PI*40;
     let acc=0;
@@ -12780,7 +12810,12 @@ class Component extends DCLogic {
           +(ytdMissing>0?' · '+T('wk_ytd_gap','{n} өдөр мэдээгүй').replace('{n}',ytdMissing):'')):''},
       {label:T('wk_kpi_wow','Өмнөх 7 хоногоос'),value:sg(b.wow),
         sub:b.wow==null?((!wk.prevFull&&prev&&!prev.missing)?T('wk_wow_partial','өмнөх 7 хоногийн мэдээ дутуу'):T('wk_wow_none','харьцуулах бүтэн 7 хоног алга')):(range(prev)+': '+fmt(b.prevWeek))},
-      {label:T('wk_kpi_yoy','Өмнөх оны мөн үеэс'),value:sg(b.yoy),
+      (b.yoy==null&&b.vsAvg!=null)
+        /* EMP: өмнөх оны мөн 7 хоног алга — хоосон «—» биш, өмнөх бүтэн 7 хоногуудын дундажтай */
+        ?{label:T('wk_kpi_avg','7 хоногийн дунджаас'),value:sg(b.vsAvg),
+          sub:T('wk_avg_sub','өмнөх {n} бүтэн 7 хоногийн дундаж {avg}').replace('{n}',b.avgN).replace('{avg}',fmt(b.avgPrev))
+            +' · '+T('wk_avg_why','өмнөх оны мөн үе эх сурвалжид алга')}
+        :{label:T('wk_kpi_yoy','Өмнөх оны мөн үеэс'),value:sg(b.yoy),
         sub:b.yoy==null?pyNone:(pyRange+': '+fmt(b.prevYearWeek))}
     ].map(k=>({...k,tone:tone(k.value)}));
     const circ=2*Math.PI*40;
@@ -12807,7 +12842,10 @@ class Component extends DCLogic {
     /* Доод «7 хоногийн гүйцэтгэл» (wp) карт — ижил тоо, нэг эх сурвалж */
     const wp={wpNoData:false,hasData:true,hasPlan:false,
       total:t0.week==null?dash:fmt(t0.week),ytd:t0.ytd==null?dash:fmt(t0.ytd),
-      wow:sg(t0.wow),wowColor:tone(sg(t0.wow)),yoy:sg(t0.yoy),yoyColor:tone(sg(t0.yoy)),
+      wow:sg(t0.wow),wowColor:tone(sg(t0.wow)),
+      /* EMP: өмнөх оны мөн үе алга — «—» биш, дээрх KPI-тай ижил «7 хоногийн дунджаас» */
+      ...((t0.yoy==null&&t0.vsAvg!=null)?{yoy:sg(t0.vsAvg),yoyColor:tone(sg(t0.vsAvg)),yoyLabel:T('wk_kpi_avg','7 хоногийн дунджаас')}
+        :{yoy:sg(t0.yoy),yoyColor:tone(sg(t0.yoy))}),
       planLabel:dash,planPctLabel:dash,planWidth:'0%',note:''};
     return {roadPaxHasWeekly:true,roadPaxNoWeekly:false,roadPaxCapitalNote:capitalNote,
       roadPaxWkRange:range(last)+' '+String(last.week_end||'').slice(0,4),roadPaxWkPeriod:wkPeriod,
@@ -14225,7 +14263,7 @@ class Component extends DCLogic {
        өөрчлөлтийн хувь зохиож байв (замын түгжрэл дээр "287 мянган хүн").
        Эх сурвалж холбогдох хүртэл "—" + шалтгааныг ил хэлнэ. */
     const wp={wpNoData:true,hasData:false,hasPlan:false,total:'—',ytd:'—',wow:'—',wowColor:'var(--ink3)',
-      yoy:'—',yoyColor:'var(--ink3)',planLabel:'—',planPctLabel:'—',planWidth:'0%',
+      yoy:'—',yoyColor:'var(--ink3)',yoyLabel:stxt('detail.wp_yoy','Өмнөх оны мөн үеийн харьцуулалт'),planLabel:'—',planPctLabel:'—',planWidth:'0%',
       note:stxt('detail.wp_no_source','Энэ датасэтийн 7 хоногийн гүйцэтгэлийн эх сурвалж холбогдоогүй — тоо харуулахгүй.')};
     const isRoadInspect=dsel.source==='roadInspect';
     /* Газрын зураг/графикийн өгөгдөл зөвхөн датасэтийн хуудсан дээр бодогдоно
