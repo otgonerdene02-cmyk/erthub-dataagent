@@ -269,6 +269,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .pvrow span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pvrow b{color:#0C1428;font-weight:600;white-space:nowrap}
 .pvax{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:8.5px;color:#7D8CA8;margin-top:5px}
+/* DG-P: сайтын картын «Хугацаа: …» мөр — гарчгаас 6px доор (sp-top margin-bottom 13px) */
+.pvper{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:#7D8CA8;margin:-7px 0 12px;overflow-wrap:anywhere}
 .pvplan{display:flex;align-items:center;gap:8px;margin-top:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;color:#7D8CA8}
 .pvplan b{color:#0C1428;font-weight:600}
 .pvplan b.z{color:#A7B0C6;font-weight:400}
@@ -441,6 +443,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="../js/erthub-publish.js"></script>
 <script src="../js/erthub-backend.js"></script>
 <script src="../js/erthub-chart.js"></script>
+<script src="../js/erthub-glossary.js"></script>
 </head>
 <body>
 
@@ -651,7 +654,9 @@ var VIZNAME={counter:'Тоолуур',kpi:'KPI',line:'График',donut:'До�
 var LOG=[];   /* энэ сессийн бодит өөрчлөлтийн лог */
 var FEED={state:'idle',err:null,months:[],index:[],weekPax:null,weekCargo:null,
           dayPax:null,dayCargo:null,
-          lastMonthCount:null,fetchedAt:null,lastLabel:''};
+          lastMonthCount:null,fetchedAt:null,lastLabel:'',
+          /* DG-P хугацааны мөрийн түлхүүр (computeSeries) */
+          year:null,partialDropped:null,lastFullKey:null,weekFrom:null,weekTo:null,cmpYear:null,cmpMonths:0};
 /* УБТЗ · вагон ачилт — flights feed-ЭЭС ТУСДАА. Аль нэг нь унасан ч
    нөгөө preview хэвийн ажиллана (нэг Promise.all болговол нэгнийх нь
    алдаа хоёуланг нь унтраана). */
@@ -814,6 +819,18 @@ function computeSeries(byYear,latest){
   rows.forEach(function(f){var m=(f.month||0)-1;if(m>=0&&m<12){cnt[m]++;seen[m]=true}});
   var months=[];
   for(var i=0;i<12;i++) if(seen[i]) months.push({m:i,label:MONTHS[i],v:cnt[i]});
+  /* ЯВАГДАЖ БУЙ (УБ-ийн одоогийн) сар цуваанд ОРОХГҮЙ — сайтын dropPartialMonth()-тэй
+     ИЖИЛ дүрэм (registry period_coverage.excludes_current). Өмнө нь preview дутуу
+     сарыг бүтэн сар мэт зурж, сайттай зөрдөг байв (DG). Хасагдсныг тэмдэглэнэ —
+     хугацааны мөр «дутуу сар хасагдсан» гэж хэлнэ. */
+  var p2=function(n){return String(n).padStart(2,'0')};
+  var yr=+latest.year||null, ub=new Date(Date.now()+8*3600000);
+  var cov=REG&&REG.metrics&&REG.metrics['air.monthly_flight_series'];
+  var excl=!(cov&&cov.period_coverage&&cov.period_coverage.excludes_current===false);
+  FEED.year=yr; FEED.partialDropped=null;
+  if(excl&&months.length&&yr===ub.getUTCFullYear()&&months[months.length-1].m===ub.getUTCMonth()){
+    FEED.partialDropped=yr+'-'+p2(months.pop().m+1);
+  }
   FEED.months=months;
   FEED.lastLabel=months.length?months[months.length-1].label:'';
   /* air.monthly_growth_index — transform: index[m]=count[m]/count[0]*100 */
@@ -828,9 +845,16 @@ function computeSeries(byYear,latest){
     var full=lm-1;                        /* түүнээс өмнөх бүтэн сар */
     FEED.lastMonthCount = full>=0 ? cnt[full] : null;
     FEED.lastMonthLabel = full>=0 ? MONTHS[full] : '';
+    FEED.lastFullKey = full>=0 ? yr+'-'+p2(full+1) : null;
+    /* i06/r06-ийн харьцуулах цонх — сайтын compareWindow(): сүүлийн бичлэгийн
+       ӨМНӨХ сар хүртэл (1-р сар бол өмнөх оны 12 сар, тэр он ачаалагдсан бол). */
+    var cy=newest.year, cmo=(newest.month||1)-1;
+    if(cmo<1){ cmo=12; cy=newest.year-1; }
+    FEED.cmpYear=byYear[cy]?cy:null; FEED.cmpMonths=FEED.cmpYear?Math.min(12,cmo):0;
     /* air.weekly_pax / air.weekly_cargo — filter: сүүлийн бичлэгийн
        ӨДРӨӨС ӨМНӨХ бүтэн 7 хоног (lastFullWeekWindow(0)) */
     var end=Date.UTC(newest.year,(newest.month||1)-1,newest.day||1)-86400000;
+    var ymd=function(t){var d=new Date(t);return d.getUTCFullYear()+'-'+p2(d.getUTCMonth()+1)+'-'+p2(d.getUTCDate())};
     var want={};
     for(var d=6;d>=0;d--){
       var dt=new Date(end-d*86400000);
@@ -851,7 +875,6 @@ function computeSeries(byYear,latest){
     for(var dd=6;dd>=0;dd--){
       var t=new Date(end-dd*86400000);
       var kk=t.getUTCFullYear()+'-'+(t.getUTCMonth()+1)+'-'+t.getUTCDate();
-      var p2=function(n){return String(n).padStart(2,'0')};
       dk.push({k:kk,label:p2(t.getUTCMonth()+1)+'.'+p2(t.getUTCDate())});
       dp[kk]=0; dc[kk]=0;
     }
@@ -863,6 +886,8 @@ function computeSeries(byYear,latest){
     });
     FEED.dayPax  = hit?dk.map(function(x){return {label:x.label,v:dp[x.k]}}):null;
     FEED.dayCargo= hit?dk.map(function(x){return {label:x.label,v:dc[x.k]}}):null;
+    FEED.weekFrom= hit?ymd(end-6*86400000):null;
+    FEED.weekTo  = hit?ymd(end):null;
   }
 }
 /* Метрикийн БОДИТ утга — зөвхөн registry-д тодорхойлолт нь байгаа
@@ -997,13 +1022,13 @@ function paxSeriesFromSummary(json,now){
   var rows=Array.isArray(json.data)?json.data:[];
   var ub=new Date((now==null?Date.now():now)+8*3600000);
   var curKey=ub.getUTCFullYear()*100+(ub.getUTCMonth()+1);
-  var by={},keys=[];
+  var by={},keys=[],cur=false;
   rows.forEach(function(r){
     var t=Date.parse(r&&r.month); if(!isFinite(t)) return;
     var raw=r.total_volume; if(raw==null||String(raw).trim()==='') return;
     var n=Number(raw); if(!isFinite(n)||n<0) return;
     var d=new Date(t), k=d.getUTCFullYear()*100+(d.getUTCMonth()+1);
-    if(k>=curKey) return;
+    if(k>=curKey){ if(k===curKey) cur=true; return; }
     if(!(k in by)) keys.push(k);
     by[k]=n;
   });
@@ -1012,7 +1037,8 @@ function paxSeriesFromSummary(json,now){
   for(var m=1;m<=12;m++){ if(!((year*100+m) in by)) break; out.push({m:m-1,label:MONTHS[m-1],v:by[year*100+m]}); }
   var maxM=Math.max.apply(null,keys.filter(function(k){return Math.floor(k/100)===year}).map(function(k){return k%100}));
   if(!out.length||maxM!==out.length) return null;
-  return {unit:unit,series:out};
+  /* year/partialDropped — preview-ийн хугацааны мөрд (сайтын sectorSummaryToSeries-ийн partial) */
+  return {unit:unit,series:out,year:year,partialDropped:cur&&Math.floor(curKey/100)===year};
 }
 function loadSectorSeries(){
   var apis={};
@@ -1024,7 +1050,7 @@ function loadSectorSeries(){
     return EHBackend.fetchSectorSummary(api).then(function(j){
       var p=paxSeriesFromSummary(j);
       if(!p||p.series.length<2){ st.state='error'; return }
-      st.series=p.series; st.unit=p.unit; st.state='ready';
+      st.series=p.series; st.unit=p.unit; st.year=p.year; st.partialDropped=p.partialDropped; st.state='ready';
     },function(){ st.state='error' });
   }));
 }
@@ -1933,6 +1959,96 @@ function partCell(p,cls){
     '<div class="l">'+esc(p.n)+'</div>'+
     '<div class="v">'+(on?esc(nf(p.v)||'0'):'0')+'</div></div>';
 }
+/* ══════════ ГРАФИКИЙН ХУГАЦАА (DG-P) — preview ══════════════════════
+   Сайтын карт бүр гарчгийн доор «Хугацаа: …» мөртэй (docs/chart-period-standard.md).
+   Preview ч ИЖИЛ мөрийг ИЖИЛ функцээр (EHGlossary.chartPeriod) зурна; хугацаа нь
+   preview-ийн ӨӨРӨӨ зурж буй өгөгдлөөс (FEED, салбарын нэгтгэл ST, SERIES …) —
+   зохиохгүй, алга бол «мэдээлэл алга». Сайттай ижил газарт л мөр гарна:
+   02-р хэсгийн карт (w2p/w2c, доторх задаргаа ба харьцуулалт хуваалцана), t05,
+   d05, i06/r06. hero/ls/k04/uk/u07 сайт дээр ч хугацааны мөргүй (k04 чөлөөлөгдсөн). */
+var PV_PERIOD={w2p:'week',w2pb:'week',w2px:'week',w2c:'week',w2cb:'week',w2cx:'week',
+  t05:'trend',d05:'parts',i06:'compare',r06:'compare'};
+function pvT(k,fb){
+  var c=CON&&CON.site&&CON.site.chart, v=c&&c[k];
+  return (v==null||v==='')?fb:v;
+}
+function pvSlotVerified(id,k){
+  return slotsOf(id).some(function(s){return s.key===k&&qualityOf(slotVal(id,s.path))==='verified'});
+}
+/* 02-р хэсэг — сайтын buildWeek(): нэгтгэл (утгын тохиргоогүй үед) ирсэн бол
+   долоо хоногийн цуваа бүхэлдээ («N долоо хоног»), эс бөгөөс flights feed-ийн
+   сүүлийн бүтэн 7 хоног. Задаргаа/харьцуулалт нь толгой картынхаа мөрийг дагана. */
+function pvWeekModel(id){
+  var head=id.indexOf('w2c')===0?'w2c':'w2p';
+  var sp=valueSpecOf(head);
+  if(!(sp&&sp.measure)&&ST.state==='ready'&&ST.weekly){
+    var w=ST.weekly[head==='w2c'?'freight_tonnes':'passengers'];
+    var ks=((w&&w.sectors)||[]).filter(function(k){return k==='air'||pvSlotVerified(head,k)});
+    if(w&&Array.isArray(w.weeks)&&w.weeks.length&&ks.length)
+      return {dayFrom:w.weeks[0].week_start,dayTo:w.weeks[w.weeks.length-1].week_end,nWeeks:w.weeks.length};
+  }
+  return (FEED.state==='ready'&&FEED.weekFrom)?{dayFrom:FEED.weekFrom,dayTo:FEED.weekTo}:{};
+}
+/* Сарын цуваа — preview-ийн line-ийн ЯГ тэр цуваа (утгын тохиргоо → registry
+   метрик). Сайтын t05Period: утгатай (>0) сарууд, дутуу сар хасагдсан бол тэмдэглэнэ. */
+function pvMonthKeys(year,list){
+  return year?list.filter(function(x){return +x.v>0}).map(function(x){return year+'-'+String(x.m+1).padStart(2,'0')}):[];
+}
+function pvTrendModel(id){
+  var vr=widgetValueRes(id);
+  if(vr&&vr.series&&vr.series.length>1)
+    return {periodKeys:pvMonthKeys(FEED.year,vr.labels.map(function(lb,i){return {m:parseInt(lb,10)-1,v:vr.series[i]}})
+      .filter(function(x){return x.m>=0&&x.m<12}))};
+  var mk=headMetric(id);
+  if(mk&&SERIES_METRIC[mk]){
+    var ss=SERIES[SERIES_METRIC[mk]];
+    return (ss&&ss.state==='ready')?{periodKeys:pvMonthKeys(ss.year,ss.series),partialDropped:!!ss.partialDropped}:{};
+  }
+  var ser=mk?metricSeries(mk):null;
+  return (ser&&ser.length>1)?{periodKeys:pvMonthKeys(FEED.year,ser),partialDropped:!!FEED.partialDropped}:{};
+}
+/* Нэг метрикийн утгын хугацаа (донутын мөр бүр) — метрик юу уншдагаас. */
+function pvMetricModel(mk){
+  if(mk==='air.flight_count_last_month'||mk==='air.kpi_set')
+    return (FEED.state==='ready'&&FEED.lastFullKey)?{periodKeys:[FEED.lastFullKey]}:{};
+  if(ST_METRIC[mk]){
+    var sw=stWeek(mk);
+    if(sw){ var lw=sw.w.weeks[sw.w.weeks.length-1]; return {dayFrom:lw.week_start,dayTo:lw.week_end}; }
+    return (mk.indexOf('air.')===0&&FEED.state==='ready'&&FEED.weekFrom)?{dayFrom:FEED.weekFrom,dayTo:FEED.weekTo}:{};
+  }
+  if(mk&&mk.indexOf('rail.wagon')===0) return (RAIL.state==='ready'&&RAIL.date)?{asOf:String(RAIL.date).slice(0,10)}:{};
+  if(mk&&mk.indexOf('road.inspection')===0) return (INSP.state==='ready'&&INSP.date)?{asOf:String(INSP.date).slice(0,10)}:{};
+  return {};
+}
+/* d05 — сайтын buildDonut(): холбогдсон салбар бүрийн хугацаа; ижил бол нэг мөр,
+   өөр бол салбараар нь нэрлэнэ (нэг мужид шахахгүй). */
+function pvPartsText(id){
+  var vr=widgetValueRes(id);
+  var ps=sectorParts(id).filter(function(p){return p.q==='verified'&&p.v});
+  if(!ps.length) return EHGlossary.chartPeriod({},pvT);
+  var tx=ps.map(function(p){
+    if(vr&&(p.k==='air'||p.k===null)) return EHGlossary.chartPeriod(pvTrendModel(id),pvT);
+    return EHGlossary.chartPeriod(pvMetricModel(p.m),pvT);
+  });
+  var uq=tx.filter(function(t,i){return tx.indexOf(t)===i});
+  return uq.length===1?uq[0]:ps.map(function(p,i){return p.n+' — '+tx[i]}).join(' · ');
+}
+function pvCompareModel(){
+  if(FEED.state!=='ready'||!FEED.cmpYear) return {};
+  var ks=[]; for(var m=1;m<=FEED.cmpMonths;m++) ks.push(FEED.cmpYear+'-'+String(m).padStart(2,'0'));
+  return {periodKeys:ks};
+}
+/* Виджетийн хугацааны мөрийн текст ('' = энэ виджет сайт дээр мөргүй) */
+function pvPeriodText(id){
+  var k=PV_PERIOD[id];
+  if(!k||typeof EHGlossary==='undefined') return '';
+  if(k==='parts') return pvPartsText(id);
+  return EHGlossary.chartPeriod(k==='week'?pvWeekModel(id):k==='trend'?pvTrendModel(id):pvCompareModel(),pvT);
+}
+function pvPeriodLine(id,mini){
+  var t=mini?'':pvPeriodText(id);
+  return t?'<div class="pvper" data-chart-period="1">'+esc(t)+'</div>':'';
+}
 function previewFor(id,mini){
   var kind=shapeOf(id), c=CON.widgets[id]||{};
   var title=(S.widget===id&&S.td&&S.td.title!=null)?S.td.title:(c.title||id);
@@ -2164,7 +2280,7 @@ function previewFor(id,mini){
           :(!mini&&('sub' in c)?'<span class="ed sp-sub empty" data-ed="sub">'+esc(utxt('preview.add_sub','+ дэд гарчиг'))+'</span>':''))+
       feedNote()+
       '<span class="pvshape">'+esc(SHAPEN[kind]||kind)+'</span>'+
-    '</div>'+body+
+    '</div>'+pvPeriodLine(id,mini)+body+
     footBlock(c,'foot',foot,mini)+footBlock(c,'foot2',foot2,mini)+
   '</div></div>';
 }
@@ -3715,6 +3831,10 @@ function chromeFields(id){
   out.push('ui.sector_extra.plan','ui.sector_extra.other','ui.metric.single_slot',
            'ui.preview.slot_quality','ui.badge.live_value','ui.badge.live_service',
            'ui.badge.mock','ui.badge.no_data');
+  /* (4б) Графикийн хугацааны мөр (DG-P) — сайттай НЭГ текст (site.chart.period_*) */
+  out.push('chart.period_prefix','chart.scope_months','chart.period_weeks','chart.period_days',
+           'chart.period_dropped','chart.period_partial','chart.period_through','chart.period_none',
+           'chart.period_day','chart.period_last');
   /* (5) ҮХМЭЛ ТАЛБАР ҮҮСГЭХГҮЙ: зам бүрийг pathAffectsPreview()-ээр
          шалгаж, preview-д ҮНЭХЭЭР нөлөөлдгийг нь л үлдээнэ. Нөхцөл
          (метрик, дата, хэлбэр) өөрчлөгдөхөд жагсаалт өөрөө дагана. */

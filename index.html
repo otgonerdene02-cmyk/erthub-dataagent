@@ -8172,14 +8172,8 @@ function freightAnalysisModel(all,sel,year,mr){
    «Хугацаа: 2022-01 — 2026-08 · 44 сар». m = анализын загвар (periodKeys/partialTo),
    T = stxt-ийн орчуулагч. Хугацаа зохиохгүй — датагүй бол «мэдээлэл алга». */
 function chartPeriodText(m,T){
-  const W={prefix:T('period_prefix','Хугацаа'),months:T('scope_months','сар'),partial:T('period_partial','дутуу сар'),
-    through:T('period_through','хүртэл'),none:T('period_none','мэдээлэл алга'),dropped:T('period_dropped','дутуу сар хасагдсан'),
-    last:T('period_last','сүүлийнх'),day:(m&&m.asOfWord)||T('period_day','сүүлийн бүрэн хоног'),days:T('period_days','хоног')};
-  /* Долоо хоногийн цуваа (багана = 7 хоног) — «N долоо хоног» (EHGlossary.weekSpan), хоногийн тоо биш */
-  if(m&&m.nWeeks>0) return EHGlossary.weekSpan(m.dayFrom,m.dayTo,m.nWeeks,
-    {words:{prefix:W.prefix,weeks:T('period_weeks','долоо хоног'),none:W.none}}).text;
-  return EHGlossary.periodSpan((m&&m.periodKeys)||[],{partialTo:m&&m.partialTo,partialCount:m&&m.partialN,asOf:m&&m.asOf,
-    dayFrom:m&&m.dayFrom,dayTo:m&&m.dayTo,dropped:!!(m&&m.partialDropped),words:W}).text;
+  /* Нэг эх: EHGlossary.chartPeriod — админы preview ч ЯГ үүнийг дуудна */
+  return EHGlossary.chartPeriod(m,T);
 }
 
 /* Ачааны сарын график — чиглэл бүр давхарласан багана (тонн, зүүн тэнхлэг)

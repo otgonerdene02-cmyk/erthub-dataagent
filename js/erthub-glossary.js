@@ -322,11 +322,26 @@
     return { from: from, to: to, count: nWeeks, text: w.prefix + ': ' + from + ' — ' + to + ' · ' + nWeeks + ' ' + w.weeks };
   }
 
+  /* (5в) Картын хугацааны мөр — сайт (index.html chartPeriodText) ба админы preview
+     ХОЁУЛАА ЭНИЙГ дуудна: загвар m = {periodKeys, partialTo, partialN, asOf, asOfWord,
+     dayFrom, dayTo, nWeeks, partialDropped}; T(түлхүүр, fallback) = content.json
+     site.chart.<түлхүүр>. Нэг газар — preview ба сайт өөр үгээр бичихгүй. */
+  function chartPeriod(m, T) {
+    var t = typeof T === 'function' ? T : function (k, fb) { return fb; };
+    var W = { prefix: t('period_prefix', 'Хугацаа'), months: t('scope_months', 'сар'), partial: t('period_partial', 'дутуу сар'),
+      through: t('period_through', 'хүртэл'), none: t('period_none', 'мэдээлэл алга'), dropped: t('period_dropped', 'дутуу сар хасагдсан'),
+      last: t('period_last', 'сүүлийнх'), day: (m && m.asOfWord) || t('period_day', 'сүүлийн бүрэн хоног'), days: t('period_days', 'хоног') };
+    if (m && m.nWeeks > 0) return weekSpan(m.dayFrom, m.dayTo, m.nWeeks,
+      { words: { prefix: W.prefix, weeks: t('period_weeks', 'долоо хоног'), none: W.none } }).text;
+    return periodSpan((m && m.periodKeys) || [], { partialTo: m && m.partialTo, partialCount: m && m.partialN, asOf: m && m.asOf,
+      dayFrom: m && m.dayFrom, dayTo: m && m.dayTo, dropped: !!(m && m.partialDropped), words: W }).text;
+  }
+
   var api = {
     airPaxSplit: airPaxSplit, norm: norm, airFlightKind: airFlightKind, KIND_LABEL: KIND_LABEL, AIR_KIND: AIR_KIND,
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,
-    filterColumns: filterColumns, rowMatchesCols: rowMatchesCols, periodSpan: periodSpan, weekSpan: weekSpan,
+    filterColumns: filterColumns, rowMatchesCols: rowMatchesCols, periodSpan: periodSpan, weekSpan: weekSpan, chartPeriod: chartPeriod,
     condActive: condActive, condMatch: condMatch, facetSuggest: facetSuggest, numOf: numOf
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
