@@ -1864,7 +1864,7 @@ function groupI() {
     /const b=src\[0\]\|\|1; return src\.slice\(0,months\)\.map\(v=>v\/b\*100\)/.test(idx),
     'хэвийшүүлэх мөр олдсонгүй');
   check('I8. Төгсгөлийн шошго Math.round-той (иймд шошгоор харьцуулж БОЛОХГҮЙ)',
-    idx.includes('endLabel:Math.round(t[lastIdx])'), 'endLabel мөр олдсонгүй');
+    idx.includes('endLabel:Math.round(t[li])'), 'endLabel мөр олдсонгүй');
 
   /* Регресс: W5 шалгуур дугуйруулсан шошго руу БУЦАЖ болохгүй. */
   const selfSrc = read('tests/run.js');
@@ -2979,7 +2979,7 @@ async function groupW() {
     idx.includes('const src=(air===undefined)?airI06:air;'));
   check('W3. r06 эрэмбэ ӨӨРИЙН тохиргоотой',
     idx.includes("const airR06=airFromSpec(this.valueSpecRaw('r06'))||cw.airCounts;") &&
-    idx.includes('const t=trendFor(k,airR06),a=t[0],b=t[lastIdx];'));
+    idx.includes('const t=trendI06(k,airR06),a=t[0],b=t[lastOf(t)];'));
   const hStart = idx.indexOf('const airFromSpec=(spec)=>{');
   const helper = hStart >= 0 ? idx.slice(hStart, idx.indexOf('};', hStart)) : '';
   check('W4. Тооцоолол EHChart.agg-аар (дахин нэмж бичээгүй)',
@@ -7939,6 +7939,85 @@ async function groupDGP() {
      2026-10 1–19 (ДУТУУ, дуусаагүй сар): Хот 180 · Улс 20 = 200 (буцаалт Хот 10)
    Нийт 1,573 зорчигч · 106 буцаалт · 146 өдөр; Хот 1,330 · Улс 243.
    YoY: бүтэн хос сар 2 (08, 09) < 3 → гаргахгүй ("few"). */
+/* RI. 06-р хэсгийн индекс (i06/r06) — авто тээврийн зорчигч (2026-10-22 хэрэглэгч: «06-р
+   хэсгийн индекс графикт авто тээврийг нэм»). Эх сурвалж цонхоор ачаалагддаг тул дутуу
+   сарын НИЙТИЙГ бүтэн сартай харьцуулбал худал уналт гарна (2026-08: 21/31 хоног).
+   Гараар бодох фикстур (2026, 4 сар):
+     01  26/31 хоног · хамрагдсан 2600 → 2600/26×31 = 3100 (дутуу)  → индекс 100 (суурь)
+     02  28/28 хоног · 2800                                          → 90.3
+     03   0/31 хоног · 12 хожуу билет → null (шугам тасарна, 0 биш)
+     04  30/30 хоног · 3100                                          → 100 */
+async function groupRI() {
+  group('RI. 06-р хэсгийн индекс — авто тээврийн зорчигч');
+  const src = dcScript();
+  const fm = src.match(/\nfunction roadPaxMonthSeries\(h,year,months\)\{[\s\S]*?\n\}\n/);
+  check('RI0. roadPaxMonthSeries тодорхойлогдсон', !!fm);
+  if (!fm) return;
+  const F = new Function(fm[0] + '\nreturn roadPaxMonthSeries;')();
+  const H = { status: 'ok', months: [
+    { month: '2026-01', days: 26, days_in_month: 31, passengers: 2700, passengers_covered: 2600 },
+    { month: '2026-02', days: 28, days_in_month: 28, passengers: 2800, passengers_covered: 2800 },
+    { month: '2026-03', days: 0, days_in_month: 31, passengers: 12, passengers_covered: 0 },
+    { month: '2026-04', days: 30, days_in_month: 30, passengers: 3100, passengers_covered: 3100 },
+    { month: '2025-12', days: 31, days_in_month: 31, passengers: 9999, passengers_covered: 9999 }] };
+  const s = F(H, 2026, 4);
+  check('RI1. Дутуу сар = хамрагдсан хоногийн дундаж × сарын хоног (2600/26×31 = 3100), partial',
+    s && s[0].v === 3100 && s[0].partial === true && s[0].days === 26 && s[0].dim === 31, JSON.stringify(s && s[0]));
+  check('RI2. Бүтэн сар = эх нийт (2800, 3100), partial биш',
+    s && s[1].v === 2800 && !s[1].partial && s[3].v === 3100 && !s[3].partial, JSON.stringify(s));
+  check('RI3. Хамрагдсан хоног 0 (12 хожуу билет) → null — 0/12 гэж зурахгүй',
+    s && s[2].v === null && s.length === 4, JSON.stringify(s && s[2]));
+  const idx = s ? s.map((x) => x.v == null ? null : Math.round(x.v / s[0].v * 1000) / 10) : [];
+  check('RI4. Индекс 1-р сар = 100: [100, 90.3, null, 100]', JSON.stringify(idx) === '[100,90.3,null,100]', JSON.stringify(idx));
+  check('RI5. Өөр он ороогүй, ok бус / хоосон бол null',
+    F(H, 2025, 3) === null && F({ status: 'no_data', months: [] }, 2026, 4) === null && F(null, 2026, 4) === null);
+  const s2 = F({ status: 'ok', months: [{ month: '2026-01', days: 10, days_in_month: 31, passengers: 1000 }] }, 2026, 1);
+  check('RI6. passengers_covered байхгүй (хуучин хариу) бол passengers-ээр: 1000/10×31 = 3100', s2 && s2[0].v === 3100, JSON.stringify(s2));
+
+  const idxSrc = read('index.html'), reg = JSON.parse(read('metric_registry.json'));
+  check('RI7. Registry: i06 ба r06-д road бүртгэлтэй',
+    reg.widgets.i06.sectors.includes('road') && reg.widgets.r06.sectors.includes('road'));
+  check('RI8. road шугам үзлэгийн c1d-ийг БИШ roadPax түүхийг уншина; шугам/эрэмбэ хоёулаа trendI06',
+    idxSrc.includes("roadPaxMonthSeries(this._roadPaxAll,cw.year,months)") &&
+    /const t=trendI06\(k\), li=lastOf\(t\);/.test(idxSrc) && /const t=trendI06\(k,airR06\)/.test(idxSrc));
+  check('RI9. Мэдээгүй сард шугам ТАСАРНА (M), утга нь min/max-д null-гүй',
+    idxSrc.includes("if(v==null){ pen=false; return; }") && idxSrc.includes('.filter(v=>v!=null):[60,130]'));
+  check('RI10. Дутуу сарын hollow цэг tooltip-тэй (HV)',
+    /<sc-for list="\{\{ comparePartialPts \}\}"[\s\S]{0,200}<title>\{\{ cp\.tip \}\}<\/title>/.test(idxSrc));
+
+  if (!CHROME) { skipped('RI11 сайт дээрх авто тээврийн шугам (хөтөч)', 'Chrome олдсонгүй'); return; }
+  const probe = async function (d, w) {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const v = f(); if (v) return v; await sleep(200); } return null; };
+    const card = () => { const t = d.querySelector('[data-eh-card="i06"][data-eh-field="title"]'); let c = t; while (c && !c.querySelector('svg')) c = c.parentElement; return c; };
+    const roadPath = () => { const c = card(); return c && [...c.querySelectorAll('path')].find((p) => (p.getAttribute('stroke') || '').toUpperCase() === '#8CA9E8'); };
+    const flat = (p) => { const ys = (p.getAttribute('d').match(/,[\d.]+/g) || []).map((x) => +x.slice(1)); return ys.length < 2 || ys.every((y) => y === ys[0]); };
+    await until(() => roadPath() && !flat(roadPath()), 30000);
+    const p = roadPath();
+    const c = card();
+    const out = { has: !!p, d: p ? p.getAttribute('d') : null, flat: p ? flat(p) : null };
+    out.tips = c ? [...c.querySelectorAll('circle title')].map((t) => t.textContent) : [];
+    const rk = d.querySelector('[data-eh-card="r06"][data-eh-field="title"]'), rc = rk && rk.parentElement;
+    out.rank = rc ? [...rc.querySelectorAll('div')].filter((r) => r.children.length >= 4 && /^\d\d$/.test((r.children[0].textContent || '').trim()))
+      .map((r) => r.innerText.replace(/\s+/g, ' ').trim()) : [];
+    return out;
+  };
+  const srv = serve();
+  const prevSrc = PROBE_SRC;
+  PROBE_SRC = '/index.html?fx=1';
+  let R;
+  try { R = await runProbe('async function(d,w){return (' + probe.toString() + ')(d,w);}', 60000); }
+  finally { PROBE_SRC = prevSrc; srv.close(); }
+  if (!R || R.__err) { bad('RI11. Нүүрний индекс графикийн probe', JSON.stringify(R)); return; }
+  check('RI11. Сайт: авто тээврийн шугам бодит цуваатай (хавтгай 0 биш, NaN-гүй)',
+    R.has && R.flat === false && !/NaN|undefined/.test(R.d || ''), JSON.stringify(R).slice(0, 400));
+  check('RI12. Сайт: авто тээврийн төгсгөлийн цэг tooltip «Авто тээвэр — N индекс»',
+    R.tips.some((t) => /^Авто тээвэр — (\d+-р сар: )?\d+ индекс/.test(t)), JSON.stringify(R.tips));
+  const rr = R.rank.find((x) => /Авто тээвэр/.test(x)) || '';
+  check('RI13. Сайт: r06 эрэмбэд авто тээвэр хувьтай, «мэдээлэл алга» биш',
+    /[+-]\d+(\.\d)?%/.test(rr) && !/мэдээлэл алга/.test(rr), JSON.stringify(R.rank));
+}
+
 function groupRPX() {
   group('RPX. Авто тээврийн зорчигч — модель · 7 хоногийн тайлан · график · холболт');
   const src = dcScript();
@@ -9482,11 +9561,12 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=ST')) { groupST(); }
   else if (process.argv.includes('--only=WK')) { groupWK(); }
   else if (process.argv.includes('--only=RPX')) { groupRPX(); }
+  else if (process.argv.includes('--only=RI')) { await groupRI(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupFR(); groupST(); await groupDGP(); groupWK(); groupRPX(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupFR(); groupST(); await groupDGP(); groupWK(); groupRPX(); await groupRI(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
