@@ -19,6 +19,7 @@
 | `.claude/agents/chart-stat-qa.md` | Статистикч агент — hover, тулгалт, нийлбэр, нэгжийг хүн шиг шалгана |
 | `tests/text-coverage.js` | Харагдах текстийн хамрах хүрээ + round-trip (5 тест) |
 | `scripts/check-ui-standard.js` | UI стандартын статик шалгагч (хүснэгт · мөр · дараалал) |
+| `scripts/stamp-assets.js` | Кэш тасалгаа — HTML доторх `style.css`/`js/*.js` холбоост агуулгын hash параметр бичнэ (`check-asset-stamps.js` нь CI-д шалгана) |
 | `tests/lib/feed-fixtures.js` | Амьд feed-ийн тестийн фикстур (`?fx=1`) — аудитыг өгөгдөлтэй төлөвөөр |
 
 ## content.json — 4 блок
@@ -88,8 +89,15 @@ node tests/text-coverage.js --list  # хамрах хүрээ 100% байх ёс
 Commit хийхийн ӨМНӨ заавал:
 
 ```bash
-node scripts/check-cyrillic.js && node scripts/check-registry.js && node scripts/check-ui-standard.js
+node scripts/stamp-assets.js && node scripts/check-cyrillic.js && node scripts/check-registry.js && node scripts/check-ui-standard.js
 ```
+
+**Кэш тасалгаа (агуулгын hash параметр).** GitHub Pages бүх файлыг `max-age=600`-аар өгдөг тул
+deploy-ийн дараа 10 минут шинэ HTML + ХУУЧИН CSS/JS зэрэг ачаалагдаж байв (2026-10-22, #84).
+`style.css` эсвэл `js/*.js`-ийг өөрчилбөл `node scripts/stamp-assets.js` ажиллуулж HTML-ийн
+hash-ыг хамт commit хий — эс тэгвэл CI `check-asset-stamps` унана (`tests/run.js --only=AS`).
+Hash нь CRLF→LF болгож тооцогдоно. Зэрэгцээ PR-ийн hash мөр зөрчилдвөл аль нэгийг аваад
+дахин `stamp-assets.js` ажиллуул. Шинэ `<script src>`/`<link href>` нэмбэл ч мөн адил.
 
 ## CI (GitHub Actions)
 
