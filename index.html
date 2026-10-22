@@ -846,7 +846,7 @@
         <div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;margin-bottom:7px;">
             <sc-for list="{{ weekPaxBars }}" as="wb" hint-placeholder-count="6">
-              <div style="flex:1;min-width:0;text-align:center;{{ wb.valueStyle }}"><span class="eh-wk-full">{{ wb.value }}</span><span class="eh-wk-short">{{ wb.valueShort }}</span></div>
+              <div style="flex:1;min-width:0;text-align:center;{{ wb.valueStyle }}"><span class="eh-wk-full">{{ wb.value }}</span><span class="eh-wk-short" style="display:none">{{ wb.valueShort }}</span></div>
             </sc-for>
           </div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;height:150px;border-bottom:1px solid var(--line2);position:relative;">
@@ -941,7 +941,7 @@
         <div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;margin-bottom:7px;">
             <sc-for list="{{ weekCargoBars }}" as="wb" hint-placeholder-count="6">
-              <div style="flex:1;min-width:0;text-align:center;{{ wb.valueStyle }}"><span class="eh-wk-full">{{ wb.value }}</span><span class="eh-wk-short">{{ wb.valueShort }}</span></div>
+              <div style="flex:1;min-width:0;text-align:center;{{ wb.valueStyle }}"><span class="eh-wk-full">{{ wb.value }}</span><span class="eh-wk-short" style="display:none">{{ wb.valueShort }}</span></div>
             </sc-for>
           </div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;height:150px;border-bottom:1px solid var(--line2);position:relative;">

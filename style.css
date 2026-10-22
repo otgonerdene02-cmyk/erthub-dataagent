@@ -93,8 +93,6 @@ body{margin:0;}
      eh-g-1c   — 1 багана (нарийн текстийн блок, график + хажуугийн хүснэгт)
      eh-g-2c   — 2 багана; сондгой тоо бол сүүлчийн нүд бүтэн мөр (орчигч үлдэхгүй)
    Аудит: node tests/layout-audit.js --vw=390 */
-/* 7 хоногийн баганын утга: товчилсон хэлбэр (571K) зөвхөн гар утсанд — доорх @media */
-.eh-wk-short { display: none; }
 @media (max-width: 640px) {
   .eh-hero { grid-template-columns: minmax(0, 1fr) !important; border-radius: 20px !important; }
   .eh-hero-l { padding: 22px 16px 6px !important; }
@@ -123,8 +121,10 @@ body{margin:0;}
      хүрээнээсээ гарахгүй. Гурван мөр (утга · багана · огноо) ижил gap-тай байх ЁСТОЙ. */
   .eh-wk { gap: 4px !important; }
   /* Утгын шошго: 6 оронтой тоо (571,206) ~33px баганад давхцдаг → товчилсон (571K); бүтэн нь tooltip-д */
-  .eh-wk-full { display: none; }
-  .eh-wk-short { display: inline; }
+  /* Товчилсон span нь inline display:none — deploy-ийн дараа хөтөч ХУУЧИН style.css-ийг
+     кэшилсэн үед (max-age=600) хоёр хэлбэр зэрэг гарахгүй, хуучин харагдац л үлдэнэ */
+  .eh-wk-full { display: none !important; }
+  .eh-wk-short { display: inline !important; }
   .eh-wk-d > * { min-width: 0; font-size: 9px !important; }
   /* Хуудасны толгой (каталог/коммунити/түүх/мэдээ/датасет): гарчиг + баруун талын блок (auto) → давхарлана */
   .eh-pg-h { grid-template-columns: minmax(0, 1fr) !important; gap: 18px !important; align-items: start !important; }
