@@ -17,7 +17,7 @@
 <script src="js/erthub-publish.js?v=ffe215f9"></script>
 <script src="js/erthub-backend.js?v=a96de8ab"></script>
 <script src="js/erthub-chart.js?v=422174bf"></script>
-<script src="js/erthub-glossary.js?v=0065e59c"></script>
+<script src="js/erthub-glossary.js?v=f43104d3"></script>
 <script src="js/erthub-tip.js?v=ba005e59"></script>
 <script src="js/vendor/dc-runtime.js?v=8fe7df74"></script>
 </head>
@@ -2598,6 +2598,17 @@
             </div>
           </div>
         </sc-for>
+        <sc-for list="{{ detail.pvColDates }}" as="cd" hint-placeholder-count="0">
+          <div class="eh-fl-row" data-fl-col="{{ cd.name }}" data-fl-date="1" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);min-width:52px;max-width:150px;flex-shrink:0;line-height:1.35;">{{ cd.name }}</div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;">
+              <input type="date" data-fl-from="{{ cd.name }}" value="{{ cd.date.from }}" min="{{ cd.date.lo }}" max="{{ cd.date.hi }}" title="{{ cd.date.lFrom }}" aria-label="{{ cd.date.lFrom }}" sc-camel-on-change="{{ cd.date.onFrom }}" style="width:142px;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:5px 8px;outline:none;">
+              <span style="font-size:11.5px;color:var(--ink3);">—</span>
+              <input type="date" data-fl-to="{{ cd.name }}" value="{{ cd.date.to }}" min="{{ cd.date.lo }}" max="{{ cd.date.hi }}" title="{{ cd.date.lTo }}" aria-label="{{ cd.date.lTo }}" sc-camel-on-change="{{ cd.date.onTo }}" style="width:142px;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:5px 8px;outline:none;">
+              <span style="font-size:11px;color:var(--ink3);">{{ cd.date.hint }}</span>
+            </div>
+          </div>
+        </sc-for>
         <sc-if value="{{ detail.pvHasRanges }}">
         <div class="eh-fl-row" style="display:flex;align-items:flex-start;gap:9px;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding-top:8px;min-width:52px;max-width:150px;flex-shrink:0;line-height:1.35;">{{ detail.pvRangesLabel }}</div>
@@ -2904,6 +2915,17 @@
                 </div>
                 <sc-if value="{{ cf.hasSuggNote }}"><div style="font-size:11px;color:var(--ink3);line-height:1.4;">{{ cf.suggNote }}</div></sc-if>
                 </sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <sc-for list="{{ detail.pvColDates }}" as="cd" hint-placeholder-count="0">
+            <div class="eh-fl-row" data-fl-col="{{ cd.name }}" data-fl-date="1" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);width:112px;flex-shrink:0;line-height:1.35;">{{ cd.name }}:</div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;">
+                <input type="date" data-fl-from="{{ cd.name }}" value="{{ cd.date.from }}" min="{{ cd.date.lo }}" max="{{ cd.date.hi }}" title="{{ cd.date.lFrom }}" aria-label="{{ cd.date.lFrom }}" sc-camel-on-change="{{ cd.date.onFrom }}" style="width:142px;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:5px 8px;outline:none;">
+                <span style="font-size:11.5px;color:var(--ink3);">—</span>
+                <input type="date" data-fl-to="{{ cd.name }}" value="{{ cd.date.to }}" min="{{ cd.date.lo }}" max="{{ cd.date.hi }}" title="{{ cd.date.lTo }}" aria-label="{{ cd.date.lTo }}" sc-camel-on-change="{{ cd.date.onTo }}" style="width:142px;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:5px 8px;outline:none;">
+                <span style="font-size:11px;color:var(--ink3);">{{ cd.date.hint }}</span>
               </div>
             </div>
           </sc-for>
@@ -6078,6 +6100,7 @@ function pvCondText(c){
   if(has('min')&&has('max')) return fmtNum(+c.min)+'–'+fmtNum(+c.max);
   if(has('min')) return '≥ '+fmtNum(+c.min);
   if(has('max')) return '≤ '+fmtNum(+c.max);
+  if(has('from')||has('to')) return (c.from||'…')+' — '+(c.to||'…');
   return '';
 }
 /* Баганын шүүлт (түүхий хүснэгт, {баганын түлхүүр: cond}) → серверийн query.
@@ -6093,6 +6116,22 @@ function dsSrvParams(sel){
     ['min','max'].forEach(b=>{ if(c[b]!=null&&c[b]!==''&&isFinite(+c[b])) q.push(b+'.'+e(k)+'='+e(String(+c[b]))); });
   });
   return q.join('&');
+}
+/* Баганын шүүлтийн огнооны хүрээ ({from,to}, daterange) → татах цонхыг НАРИЙСГАНА.
+   ЦЭВЭР. Backend огнооны баганыг (record_date / trip_date) from/to-оор шүүдэг тул
+   хүрээ нь БҮТЭН датад үйлчилнэ (min./max. нь зөвхөн тоон баганад). Он/сарын цонхтой
+   огтлолцоно — цонхноос гадуур хүрээ = хоосон хариу (from > to). */
+function dsDateWindow(w,sel){
+  const G=typeof EHGlossary!=='undefined'?EHGlossary:null;
+  let from=w.from, to=w.to;
+  Object.keys(sel||{}).forEach(k=>{
+    const c=sel[k];
+    if(!G||!c||typeof c!=='object') return;
+    const f=G.dayOf(c.from), t=G.dayOf(c.to);
+    if(f&&(!from||f>from)) from=f;
+    if(t&&(!to||t<to)) to=t;
+  });
+  return {from,to,narrowed:from!==w.from||to!==w.to};
 }
 /* /api/datasets/:key/rows хариу → DS_SCHEMA хэлбэр. ЦЭВЭР (tests/run.js RAW).
    Мөр бүрийн сүүлд хоосон "төлөв" нүд (хүснэгтийн гэрээ) — түүхий мөрөнд
@@ -6113,7 +6152,7 @@ function datasetRowsToSchema(json,mFrom,mTo,noteLabel){
   const rows=json.rows.filter(inRange).map(r=>r.concat(['']));
   /* Багана шошгоо бүтэн харуулах өргөнтэй (толгой mono, том үсэг ~7.8px/тэмдэгт); олон багана бол хэвтээ гүйлгэнэ */
   const widths=cols.map((c,i)=>types[i]==='date'?106:Math.max(96,Math.min(250,Math.round(String(c.label||c.key).length*7.8+22))));
-  return {raw:true,facets:json.facets&&typeof json.facets==='object'?json.facets:null,filtered:!!json.filtered,
+  return {raw:true,facets:json.facets&&typeof json.facets==='object'?json.facets:null,filtered:!!json.filtered,dateIndex:di>=0?di:null,
     keys:cols.map(c=>c.key),head:cols.map(c=>String(c.label||c.key)),types,widths,
     notes:cols.map(c=>(noteLabel||'')+(noteLabel?': ':'')+c.key),rows,
     total:+json.total||json.rows.length,loaded:json.rows.length,truncated:!!json.truncated};
@@ -11772,7 +11811,8 @@ class Component extends DCLogic {
     if(!this._pvDimCache||this._pvDimCache.key!==schemaKey||this._pvDimCache.src!==sc.rows||this._pvDimCache.fz!==sc.facets){
       this._pvDimCache={key:schemaKey,src:sc.rows,fz:sc.facets,
         cols:G?G.filterColumns(sc.head,sc.types,sc.rows,{exclude:PV_COL_EXCLUDE[baseKey],
-          facets:sc.facets||null,keys:sc.keys||null,ranges:true,dedupe:true,maxDistinct:1000,chipMax:PV_COL_TOP}):[]};
+          facets:sc.facets||null,keys:sc.keys||null,ranges:true,dedupe:true,maxDistinct:1000,chipMax:PV_COL_TOP,
+          dateIndex:sc.raw?sc.dateIndex:null}):[]};
     }
     const fCols=this._pvDimCache.cols;
     /* Сонголтын түлхүүр: түүхий мөрөнд баганын ТҮЛХҮҮР (индекс шилжиж болно), бусад нь индекс */
@@ -11897,13 +11937,13 @@ class Component extends DCLogic {
       ...(()=>{
         const ui=fCols.map(c=>this.pvColFilterUi(schemaKey,c,colId(c.index),selRaw[colId(c.index)],
           /* Мөрийн тоо: серверийн facet = цонхны бүтэн дата; ачаалсан мөр таслагдсан бол худал тул харуулахгүй */
-          !!sc.facets||!sc.truncated));
+          !!sc.facets||!sc.truncated,sc.win&&Object.assign({truncated:!!sc.truncated},sc.win)));
         const rg=ui.filter(u=>u.isRange);
         /* Олон тоон баганатай датасэт (вагон 28) — эхний PV_RANGE_TOP, бусдыг дэлгэнэ;
            дэлгээгүй хэсэгт идэвхтэй хязгаар байвал нээлттэй (шалтгаан нуугдахгүй) */
         const hid=rg.slice(PV_RANGE_TOP);
         const open=!!(this.state.pvRangeOpen||{})[schemaKey]||hid.some(u=>u.range.min!==''||u.range.max!=='');
-        return {pvColFilters:ui.filter(u=>!u.isRange),pvColRanges:open?rg:rg.slice(0,PV_RANGE_TOP),pvHasRanges:rg.length>0,
+        return {pvColFilters:ui.filter(u=>!u.isRange&&!u.isDate),pvColDates:ui.filter(u=>u.isDate),pvColRanges:open?rg:rg.slice(0,PV_RANGE_TOP),pvHasRanges:rg.length>0,
           pvRangesLabel:stxt('detail.col_ranges','Тоон утгын хязгаар (доод — дээд)'),
           pvRangesMore:hid.length>0,
           pvRangesMoreLabel:open?stxt('detail.col_less','Хураах'):stxt('detail.col_more','+{n} бусад').replace('{n}',String(hid.length)),
@@ -11937,14 +11977,35 @@ class Component extends DCLogic {
        range  — доод/дээд тоо (хоосон = хязгааргүй), placeholder = датаны мин/макс
      cond-ийн хэлбэр нь {in:[…]} / {min,max} — сервер (dsSrvParams) ба клиент
      (rowMatchesCols) ижил дүрмээр шүүнэ. */
-  pvColFilterUi(schemaKey,c,id,cond,showCount){
+  pvColFilterUi(schemaKey,c,id,cond,showCount,win){
     const G=EHGlossary;
     const base='cursor:pointer;font-family:inherit;border-radius:999px;padding:6px 13px;font-size:11.5px;white-space:nowrap;transition:.16s var(--ease);';
     const on='border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;';
     const off='border:1px solid var(--line);background:var(--surface);color:var(--ink2);';
     const cnt=v=>showCount&&c.counts&&c.counts[v]!=null?fmtNum(c.counts[v]):'';
-    const out={name:c.name,isChips:c.kind==='chips',isSearch:c.kind==='search',isRange:c.kind==='range',
+    const out={name:c.name,isChips:c.kind==='chips',isSearch:c.kind==='search',isRange:c.kind==='range',isDate:c.kind==='daterange',
       chips:[],picked:[],sugg:[],hasSuggNote:false,suggNote:''};
+    if(c.kind==='daterange'){
+      /* Огноо: бүх утгыг chip болгохгүй — эхлэх/дуусах огноо (хоосон = хязгааргүй).
+         Сонгох хил = он/сарын цонх (цонхноос гадуур огноо 0 мөр өгнө) */
+      const r=cond&&typeof cond==='object'?cond:{};
+      const set=b=>e=>{
+        const v=G.dayOf(e.target.value);
+        const nx=Object.assign({},r,{[b]:v});
+        if(!v) delete nx[b];
+        this.setPvColFilter(schemaKey,id,Object.keys(nx).length?nx:'');
+      };
+      const lo=(win&&win.from)||'', hi=(win&&win.to)||'';
+      /* Боломжит хүрээ: он/сарын цонх, эс бөгөөс ачаалсан мөр — таслагдсан (сүүлийн N мөр)
+         бол ачаалсан мөрийн мин нь бүтэн датаг төлөөлөхгүй тул хэлэхгүй (тоо зохиохгүй) */
+      const full=!(win&&win.truncated);
+      const a=lo||(full?c.min:''), z=hi||(full?c.max:'');
+      const span=a&&z?a+' — '+z:'';
+      out.date={from:r.from||'',to:r.to||'',lo,hi,onFrom:set('from'),onTo:set('to'),
+        lFrom:stxt('detail.col_date_from','Эхлэх огноо'),lTo:stxt('detail.col_date_to','Дуусах огноо'),
+        hint:span&&!r.from&&!r.to?stxt('detail.col_date_span','боломжит: {span}').replace('{span}',span):''};
+      return out;
+    }
     if(c.kind==='range'){
       const r=cond&&typeof cond==='object'?cond:{};
       const set=b=>e=>{
@@ -12010,7 +12071,8 @@ class Component extends DCLogic {
     const dc=this._pvDimCache&&this._pvDimCache.key===schemaKey?this._pvDimCache.cols:null;
     /* Сонголтын id → баганын индекс (түүхий мөрөнд id = баганын түлхүүр) */
     const idx=k=>sc.raw&&sc.keys?sc.keys.indexOf(k):+k;
-    const ks=Object.keys(selRaw).filter(k=>EHGlossary.condActive(selRaw[k])&&idx(k)>=0&&(!dc||dc.some(c=>c.index===idx(k))))
+    const isDate=v=>!!v&&typeof v==='object'&&!!(EHGlossary.dayOf(v.from)||EHGlossary.dayOf(v.to));
+    const ks=Object.keys(selRaw).filter(k=>EHGlossary.condActive(selRaw[k])&&!isDate(selRaw[k])&&idx(k)>=0&&(!dc||dc.some(c=>c.index===idx(k))))
       .map(k=>({k,i:idx(k)}));
     if(!ks.length) return none;
     /* Түүхий мөр: хамрах түлхүүр нь зарласан багана. Таслагдсан (сүүлийн N мөр)
@@ -12257,8 +12319,10 @@ class Component extends DCLogic {
     /* Баганын шүүлт СЕРВЕР талд: ачаалсан 5,000 мөрөөс гадуурх утга (МТЗ) ч
        бүтэн датаас шүүгдэнэ. Сонголт pvColFilter[<схем>__raw]-д баганын
        ТҮЛХҮҮРЭЭР (шүүсэн хариунд хоосон багана хасагдаж индекс шилждэг). */
-    const ps=fz[wk]?dsSrvParams((this.state.pvColFilter||{})[(dsel.schema||dsel.sector)+'__raw']):'';
-    const rk=wk+'|'+ps;
+    const selSrv=(this.state.pvColFilter||{})[(dsel.schema||dsel.sector)+'__raw'];
+    const dw=dsDateWindow(w,selSrv);
+    const ps=fz[wk]?dsSrvParams(selSrv):'';
+    const rk=wk+'|'+ps+(dw.narrowed?'|d='+dw.from+'~'+dw.to:'');
     const bump=()=>this.setState(s=>({dsRowsVer:(s.dsRowsVer||0)+1}));
     /* Facet ТУСДАА хүсэлт (limit=1): үзлэгийн 910k мөр дээр анх ~10 сек (сервер
        10 мин кэшлэнэ) — хүснэгтийн мөр түүнийг хүлээхгүй. */
@@ -12272,7 +12336,7 @@ class Component extends DCLogic {
     }
     const go=()=>{
       c[rk]=undefined;
-      EHBackend.fetchDatasetRows(key,w.from,w.to,DS_ROWS_LIMIT,{params:ps}).then(j=>{
+      EHBackend.fetchDatasetRows(key,dw.from,dw.to,DS_ROWS_LIMIT,{params:ps}).then(j=>{
         c[rk]=j||null;
         if(j) last[wk]=rk;
         bump();
@@ -12280,7 +12344,7 @@ class Component extends DCLogic {
     };
     if(!(rk in c)){
       /* Бичих/тоо оруулах явцад хүсэлт бүр явуулахгүй — 350мс тогтворжсоны дараа */
-      if(!ps) go();
+      if(!ps&&!dw.narrowed) go();
       else if(this._dsRowsPend!==rk){
         this._dsRowsPend=rk;
         clearTimeout(this._dsRowsT);
@@ -12296,7 +12360,7 @@ class Component extends DCLogic {
     const fzw=fz[wk]||null;
     if(!this._dsRawSc||this._dsRawSc.k!==sk||this._dsRawSc.j!==j||this._dsRawSc.fz!==fzw){
       const sc=datasetRowsToSchema(j,w.mFrom,w.mTo,note);
-      if(sc) sc.facets=fzw;
+      if(sc){ sc.facets=fzw; sc.win=w; }
       this._dsRawSc={k:sk,j,fz:fzw,sc};
     }
     return this._dsRawSc.sc;
