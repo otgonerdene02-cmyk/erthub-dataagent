@@ -8989,8 +8989,115 @@ async function groupFL() {
     check('FL24. Сонголтын түлхүүр — түүхий мөрөнд баганын ТҮЛХҮҮР (шүүсэн хариунд индекс шилждэг)',
       src.includes("const colId=ci=>sc.raw&&sc.keys?sc.keys[ci]:String(ci);"));
   }
+  /* FL26. Огнооны багана (2026-10-22, хэрэглэгч: «Хөдлөх огноо-г шүүлтэд нэм — огноо тул бүх утгаар
+     биш, эхлэх/дуусах огноогоор»). Татах цонхны огнооны багана → daterange; бусад огноо орохгүй. */
+  {
+    const head = ['Хөдлөх огноо', 'Төрөл', 'Бүртгэсэн огноо'], types = ['date', 'string', 'date'];
+    const rows = [['2026-10-01', 'А', '2026-09-30'], ['2026-10-03', 'Б', '2026-10-01'], ['2026-10-05', 'А', '2026-10-02'],
+      ['2026-10-07', 'Б', '2026-10-06'], ['2026-10-09', 'А', '2026-10-08']];
+    const fc = G.filterColumns(head, types, rows, { ranges: true, dateIndex: 0 });
+    check('FL26. dateIndex багана → daterange (мин 2026-10-01, макс 2026-10-09); «Бүртгэсэн огноо» орохгүй',
+      JSON.stringify(fc.map(c => [c.name, c.kind, c.min || '', c.max || ''])) ===
+        JSON.stringify([['Хөдлөх огноо', 'daterange', '2026-10-01', '2026-10-09'], ['Төрөл', 'chips', '', '']]), JSON.stringify(fc));
+    check('FL26. dateIndex-гүй бол огноо шүүлтэд орохгүй (FL19-ийн гэрээ); ганц огноо → шүүлтгүй, facet-тэй бол үлдэнэ',
+      !G.filterColumns(head, types, rows, { ranges: true }).some(c => c.kind === 'daterange') &&
+      !G.filterColumns(head, types, rows.slice(0, 1), { ranges: true, dateIndex: 0 }).some(c => c.kind === 'daterange') &&
+      G.filterColumns(head, types, [], { ranges: true, dateIndex: 0, facets: {}, keys: ['trip_date', 'kind', 'reg'] }).some(c => c.kind === 'daterange'));
+    const pick = sel => rows.filter(r => G.rowMatchesCols(r, sel)).map(r => r[0].slice(8)).join(',');
+    check('FL26. {from:03, to:07} → 03,05,07 (хил оролцоно)', pick({ 0: { from: '2026-10-03', to: '2026-10-07' } }) === '03,05,07', pick({ 0: { from: '2026-10-03', to: '2026-10-07' } }));
+    check('FL26. Зөвхөн эхлэх → 05,07,09; зөвхөн дуусах → 01,03', pick({ 0: { from: '2026-10-05' } }) === '05,07,09' && pick({ 0: { to: '2026-10-04' } }) === '01,03');
+    check('FL26. Огноо + ангилал AND: А ба ≥ 03 → 05,09', pick({ 0: { from: '2026-10-03' }, 1: { in: ['А'] } }) === '05,09');
+    check('FL26. Хоосон/буруу огноо = шүүлтгүй; огноо биш нүд хүрээнд таарахгүй; цагтай нүд өдрөөрөө',
+      !G.condActive({ from: '' }) && !G.condActive({ to: '2026-13' }) && G.condActive({ to: '2026-10-01' }) &&
+      !G.condMatch('', { from: '2026-10-01' }) && G.condMatch('2026-10-05 07:00', { from: '2026-10-05', to: '2026-10-05' }));
+    /* dsDateWindow — он/сарын цонхтой огтлолцоно, сервер from/to-оор БҮТЭН датаас шүүнэ */
+    const m = dcScript().match(/\nfunction dsDateWindow\(w,sel\)\{([\s\S]*?)\n\}/);
+    if (!m) bad('FL26. dsDateWindow() олдсонгүй');
+    else {
+      const W = new Function('EHGlossary', 'w', 'sel', m[1]).bind(null, G);
+      const J = x => JSON.stringify(x);
+      check('FL26. dsDateWindow: «Бүгд» он + 10-03…10-07 → from/to = сонголт',
+        J(W({ from: null, to: null }, { trip_date: { from: '2026-10-03', to: '2026-10-07' } })) === J({ from: '2026-10-03', to: '2026-10-07', narrowed: true }));
+      check('FL26. dsDateWindow: 2026 оны цонхтой огтлолцоно (2025-12-20 → 2026-01-01 хэвээр); шүүлтгүй → цонх хэвээр',
+        J(W({ from: '2026-01-01', to: '2026-12-31' }, { trip_date: { from: '2025-12-20', to: '2026-02-10' }, route_type: { in: ['А'] } })) ===
+          J({ from: '2026-01-01', to: '2026-02-10', narrowed: true }) &&
+        J(W({ from: '2026-01-01', to: '2026-12-31' }, {})) === J({ from: '2026-01-01', to: '2026-12-31', narrowed: false }));
+    }
+    const src = dcScript();
+    check('FL26. dsRawSchema: мөр нарийсгасан цонхоор (огноо), facet нь он/сарын цонхоор (огноо солиход дахин бодохгүй)',
+      src.includes('EHBackend.fetchDatasetRows(key,dw.from,dw.to,DS_ROWS_LIMIT,{params:ps})') &&
+      src.includes('EHBackend.fetchDatasetRows(key,w.from,w.to,1,{facets:true})') && src.includes("dateIndex:sc.raw?sc.dateIndex:null"));
+    check('FL26. FL3: огнооны хүрээ KPI/графикийн хэмжээс БИШ (он/сарын нэгдсэн шүүлт шүүнэ) — хамрах түлхүүрээс хасагдана',
+      src.includes('&&!isDate(selRaw[k])&&'));
+  }
   await groupFLCoverage(G);
   await groupFLFacetLive();
+  await groupFLDateLive();
+}
+
+/* FL27. Регресс — ЯГ хэрэглэгчийн гүйлгээ, жинхэнэ хөтчөөр (?fx=1): авто тээврийн зорчигчийн
+   хүснэгтийн «Хөдлөх огноо» шүүлт нь chip-ийн хана БИШ, эхлэх/дуусах огнооны хоёр талбар. Хүрээ
+   сонгоход серверээс (from/to) зөвхөн тэр хоногуудын мөр ирнэ; «Бүртгэсэн огноо»-нд огнооны шүүлт гарахгүй. */
+async function groupFLDateLive() {
+  if (!CHROME) { skipped('FL27 огнооны хүрээний шүүлт (хөтөч)', 'Chrome олдсонгүй'); return; }
+  const ds = flDatasets(read('index.html'));
+  const it = ds.find((d) => d.schemaKey === 'road_pax');
+  if (!it) { bad('FL27. road_pax датасэт олдсонгүй'); return; }
+  const probe = async function (d, w, slug) {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const v = f(); if (v) return v; await sleep(150); } return null; };
+    w.location.hash = '#/browse/' + slug;
+    const table = () => d.querySelector('[data-eh-table]');
+    const body = () => { const t = table(); return t && t.children[1] ? [...t.children[1].children] : []; };
+    const head = () => [...table().children[0].querySelectorAll('button')].map((b) => b.textContent.replace(/[↑↓]/g, '').trim());
+    if (!await until(() => body().length > 0 && head().includes('Хөдлөх огноо'), 20000)) return { __err: 'хүснэгт зурагдсангүй' };
+    const fb = [...d.querySelectorAll('button')].find((b) => b.textContent.includes('▽'));
+    if (fb) fb.click();
+    const row = await until(() => d.querySelector('[data-fl-date][data-fl-col="Хөдлөх огноо"]'), 8000);
+    const out = { cols: [...d.querySelectorAll('[data-fl-col]')].map((e) => e.getAttribute('data-fl-col')) };
+    if (!row) return Object.assign(out, { __err: 'Хөдлөх огноо шүүлт алга' });
+    out.dateRows = [...d.querySelectorAll('[data-fl-date]')].map((e) => e.getAttribute('data-fl-col'));
+    out.chipsInRow = row.querySelectorAll('button').length;
+    const fi = row.querySelector('input[type="date"][data-fl-from]'), ti = row.querySelector('input[type="date"][data-fl-to]');
+    out.inputs = !!(fi && ti);
+    const di = head().indexOf('Хөдлөх огноо');
+    const dates = () => body().map((r) => r.children[di].textContent.trim());
+    const all = [...new Set(dates())].sort();
+    out.allDays = all.length;
+    out.firstN = body().length;
+    if (!out.inputs || all.length < 6) return out;
+    out.from = all[1]; out.to = all[4];
+    const seen = [], of = w.fetch;
+    w.fetch = function (i) { seen.push(String(i && i.url || i)); return of.apply(this, arguments); };
+    /* React-ийн утгын мөрдөгч: el.value = … нь өөрчлөлт гэж тооцогдохгүй — жинхэнэ сонголт шиг native setter */
+    const set = (el, v) => { Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype, 'value').set.call(el, v);
+      el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+    set(fi, out.from);
+    await sleep(200);
+    set(d.querySelector('[data-fl-date][data-fl-col="Хөдлөх огноо"] input[data-fl-to]'), out.to);
+    await until(() => { const x = dates(); return x.length && x.every((v) => v >= out.from && v <= out.to); }, 8000);
+    await sleep(600);
+    out.after = dates();
+    out.reqs = seen.filter((n) => n.includes('road-passengers/rows') && n.includes('from=' + out.from) && n.includes('to=' + out.to));
+    const clr = d.querySelector('[data-fl-clear]');
+    if (clr) { clr.click(); await until(() => body().length === out.firstN, 6000); }
+    out.cleared = body().length;
+    return out;
+  };
+  const srv = serve();
+  const prevSrc = PROBE_SRC;
+  PROBE_SRC = '/index.html?fx=1';
+  let R;
+  try {
+    R = await runProbe('async function(d,w){return (' + probe.toString() + ')(d,w,' + JSON.stringify(it.slug) + ');}', 60000);
+  } finally { PROBE_SRC = prevSrc; srv.close(); }
+  if (!R || R.__err) { bad('FL27. Огнооны хүрээний шүүлтийн probe', JSON.stringify(R)); return; }
+  check('FL27. «Хөдлөх огноо» = эхлэх/дуусах огнооны 2 талбар (chip-ийн хана биш); «Бүртгэсэн огноо»-нд огнооны шүүлт алга',
+    R.inputs && R.chipsInRow === 0 && JSON.stringify(R.dateRows) === '["Хөдлөх огноо"]', JSON.stringify(R));
+  check('FL27. Хүрээ (4 хоног × 5 чиглэл) → зөвхөн тэр хоногуудын 20 мөр',
+    R.after && R.after.length === 20 && R.after.every((v) => v >= R.from && v <= R.to) && new Set(R.after).size === 4, JSON.stringify(R.after));
+  check('FL27. Шүүлт СЕРВЕРТ: мөрийн хүсэлт нарийсгасан from=-тэй явна', R.reqs && R.reqs.length > 0, JSON.stringify(R.reqs));
+  check('FL27. «Шүүлтийг цэвэрлэх» → анхны мөрийн тоо', R.cleared === R.firstN, R.cleared + ' / ' + R.firstN);
 }
 
 /* FL25. Регресс — ЯГ хэрэглэгчийн гүйлгээ, жинхэнэ хөтчөөр (?fx=1): нэгтгэлийн

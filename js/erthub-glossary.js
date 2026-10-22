@@ -157,6 +157,9 @@
        'search' — олон утга (Хот 157, Өртөө 45): бичиж хайгаад санал болгосноос
                   сонгоно — 100+ chip-ийн хана биш, жагсаалт ч удаашрахгүй
        'range'  — тоон багана (opts.ranges): доод–дээд хязгаар (min ≤ x ≤ max)
+       'daterange' — огнооны багана (opts.dateIndex = түүхий мөрийн татах цонхны
+                  багана): бүх огноог утга болгохгүй, ЭХЛЭХ–ДУУСАХ огноо (from ≤ d ≤ to).
+                  Сервер энэ баганыг from/to-оор шүүдэг тул бүтэн датад үйлчилнэ.
      opts.facets/opts.keys — серверийн facet ({түлхүүр: {kind:'cat', values:[[утга,
        тоо]]} | {kind:'range', min, max}}): ЦОНХНЫ БҮТЭН датаас. Ачаалсан мөр нь
        сүүлийн 5,000 л байх тул түүнээс утга гаргавал цонхонд ороогүй утга (МТЗ —
@@ -179,6 +182,18 @@
       var t = (types || [])[i], name = head[i];
       if (skip[name]) continue;
       var fc = facets && keys && keys[i] ? facets[keys[i]] : null;
+      if (opts.ranges && t === 'date' && opts.dateIndex != null && +opts.dateIndex === i) {
+        var d0 = '', d1 = '';
+        (rows || []).forEach(function (r) {
+          var d = dayOf(r == null ? null : r[i]);
+          if (!d) return;
+          if (!d0 || d < d0) d0 = d;
+          if (!d1 || d > d1) d1 = d;
+        });
+        /* Facet-тэй (цонхны бүтэн дата) бол шүүсэн хариу хоосон ч шүүлт үлдэнэ */
+        if (facets || (d0 && d0 < d1)) out.push({ index: i, name: name, kind: 'daterange', min: d0, max: d1 });
+        continue;
+      }
       if (opts.ranges && (t === 'int' || t === 'float')) {
         var lo = Infinity, hi = -Infinity;
         if (fc && fc.kind === 'range') { lo = +fc.min; hi = +fc.max; }
@@ -227,12 +242,16 @@
        'утга'            — тэнцүү (хуучин хэлбэр, агаарын тест FL13)
        {in:['а','б']}    — аль нэгтэй нь тэнцүү (chip / хайлтаас олныг сонгосон)
        {min:n, max:m}    — тоон хүрээ, хил оролцоно; тоо биш нүд таарахгүй
+       {from:d, to:d}    — огнооны хүрээ ('YYYY-MM-DD', хил оролцоно); огноо биш нүд таарахгүй
      Сервер (backend whereOf) ЯГ ижил дүрмээр шүүдэг — хоёр талд давтан шүүхэд үр
      дүн өөрчлөгдөхгүй. */
+  var DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+  function dayOf(v) { var d = v == null ? '' : String(v).trim().slice(0, 10); return DAY_RE.test(d) ? d : ''; }
   function condActive(cond) {
     if (cond == null || cond === '') return false;
     if (typeof cond !== 'object') return true;
-    return (Array.isArray(cond.in) && cond.in.length > 0) || isFinite(numOf(cond.min)) || isFinite(numOf(cond.max));
+    return (Array.isArray(cond.in) && cond.in.length > 0) || isFinite(numOf(cond.min)) || isFinite(numOf(cond.max))
+      || !!dayOf(cond.from) || !!dayOf(cond.to);
   }
   function condMatch(text, cond) {
     if (!condActive(cond)) return true;
@@ -243,6 +262,11 @@
     if (isFinite(lo) || isFinite(hi)) {
       var x = numOf(v);
       if (!isFinite(x) || (isFinite(lo) && x < lo) || (isFinite(hi) && x > hi)) return false;
+    }
+    var df = dayOf(cond.from), dt = dayOf(cond.to);
+    if (df || dt) {
+      var d = dayOf(v);
+      if (!d || (df && d < df) || (dt && d > dt)) return false;
     }
     return true;
   }
@@ -382,7 +406,7 @@
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,
     filterColumns: filterColumns, rowMatchesCols: rowMatchesCols, periodSpan: periodSpan, weekSpan: weekSpan, chartPeriod: chartPeriod,
-    sectorShare: sectorShare, condActive: condActive, condMatch: condMatch, facetSuggest: facetSuggest, numOf: numOf
+    sectorShare: sectorShare, condActive: condActive, condMatch: condMatch, dayOf: dayOf, facetSuggest: facetSuggest, numOf: numOf
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.EHGlossary = api;
