@@ -7946,7 +7946,7 @@ async function groupDGA() {
     cut(adm, 'function metricSeries(mk){', '/* Метрикийн 7 ХОНОГИЙН'),
     cut(adm, '/* ══════════ ГРАФИКИЙН ХУГАЦАА (DG-P) — preview', 'function previewFor(id,mini){')];
   const dpm = site.match(/\nfunction dropPartialMonth\(counts,year,cov,now\)\{([\s\S]*?)\n\}/);
-  const wsr = site.match(/\nfunction weekSectorReport\(w,keys\)\{([\s\S]*?)\n\}/);
+  const wsr = site.match(/\nfunction weekSectorReport\(w,keys(?:,gaps)?\)\{([\s\S]*?)\n\}/);
   check('DG-P19. Админы хугацааны функцүүд ба сайтын dropPartialMonth/weekSectorReport олдов',
     parts.every(Boolean) && !!dpm && !!wsr, parts.map((p) => !!p).join(','));
   if (!parts.every(Boolean) || !dpm || !wsr) return;
@@ -8004,7 +8004,7 @@ async function groupDGA() {
   const wk = (a, b, miss) => ({ week_start: a, week_end: b, missing: !!miss, by_sector: miss ? {} : { air: { value: 5 }, rail: { value: 7 } } });
   const WP = { sectors: ['air', 'rail'], weeks: [wk('2026-09-28', '2026-10-04'), wk('2026-10-05', '2026-10-11', true), wk('2026-10-12', '2026-10-18')] };
   const KS = mkKit({ FEED, ST: { state: 'ready', weekly: { passengers: WP } } });
-  const sr = new Function('w', 'keys', wsr[1])(WP, ['air']);
+  const sr = new Function('w', 'keys', 'gaps', wsr[1])(WP, ['air']);
   const siteW = G.chartPeriod({ dayFrom: sr.weeks[0].start, dayTo: sr.weeks[sr.weeks.length - 1].end, nWeeks: sr.weeks.length }, (k, fb) => fb);
   const w2 = ['w2p', 'w2pb', 'w2px'].map((id) => KS.pvPeriodText(id));
   check('DG-P22. 02-р хэсэг (зорчигч): нэгтгэлийн бүх долоо хоног — гараар 2026-09-28 — 2026-10-18 · 3 долоо хоног',
