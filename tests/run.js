@@ -1279,7 +1279,7 @@ async function groupG4() {
     before(idx, 'js/backend-config.js', 'js/publish-mock.js') && before(idx, 'js/publish-mock.js', 'js/erthub-publish.js') &&
     before(adm, '../js/backend-config.js', '../js/publish-mock.js') && before(adm, '../js/publish-mock.js', '../js/erthub-publish.js'));
   check('G4.18 зөвхөн админ auth-ыг солино (data-auth="1")',
-    /publish-mock\.js" data-auth="1"/.test(adm) && !/publish-mock\.js" data-auth/.test(idx));
+    /publish-mock\.js(\?v=[0-9a-f]{8})?" data-auth="1"/.test(adm) && !/publish-mock\.js(\?v=[0-9a-f]{8})?" data-auth/.test(idx));
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -6999,7 +6999,7 @@ async function groupHV() {
   }
 
   /* ── HV2. Статик ── */
-  check('HV2. Сайт tooltip модулийг ачаална', idx.includes('<script src="js/erthub-tip.js"></script>'));
+  check('HV2. Сайт tooltip модулийг ачаална', /<script src="js\/erthub-tip\.js(\?v=[0-9a-f]{8})?"><\/script>/.test(idx));
   const a0 = idx.indexOf('<svg class="eh-fmap"');
   const tplFlow = idx.slice(a0, idx.indexOf('<sc-if value="{{ detail.flowMap.detail }}">', a0));
   [
@@ -7741,6 +7741,61 @@ function groupFR() {
    198px donut | 964px жагсаалт. Энэ бүлэг (а) форматын цэвэр функцыг гараар
    бодсон утгаар, (б) статик шалгагчийг өөрийг нь (эвдсэн хуулбар дээр УНАХ ёстой)
    шалгана. Харагдацыг өгөгдөлтэй төлөвөөр layout-audit (+fx) шалгана. */
+/* ════════════════════════════════════════════════════════════════════
+   AS. Asset-ийн кэш тасалгаа (`?v=<hash8>`). GitHub Pages max-age=600 тул
+   deploy-ийн дараа шинэ HTML + хуучин CSS/JS зэрэг ачаалагдаж байв
+   (2026-10-22: #84 → «113,324» ба «113K» давхар). scripts/stamp-assets.js
+   ════════════════════════════════════════════════════════════════════ */
+function groupAS() {
+  group('AS. Asset-ийн кэш тасалгаа (?v=hash)');
+  const SA = require(path.join(ROOT, 'scripts/stamp-assets.js'));
+
+  /* AS1. Репо дахь бүх локал холбоос hash-тай, шинэ */
+  const cur = SA.run({ check: true });
+  check('AS1. index.html + admin: бүх локал .css/.js холбоос ?v=<hash> шинэ',
+    cur.total >= 20 && cur.problems.length === 0, cur.problems.slice(0, 3).join(' | '));
+  const bare = [];
+  for (const rel of SA.HTML_FILES) {
+    const h = read(rel), re = /\b(?:src|href)="((?!https?:|\/\/)[^"]+\.(?:css|js))"/g; let m;
+    while ((m = re.exec(h))) bare.push(rel + ': ' + m[1]);
+  }
+  check('AS1. hash-гүй локал холбоос алга', bare.length === 0, bare.join(', '));
+
+  /* AS2. Жижиг фикстур дээр: CRLF/LF ижил hash, гадаад холбоос хөндөгдөхгүй,
+     ../ зам, файл өөрчлөгдвөл шалгагч унана */
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'eh-as-'));
+  try {
+    fs.mkdirSync(path.join(tmp, 'js')); fs.mkdirSync(path.join(tmp, 'admin'));
+    fs.writeFileSync(path.join(tmp, 'js/a.js'), 'var a=1;\nvar b=2;\n');
+    fs.writeFileSync(path.join(tmp, 'style.css'), 'body{}\r\n');
+    fs.writeFileSync(path.join(tmp, 'index.html'),
+      '<script src="https://x.org/f.js"></script>\r\n<script src="js/a.js"></script>\r\n<link rel="stylesheet" href="style.css?v=deadbeef">\r\n');
+    fs.writeFileSync(path.join(tmp, 'admin/index.html'), '<script src="../js/a.js" data-auth="1"></script>\n');
+    const h1 = SA.hashFile(path.join(tmp, 'js/a.js'));
+    fs.writeFileSync(path.join(tmp, 'js/a.js'), 'var a=1;\r\nvar b=2;\r\n');
+    check('AS2. CRLF ба LF ижил hash (Windows autocrlf ↔ CI)', SA.hashFile(path.join(tmp, 'js/a.js')) === h1);
+    const pre = SA.run({ root: tmp, check: true });
+    check('AS2. Хуучин/дутуу hash илэрнэ (3 локал холбоос, гадаад нь тоологдохгүй)',
+      pre.total === 3 && pre.problems.length === 3, JSON.stringify(pre));
+    SA.run({ root: tmp });
+    const idx2 = fs.readFileSync(path.join(tmp, 'index.html'), 'utf8');
+    const adm2 = fs.readFileSync(path.join(tmp, 'admin/index.html'), 'utf8');
+    check('AS2. Тамга: js/a.js?v=<hash>, ../js/a.js ижил hash, гадаад холбоос хэвээр, CRLF хэвээр',
+      idx2.includes('src="js/a.js?v=' + h1 + '"') && adm2.includes('src="../js/a.js?v=' + h1 + '" data-auth="1"') &&
+      idx2.includes('src="https://x.org/f.js"') && !idx2.includes('deadbeef') && /\r\n/.test(idx2), idx2);
+    check('AS2. Тамгалсны дараа шалгагч ногоон', SA.run({ root: tmp, check: true }).problems.length === 0);
+    fs.appendFileSync(path.join(tmp, 'style.css'), '.x{}\n');
+    const post = SA.run({ root: tmp, check: true });
+    check('AS2. CSS өөрчлөгдөөд дахин тамгалаагүй бол шалгагч УНАНА (регресс #84)',
+      post.problems.length === 1 && /style\.css/.test(post.problems[0]), JSON.stringify(post.problems));
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+
+  /* AS3. Сервер бүр query-г хасаж файл олно (?v= → 404 болохгүй), CI шалгуур */
+  ['scripts/serve.js', 'tests/run.js', 'tests/layout-audit.js', 'tests/text-coverage.js'].forEach((f) =>
+    check('AS3. ' + f + ': URL-ийн query-г хасаж зам гаргана', read(f).includes("req.url.split('?')[0]")));
+  check('AS3. CI checks job: check-asset-stamps', /node scripts\/check-asset-stamps\.js/.test(read('.github/workflows/tests.yml')));
+}
+
 function groupUI() {
   group('UI. Нэгдсэн UI стандарт — хүснэгт · мөр · дараалал');
   const src = dcScript();
@@ -7952,7 +8007,7 @@ async function groupDGA() {
   if (!parts.every(Boolean) || !dpm || !wsr) return;
   check('DG-P19. Сайт ба админ НЭГ функцээр (EHGlossary.chartPeriod) бичнэ',
     /function chartPeriodText\(m,T\)\{\s*\/\*[^*]*\*\/\s*return EHGlossary\.chartPeriod\(m,T\);/.test(site) &&
-    /EHGlossary\.chartPeriod\(/.test(parts[3]) && /<script src="\.\.\/js\/erthub-glossary\.js"><\/script>/.test(read('admin/index.html')));
+    /EHGlossary\.chartPeriod\(/.test(parts[3]) && /<script src="\.\.\/js\/erthub-glossary\.js(\?v=[0-9a-f]{8})?"><\/script>/.test(read('admin/index.html')));
 
   const MONTHS = readJson('content.json').site.months;
   const NOW = Date.UTC(2026, 9, 21, 2, 0);   /* УБ 2026-10-21 10:00 — 10-р сар ДУТУУ */
@@ -8652,7 +8707,7 @@ function groupDG() {
   check('DG7. Улсын жагсаалт ОУ нислэгээс (ОН нислэг "Тодорхойгүй" улс болж орохгүй)',
     /if\(f\.cntry && airFlightKind\(f\.ou\)==='intl'\)\{\s*byCountry\[f\.cntry\]/.test(idx));
   check('DG7. index.html домэйны толийг ачаална',
-    idx.includes('<script src="js/erthub-glossary.js"></script>'));
+    /<script src="js\/erthub-glossary\.js(\?v=[0-9a-f]{8})?"><\/script>/.test(idx));
 
   /* DG8. Нүүрний share/donut: ганц салбар 100% бол ил анхааруулга, «0.0%» биш «—» (регресс).
      d05 buildDonut-ыг гараар бодох фикстур дээр ажиллуулна: агаар 1000, төмөр зам 500. */
@@ -9795,6 +9850,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=FL')) { await groupFL(); }
   else if (process.argv.includes('--only=AF')) { await groupAF(); }
   else if (process.argv.includes('--only=UI')) { groupUI(); }
+  else if (process.argv.includes('--only=AS')) { groupAS(); }
   else if (process.argv.includes('--only=FR')) { groupFR(); }
   else if (process.argv.includes('--only=ST')) { groupST(); }
   else if (process.argv.includes('--only=WK')) { groupWK(); }
@@ -9804,7 +9860,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupFR(); groupST(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));

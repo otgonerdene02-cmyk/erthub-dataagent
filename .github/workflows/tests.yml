@@ -58,6 +58,11 @@ jobs:
       - name: check-ui-standard
         run: node scripts/check-ui-standard.js
 
+      # Кэш тасалгаа: index.html/admin-ийн style.css, js/*.js холбоосын hash параметр
+      # файлын агуулгатай таарч байх ёстой (Pages max-age=600 → шинэ HTML + хуучин CSS)
+      - name: check-asset-stamps
+        run: node scripts/check-asset-stamps.js
+
   suites:
     name: run.js · text-coverage (DOM)
     runs-on: ubuntu-latest
