@@ -1263,10 +1263,13 @@
         </sc-if>
         <sc-for list="{{ compareLines }}" as="cl" hint-placeholder-count="5">
           <path d="{{ cl.d }}" fill="none" stroke="{{ cl.color }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="{{ cl.dash }}"></path>
-          <circle cx="{{ cl.ex }}" cy="{{ cl.ey }}" r="3.4" fill="{{ cl.color }}" stroke="#FFFFFF" stroke-width="1.6"><title>{{ cl.tip }}</title></circle>
+          <circle cx="{{ cl.ex }}" cy="{{ cl.ey }}" r="3.4" fill="{{ cl.eFill }}" stroke="{{ cl.eStroke }}" stroke-width="1.6"><title>{{ cl.tip }}</title></circle>
           <foreignObject x="{{ cl.endLabelX }}" y="{{ cl.endLabelY }}" width="54" height="14">
             <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;color:{{ cl.color }};white-space:nowrap;">{{ cl.endLabel }}</div>
           </foreignObject>
+        </sc-for>
+        <sc-for list="{{ comparePartialPts }}" as="cp" hint-placeholder-count="0">
+          <circle cx="{{ cp.cx }}" cy="{{ cp.cy }}" r="3.4" fill="var(--surface)" stroke="{{ cp.color }}" stroke-width="1.6"><title>{{ cp.tip }}</title></circle>
         </sc-for>
         <sc-for list="{{ compareX }}" as="cx" hint-placeholder-count="5">
           <foreignObject x="{{ cx.fx }}" y="{{ cx.fy }}" width="40" height="14" style="overflow:visible;">
@@ -8506,6 +8509,27 @@ function sectorWeeklyView(w,sectors){
     weekSlices:slices(last.by_sector),ytdSlices:slices(w.ytd&&w.ytd.by_sector)};
 }
 
+/* 06-р хэсгийн индекс (i06/r06) — авто тээврийн зорчигчийн сарын цуваа (roadPax түүх).
+   Эх сурвалж ЦОНХООР ачаалагддаг тул дутуу сарын НИЙТИЙГ бүтэн сартай харьцуулбал худал
+   уналт гарна: хамрагдсан (coverage) хоногийн дундаж × сарын хоног = сарын эквивалент,
+   partial=true (hollow цэг, tooltip-д N/M хоног). Хамрагдсан хоног 0 бол v=null — шугам
+   тасарна, тоо зохиохгүй. ЦЭВЭР — tests/run.js RI бүлэг. */
+function roadPaxMonthSeries(h,year,months){
+  if(!h||h.status!=='ok'||!Array.isArray(h.months)||!year||!(months>0)) return null;
+  const by={};
+  h.months.forEach(m=>{ if(m&&m.month) by[m.month]=m; });
+  const out=[];
+  for(let i=0;i<months;i++){
+    const m=by[year+'-'+String(i+1).padStart(2,'0')];
+    const dim=(m&&+m.days_in_month)||new Date(Date.UTC(year,i+1,0)).getUTCDate();
+    const days=m?(+m.days||0):0;
+    if(days<=0){ out.push({v:null,partial:false,days:0,dim}); continue; }
+    if(days>=dim) out.push({v:+m.passengers||0,partial:false,days,dim});
+    else out.push({v:(m.passengers_covered!=null?+m.passengers_covered:(+m.passengers||0))/days*dim,partial:true,days,dim});
+  }
+  return out.some(x=>x.v!=null)?out:null;
+}
+
 /* Нүүрний 02-р хэсэг «7 хоногийн тайлан» — нэгтгэлийн weekly[measure]-ээс ЗӨВХӨН `keys`
    салбараар (бүртгэлд холбогдсон, backend-д бий). ЦЭВЭР — tests/run.js WK бүлэг.
    - weeks[].value: долоо хоногийн нийлбэр; аль нэг салбар бичлэггүй бол null (дутуу
@@ -10753,6 +10777,15 @@ class Component extends DCLogic {
     return ' '+stxt('compare_window.prefix','Харьцуулах цонх:')+' '+w.year+' '+
       stxt('compare_window.year','оны')+' 1–'+w.months+' '+stxt('compare_window.months','сар.')+' '+
       stxt('compare_window.note','Бүх салбарт дата бүрэн байгаа сүүлийн үе.');
+  }
+  /* i06: авто тээврийн цуваанд дутуу/мэдээгүй сар байвал хөл бичигт ИЛ хэлнэ (hollow цэгийн утга). */
+  compareRoadNote(){
+    const reg=this.state.metricRegistry, i6=reg&&reg.widgets&&reg.widgets.i06;
+    if(!(i6&&Array.isArray(i6.sectors)&&i6.sectors.indexOf('road')>=0)) return '';
+    const w=this.compareWindow();
+    const s=roadPaxMonthSeries(this._roadPaxAll,w.year,w.months);
+    if(!s||!s.some(x=>x.partial||x.v==null)) return '';
+    return ' '+stxt('compare_window.road_partial','Авто тээвэр: ○ — эх сурвалжийн цоорхойтой сар, хамрагдсан хоногийн дунджаар сарын хэмжээнд шилжүүлсэн; мэдээгүй сард шугам тасарна.');
   }
   // Виджет бүр metric_registry.json-д quality:"verified" гэж тодорхой
   // бичигдээгүй бол mock гэж үзнэ (registry ачаалагдаагүй үед ч мөн адил —
@@ -13711,23 +13744,50 @@ class Component extends DCLogic {
       if(ls){ const b=ls[0]||1; return ls.slice(0,months).map(v=>v/b*100); }
       return new Array(months).fill(0);
     };
+    /* Авто тээвэр — SECTORS.road.c1d нь ҮЗЛЭГИЙН цуваа (t05) тул энд ашиглахгүй;
+       зорчигчийн сарын цуваа roadPax түүхээс (roadPaxMonthSeries — дутуу сар нь
+       сарын эквивалент, partial). Суурь (1-р сар) мэдээгүй бол индекс тооцохгүй. */
+    const roadSer=verifiedSet.has('road')?roadPaxMonthSeries(this._roadPaxAll,cw.year,months):null;
+    const roadOk=!!(roadSer&&roadSer[0].v>0);
+    const trendI06=(k,air)=>{
+      if(k!=='road') return trendFor(k,air);
+      if(!roadOk) return new Array(months).fill(0);
+      const b=roadSer[0].v;
+      return roadSer.map(x=>x.v==null?null:x.v/b*100);
+    };
+    const lastOf=t=>{ for(let i=t.length-1;i>=0;i--) if(t[i]!=null) return i; return 0; };
+    const partialTip=i=>{ const x=roadSer&&roadSer[i];
+      return x&&x.partial?' ('+stxt('compare_window.partial_tip','{d}/{m} хоног · хоногийн дунджаар').replace('{d}',x.days).replace('{m}',x.dim)+')':''; };
     /* "Бодит өгөгдөлтэй" гэдэг нь registry-д бүртгэгдсэн + цуваа ИРСЭН. */
-    const liveI06=(k)=>verifiedSet.has(k)&&(k==='air'?!!airI06:!!liveSeriesFor(k));
+    const liveI06=(k)=>verifiedSet.has(k)&&(k==='air'?!!airI06:k==='road'?roadOk:!!liveSeriesFor(k));
     const W=620,Hh=200,pL=40,pR=62,pT=14,pB=26;
     const all=ckeys.filter(k=>!off.includes(k));
-    const vals=all.length?all.flatMap(k=>trendFor(k)):[60,130];
+    const vals=all.length?all.flatMap(k=>trendI06(k)).filter(v=>v!=null):[60,130];
     const vmax=Math.ceil(Math.max.apply(null,vals)/10)*10, vmin=Math.floor(Math.min.apply(null,vals)/10)*10;
     const rng=(vmax-vmin)||1, stepX=(W-pL-pR)/Math.max(1,lastIdx);
     const Y=(v)=>pT+(Hh-pT-pB)*(1-(v-vmin)/rng);
+    const iUnit=stxt('chart.index_unit','индекс');
+    /* Авто тээврийн дутуу сар — hollow цэг + «N/M хоног» tooltip (DG: дутуу ≠ бүтэн);
+       сүүлийн цэг дутуу бол төгсгөлийн цэг өөрөө hollow. */
+    const comparePartialPts=[];
     const compareLines=all.map(k=>{
-      const t=trendFor(k);
-      return {key:k,color:NEON[k],tip:SECTORS[k].label+' — '+Math.round(t[lastIdx])+' '+stxt('chart.index_unit','индекс'),
+      const t=trendI06(k), li=lastOf(t);
+      // Мэдээгүй сар (null) — шугам ТАСАРНА (M), 0 гэж зурахгүй.
+      let d='', pen=false;
+      t.forEach((v,i)=>{ if(v==null){ pen=false; return; }
+        d+=(pen?' L':(d?' M':'M'))+(pL+i*stepX).toFixed(1)+','+Y(v).toFixed(1); pen=true; });
+      const endPartial=k==='road'&&!!(roadSer&&roadSer[li]&&roadSer[li].partial);
+      if(k==='road'&&roadSer) t.forEach((v,i)=>{ if(v!=null&&i!==li&&roadSer[i].partial)
+        comparePartialPts.push({cx:(pL+i*stepX).toFixed(1),cy:Y(v).toFixed(1),color:NEON[k],
+          tip:SECTORS[k].label+' — '+MONTHS[i]+': '+Math.round(v)+' '+iUnit+partialTip(i)}); });
+      return {key:k,color:NEON[k],tip:SECTORS[k].label+' — '+(li!==lastIdx?MONTHS[li]+': ':'')+Math.round(t[li])+' '+iUnit+(k==='road'?partialTip(li):''),
         // H5: verified эсэхээс үл хамааран бүх шугам ижил (тасралтгүй)
         // стильтэй — 0 бол зүгээр нэг үнэн тоо, тусгай ялгаа шаардлагагүй.
         dash:'none',
-        endLabel:Math.round(t[lastIdx]),endLabelY:(Y(t[lastIdx])-6.5).toFixed(1),endLabelX:(pL+lastIdx*stepX+7).toFixed(1),
-        d:'M'+t.map((v,i)=>(pL+i*stepX).toFixed(1)+','+Y(v).toFixed(1)).join(' L'),
-        ex:(pL+lastIdx*stepX).toFixed(1),ey:Y(t[lastIdx]).toFixed(1)};
+        eFill:endPartial?'var(--surface)':NEON[k],eStroke:endPartial?NEON[k]:'#FFFFFF',
+        endLabel:Math.round(t[li]),endLabelY:(Y(t[li])-6.5).toFixed(1),endLabelX:(pL+li*stepX+7).toFixed(1),
+        d:d||('M'+pL+','+Y(0).toFixed(1)),
+        ex:(pL+li*stepX).toFixed(1),ey:Y(t[li]).toFixed(1)};
     });
     // declutter endpoint labels: keep >=12px apart
     const ordered=compareLines.slice().sort((a,b)=>parseFloat(a.endLabelY)-parseFloat(b.endLabelY));
@@ -13738,13 +13798,15 @@ class Component extends DCLogic {
       l.endLabelY=y.toFixed(1); prevY=y;
     });
     const cRank=ckeys.map(k=>{
-      const t=trendFor(k,airR06),a=t[0],b=t[lastIdx];
+      const t=trendI06(k,airR06),a=t[0],b=t[lastOf(t)];
       // a===0 үед (0)-той харьцуулж хувь ТООЦООХГүй — 0÷0 тодорхойгүй
       // тул ch=null (w2p/w2c-ийн plan-той адил зарчим), NaN үүсэхгүй.
       const ch=a===0?null:(b-a)/a*100;
       return {key:k,label:SECTORS[k].label,glyph:GLYPH[k],color:NEON[k],
         start:Math.round(a),end:Math.round(b),ch,muted:off.includes(k)};
-    }).sort((x,y)=>(y.ch||0)-(x.ch||0));
+    /* Хувьгүй (мэдээлэл алга) мөр эрэмбийн ХАМГИЙН ДООР — 0 гэж үзвэл сөрөг өсөлттэй
+       салбаруудын дээр орж, «мэдээгүй нь илүү» гэж уншигдана. */
+    }).sort((x,y)=>(x.ch==null)-(y.ch==null)||(y.ch||0)-(x.ch||0));
     const cMaxAbs=Math.max.apply(null,cRank.map(r=>Math.abs(r.ch||0)))||1;
     const compareRank=cRank.map((r,i)=>({
       rank:String(i+1).padStart(2,'0'),label:r.label,glyph:r.glyph,color:r.color,
@@ -13839,7 +13901,7 @@ class Component extends DCLogic {
       w2pMark:section02Marks.w2p,w2pbMark:section02Marks.w2pb,w2pxMark:section02Marks.w2px,
       w2cMark:section02Marks.w2c,w2cbMark:section02Marks.w2cb,w2cxMark:section02Marks.w2cx,
       weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,weekCargoDeltaCols:String(Math.max(1,wCargo.delta.length)),weekCargoAirOnlyNote:wCargo.airOnlyNote,
-      compareLines,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareBaseYLabel,compareLastLabel,
+      compareLines,comparePartialPts,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareBaseYLabel,compareLastLabel,
       showLeadLag,
       f04:{open:!!this.state.f04Open,toggle:()=>this.setState(s=>({f04Open:!s.f04Open})),
         btnStyle:'cursor:pointer;font-family:inherit;width:26px;height:26px;border-radius:8px;flex-shrink:0;font-size:12px;line-height:1;'+(this.state.f04Open?'border:1px solid #7C5CF0;background:#7C5CF01a;color:#7C5CF0;':'border:1px solid var(--line);background:var(--surface);color:var(--ink3);'),
@@ -15866,7 +15928,7 @@ class Component extends DCLogic {
       // i06Foot: content.json-ий статик тайлбарын ард харьцуулах цонхыг
       // (жиш нь "2026 оны 1–7 сар") ДИНАМИКААР залгана — тоог энд хатуу
       // бичихгүй, buildExtras()-ийн compareWindowNote-оос авна.
-      i06Foot:this.txt('i06','foot','Индекс 2026 оны 1-р сарыг 100 гэж авсан харьцангуй үзүүлэлт. Салбарын нэр дээр дарж шугамыг нуух, харуулах боломжтой.')+this.compareWindowNote(),
+      i06Foot:this.txt('i06','foot','Индекс 2026 оны 1-р сарыг 100 гэж авсан харьцангуй үзүүлэлт. Салбарын нэр дээр дарж шугамыг нуух, харуулах боломжтой.')+this.compareWindowNote()+this.compareRoadNote(),
       // r06 — мөн 2 тусдаа элемент: foot (1232 "Тэргүүлэгч"),
       // foot2 (1237 "Хоцрогдож байгаа").
       r06Title:this.txt('r06','title','Сарын өсөлтийн эрэмбэ'),
