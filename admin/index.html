@@ -301,7 +301,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 .pvticker .t{font-family:var(--mono);font-size:10px;color:#8FA3C8;white-space:nowrap}
 .pvticker .v{font-family:var(--mono);font-size:12.5px;font-weight:600;color:#EAF1FF;white-space:nowrap}
 .pvticker .d{margin-left:auto;font-family:var(--mono);font-size:8px;color:#5E7099;white-space:nowrap}
-/* 5 салбарын зурвас (ls) ба 5 баганат харьцуулалт (w2px/w2cx) */
+/* 4 салбарын зурвас (ls) ба 4 баганат харьцуулалт (w2px/w2cx) */
 .pvstrip{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
 .pvsc{border-left:2px solid;padding:3px 0 3px 5px;min-width:0}
 .pvsc .l{font-family:var(--mono);font-size:7px;color:#8494B0;overflow:hidden;
@@ -521,10 +521,10 @@ var SCOPE=['hero_fl','hero_px','ls','w2p','w2pb','w2px','w2c','w2cb','w2cx',
            'k04','t05','d05','i06','r06','u07'];
 
 /* Сайтын эх кодоос авсан БОДИТ токен (index.html: NEON, GLYPH, rootStyle) */
-var NEON={road:'#8CA9E8',rail:'#B48CFF',air:'#2FE0C4',water:'#4FA8FF',public:'#F2A93B'};
-var GLYPH={road:'🚗',rail:'🚆',air:'✈️',water:'🚢',public:'🚌'};
-var SECN={air:'Агаарын тээвэр',road:'Авто зам',rail:'Төмөр зам',
-          water:'Ус, далайн тээвэр',public:'Нийтийн тээвэр',plan:'Төлөвлөгөө',
+var NEON={road:'#8CA9E8',rail:'#B48CFF',air:'#2FE0C4',water:'#4FA8FF'};
+var GLYPH={road:'🚗',rail:'🚆',air:'✈️',water:'🚢'};
+var SECN={air:'Агаарын тээвэр',road:'Авто тээвэр',rail:'Төмөр зам',
+          water:'Ус, далайн тээвэр',plan:'Төлөвлөгөө',
           /* w2pb/w2cb-ийн донутын "агаараас бусад" нэгтгэсэн сегмент */
           other:'Бусад салбар'};
 /* Хэсгийн нэр — index.html-ийн ЯГ ТЭР хэсгийн гарчгийн текстээс.
@@ -587,13 +587,13 @@ var DSMETA={
 var FIXED_UNIT={
   'hero_fl.':'нислэг','t05.':'нислэг/сар','u07.':'огноо',
   't05.air':'нислэг/сар','t05.rail':'зорчигч/сар','t05.road':'тээврийн хэрэгсэл/сар',
-  't05.water':'хөлөг онгоц/сар','t05.public':'зорчигч/сар',
+  't05.water':'хөлөг онгоц/сар',
   'u07.air':'огноо','u07.rail':'огноо','u07.road':'огноо',
-  'u07.water':'огноо','u07.public':'огноо',
+  'u07.water':'огноо',
   'i06.':'индекс (1-р сар=100)','r06.':'индекс (1-р сар=100)',
-  'k04.air':'mixed','k04.road':'mixed','k04.rail':'mixed','k04.water':'км','k04.public':'чиглэл',
-  'ls.air':'нислэг', 'ls.road':'үзлэг', 'ls.rail':'вагон', 'ls.water':'км', 'ls.public':'чиглэл',
-  'hero_px.public':'хүн'
+  'k04.air':'mixed','k04.road':'mixed','k04.rail':'mixed','k04.water':'км',
+  'ls.air':'нислэг', 'ls.road':'үзлэг', 'ls.rail':'вагон', 'ls.water':'км',
+  'hero_px.road':'хүн'
 };
 var SUM_WIDGETS={d05:1,w2p:1,w2px:1,w2c:1,w2cx:1};
 var DERIVES_FROM={w2pb:'w2p',w2cb:'w2c'};
@@ -615,15 +615,15 @@ var PKIND={hero_fl:'counter',hero_px:'counter',ls:'kpi',k04:'kpi',uk:'kpi',
   r06:'list',u07:'list'};
 /* SHAPE — виджет сайт дээр ЯМАР СИЛУЭТТЭЙ харагддаг. PKIND-ээс НАРИЙН:
    ls/k04/uk гурав PKIND дээр адилхан 'kpi' боловч сайт дээр огт өөр
-   (5 салбарын зурвас / 8 KPI сүлжээ / 4 карт) харагддаг. Хэрэглэгч
+   (4 салбарын зурвас / 8 KPI сүлжээ / 4 карт) харагддаг. Хэрэглэгч
    builder дээрээс виджетээ НҮДЭЭР таних ёстой тул энэ ялгаа чухал. */
 var SHAPE={hero_fl:'ticker',hero_px:'ticker',ls:'strip5',k04:'grid8',uk:'kpi4',
   t05:'line',i06:'multiline',d05:'donut',w2pb:'donut',w2cb:'donut',
   w2px:'cols5',w2cx:'cols5',w2p:'bignum',w2c:'bignum',
   r06:'rank',u07:'cards'};
-var SHAPEN={ticker:'Гүйдэг мөр',strip5:'5 салбарын зурвас',grid8:'8 KPI сүлжээ',
+var SHAPEN={ticker:'Гүйдэг мөр',strip5:'4 салбарын зурвас',grid8:'8 KPI сүлжээ',
   kpi4:'4 картын мөр',line:'Шугаман график',multiline:'Олон шугамт график',
-  donut:'Донут + жагсаалт',cols5:'5 баганат харьцуулалт',bignum:'Том тоо + багана',
+  donut:'Донут + жагсаалт',cols5:'4 баганат харьцуулалт',bignum:'Том тоо + багана',
   rank:'Эрэмбийн жагсаалт',cards:'Картан жагсаалт',bar:'Багана график'};
 function shapeOf(id){return S.viz[id]||SHAPE[id]||'ticker'}
 /* Хэрэглэгч солиж болох чартын хэлбэр (зөвхөн утга алдагдахгүй хосууд) */
@@ -669,7 +669,8 @@ var SERIES={};
    нь flights feed-ийн хуучин зам, төмөр зам «мэдээлэл алга». Метрик → [хэмжүүр, салбар]. */
 var ST={state:'idle',weekly:null};
 var ST_METRIC={'air.weekly_pax':['passengers','air'],'air.weekly_cargo':['freight_tonnes','air'],
-  'rail.weekly_pax':['passengers','rail'],'rail.weekly_cargo':['freight_tonnes','rail']};
+  'rail.weekly_pax':['passengers','rail'],'rail.weekly_cargo':['freight_tonnes','rail'],
+  'road.weekly_pax':['passengers','road']};
 
 var $=function(i){return document.getElementById(i)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -945,7 +946,13 @@ function loadRoadInspections(){
 function loadSectorTotalWeekly(){
   if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchSectorTotal){ ST.state='off'; return Promise.resolve() }
   ST.state='loading';
-  return EHBackend.fetchSectorTotal().then(function(d){
+  /* Авто тээвэр — эх сурвалжийн цоорхой (road history coverage.gaps): сайтын
+     weekSectorTotal()-тэй ИЖИЛ — цоорхойтой давхцсан долоо хоног бичлэггүйтэй адил. */
+  var gp=EHBackend.fetchRoadPassengersHistory?EHBackend.fetchRoadPassengersHistory().then(function(h){
+    ST.gaps=(h&&h.coverage&&Array.isArray(h.coverage.gaps))?{road:h.coverage.gaps}:null;
+  },function(){ ST.gaps=null }):Promise.resolve();
+  return Promise.all([EHBackend.fetchSectorTotal(),gp]).then(function(r){
+    var d=r[0];
     if(!d||d.status!=='ok'||!d.weekly){ ST.state='error'; return }
     ST.weekly=d.weekly; ST.state='ready';
   },function(){ ST.state='error' });
@@ -959,6 +966,8 @@ function stWeek(mk){
 }
 function stWeekVal(x,sec){
   if(!x||x.missing) return null;
+  var g=ST.gaps&&ST.gaps[sec];
+  if(g&&g.some(function(r){return r&&r.from<=x.week_end&&r.to>=x.week_start})) return null;
   var b=x.by_sector&&x.by_sector[sec];
   return (b&&b.value!=null&&isFinite(Number(b.value)))?Number(b.value):null;
 }
@@ -1396,9 +1405,9 @@ var SITE_GROUPS=[
   {key:'footer',  title:'Хөл хэсэг',       where:'Хуудасны хамгийн доод мөр',
    labels:{copyright:'Эрхийн мэдэгдэл'}},
   {key:'sector_short', title:'Салбарын богино нэр', where:'01-р хэсэг — үндсэн үзүүлэлтийн 5 багана',
-   labels:{road:'Авто зам',rail:'Төмөр зам',air:'Агаар',water:'Усан зам',public:'Нийтийн'}},
+   labels:{road:'Авто тээвэр',rail:'Төмөр зам',air:'Агаар',water:'Усан зам'}},
   {key:'sectors', title:'Салбарын нэр',    where:'01/02/05/06/07 — виджет доторх салбарын мөр бүрд',
-   labels:{road:'Авто зам',rail:'Төмөр зам',air:'Агаарын тээвэр',water:'Ус, далайн тээвэр',public:'Нийтийн тээвэр'}},
+   labels:{road:'Авто тээвэр',rail:'Төмөр зам',air:'Агаарын тээвэр',water:'Ус, далайн тээвэр'}},
   {key:'a11y',    title:'Хандах боломж',   where:'aria-label — дэлгэц уншигчид зориулсан',
    labels:{menu:'Цэсний товч',filter:'Шүүлтийн товч',close:'Хаах товч'}},
   /* Тээврийн хэрэгслийн бүртгэлийн самбар (#/vehreg). Слотын гарчиг,
@@ -1542,7 +1551,7 @@ var UI_GROUPS=[
            note_modal:'Тайлбар (модаль)',slot_quality:'Слотын чанар гарчиг',
            add_sub:'Дэд гарчиг нэмэх сануулга',add_foot:'Хөл бичиг нэмэх сануулга',
            ticker_tag:'Гүйдэг мөрийн шошго',no_series:'Цуваа алга',no_data:'Дата алга',
-           points:'"цэг" үг',five_lines:'5 салбарын шугам',bar:'"багана" үг',
+           points:'"цэг" үг',five_lines:'4 салбарын шугам',bar:'"багана" үг',
            daily7:'7 хоногийн шошго',kpi_row:'KPI мөрийн нэр',edit_widget:'Засах товч'}},
   {key:'portal_kpi',title:'Админ · порталын 4 карт', where:'uk виджетийн preview',
    labels:{computed:'Тооцоолсон тооны түр бичвэр (жинхэнэ тоо зөвхөн сайт дээр харагдана)'}},
@@ -1599,9 +1608,9 @@ var UI_GROUPS=[
   {key:'field',title:'Админ · текстийн талбарын нэр', where:'Виджет бүрийн текстийн маягт',
    labels:{title:'Гарчиг',sub:'Дэд гарчиг',unit:'Нэгжийн шошго',foot:'Хөл бичиг',foot2:'Хөл бичиг 2'}},
   {key:'shape',title:'Админ · виджетийн хэлбэрийн нэр', where:'Preview картын баруун дээд шошго',
-   labels:{ticker:'Гүйдэг мөр',strip5:'5 салбарын зурвас',grid8:'8 KPI сүлжээ',kpi4:'4 картын мөр',
+   labels:{ticker:'Гүйдэг мөр',strip5:'4 салбарын зурвас',grid8:'8 KPI сүлжээ',kpi4:'4 картын мөр',
            line:'Шугаман график',multiline:'Олон шугамт график',donut:'Донут + жагсаалт',
-           cols5:'5 баганат харьцуулалт',bignum:'Том тоо + багана',rank:'Эрэмбийн жагсаалт',
+           cols5:'4 баганат харьцуулалт',bignum:'Том тоо + багана',rank:'Эрэмбийн жагсаалт',
            cards:'Картан жагсаалт',bar:'Багана график'}},
   {key:'viz',title:'Админ · дүрслэлийн ангилал', where:'Модаль дэд мөр',
    labels:{counter:'Тоолуур',kpi:'KPI',line:'График',donut:'Донут',
@@ -2047,7 +2056,7 @@ function previewFor(id,mini){
     body=ser&&ser.length>1
       ? svgLine(ser,accent,W,H,false)+
         '<div class="pvax">'+esc(ser[0].label)+' — '+esc(ser[ser.length-1].label)+
-        ' · '+ser.length+' '+esc(utxt('preview.points','цэг'))+(kind==='multiline'?' · '+esc(utxt('preview.five_lines','5 салбарын шугам')):'')+'</div>'+
+        ' · '+ser.length+' '+esc(utxt('preview.points','цэг'))+(kind==='multiline'?' · '+esc(utxt('preview.five_lines','4 салбарын шугам')):'')+'</div>'+
         (extraSer.length?'<div class="pvax" data-pvextra="1">+ '+esc(extraSer.join(' · '))+'</div>':'')
       : '<div class="pvempty">'+esc(FEED.state==='ready'?utxt('preview.no_series','цуваа алга'):utxt('feed.error','дата ачаалагдаагүй'))+'</div>';
   } else if(kind==='bar'){
@@ -2105,7 +2114,7 @@ function previewFor(id,mini){
       var ok=Array.isArray(rw.sectors)?rw.sectors:[];
       /* Утгын тохиргоотой бол air мөрийн тоо түүнээс гарна (сайттай ижил). */
       var rkRes=widgetValueRes(id);
-      rp=['air','road','rail','water','public'].map(function(k){
+      rp=['air','road','rail','water'].map(function(k){
         var isOk=ok.indexOf(k)>=0;
         var rv=isOk?(metricValue(headMetric(id))||0):0;
         if(rkRes&&k==='air'&&isOk) rv=rkRes.rounded;
@@ -3702,7 +3711,7 @@ function chromeFields(id){
   if(ui0.src==='fixed'){ var up=unitPath(ui0.u); if(up) out.push(up) }
   /* (4) Салбар/слотын нэр ба чанарын badge — "Слотын чанар" мөрүүд ч
          үүнд багтана */
-  ['air','road','rail','water','public'].forEach(function(k){out.push('sectors.'+k)});
+  ['air','road','rail','water'].forEach(function(k){out.push('sectors.'+k)});
   out.push('ui.sector_extra.plan','ui.sector_extra.other','ui.metric.single_slot',
            'ui.preview.slot_quality','ui.badge.live_value','ui.badge.live_service',
            'ui.badge.mock','ui.badge.no_data');
