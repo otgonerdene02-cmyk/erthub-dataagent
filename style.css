@@ -112,6 +112,9 @@ body{margin:0;}
   /* FL баганын шүүлт: шошгоны 112px багана гар утсанд chip-ийн зайг иддэг тул дээр нь */
   .eh-fl-row { flex-direction: column !important; gap: 6px !important; }
   .eh-fl-row > :first-child { width: auto !important; padding-top: 0 !important; }
+  /* Тоон хүрээ: 300px баганын сүлжээ гар утсанд хальдаг — нэг багана, оролт уян */
+  .eh-fl-ranges { grid-template-columns: minmax(0, 1fr) !important; align-self: stretch; }
+  .eh-fl-ranges input { width: 0 !important; flex: 1 1 0 !important; min-width: 0; }
   .eh-fill-list { position: static; flex: none; min-height: 0; }
   .eh-fill-scroll { position: static; overflow: visible; padding-right: 0; max-height: 420px; overflow-y: auto; }
   /* 7 хоногийн баганын график: 6–7 багана 244px-д багтаж, огнооны шошго ("10.07")
