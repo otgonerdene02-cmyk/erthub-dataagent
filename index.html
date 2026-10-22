@@ -846,7 +846,7 @@
         <div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;margin-bottom:7px;">
             <sc-for list="{{ weekPaxBars }}" as="wb" hint-placeholder-count="6">
-              <div style="flex:1;min-width:0;text-align:center;{{ wb.valueStyle }}">{{ wb.value }}</div>
+              <div style="flex:1;min-width:0;text-align:center;{{ wb.valueStyle }}"><span class="eh-wk-full">{{ wb.value }}</span><span class="eh-wk-short">{{ wb.valueShort }}</span></div>
             </sc-for>
           </div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;height:150px;border-bottom:1px solid var(--line2);position:relative;">
@@ -941,7 +941,7 @@
         <div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;margin-bottom:7px;">
             <sc-for list="{{ weekCargoBars }}" as="wb" hint-placeholder-count="6">
-              <div style="flex:1;min-width:0;text-align:center;{{ wb.valueStyle }}">{{ wb.value }}</div>
+              <div style="flex:1;min-width:0;text-align:center;{{ wb.valueStyle }}"><span class="eh-wk-full">{{ wb.value }}</span><span class="eh-wk-short">{{ wb.valueShort }}</span></div>
             </sc-for>
           </div>
           <div class="eh-wk" style="display:flex;padding-left:44px;gap:12px;height:150px;border-bottom:1px solid var(--line2);position:relative;">
@@ -13467,9 +13467,13 @@ class Component extends DCLogic {
       // үзэгдэл дээрээ илэрхийлнэ (тайлбар мөрөнд текстээр ч давхар
       // тэмдэглэнэ). Бодит өдрийн багана холбогдсон үед энгийн стиль.
       const dateLabelStyle=(realDaily||stW)?'':'color:var(--ink3);opacity:.55;font-style:italic;';
+      /* Гар утас (≤640px): 8 баганын 6 оронтой утга (571,206 ≈ 44px) ~33px баганад
+         багтахгүй давхцдаг тул style.css нь товчилсон хэлбэрийг (571K) харуулна;
+         бүтэн тоо ширээний дэлгэц ба tooltip-д хэвээр. */
+      const shortVal=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e5?Math.round(v/1e3)+'K':v>=1e3?(v/1e3).toFixed(1)+'K':String(Math.round(v));
       const bars=barVals.map((v,i)=>(v===null||v===undefined)
-        ?{label:barLabels[i],value:'—',dateLabelStyle,heightPct:'0%',color:'var(--line2)'}
-        :{label:barLabels[i],value:(stW?Math.round(v):v).toLocaleString(),dateLabelStyle,
+        ?{label:barLabels[i],value:'—',valueShort:'—',dateLabelStyle,heightPct:'0%',color:'var(--line2)'}
+        :{label:barLabels[i],value:(stW?Math.round(v):v).toLocaleString(),valueShort:shortVal(v),dateLabelStyle,
           heightPct:(top===base?50:(v-base)/(top-base)*100).toFixed(1)+'%',color:wd.color});
       const yTicks=[0,0.5,1].map(fr=>({pct:(fr*100).toFixed(1)+'%',label:Math.round(base+fr*(top-base)).toLocaleString()}));
       const avgVal=hasBars?okVals.reduce((a,v)=>a+v,0)/okVals.length:0;
