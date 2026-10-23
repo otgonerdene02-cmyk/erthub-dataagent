@@ -104,6 +104,10 @@ body{margin:0;}
   .eh-g-1c { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
   .eh-g-2c { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
   .eh-g-2c > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* 01-р хэсгийн салбарын товч (sticky мөр): гар утсанд зөвхөн СОНГОСОН салбар нэртэй —
+     4 нэр зэрэг 3 мөр болж sticky самбар дэлгэцийн 1/7-ийг эзэлдэг байв. Бусад нь дүрс + title. */
+  [data-home-sector]:not([data-on="1"]) .eh-sec-chip-l { display: none; }
+  [data-home-sector]:not([data-on="1"]) { padding: 0 9px !important; }
   /* Сарын график + тээвэрлэгчийн жагсаалт: гар утсанд дараалан, жагсаалт бүтнээрээ */
   .eh-trend-rank { grid-template-columns: minmax(0, 1fr) !important; }
   .eh-ri-row { grid-template-columns: minmax(0, 1fr) !important; }

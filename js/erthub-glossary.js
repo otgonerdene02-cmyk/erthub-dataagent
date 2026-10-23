@@ -401,7 +401,60 @@
       period: period + ' · ' + (meas === 'passengers' ? t('by_pax', 'зорчигчоор') : t('by_freight', 'ачаагаар (тонн)')) };
   }
 
+  /* (5д) Авто тээврийн зорчигчийн САРЫН цуваа (/api/sectors/road/passengers/history) →
+     sectorSummaryToSeries()-ийн ИЖИЛ хэлбэр {unit, year, counts, lastMonth, partial,
+     partialValue, prev} + partials. Нүүрний t05/k04 (сайт) ба админы t05 preview ХОЁУЛАА
+     ЭНИЙГ дуудна. Эх сурвалж ЦОНХООР ачаалагддаг тул сард цоорхой байж болно:
+     хамрагдсан хоногийн дундаж × сарын хоног = сарын эквивалент (06-р хэсгийн
+     roadPaxMonthSeries-тэй ижил дүрэм), partials[i] = {days, dim} — tooltip-д ИЛ.
+     - Явагдаж буй (УБ) сар цуваанд орохгүй → partial/partialValue (бодит дүн, hollow цэг).
+     - Сүүлийн мэдээтэй оны 1-р сараас ЗАВСАРГҮЙ; мэдээгүй сар (хоног 0) завсарт байвал
+       null — хэсэгчилж зурахгүй, тоо зохиохгүй. 2-оос цөөн сар бол null. */
+  function roadPaxSeries(h, now) {
+    if (!(h && h.status === 'ok' && Array.isArray(h.months))) return null;
+    var ub = new Date((now == null ? Date.now() : now) + 8 * 3600000);
+    var curKey = ub.getUTCFullYear() * 100 + (ub.getUTCMonth() + 1);
+    var by = {}, partial = null, partialValue = null, maxKey = 0;
+    h.months.forEach(function (m) {
+      if (!m || !/^\d{4}-\d{2}$/.test(String(m.month))) return;
+      var y = +m.month.slice(0, 4), mo = +m.month.slice(5, 7), k = y * 100 + mo;
+      var days = +m.days || 0;
+      if (days <= 0) return;
+      var dim = +m.days_in_month || new Date(Date.UTC(y, mo, 0)).getUTCDate();
+      if (k >= curKey) {
+        if (k === curKey) { partial = m.month; partialValue = +m.passengers || 0; }
+        return;
+      }
+      var v = days >= dim ? (+m.passengers || 0)
+        : (m.passengers_covered != null ? +m.passengers_covered : (+m.passengers || 0)) / days * dim;
+      by[k] = { v: Math.round(v), days: Math.min(days, dim), dim: dim };
+      if (k > maxKey) maxKey = k;
+    });
+    if (!maxKey) return null;
+    var year = Math.floor(maxKey / 100), counts = [], partials = [];
+    for (var mo = 1; mo <= maxKey % 100; mo++) {
+      var r = by[year * 100 + mo];
+      if (!r) return null;
+      counts.push(r.v);
+      partials.push(r.days < r.dim ? { days: r.days, dim: r.dim } : null);
+    }
+    if (counts.length < 2) return null;
+    var prevCounts = [], prevPartials = [];
+    for (var pm = 1; pm <= 12; pm++) {
+      var p = by[(year - 1) * 100 + pm];
+      prevCounts.push(p ? p.v : null);
+      prevPartials.push(p && p.days < p.dim ? { days: p.days, dim: p.dim } : null);
+    }
+    var prev = prevCounts.some(function (v) { return v != null; }) ? { year: year - 1, counts: prevCounts, partials: prevPartials } : null;
+    /* Одоогийн сарын hollow цэг нь графикийн ДАРААГИЙН слот (counts.length+1) дээр зурагддаг —
+       цуваа түүнээс өмнө тасарсан бол (жиш. 4–9-р сар мэдээгүй) өөр сарын нэрээр гарна → хаяна. */
+    var adj = partial && curKey === year * 100 + counts.length + 1;
+    return { unit: 'зорчигч', year: year, counts: counts, partials: partials, lastMonth: counts.length,
+      partial: adj ? partial : null, partialValue: adj ? partialValue : null, prev: prev };
+  }
+
   var api = {
+    roadPaxSeries: roadPaxSeries,
     airPaxSplit: airPaxSplit, norm: norm, airFlightKind: airFlightKind, KIND_LABEL: KIND_LABEL, AIR_KIND: AIR_KIND,
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,

@@ -447,7 +447,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="../js/erthub-publish.js?v=ffe215f9"></script>
 <script src="../js/erthub-backend.js?v=a96de8ab"></script>
 <script src="../js/erthub-chart.js?v=422174bf"></script>
-<script src="../js/erthub-glossary.js?v=f43104d3"></script>
+<script src="../js/erthub-glossary.js?v=8aacae8e"></script>
 </head>
 <body>
 
@@ -551,7 +551,7 @@ var SEC_FROM={'portal-kpi':'uk','sec-04':'k04','sec-05':'t05','sec-07':'u07'};
    placeholder бичигдсэн байсан нь сайт дээр ХЭЗЭЭ Ч харагддаггүй текст
    тул админ сайттай тулгаж чаддаггүй байв. Динамик болохыг өнцгөн
    хаалтаар БИШ, тусад нь "(динамик)" тэмдэглэгээгээр илэрхийлнэ. */
-var SEC_SUFFIX={'sec-04':' — Авто зам','sec-05':' — Сарын дундаж ачаалал (мянга)'};
+var SEC_SUFFIX={'sec-04':' — Авто тээвэр','sec-05':' — Сарын зорчигч (билеттэй)'};
 /* Эдгээрийн ард ирэх хэсэг сонгосон салбараас хамаарч өөрчлөгддөг —
    дээрх нь ЗӨВХӨН анхны төлөвийн утга. */
 var SEC_DYN={'sec-04':1,'sec-05':1};
@@ -582,6 +582,7 @@ var DSMETA={
   'silver.rail_operations':{n:'Төмөр замын зорчигч (галт тэрэг × өдөр)', a:'УБТЗ · Veritech', s:'rail'},
   /* road.inspection_* метрикүүдийн датасэт (2026-09-23). Бүртгэлгүй бол
      каталогт "silver.road_inspections" гэсэн түүхий код гарна. */
+  'silver.road_passengers':{n:'Авто тээврийн зорчигч (билет × өдөр)', a:'АТҮТ · Veritech', s:'road'},
   'silver.road_inspections':{n:'Техникийн хяналтын үзлэг (үзлэг × өдөр)', a:'ЗТХЕГ · Veritech', s:'road'}
 };
 /* Слот бүр ЮУ ХАРУУЛДАГ, түүнээсээ шалтгаалан ямар нэгж шаардахыг энд
@@ -593,7 +594,7 @@ var DSMETA={
      ls.air  — зөвхөн kpis[0] (нислэгийн тоо) уншина тул "нислэг" */
 var FIXED_UNIT={
   'hero_fl.':'нислэг','t05.':'нислэг/сар','u07.':'огноо',
-  't05.air':'нислэг/сар','t05.rail':'зорчигч/сар','t05.road':'тээврийн хэрэгсэл/сар',
+  't05.air':'нислэг/сар','t05.rail':'зорчигч/сар','t05.road':'зорчигч/сар',
   't05.water':'хөлөг онгоц/сар',
   'u07.air':'огноо','u07.rail':'огноо','u07.road':'огноо',
   'u07.water':'огноо',
@@ -979,6 +980,8 @@ function loadSectorTotalWeekly(){
      weekSectorTotal()-тэй ИЖИЛ — цоорхойтой давхцсан долоо хоног бичлэггүйтэй адил. */
   var gp=EHBackend.fetchRoadPassengersHistory?EHBackend.fetchRoadPassengersHistory().then(function(h){
     ST.gaps=(h&&h.coverage&&Array.isArray(h.coverage.gaps))?{road:h.coverage.gaps}:null;
+    /* t05.road — сайтын applySectorSeries('road')-тэй ИЖИЛ цэвэр функц (EHGlossary.roadPaxSeries) */
+    ST.roadSeries=(typeof EHGlossary!=='undefined'&&EHGlossary.roadPaxSeries)?EHGlossary.roadPaxSeries(h):null;
   },function(){ ST.gaps=null }):Promise.resolve();
   return Promise.all([EHBackend.fetchSectorTotal(),gp]).then(function(r){
     var d=r[0];
@@ -1063,6 +1066,8 @@ function loadSectorSeries(){
 function metricSeries(mk){
   /* rail-ийн цуваа flights feed-ээс ХАМААРАХГҮЙ — FEED.state-ээр хаавал
      backend амьд байхад ч preview хоосон харагдана. */
+  if(mk==='road.monthly_passenger_series'){ var rs=ST.roadSeries;
+    return rs?rs.counts.map(function(v,i){return {m:i,label:MONTHS[i],v:v}}):null; }
   if(SERIES_METRIC[mk]){ var ss=SERIES[SERIES_METRIC[mk]]; return (ss&&ss.state==='ready')?ss.series:null; }
   if(FEED.state!=='ready') return null;
   if(mk==='air.monthly_flight_series') return FEED.months;
@@ -2010,6 +2015,8 @@ function pvTrendModel(id){
     var ss=SERIES[SERIES_METRIC[mk]];
     return (ss&&ss.state==='ready')?{periodKeys:pvMonthKeys(ss.year,ss.series),partialDropped:!!ss.partialDropped}:{};
   }
+  if(mk==='road.monthly_passenger_series'){ var rs=ST.roadSeries;
+    return rs?{periodKeys:pvMonthKeys(rs.year,metricSeries(mk)),partialDropped:!!rs.partial}:{}; }
   var ser=mk?metricSeries(mk):null;
   return (ser&&ser.length>1)?{periodKeys:pvMonthKeys(FEED.year,ser),partialDropped:!!FEED.partialDropped}:{};
 }
@@ -2567,7 +2574,7 @@ var SITE_LOC={
   filter:'home|s1', range:'home|s1', months:'home|s1', sector_short:'home|s1',
   week:'home|s2', community:'home|s3', community_data:'home|s3', updates:'home|s3',
   rank:'home|s4', sector_kpi:'home|s4', sector_kpi_air_live:'home|s4',
-  sector_kpi_rail_live:'home|s4', sector_chart_rail_live:'home|s5',
+  sector_kpi_rail_live:'home|s4', sector_chart_rail_live:'home|s5', sector_chart_road_live:'home|s5',
   sector_rank_rail_live:'home|s4', sector_rank_rail_other:'home|s4',
   sector_chart2_rail_live:'home|s5',
   sector_kpi_road_live:'home|s4', road_fail_cats:'home|s4',
