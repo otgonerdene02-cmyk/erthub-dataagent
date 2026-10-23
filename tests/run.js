@@ -4565,7 +4565,8 @@ async function groupBE() {
           !/өмнөх оны өгөгдөл алга/.test(YRT(half, T15)), YRT(half, T15));
         check('PA15. Вагон, зорчигч ХОЁУЛАА нэг helper-ээр (yoyReasonText) — текст хуваагдахгүй',
           /* 2026-10-19: ачаа тээвэр (УБТЗ/МТЗ) ч мөн энэ helper-ээр — 3; 2026-10-20 авто тээврийн зорчигч — 4 */
-          (dcScript().match(/:yoyReasonText\(m,T\)\}/g) || []).length === 4);
+          /* 2026-10-22: ачаа тээвэр ба авто зорчигч momOrYoyKpi()-аар (YoY алга бол «Өмнөх сараас») — дотор нь мөн энэ helper */
+          (dcScript().match(/:yoyReasonText\(m,T\)\}/g) || []).length === 3 && (dcScript().match(/momOrYoyKpi\(m,T,dash,[A-Z]/g) || []).length === 2);
         const WAC15 = (readJson('content.json').site || {}).wagon_an || {};
         check('PA15. kpi_yoy_no_prev {year}/{from}-тэй pax_an ба wagon_an-д',
           [PAC15, WAC15].every(c => /\{year\}/.test(c.kpi_yoy_no_prev || '') && /\{from\}/.test(c.kpi_yoy_no_prev || '')));
@@ -7551,7 +7552,10 @@ function groupFR() {
   const YOC = new Function('months', 'yr', 'mFrom', 'mTo', 'key', yoc[1]);
   const minM = src.match(/const FREIGHT_YOY_MIN=([0-9]+);/);
   check('FR0. FREIGHT_YOY_MIN = 3 (YoY хамгийн багадаа 3 бүтэн хос сар)', !!minM && +minM[1] === 3);
-  const FA = (all, sel, year, mr) => new Function('FREIGHT_DIRS', 'FREIGHT_YOY_MIN', 'yoyCompare', 'all', 'sel', 'year', 'mr', fam[1])(eval(dirsM[1]), minM ? +minM[1] : 3, YOC, all, sel, year, mr);
+  const momM = src.match(/\nfunction monthOverMonth\(ms,key,isFull\)\{([\s\S]*?)\n\}/);
+  check('FR0. monthOverMonth тодорхойлогдсон', !!momM);
+  const MOM = momM ? new Function('ms', 'key', 'isFull', momM[1]) : () => null;
+  const FA = (all, sel, year, mr) => new Function('FREIGHT_DIRS', 'FREIGHT_YOY_MIN', 'yoyCompare', 'monthOverMonth', 'all', 'sel', 'year', 'mr', fam[1])(eval(dirsM[1]), minM ? +minM[1] : 3, YOC, MOM, all, sel, year, mr);
   const fm = (month, days, last, d) => Object.assign({ month, days, days_in_month: 30, last_date: last, rows: 10,
     transit_tonnes: 0, transit_wagons: 0, export_tonnes: 0, export_wagons: 0, import_tonnes: 0, import_wagons: 0, domestic_tonnes: 0, domestic_wagons: 0 }, d);
   const ALL = { status: 'ok', months: [
@@ -7575,6 +7579,14 @@ function groupFR() {
   /* Регресс (2026-10-19 UX аудит): МТЗ дээр ганц хос сар (2026-01/2025-01) "+535.8%" гэж гарч байв */
   check('FR4. Ганц бүтэн хос сар (2026-09/2025-09) → YoY ГАРАХГҮЙ, шалтгаан "few"',
     m.yoy === null && m.yoyReason === 'few', JSON.stringify([m.yoy, m.yoyReason]));
+  /* Регресс (2026-10-22, «хоосон картууд»): МТЗ дээр «Өмнөх оноос — 3-аас цөөн» хоосон карт (EMP) */
+  const MZ = FA({ status: 'ok', months: [
+    fm('2025-12', 31, '2025-12-31', { export_tonnes: 200, export_wagons: 2 }),
+    fm('2026-01', 31, '2026-01-31', { export_tonnes: 250, export_wagons: 3 }),
+    fm('2026-02', 9, '2026-02-09', { export_tonnes: 40, export_wagons: 1 })] }, null, 'all');
+  check('FR4b. YoY алга → «Өмнөх сараас» 2026-01 / 2025-12 = 250/200 − 1 = +25.0% (дутуу 2026-02 орохгүй); дараалаагүй (2025-09→2026-09) бол null',
+    MZ.yoy === null && !!MZ.mom && MZ.mom.month === '2026-01' && MZ.mom.prevMonth === '2025-12' && Math.abs(MZ.mom.pct - 25) < 1e-9 && m.mom === null,
+    JSON.stringify([MZ.mom, m.mom]));
   const Y3 = FA({ status: 'ok', months: ['07', '08', '09'].flatMap((mo, i) => [
     fm('2025-' + mo, 31, '2025-' + mo + '-30', { export_tonnes: 100, export_wagons: 2 }),
     fm('2026-' + mo, 31, '2026-' + mo + '-30', { export_tonnes: 110 + i * 10, export_wagons: 2 })]) }, null, 'all');
@@ -8329,8 +8341,10 @@ function groupRPX() {
   const YOC = new Function('months', 'yr', 'mFrom', 'mTo', 'key', yoc[1]);
   const COLORS = eval('(' + colM[1] + ')'), EXTRA = eval(exM[1]);
   const typeColor = (t, i) => COLORS[t] || EXTRA[(i || 0) % EXTRA.length];
-  const AM = (all, sel, year, mr) => new Function('ROAD_PAX_COMPLETE_RATIO', 'ROAD_PAX_YOY_MIN', 'yoyCompare', 'roadPaxTypeColor',
-    'all', 'sel', 'year', 'mr', am[1])(+crM[1], +ymM[1], YOC, typeColor, all, sel, year, mr);
+  const momM = src.match(/\nfunction monthOverMonth\(ms,key,isFull\)\{([\s\S]*?)\n\}/);
+  const MOM = momM ? new Function('ms', 'key', 'isFull', momM[1]) : () => null;
+  const AM = (all, sel, year, mr) => new Function('ROAD_PAX_COMPLETE_RATIO', 'ROAD_PAX_YOY_MIN', 'yoyCompare', 'roadPaxTypeColor', 'monthOverMonth',
+    'all', 'sel', 'year', 'mr', am[1])(+crM[1], +ymM[1], YOC, typeColor, MOM, all, sel, year, mr);
   const WM = (all) => new Function('roadPaxTypeColor', 'all', wm[1])(typeColor, all);
   const BM = new Function('weeks', 'values', 'color', 'words', bm[1]);
   const H = 'Хот хооронд', U = 'Улс хооронд';
@@ -8510,11 +8524,30 @@ function groupRPX() {
   check('RPX30. Таслагдсан хүснэгтэд хамрах баганын шүүлт KPI-г шүүнэ (түлхүүр = сонгосон утга); өөр багана — хамаарахгүй',
     src.includes("if(kl||!ks.every(k=>String(k)===String(ki))) return none;") &&
     src.includes("keys:new Set([String(selRaw[ki]).trim()])"));
+  /* Регресс (2026-10-22, хэрэглэгч: «хоосон байгаа картууд дээр check хий»): эх сурвалжид 2025 онд 2 л
+     сар тул «Өмнөх оноос» ба «Өмнөх оны мөн үеэс» үргэлж «—» хоосон карт байв (EMP). */
+  check('RPX32. YoY алга үед «Өмнөх сараас»: сүүлийн хоёр дараалсан БҮТЭН сар 2026-09 / 2026-08 = 363/330 − 1 = +10.0% (2026-10 дутуу — орохгүй)',
+    m.yoy === null && !!m.mom && m.mom.month === '2026-09' && m.mom.prevMonth === '2026-08' && Math.abs(m.mom.pct - 10) < 1e-9,
+    JSON.stringify(m.mom));
+  check('RPX32. Дараалаагүй бүтэн сар (2025-09 → 2026-08) харьцуулахгүй; ганц бүтэн сар → mom null',
+    AM(ALL, null, 2025).mom.month === '2025-09' && AM(ALL, null, 2026, { from: 9, to: 10 }).mom === null);
+  check('RPX33. 7 хоног: өмнөх оны мөн үе алга → өмнөх БҮТЭН 7 хоногуудын дундаж (≥3): 180 / ((200+220+190)/3) − 1',
+    (() => { const W5 = JSON.parse(JSON.stringify(WK2)); const wk = W5.weekly.weeks;
+      W5.weekly.weeks = [{ ...wk[1], week_start: '2026-09-14', days: 3, passengers: 50 },
+        { ...wk[1], week_start: '2026-09-21', passengers: 200 }, { ...wk[1], week_start: '2026-09-28', passengers: 220 },
+        { ...wk[1], week_start: '2026-10-05', passengers: 190 }, wk[1]];
+      const r = WM(W5).total; return r.yoy === null && r.avgN === 3 && Math.abs(r.vsAvg - (180 / (610 / 3) - 1) * 100) < 1e-9; })());
+  check('RPX33. Бүтэн 7 хоног 3-аас цөөн бол дундажтай харьцуулахгүй (null)', WM(WK2).total.vsAvg === null && WM(WK).total.avgN === 1);
+  check('RPX33. Карт: YoY алга бол «7 хоногийн дунджаас» / «Өмнөх сараас» — «—» хоосон карт биш',
+    src.includes("(b.yoy==null&&b.vsAvg!=null)") && src.includes("if(!m.yoy&&m.mom) return {label:T('kpi_mom',") &&
+    src.includes('momOrYoyKpi(m,T,dash,ROAD_PAX_YOY_MIN)') && src.includes('momOrYoyKpi(m,T,dash,FREIGHT_YOY_MIN)'));
   check('RPX31. Өдрийн дундаж = мэдээтэй өдрийн зорчигч / мэдээтэй өдөр (хуваагч ба хуваагдагч ижил олонлог)',
     src.includes('perDay:days>0?ms.reduce((t,m)=>t+m.paxCovered,0)/days:null'));
   /* Текст бүр content.json-д (T('k','fallback') → site.road_pax_an.k) — дутуу/үхмэл түлхүүргүй */
   const body = (src.split('  buildRoadPaxAnalysis(dsel){')[1] || '').split('  buildDocDetail(){')[0];
-  const keys = [...new Set([...body.matchAll(/\bT\('([a-z_0-9.]+)',/g)].map(x => x[1]))];
+  /* «Өмнөх оноос»/«Өмнөх сараас» карт нийтлэг momOrYoyKpi()-д (ачаа тээвэртэй хамт) — түүний текст ч road_pax_an-аас */
+  const momBody = body.includes('momOrYoyKpi(') ? ((src.match(/\nfunction momOrYoyKpi\(m,T,dash,minPairs\)\{[\s\S]*?\n\}/) || [''])[0]) : '';
+  const keys = [...new Set([...(body + momBody).matchAll(/\bT\('([a-z_0-9.]+)',/g)].map(x => x[1]))];
   const missing = keys.filter(k => content.site.road_pax_an[k] === undefined);
   const dead = Object.keys(content.site.road_pax_an).filter(k => k !== 'unnamed' && !keys.includes(k));
   check('RPX26. buildRoadPaxAnalysis-ийн текст бүр site.road_pax_an-д, үхмэл түлхүүргүй', keys.length > 40 && !missing.length && !dead.length,
