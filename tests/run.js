@@ -9080,6 +9080,10 @@ async function groupFL() {
       src.includes('EHBackend.fetchDatasetRows(key,w.from,w.to,1,{facets:true})') && src.includes("dateIndex:sc.raw?sc.dateIndex:null"));
     check('FL26. FL3: огнооны хүрээ KPI/графикийн хэмжээс БИШ (он/сарын нэгдсэн шүүлт шүүнэ) — хамрах түлхүүрээс хасагдана',
       src.includes('&&!isDate(selRaw[k])&&'));
+    /* Регресс (2026-10-23, амьд сайт: нийт 20,861 мөр): таслагдсан хүснэгтийн тэмдэглэл зөвхөн «он, сараар»
+       гэж заадаг байв — огнооны шүүлттэй датасэтэд түүнийг нэрлэнэ */
+    check('FL26. Таслагдсан хүснэгт: огнооны шүүлттэй бол тэмдэглэл «{col}»-ын эхлэх–дуусах огноог заана',
+      src.includes("stxt('detail.raw_truncated_date',") && src.includes(".replace('{col}',sc.head[sc.dateIndex])"));
   }
   await groupFLCoverage(G);
   await groupFLFacetLive();

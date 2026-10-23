@@ -11948,7 +11948,10 @@ class Component extends DCLogic {
       pvTitle:dsel.name+' — жагсаалт',
       pvHasStatus:hasStatus,
       pvHasNote:!!(sc.raw&&sc.truncated),
-      pvNote:sc.raw&&sc.truncated?stxt('detail.raw_truncated','Сүүлийн {n} мөр харагдаж байна (нийт {total}) — он, сараар нарийсгаж үзнэ үү.')
+      /* Огнооны баганын шүүлттэй бол (daterange) нарийсгах арга нь тэр — нэрээр нь заана */
+      pvNote:sc.raw&&sc.truncated?(sc.dateIndex!=null&&sc.head[sc.dateIndex]
+        ?stxt('detail.raw_truncated_date','Сүүлийн {n} мөр харагдаж байна (нийт {total}) — он, сар эсвэл шүүлтийн «{col}»-ын эхлэх–дуусах огноогоор нарийсгана уу.').replace('{col}',sc.head[sc.dateIndex])
+        :stxt('detail.raw_truncated','Сүүлийн {n} мөр харагдаж байна (нийт {total}) — он, сараар нарийсгаж үзнэ үү.'))
         .replace('{n}',fmtNum(sc.loaded)).replace('{total}',fmtNum(sc.total)):'',
       pvExport:()=>{
         const XLSX=window.XLSX;
