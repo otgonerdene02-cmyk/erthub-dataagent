@@ -401,7 +401,32 @@
       period: period + ' · ' + (meas === 'passengers' ? t('by_pax', 'зорчигчоор') : t('by_freight', 'ачаагаар (тонн)')) };
   }
 
+  /* (5д) Ижил бүрэлдэхүүнтэй «Өмнөх оноос» (like-for-like). Нэгтгэл (төмөр замын ачаа = УБТЗ +
+     МТЗ) хэсэг бүр өөр хугацаанд мэдээ ирүүлдэг: МТЗ 2026-02-01-ээс хойш бичлэггүй тул 2026 оны
+     3–9 сар (зөвхөн УБТЗ) 2025 оны мөн сартай (УБТЗ + МТЗ) харьцуулагдаж нэгтгэлд «+4.0%», УБТЗ
+     дангаараа «+23.3%» гарч байв (2026-10-23 тулгалт). Хэсэг харьцуулалтад орно ⇔ өмнөх оны ижил
+     эхлэлээс өмнө эхэлсэн БА одоогийн хугацааны төгсгөл хүртэл мэдээ ирүүлсэн (tol хоногийн
+     хүлцэлтэй — өдрийн мэдээ маргааш нь ирдэг). parts = [{code, name, first, last}] (анхны/сүүлийн
+     бичлэг 'YYYY-MM-DD'); curFrom/curTo — харьцуулж буй ОДООГИЙН хугацаа. Огноо буруу бол бүгд
+     орно (зохиож хасахгүй). Буцаана {keep:[code], drop:[{code, name, first, last}]}. */
+  function likeForLike(parts, curFrom, curTo, tolDays) {
+    var tol = (tolDays == null ? 7 : +tolDays) * 864e5;
+    var ok = function (d) { return /^\d{4}-\d{2}-\d{2}/.test(String(d || '')); };
+    var ms = function (d) { return Date.parse(String(d).slice(0, 10) + 'T00:00:00Z'); };
+    var list = Array.isArray(parts) ? parts : [];
+    if (!ok(curFrom) || !ok(curTo)) return { keep: list.map(function (p) { return String(p.code); }), drop: [] };
+    var prevFrom = ms((+String(curFrom).slice(0, 4) - 1) + String(curFrom).slice(4, 10)), to = ms(curTo);
+    var keep = [], drop = [];
+    list.forEach(function (p) {
+      var good = ok(p.first) && ok(p.last) && ms(p.first) <= prevFrom + tol && ms(p.last) >= to - tol;
+      if (good) keep.push(String(p.code));
+      else drop.push({ code: String(p.code), name: p.name || String(p.code), first: p.first || null, last: p.last || null });
+    });
+    return { keep: keep, drop: drop };
+  }
+
   var api = {
+    likeForLike: likeForLike,
     airPaxSplit: airPaxSplit, norm: norm, airFlightKind: airFlightKind, KIND_LABEL: KIND_LABEL, AIR_KIND: AIR_KIND,
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,

@@ -17,7 +17,7 @@
 <script src="js/erthub-publish.js?v=ffe215f9"></script>
 <script src="js/erthub-backend.js?v=a96de8ab"></script>
 <script src="js/erthub-chart.js?v=422174bf"></script>
-<script src="js/erthub-glossary.js?v=f43104d3"></script>
+<script src="js/erthub-glossary.js?v=48cb3fdf"></script>
 <script src="js/erthub-tip.js?v=ba005e59"></script>
 <script src="js/vendor/dc-runtime.js?v=8fe7df74"></script>
 </head>
@@ -3979,6 +3979,9 @@
           <div data-sector-share="1" style="background:linear-gradient(155deg,{{ detail.tint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;display:flex;flex-direction:column;min-width:0;">
             <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ detail.stT.shareTitle }}</div>
             <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ detail.stSharePeriod }}</div>
+            <sc-if value="{{ detail.stHasShareNote }}">
+              <div data-share-note="1" style="font-size:11.5px;color:var(--ink2);line-height:1.5;margin:-4px 0 12px;">{{ detail.stShareNote }}</div>
+            </sc-if>
             <div style="display:flex;flex-wrap:wrap;justify-content:space-around;gap:16px;flex:1 1 auto;align-items:center;">
               <sc-for list="{{ detail.stShare }}" as="sh" hint-placeholder-count="2">
                 <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
@@ -5804,7 +5807,15 @@ const RECENT = [
   /* Техникийн хяналтын үзлэг — вагонтой ижил зарчим: `date` ЗОРИУД хоосон,
      backend ирээгүй үед огноо ЗОХИОХГҮЙ. */
   {title:'Техникийн хяналтын үзлэгийн мэдээ', agency:'ЗТХЕГ', src:'API', date:'', sector:'road',
-   dataset:'Техникийн хяналтын үзлэгийн мэдээ', source:'roadInspect', bind:{date:'feedUpdated'}}
+   dataset:'Техникийн хяналтын үзлэгийн мэдээ', source:'roadInspect', bind:{date:'feedUpdated'}},
+  /* 2026-10-23 тулгалт: каталогийн 9 датасэтээс 4 нь л энд байсан — өдөр бүр шинэчлэгддэг
+     авто тээврийн зорчигч (2026-10-22) ба төмөр замын ачаа (2026-10-21) нь 28 хоног
+     хоцорсон үзлэгээс (2026-09-25) ДООР ч гарахгүй, «сүүлд шинэчлэгдсэн» нь худал эрэмбэ
+     болж байв. Огноо — датасэтийн хуудасны «Сүүлийн бичлэг»-тэй ИЖИЛ мета (тоо зохиохгүй). */
+  {title:'Авто тээврийн зорчигч тээврийн мэдээ', agency:'АТҮТ', src:'API', date:'', sector:'road',
+   dataset:'Авто тээврийн зорчигч тээврийн мэдээ', source:'roadPax', bind:{date:'feedUpdated'}},
+  {title:'Төмөр замын ачаа тээврийн нэгтгэл', agency:'УБТЗ · МТЗ', src:'API', date:'', sector:'rail',
+   dataset:'Төмөр замын ачаа тээврийн нэгтгэл', source:'railFreightAll', bind:{date:'feedUpdated'}}
 ];
 
 const YEARS=['2026','2025','2024','2023','2022','2021','2020'];
@@ -7629,15 +7640,20 @@ function datasetRank(sec,ds){
 function weekAxis(vals){
   if(!vals||!vals.length) return {base:0,top:0,step:1};
   const mx=Math.max.apply(null,vals), mn=Math.min.apply(null,vals);
+  /* DG: хүн, тонн зэрэг СӨРӨГ БАЙЖ ЧАДАХГҮЙ хэмжигдэхүүний БАГАНА 0-ээс (2026-10-23 тулгалт).
+     Өмнө нь шал min−60% хүртэл өргөгдөж («тэнхлэг 102,000-с эхэлнэ») 106,546 ба 113,324-ийн
+     6%-ийн зөрүү багананд ~2 дахин мэт харагддаг байв; нэгтгэлийн хуудасны ижил 7 хоногийн
+     график (buildSectorStackChart) 0-ээс — нэг тоо хоёр өөр харагдацтай байв. */
+  if(mn>=0){
+    const m=mx||1, st=Math.pow(10,Math.floor(Math.log10(m/2)))||1;
+    return {base:0,top:Math.ceil(m*1.08/st)*st,step:st};
+  }
   /* Бүх утга тэнцүү бол хүрээг утгын ӨӨРИЙНХ нь хэмжээнээс гаргана
      (0 бол 1) — эс тэгвэл span=0 болж алхам тодорхойгүй болно. */
   const span=(mx-mn)||Math.abs(mx)||1;
   const step=Math.pow(10,Math.floor(Math.log10(span/2)))||1;
-  let base=Math.floor((mn-span*0.6)/step)*step;
+  const base=Math.floor((mn-span*0.6)/step)*step;
   const top=Math.ceil((mx+span*0.15)/step)*step;
-  /* Хүн, тонн зэрэг СӨРӨГ БАЙЖ ЧАДАХГҮЙ хэмжигдэхүүнд 0-ээс доош
-     тэнхлэг утгагүй — шалыг 0-д барина. */
-  if(mn>=0&&base<0) base=0;
   return {base,top,step};
 }
 
@@ -8127,8 +8143,16 @@ function momOrYoyKpi(m,T,dash,minPairs){
     sub:T('kpi_mom_vs','{month} / {prev}').replace('{month}',m.mom.month).replace('{prev}',m.mom.prevMonth)
       +' · '+T('kpi_mom_why','өмнөх онтой харьцуулах бүтэн сар хүрэлцэхгүй')};
   return {label:T('kpi_yoy','Өмнөх оноос'),value:m.yoy?sg(m.yoy.pct):dash,
-    sub:m.yoy?(T('kpi_yoy_vs','{year} / {prev}').replace('{year}',m.yoy.year).replace('{prev}',m.yoy.prevYear)+' · '+m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')):
+    sub:m.yoy?(T('kpi_yoy_vs','{year} / {prev}').replace('{year}',m.yoy.year).replace('{prev}',m.yoy.prevYear)+' · '+m.yoy.months+' '+T('kpi_yoy_months','бүтэн сараар')
+      +(m.yoy.excl&&m.yoy.excl.length?' · '+yoyExclText(m.yoy.excl):'')):
       m.yoyReason==='few'?T('kpi_yoy_few','харьцуулах бүтэн сар {min}-аас цөөн').replace('{min}',minPairs):yoyReasonText(m,T)};
+}
+/* Ижил бүрэлдэхүүнтэй харьцуулалтаас хасагдсан хэсэг (EHGlossary.likeForLike drop) — ачааны
+   нэгтгэл, салбарын нэгтгэл, нүүрний 7 хоног НЭГ текстээр (content.json site.yoy_lfl). */
+function yoyExclText(drop){
+  if(!drop||!drop.length) return '';
+  return stxt('yoy_lfl.excl','{names} ороогүй (сүүлийн бичлэг {last})')
+    .replace('{names}',drop.map(d=>d.name).join(', ')).replace('{last}',drop.map(d=>d.last||'—').join(', '));
 }
 
 /* ── Ачаа тээврийн мэдээ (УБТЗ ХНН 15399738 · МТЗ ТӨХК 15439650) ───────────
@@ -8147,6 +8171,28 @@ const FREIGHT_COLORS={transit:'#8B5CF6',export:'#2E7CF6',import:'#E8913A',domest
 const FREIGHT_STALE_DAYS=3;
 /* «Өмнөх оноос»-ыг хамгийн багадаа хэдэн бүтэн хос сараар (нэг сарын хэлбэлзэл ≠ жилийн чиг) */
 const FREIGHT_YOY_MIN=3;
+
+/* Нэгтгэлийн (УБТЗ + МТЗ) «Өмнөх оноос» — ИЖИЛ тээвэрлэгчээр (EHGlossary.likeForLike).
+   all.by_org (first_date/last_date) ба org_months-тэй үед л; хасах тээвэрлэгчгүй бол null
+   (энгийн зам хэвээр). months[].tonnes_cmp = харьцуулалтад үлдсэн тээвэрлэгчдийн тонн.
+   ЦЭВЭР (tests/run.js FR — FR-LF). */
+function freightLikeForLike(all,months,yr,mFrom,mTo){
+  if(typeof EHGlossary==='undefined'||!EHGlossary.likeForLike) return null;
+  if(!(all&&Array.isArray(all.by_org)&&all.by_org.length>1&&Array.isArray(all.org_months))) return null;
+  const ys=months.map(m=>+String(m.month).slice(0,4)).filter(y=>y>0);
+  const ty=yr==='all'?(ys.length?Math.max.apply(null,ys):null):+yr;
+  if(!ty) return null;
+  const pad=x=>String(x).padStart(2,'0');
+  const lastData=months.reduce((d,m)=>m.last_date&&String(m.last_date)>d?String(m.last_date):d,'');
+  let curTo=ty+'-'+pad(mTo)+'-'+pad(new Date(Date.UTC(ty,mTo,0)).getUTCDate());
+  if(lastData&&lastData<curTo) curTo=lastData;
+  const parts=all.by_org.map(o=>({code:String(o.org),name:String(o.org),first:o.first_date,last:o.last_date}));
+  const r=EHGlossary.likeForLike(parts,ty+'-'+pad(mFrom)+'-01',curTo);
+  if(!r.drop.length||!r.keep.length) return null;
+  const by={};
+  all.org_months.forEach(x=>{ if(r.keep.indexOf(String(x.org))>=0) by[String(x.month)]=(by[String(x.month)]||0)+(+x.tonnes||0); });
+  return {months:months.map(m=>({...m,tonnes_cmp:by[m.month]||0})),drop:r.drop,keep:r.keep};
+}
 
 /* ЦЭВЭР (tests/run.js FR). Тоо ЗОХИОХГҮЙ — түүх ирээгүй бол {hasData:false}.
    Дутуу сар = цувааны СҮҮЛИЙН сар, сүүлийн бичлэг нь сарын эцэст хүрээгүй
@@ -8187,8 +8233,12 @@ function freightAnalysisModel(all,sel,year,mr){
   /* YoY ≥ FREIGHT_YOY_MIN бүтэн хос сараар. МТЗ (2026-02-оос шинэчлэгдээгүй) дээр
      ганц хос сар (2026-01 / 2025-01) "+535.8%" гэж "6 дахин өссөн" мэт уншигдаж
      байв (2026-10-19 UX аудит) — нэг сарын хэлбэлзэл жилийн чиг биш. */
-  const yc=yoyCompare(months,yr,mFrom,mTo,'tonnes');
+  /* Нэгтгэл (УБТЗ + МТЗ, org_months-тэй): ижил бүрэлдэхүүнээр — харьцуулах хугацаанд мэдээ
+     ирүүлээгүй тээвэрлэгчийг ХОЁР онд хоёуланд нь хасна (EHGlossary.likeForLike), ил нэрлэнэ */
+  const lfl=typeof freightLikeForLike==='function'?freightLikeForLike(all,months,yr,mFrom,mTo):null;
+  const yc=yoyCompare(lfl?lfl.months:months,yr,mFrom,mTo,lfl?'tonnes_cmp':'tonnes');
   const few=!!(yc.yoy&&yc.yoy.months<FREIGHT_YOY_MIN), yoy=few?null:yc.yoy;
+  if(yoy&&lfl) yoy.excl=lfl.drop;
   const yoyReason=yoy?'ok':few?'few':(!yc.year?'pick_year':(yc.hasPrevYear?'none':'no_prev_year'));
   /* МТЗ 2026-02-оос шинэчлэгдээгүй — YoY алга үед «Өмнөх сараас» (EMP) */
   const mom=monthOverMonth(ms,'tonnes',m=>!m.partial&&+m.days>0);
@@ -8349,12 +8399,20 @@ function freightTotalModel(all,year,mr){
     const pct=(a,b)=>b>0?(a/b-1)*100:null;
     const wow=(!last.missing&&prev&&!prev.missing)?pct(n(last.tonnes),n(prev.tonnes)):null;
     const ytd=W.ytd||null, py=W.prev_ytd||null;
-    const yoy=(ytd&&py&&n(py.tonnes)>0)?pct(n(ytd.tonnes),n(py.tonnes)):null;
+    /* Ижил тээвэрлэгчээр (EHGlossary.likeForLike): оны эхнээс хугацаанд мэдээ ирүүлээгүй
+       тээвэрлэгчийг (МТЗ 2026-02-оос) ХОЁР оны дүнгээс хоёуланг нь хасна */
+    const lf=(ytd&&py&&ytd.by_org&&py.by_org&&typeof EHGlossary!=='undefined'&&EHGlossary.likeForLike)
+      ?EHGlossary.likeForLike(orgs.map(o=>({code:o.code,name:o.code,first:o.firstDate,last:o.lastDate})),ytd.from,ytd.to):null;
+    const useLf=!!(lf&&lf.drop.length&&lf.keep.length);
+    const dropT=b=>useLf?lf.drop.reduce((t,d)=>t+n(b&&b[d.code]&&b[d.code].tonnes),0):0;
+    const yCur=ytd?n(ytd.tonnes)-dropT(ytd.by_org):0, yPrev=py?n(py.tonnes)-dropT(py.by_org):0;
+    const yoy=(ytd&&py&&yPrev>0)?pct(yCur,yPrev):null;
     const slices=b=>{const list=orgs.map(o=>({...o,tonnes:n(b&&b[o.code]&&b[o.code].tonnes),wagons:n(b&&b[o.code]&&b[o.code].wagons)}));
       const t=list.reduce((s,o)=>s+o.tonnes,0);
       list.forEach(o=>{o.pct=t>0?o.tonnes/t*100:0;});
       return {list,total:t};};
     weekly={weekEnd:W.week_end,maxDate:W.max_date||null,weeks,last,prev,wow,ytd,prevYtd:py,yoy,
+      yoyExcl:useLf?lf.drop:[],yoyPrev:yPrev,
       stale:orgs.filter(o=>!o.lastDate||o.lastDate<last.week_start),
       weekOrgs:slices(last.by_org),ytdOrgs:slices(ytd&&ytd.by_org)};
   }
@@ -8464,8 +8522,13 @@ function sectorTotalFallback(p){
     const r=row(m.month,'rail'); r.passengers=+m.passengers||0; r.passenger_days=+m.days; });
   /* Авто тээвэр — билеттэй зорчигч (roadPax түүх): сар бүрийн «Хэвийн» билет */
   const rd=p.roadPax;
-  if(rd&&rd.status==='ok') (rd.months||[]).forEach(m=>{ if(!(m&&m.month&&+m.days>0)) return;
-    const r=row(m.month,'road'); r.passengers=+m.passengers||0; r.passenger_days=+m.days; r.passenger_last=m.last_date||null; });
+  /* backend-ийн нэгтгэлтэй ИЖИЛ: мэдээтэй өдөр (data_days) → мөр байна, хамрагдсан өдөр
+     (days) → бүтэн/дутуу (sectorTotalWithCoverage-ийн passenger_cov_days) */
+  if(rd&&rd.status==='ok') (rd.months||[]).forEach(m=>{
+    const dd=m&&m.data_days!=null?+m.data_days:+(m&&m.days);
+    if(!(m&&m.month&&dd>0&&+m.passengers>0)) return;
+    const r=row(m.month,'road'); r.passengers=+m.passengers||0; r.passenger_days=dd; r.passenger_cov_days=+m.days||0;
+    r.passenger_last=m.last_date||null; });
   const rf=p.railFreight;
   if(rf&&rf.status==='ok') (rf.months||[]).forEach(m=>{ if(!(m&&m.month&&+m.days>0)) return;
     const r=row(m.month,'rail'); r.freight_tonnes=+m.tonnes||0; r.freight_days=+m.days; r.freight_last=m.last_date||null; });
@@ -8484,6 +8547,85 @@ function sectorTotalFallback(p){
   });
   const has=months.some(r=>r.passengers!==null||r.freight_tonnes!==null);
   return {status:has?'ok':'no_data',source:'fallback',sectors,months,weekly:null};
+}
+
+/* Авто тээврийн ХАМРАХ ХҮРЭЭ нэгтгэлд (2026-10-23 тулгалт). gold.sector_daily_total нь
+   авто тээврийн «өдөр»-ийг билет бүртгэгдсэн өдрөөр тоолдог (passenger_days) — эх сурвалж
+   цонхоор ачаалагддаг тул цоорхойн хооронд хожуу орсон цөөн билет ч «өдөр» болж, 2026-09
+   (15 хоног хамрагдсан) 30/30 «бүтэн сар» гэж тооцогдон өмнөх онтой харьцуулагдаж байв
+   («−25.5%»). Авто тээврийн датасэт өөрөө (roadPaxAnalysisModel) ижил сарыг хамрагдсан
+   хоногоор (history months[].days, coverage.gaps) «дутуу» гэдэг — нэг сар хоёр хуудсанд
+   хоёр өөр төлөвтэй байх ёсгүй. Энд road мөр бүрд passenger_cov_days (хамрагдсан хоног),
+   weekly-ийн цоорхойтой долоо хоногт by_sector.road.gap нэмнэ. Утга ӨӨРЧЛӨГДӨХГҮЙ (тоо
+   зохиохгүй) — зөвхөн «бүтэн/дутуу» шийдвэр. ЦЭВЭР (tests/run.js ST14–ST16). */
+function sectorTotalWithCoverage(api,roadHist,freightAll){
+  if(!(api&&api.status==='ok'&&Array.isArray(api.months))) return api;
+  const rh=(roadHist&&roadHist.status==='ok'&&Array.isArray(roadHist.months))?roadHist:null;
+  /* Төмөр замын ачаа = УБТЗ + МТЗ (freightAll — /rail/freight/all/history): тээвэрлэгч бүрийн
+     сарын тонн (org_months) ба анхны/сүүлийн бичлэг (by_org) — «Өмнөх оноос»-ыг ИЖИЛ
+     тээвэрлэгчээр (EHGlossary.likeForLike). Ачааны нэгтгэлийн датасэттэй НЭГ дүрэм. */
+  const fa=(freightAll&&freightAll.status==='ok'&&Array.isArray(freightAll.by_org)&&freightAll.by_org.length>1
+    &&Array.isArray(freightAll.org_months))?freightAll:null;
+  if(!rh&&!fa) return api;
+  const cov={};
+  if(rh) rh.months.forEach(m=>{ if(m&&m.month) cov[String(m.month)]=+m.days||0; });
+  const gaps=(rh&&rh.coverage&&Array.isArray(rh.coverage.gaps))?rh.coverage.gaps.filter(g=>g&&g.from&&g.to):[];
+  const om={};
+  if(fa) fa.org_months.forEach(x=>{ if(x&&x.month){ const o=om[x.month]||(om[x.month]={}); o[String(x.org)]=(o[String(x.org)]||0)+(+x.tonnes||0); } });
+  const freightOrgs=fa?fa.by_org.map(o=>({code:String(o.org),name:String(o.org),first:o.first_date||null,last:o.last_date||null})):null;
+  const months=api.months.map(r=>{
+    if(!r) return r;
+    if(rh&&r.sector==='road'&&r.passengers!==null&&r.passengers!==undefined)
+      return {...r,passenger_cov_days:cov[r.month]!==undefined?cov[r.month]:0};
+    if(fa&&r.sector==='rail'&&r.freight_tonnes!==null&&r.freight_tonnes!==undefined&&om[r.month])
+      return {...r,freight_parts:om[r.month]};
+    return r;
+  });
+  const gapIn=(a,b)=>gaps.some(g=>g.from<=b&&g.to>=a);
+  let weekly=api.weekly||null;
+  if(weekly&&typeof weekly==='object'){
+    weekly={};
+    Object.keys(api.weekly).forEach(k=>{
+      let w=api.weekly[k];
+      if(!(w&&Array.isArray(w.weeks))){ weekly[k]=w; return; }
+      if(gaps.length) w={...w,weeks:w.weeks.map(x=>{
+        const b=x&&x.by_sector&&x.by_sector.road;
+        if(!b||!gapIn(x.week_start,x.week_end)) return x;
+        return {...x,by_sector:{...x.by_sector,road:{...b,gap:true}}};
+      })};
+      /* Оны эхнээс «Өмнөх оны мөн үе» — төмөр замын ачаанаас хугацаанд мэдээ ирүүлээгүй
+         тээвэрлэгчийг ХОЁР оноос хасна (ytd_cmp/prev_ytd_cmp, yoy_cur/yoy_prev); YTD дүн өөрөө
+         (донут, «оны эхнээс») ХЭВЭЭР — бодит бүртгэгдсэн тонн. */
+      const fy=fa&&fa.weekly&&fa.weekly.ytd, fp=fa&&fa.weekly&&fa.weekly.prev_ytd;
+      const rs=w.ytd&&w.ytd.by_sector&&w.ytd.by_sector.rail, rp=w.prev_ytd&&w.prev_ytd.by_sector&&w.prev_ytd.by_sector.rail;
+      if(k==='freight_tonnes'&&fy&&fp&&fy.by_org&&fp.by_org&&rs&&rp&&fy.from===w.ytd.from&&fy.to===w.ytd.to
+        &&typeof EHGlossary!=='undefined'&&EHGlossary.likeForLike){
+        const lf=EHGlossary.likeForLike(freightOrgs,w.ytd.from,w.ytd.to);
+        if(lf.drop.length&&lf.keep.length){
+          const sum=b=>lf.drop.reduce((t,d)=>t+(+(b[d.code]&&b[d.code].tonnes)||0),0);
+          const dc=sum(fy.by_org), dp=sum(fp.by_org);
+          const inCmp=(w.comparable||[]).indexOf('rail')>=0;
+          w={...w,yoy_excl:lf.drop,
+            ytd_cmp:{...w.ytd,by_sector:{...w.ytd.by_sector,rail:{...rs,value:(+rs.value||0)-dc}}},
+            prev_ytd_cmp:{...w.prev_ytd,by_sector:{...w.prev_ytd.by_sector,rail:{...rp,value:(+rp.value||0)-dp}}},
+            yoy_cur:w.yoy_cur!=null&&inCmp?(+w.yoy_cur)-dc:w.yoy_cur,
+            yoy_prev:w.yoy_prev!=null&&inCmp?(+w.yoy_prev)-dp:w.yoy_prev};
+        }
+      }
+      weekly[k]=w;
+    });
+  }
+  return {...api,months,weekly,coverageGaps:{road:gaps},freightOrgs};
+}
+
+/* Нэгтгэлийн нэг мөрийн нэг хэмжүүрийн өдөр: days = мэдээтэй (бичлэгтэй) өдөр, cov =
+   «бүтэн/дутуу»-г шийдэх хамрагдсан өдөр (авто тээвэрт passenger_cov_days, бусдад days).
+   Модель ба хүснэгт ХОЁУЛАА ЭНИЙГ уншина — нэг сар хоёр өөр төлөвтэй гарахгүй. */
+function stRowDays(r,meas){
+  const days=meas==='passengers'?(+r.passenger_days||0):(+r.freight_days||0);
+  const cov=(meas==='passengers'&&r.passenger_cov_days!==undefined&&r.passenger_cov_days!==null)?(+r.passenger_cov_days||0):days;
+  const dim=+r.days_in_month||30;
+  return {days,cov,dim,complete:cov>=dim*SECTOR_COMPLETE_RATIO,gap:cov<days};
 }
 
 /* Салбарын нэгтгэлийн загвар. ЦЭВЭР (tests/run.js ST — гараар бодох фикстур).
@@ -8510,10 +8652,10 @@ function sectorTotalModel(api,year,mr){
   api.months.forEach(r=>{ idx[r.month+'|'+r.sector]=r; });
   const cell=(month,sec,meas)=>{
     const r=idx[month+'|'+sec]; if(!r) return null;
-    const days=meas==='passengers'?n(r.passenger_days):n(r.freight_days);
-    if(r[meas]===null||r[meas]===undefined||!days) return null;
-    const dim=n(r.days_in_month)||30;
-    return {value:n(r[meas]),days,dim,complete:days>=dim*SECTOR_COMPLETE_RATIO};
+    const d=stRowDays(r,meas);
+    if(r[meas]===null||r[meas]===undefined||!d.days) return null;
+    /* days = хамрагдсан хоног (tooltip «дутуу (15/30)»); утга нь бүх бичлэгийн нийлбэр хэвээр */
+    return {value:n(r[meas]),days:d.cov,dim:d.dim,complete:d.complete,gap:d.gap};
   };
   const allMonths=[...new Set(api.months.map(r=>r.month))].sort();
   const years=[...new Set(allMonths.map(m=>+m.slice(0,4)))].sort((a,b)=>a-b);
@@ -8528,14 +8670,46 @@ function sectorTotalModel(api,year,mr){
       return {key:s.key,name:s.name,color:s.color,value:any?v:null,days};
     });
     const total=bySec.reduce((t,s)=>t+(s.value||0),0);
-    bySec.forEach(s=>{ s.pct=(s.value!==null&&total>0)?s.value/total*100:null; });
+    /* Эзлэх хувь — БҮХ салбарт мэдээтэй ДАВХЦАХ хугацаагаар (2026-10-23 тулгалт). «Бүгд» он
+       дээр төмөр зам 2019-09-өөс, авто 2023-аас, агаар 2025-01-ээс эхэлдэг тул бүх түүхийн
+       нийлбэрийн харьцаа «тэргүүлэх: Төмөр зам 63.5%» гэж өөр өөр урттай хугацааг харьцуулж
+       байв (2026 онд агаар 45%-тай тэргүүлдэг). Салбар бүрийн эхний/сүүлийн мэдээтэй сарын
+       огтлолцол = shareMonths; түүнээс гадуурх сар хувьд орохгүй (нийт KPI-д орно). */
+    const edges=bySec.filter(s=>s.value!==null).map(s=>{
+      const ms=winMonths.filter(m=>{const c=cell(m,s.key,k);return c&&c.value>0;});
+      return ms.length?[ms[0],ms[ms.length-1]]:null;}).filter(Boolean);
+    const shFrom=edges.length?edges.map(e=>e[0]).sort().pop():null, shTo=edges.length?edges.map(e=>e[1]).sort()[0]:null;
+    const shareMonths=(shFrom&&shTo&&shFrom<=shTo)?winMonths.filter(m=>m>=shFrom&&m<=shTo):winMonths;
+    bySec.forEach(s=>{ let v=0,any=false;
+      shareMonths.forEach(m=>{const c=cell(m,s.key,k); if(c){v+=c.value;any=true;}});
+      s.shareValue=s.value===null?null:(any?v:0); });
+    const shareTotal=bySec.reduce((t,s)=>t+(s.shareValue||0),0);
+    bySec.forEach(s=>{ s.pct=(s.shareValue!==null&&shareTotal>0)?s.shareValue/shareTotal*100:null; });
+    const shareTrimmed=shareMonths.length<winMonths.filter(m=>bySec.some(s=>cell(m,s.key,k))).length;
+    const sharePartial=shareMonths.filter(m=>bySec.some(s=>{const c=cell(m,s.key,k);return c&&!c.complete;}));
+    /* Төмөр замын ачаа — ИЖИЛ тээвэрлэгчээр (sectorTotalWithCoverage → freight_parts, freightOrgs):
+       харьцуулах хугацааны төгсгөл хүртэл мэдээ ирүүлээгүй тээвэрлэгч (МТЗ 2026-02-оос) ХОЁР оноос хасагдана */
+    const lfl=(s)=>{
+      if(k!=='freight_tonnes'||!Array.isArray(api.freightOrgs)||typeof EHGlossary==='undefined'||!EHGlossary.likeForLike) return null;
+      if(!api.months.some(r=>r.sector===s.key&&r.freight_parts)) return null;
+      const last=s.freightLast||'';
+      let to=yoyYear+'-'+pad(mTo)+'-'+pad(new Date(Date.UTC(yoyYear,mTo,0)).getUTCDate());
+      if(last&&last.length>=10&&last<to) to=last;
+      const r=EHGlossary.likeForLike(api.freightOrgs,yoyYear+'-'+pad(mFrom)+'-01',to);
+      return (r.drop.length&&r.keep.length)?r:null;
+    };
     const yoy=bySec.map(s=>{
       let cur=0,prev=0; const used=[];
+      const lf=lfl(all.find(x=>x.key===s.key)||{});
+      const val=(c,month)=>{ if(!lf) return c.value; const r=idx[month+'|'+s.key], p=r&&r.freight_parts;
+        return p?lf.keep.reduce((t,o)=>t+(+p[o]||0),0):c.value; };
       for(let mo=mFrom;mo<=mTo;mo++){
-        const a=cell(yoyYear+'-'+pad(mo),s.key,k), b=cell((yoyYear-1)+'-'+pad(mo),s.key,k);
-        if(a&&b&&a.complete&&b.complete){ cur+=a.value; prev+=b.value; used.push(mo); }
+        const ma=yoyYear+'-'+pad(mo), mb=(yoyYear-1)+'-'+pad(mo);
+        const a=cell(ma,s.key,k), b=cell(mb,s.key,k);
+        if(a&&b&&a.complete&&b.complete){ cur+=val(a,ma); prev+=val(b,mb); used.push(mo); }
       }
-      return {key:s.key,name:s.name,color:s.color,cur,prev,months:used,pct:(used.length&&prev>0)?(cur/prev-1)*100:null};
+      return {key:s.key,name:s.name,color:s.color,cur,prev,months:used,pct:(used.length&&prev>0)?(cur/prev-1)*100:null,
+        excl:lf&&used.length?lf.drop:[]};
     });
     /* Нийт % — ИЖИЛ сарын олонлогоор харьцуулсан салбаруудаар л (хамгийн урт олонлог = жишиг).
        Эх сурвалж нь хожуу эхэлсэн салбарыг (авто тээвэр 2025-08-аас) богино цонхоор нь нийтэд
@@ -8546,12 +8720,12 @@ function sectorTotalModel(api,year,mr){
     const chartMonths=yr==='all'?winMonths.slice(-24):winMonths;
     const series=chartMonths.map(m=>{
       const parts=sectors.map(s=>{const c=cell(m,s.key,k);
-        return c?{key:s.key,name:s.name,color:s.color,value:c.value,complete:c.complete,days:c.days,dim:c.dim}:null;}).filter(Boolean);
+        return c?{key:s.key,name:s.name,color:s.color,value:c.value,complete:c.complete,days:c.days,dim:c.dim,gap:c.gap}:null;}).filter(Boolean);
       return {month:m,parts,total:parts.reduce((t,p)=>t+p.value,0),partial:parts.some(p=>!p.complete),missing:!parts.length};
     });
-    measures[k]={bySec,total,hasData:bySec.some(s=>s.value!==null),withData:bySec.filter(s=>s.value!==null).length,
+    measures[k]={bySec,total,shareMonths,shareTotal,shareTrimmed,sharePartial,hasData:bySec.some(s=>s.value!==null),withData:bySec.filter(s=>s.value!==null).length,
       yoy,yoyPct:(cmp.length&&yPrev>0)?(yCur/yPrev-1)*100:null,yoyCur:yCur,yoyPrev:yPrev,yoyYear,
-      yoySectors:cmp.map(y=>y.key),series,chartTrimmed:chartMonths.length<winMonths.length};
+      yoySectors:cmp.map(y=>y.key),yoyExcl:[].concat(...cmp.map(y=>y.excl||[])),series,chartTrimmed:chartMonths.length<winMonths.length};
   });
   const lasts=[];
   sectors.forEach(s=>{ if(s.paxLast) lasts.push(s.paxLast); if(s.freightLast) lasts.push(s.freightLast); });
@@ -8574,11 +8748,14 @@ function sectorWeeklyView(w,sectors){
     const t=list.reduce((s,o)=>s+(o.value||0),0);
     list.forEach(o=>{o.pct=(o.value!==null&&t>0)?o.value/t*100:null;});
     return {list,total:t};};
+  /* Эх сурвалжийн цоорхойтой салбар-долоо хоног (sectorTotalWithCoverage → by_sector.*.gap) —
+     нүүрний weekSectorReport-той ИЖИЛ: тэр долоо хоногийн нийт бүтэн биш тул харьцуулахгүй */
+  const gapped=x=>!!(x&&x.by_sector&&Object.keys(x.by_sector).some(k=>x.by_sector[k]&&x.by_sector[k].gap));
   return {weekEnd:w.week_end,maxDate:w.max_date||null,weeks,last,prev,
-    wow:(!last.missing&&prev&&!prev.missing)?pct(n(last.value),n(prev.value)):null,
+    wow:(!last.missing&&prev&&!prev.missing&&!gapped(last)&&!gapped(prev))?pct(n(last.value),n(prev.value)):null,
     ytd:w.ytd||null,prevYtd:w.prev_ytd||null,
     yoy:(w.yoy_cur!=null&&n(w.yoy_prev)>0)?pct(n(w.yoy_cur),n(w.yoy_prev)):null,
-    yoyCur:w.yoy_cur,yoyPrev:w.yoy_prev,comparable:w.comparable||[],stale:w.stale||[],
+    yoyCur:w.yoy_cur,yoyPrev:w.yoy_prev,yoyExcl:w.yoy_excl||[],comparable:w.comparable||[],stale:w.stale||[],
     weekSlices:slices(last.by_sector),ytdSlices:slices(w.ytd&&w.ytd.by_sector)};
 }
 
@@ -8636,11 +8813,13 @@ function weekSectorReport(w,keys,gaps){
   });
   const total=weeks[weeks.length-1].value, prevTotal=weeks.length>1?weeks[weeks.length-2].value:null;
   const cmp=ks.filter(k=>(w.comparable||[]).indexOf(k)>=0);
-  const yCur=(cmp.length&&w.ytd)?sumK(w.ytd.by_sector,cmp):null;
-  const yPrev=(cmp.length&&w.prev_ytd)?sumK(w.prev_ytd.by_sector,cmp):null;
+  /* ytd_cmp/prev_ytd_cmp — ижил тээвэрлэгчээр (sectorTotalWithCoverage; МТЗ хасагдсан) */
+  const yc=w.ytd_cmp||w.ytd, yp=w.prev_ytd_cmp||w.prev_ytd;
+  const yCur=(cmp.length&&yc)?sumK(yc.by_sector,cmp):null;
+  const yPrev=(cmp.length&&yp)?sumK(yp.by_sector,cmp):null;
   return {keys:ks,weeks,total,prevTotal,wow:pct(total,prevTotal),bySector,
     ytd:w.ytd?sumK(w.ytd.by_sector,ks):null,ytdYear:w.ytd?w.ytd.year:null,
-    yoy:pct(yCur,yPrev),yoyKeys:cmp,weekStart:last.week_start,weekEnd:last.week_end,
+    yoy:pct(yCur,yPrev),yoyKeys:cmp,yoyExcl:(w.ytd_cmp&&cmp.indexOf('rail')>=0&&w.yoy_excl)||[],weekStart:last.week_start,weekEnd:last.week_end,
     stale:(w.stale||[]).filter(k=>ks.indexOf(k)>=0),
     gapKeys:ks.filter(k=>weeks.some(x=>x.gap.indexOf(k)>=0)),
     ytdGapKeys:w.ytd?ks.filter(k=>gapIn(k,w.ytd.from,w.ytd.to)):[]};
@@ -8650,7 +8829,7 @@ function weekSectorReport(w,keys,gaps){
    бүдэг + тасархай хүрээ, tooltip-д «дутуу»; бичлэггүй — бүдэг тууз + «мэдээлэл алга»
    (0 багана биш). Tooltip: "2026-09 — Төмөр зам: 123,456 зорчигч" (HV: нэр — утга). */
 function buildSectorStackChart(cols,words){
-  const W=Object.assign({unit:'',none:'мэдээлэл алга',partial:'дутуу',total:'нийт'},words||{});
+  const W=Object.assign({unit:'',none:'мэдээлэл алга',partial:'дутуу',gap:'эх сурвалжийн цоорхой',total:'нийт'},words||{});
   const w=640,h=230,padL=58,padR=12,padT=16,padB=32;
   const plotW=w-padL-padR, plotH=h-padT-padB;
   const n=(cols&&cols.length)||0;
@@ -8681,7 +8860,7 @@ function buildSectorStackChart(cols,words){
       const y1=Y(acc+v), y0=Y(acc); acc+=v;
       bars.push({x:(x0+(slot-bw)/2).toFixed(1),y:y1.toFixed(1),w:bw.toFixed(1),h:Math.max(0.8,y0-y1).toFixed(1),fill:p.color,
         op:p.complete===false?'.42':'.9',stroke:p.complete===false?p.color:'none',dash:p.complete===false?'3 2':'',
-        tip:c.tipLabel+' — '+p.name+': '+fmt(v)+' '+W.unit+(p.complete===false?' · '+W.partial+(p.days&&p.dim?' ('+p.days+'/'+p.dim+')':''):'')+totTip});
+        tip:c.tipLabel+' — '+p.name+': '+fmt(v)+' '+W.unit+(p.complete===false?' · '+(p.gap?W.gap:W.partial)+(p.dim?' ('+(+p.days||0)+'/'+p.dim+')':''):'')+totTip});
     });
   });
   const short=x=>x>=1e6?(+(x/1e6).toFixed(2))+'M':x>=1e3?(+(x/1e3).toFixed(1))+'K':fmt(x);
@@ -9656,7 +9835,14 @@ class Component extends DCLogic {
   }
   sectorTotalData(){
     const a=this._sectorTotalApi;
-    if(a&&a.status==='ok') return a;
+    /* Авто тээврийн хамрах хүрээ (road history) ирсэн бол «бүтэн/дутуу»-г авто датасэттэй
+       ИЖИЛ болгоно (sectorTotalWithCoverage); road ирээгүй бол backend хэвээр */
+    if(a&&a.status==='ok'){
+      const rh=this._roadPaxAll||null, fa=(this._freightAll&&this._freightAll.railFreightAll)||null;
+      if(this._stCovSrc!==a||this._stCovRoad!==rh||this._stCovFa!==fa){
+        this._stCovSrc=a; this._stCovRoad=rh; this._stCovFa=fa; this._stCov=sectorTotalWithCoverage(a,rh,fa); }
+      return this._stCov;
+    }
     const p=this._sectorTotalParts;
     if(!p) return a||null;
     const fc=this._flightsCache||{};
@@ -9702,17 +9888,21 @@ class Component extends DCLogic {
     if(!m.hasData){ sch.rows=[]; return; }
     const api=this.sectorTotalData();
     const full=T('st_full','Бүтэн сар'), part=T('st_partial','Дутуу сар');
-    const key=[u.year,u.mFrom,u.mTo,(api&&api.months||[]).length,m.source,full].join('|');
+    const gapTxt=T('st_gap','Цоорхойтой сар ({n}/{dim} хоног)');
+    const key=[u.year,u.mFrom,u.mTo,(api&&api.months||[]).length,m.source,full,api===this._stCov?'cov':''].join('|');
     if(this._stTblKey===key&&sch.rows.length) return;
     this._stTblKey=key;
     const win=new Set(m.winMonths), names={};
     m.allSectors.forEach(s=>{ names[s.key]=s.name; });
+    /* «Төлөв» — модельтэй ИЖИЛ дүрэм (stRowDays): авто тээвэрт хамрагдсан хоногоор */
     sch.rows=(api.months||[]).filter(r=>win.has(r.month)&&(r.passengers!==null||r.freight_tonnes!==null)).slice().reverse().map(r=>{
-      const dim=+r.days_in_month||30;
-      const okP=r.passengers===null||(+r.passenger_days>=dim*SECTOR_COMPLETE_RATIO);
-      const okF=r.freight_tonnes===null||(+r.freight_days>=dim*SECTOR_COMPLETE_RATIO);
+      const p=stRowDays(r,'passengers'), f=stRowDays(r,'freight_tonnes');
+      const okP=r.passengers===null||p.complete;
+      const okF=r.freight_tonnes===null||f.complete;
+      const st=(okP&&okF)?'ok:'+full:(r.passengers!==null&&!okP&&p.gap)
+        ?'warn:'+gapTxt.replace('{n}',p.cov).replace('{dim}',p.dim):'warn:'+part;
       return [names[r.sector]||r.sector,r.month,r.passengers,r.freight_tonnes===null?null:Math.round(r.freight_tonnes*100)/100,
-        +r.passenger_days||0,+r.freight_days||0,(okP&&okF)?'ok:'+full:'warn:'+part];
+        p.days,f.days,st];
     });
   }
   /* Нүүрний «Салбарын харьцаа» (d05) — НИЙТЛЭГ нэгжээр (зорчигч эсвэл ачаа тонн).
@@ -9728,7 +9918,8 @@ class Component extends DCLogic {
     const w=api.weekly[wt==='cargo'?'freight_tonnes':'passengers'];
     const keys=((w&&w.sectors)||[]).filter(k=>k==='air'||this.sectorQuality(widgetId,k).quality==='verified');
     /* Авто тээвэр — эх сурвалж цонхоор ачаалагдсан: цоорхойг road history-ийн coverage.gaps-аас */
-    const rh=this._roadPaxAll, rg=rh&&rh.coverage&&Array.isArray(rh.coverage.gaps)?rh.coverage.gaps:null;
+    const rh=this._roadPaxAll, rg=rh&&rh.coverage&&Array.isArray(rh.coverage.gaps)?rh.coverage.gaps
+      :(api.coverageGaps&&api.coverageGaps.road)||null;
     return weekSectorReport(w,keys,rg?{road:rg}:null);
   }
   sectorShareFromTotal(keys){
@@ -9815,8 +10006,12 @@ class Component extends DCLogic {
     const yoyMonths=x=>{const ms=[...new Set([].concat(...x.yoy.filter(y=>x.yoySectors.indexOf(y.key)>=0).map(y=>y.months)))].sort((a,b)=>a-b);
       return ms.length?(ms.length===1?String(ms[0]):ms[0]+'–'+ms[ms.length-1])+' '+T('f_month_unit','сар'):'';};
     const yoySub=x=>x.yoyPct==null?T('kpi_yoy_none','харьцуулах бүтэн сар алга')
-      :(x.yoyYear+' / '+(x.yoyYear-1)+' · '+yoyMonths(x)+(x.yoySectors.length<x.withData?' · '+T('kpi_yoy_partial','зөвхөн {names}').replace('{names}',x.yoy.filter(y=>x.yoySectors.indexOf(y.key)>=0).map(y=>y.name).join(', ')):''));
-    const lead=x=>{const s=x.bySec.filter(b=>b.value!=null).sort((a,b)=>b.value-a.value)[0];return s?s.name+' · '+stPct(s.pct):dash;};
+      :(x.yoyYear+' / '+(x.yoyYear-1)+' · '+yoyMonths(x)+(x.yoySectors.length<x.withData?' · '+T('kpi_yoy_partial','зөвхөн {names}').replace('{names}',x.yoy.filter(y=>x.yoySectors.indexOf(y.key)>=0).map(y=>y.name).join(', ')):'')
+        +(x.yoyExcl&&x.yoyExcl.length?' · '+yoyExclText(x.yoyExcl):''));
+    /* Тэргүүлэх салбар — эзлэх хувийн ИЖИЛ хугацаагаар (shareMonths); таслагдсан бол хугацааг нэрлэнэ */
+    const lead=x=>{const s=x.bySec.filter(b=>b.shareValue!=null).sort((a,b)=>b.shareValue-a.shareValue)[0];
+      const sm=x.shareMonths, per=x.shareTrimmed&&sm.length?' ('+(sm.length===1?sm[0]:sm[0]+' – '+sm[sm.length-1])+')':'';
+      return s?s.name+' · '+stPct(s.pct)+per:dash;};
     const live=m.live.length, totalSec=(m.allSectors||[]).length;
     base.stKpis=[
       {label:T('kpi_pax','Нийт зорчигч'),value:P.hasData?fmt(P.total):dash,sub:P.hasData?(T('kpi_lead','тэргүүлэх')+': '+lead(P)):T('no_source','мэдээлэл алга'),tone:'var(--ink)'},
@@ -9847,7 +10042,8 @@ class Component extends DCLogic {
           {label:T('wk_yoy','Өмнөх оны мөн үеэс'),value:sg(v.yoy),tone:tone(v.yoy),
             sub:v.yoy==null?T('wk_yoy_none','өмнөх оны мөн үеийн мэдээ алга')
               :(T('wk_yoy_sub','{year} оны мөн үе: {value}').replace('{year}',v.prevYtd?v.prevYtd.year:'').replace('{value}',fmt(v.yoyPrev))+' '+unit
-                +(notCmp.length?' · '+T('wk_yoy_only','{names} ороогүй').replace('{names}',notCmp.join(', ')):''))}],
+                +(notCmp.length?' · '+T('wk_yoy_only','{names} ороогүй').replace('{names}',notCmp.join(', ')):'')
+                +(v.yoyExcl.length?' · '+yoyExclText(v.yoyExcl):''))}],
         donut:sectorDonutArcs(v.weekSlices.list,unit),
         legend:v.weekSlices.list.map(o=>{const y=v.ytdSlices.list.find(x=>x.key===o.key)||{};
           return {name:o.name,color:o.color,week:o.value==null?dash:fmt(o.value)+(o.pct!=null?' · '+stPct(o.pct):''),
@@ -9857,15 +10053,28 @@ class Component extends DCLogic {
         stale:stale.length?T('wk_stale','{list} — хоцорсон тул 7 хоногийн тайланд ороогүй.').replace('{list}',stale.join(', ')):'',
         hasStale:stale.length>0});
       const cols=v.weeks.map(wk=>({label:range(wk),tipLabel:range(wk),missing:wk.missing,total:+wk.value||0,
-        parts:v.weekSlices.list.map(o=>({name:o.name,color:o.color,value:wk.by_sector&&wk.by_sector[o.key]&&wk.by_sector[o.key].value!=null?+wk.by_sector[o.key].value:0,
-          complete:!(wk.by_sector&&wk.by_sector[o.key]&&+wk.by_sector[o.key].days<7),days:wk.by_sector&&wk.by_sector[o.key]?+wk.by_sector[o.key].days:0,dim:7}))}));
+        parts:v.weekSlices.list.map(o=>{const b=wk.by_sector&&wk.by_sector[o.key];
+          /* Эх сурвалжийн цоорхой (авто тээвэр) — бүдэг/тасархай + «эх сурвалжийн цоорхой» (нүүрний 02-той ижил) */
+          return {name:o.name,color:o.color,value:b&&b.value!=null?+b.value:0,
+            complete:!(b&&(+b.days<7||b.gap)),gap:!!(b&&b.gap),days:b?+b.days:0,dim:b&&b.gap?0:7};})}));
       weekCharts.push({key:k,title:MN[k]+' — '+T('week_chart_title','сүүлийн 8 долоо хоног')+' ('+unit+')',legend:txt.weekChartLegend,
         period:chartPeriodText(v.weeks.length?{dayFrom:v.weeks[0].week_start,dayTo:v.weeks[v.weeks.length-1].week_end,nWeeks:v.weeks.length}:{},TP),
         sectors:v.weekSlices.list.map(o=>({label:o.name,color:o.color})),
-        chart:buildSectorStackChart(cols,{unit,none:T('chart_none','мэдээлэл алга'),partial:T('chart_partial','дутуу'),total:T('chart_total','нийт')})});
+        chart:buildSectorStackChart(cols,{unit,none:T('chart_none','мэдээлэл алга'),partial:T('chart_partial','дутуу'),gap:T('chart_gap','эх сурвалжийн цоорхой'),total:T('chart_total','нийт')})});
     });
     base.stHasWeekly=weekCards.length>0;
     base.stNoWeekly=!base.stHasWeekly;
+    /* Доод «7 хоногийн гүйцэтгэл» (wp) — дээрх «Зорчигч тээвэр — 7 хоногийн тайлан»-гийн ИЖИЛ тоо
+       (нэгжтэй); «эх сурвалж холбогдоогүй» гэж зөрчилтэй хэлэхгүй (2026-10-23 тулгалт) */
+    const vP=m.weekly?sectorWeeklyView(m.weekly.passengers,m.allSectors):null;
+    if(vP){
+      const wpTone=p=>p==null?'var(--ink3)':tone(p);
+      base.stWp={wpNoData:false,hasData:true,hasPlan:false,
+        total:vP.last.missing?dash:fmt(vP.last.value)+' '+U.passengers,
+        ytd:vP.ytd&&vP.ytd.value!=null?fmt(vP.ytd.value)+' '+U.passengers:dash,
+        wow:sg(vP.wow),wowColor:wpTone(vP.wow),yoy:sg(vP.yoy),yoyColor:wpTone(vP.yoy),
+        planLabel:dash,planPctLabel:dash,planWidth:'0%',note:''};
+    }
     base.stWeekCards=weekCards;
     base.stWeekCharts=weekCharts;
 
@@ -9877,22 +10086,31 @@ class Component extends DCLogic {
         legend:txt.monthLegend+(x.chartTrimmed?' '+T('month_trimmed','«Бүгд» он: сүүлийн 24 сар.'):''),
         sectors:x.bySec.filter(s=>s.value!=null).map(s=>({label:s.name,color:s.color})),
         hasData:x.hasData,noData:!x.hasData,none:T('no_source','мэдээлэл алга'),
-        chart:buildSectorStackChart(cols,{unit,none:T('chart_none','мэдээлэл алга'),partial:T('chart_partial','дутуу'),total:T('chart_total','нийт')})};
+        chart:buildSectorStackChart(cols,{unit,none:T('chart_none','мэдээлэл алга'),partial:T('chart_partial','дутуу'),gap:T('chart_gap','эх сурвалжийн цоорхой'),total:T('chart_total','нийт')})};
     });
 
     /* Эзлэх хувь (сонгосон цонх) + он дамнасан харьцуулалт */
     base.stShare=SECTOR_TOTAL_MEASURES.map(k=>{const x=m.measures[k];
-      return {key:k,cap:MN[k],arcs:sectorDonutArcs(x.bySec,U[k]),hasData:x.hasData,
-        total:x.hasData?fmt(x.total)+' '+U[k]:T('no_source','мэдээлэл алга')};});
+      /* Донут = эзлэх хувийн хугацааны (shareMonths) дүн — хувь ба тоо НЭГ хугацаанаас */
+      return {key:k,cap:MN[k],arcs:sectorDonutArcs(x.bySec.map(b=>({...b,value:b.shareValue})),U[k]),hasData:x.hasData,
+        total:x.hasData?fmt(x.shareTotal)+' '+U[k]:T('no_source','мэдээлэл алга')};});
     base.stShareLegend=m.sectors.map(s=>{
       const p=P.bySec.find(b=>b.key===s.key)||{}, f=F.bySec.find(b=>b.key===s.key)||{};
-      const cell=(b,unit)=>b.value==null?T('no_source','мэдээлэл алга'):fmt(b.value)+(b.pct!=null?' · '+stPct(b.pct):'');
+      const cell=(b,unit)=>b.shareValue==null?T('no_source','мэдээлэл алга'):fmt(b.shareValue)+(b.pct!=null?' · '+stPct(b.pct):'');
       return {name:s.name,color:s.color,pax:cell(p,U.passengers),freight:cell(f,U.freight_tonnes),
-        tip:s.name+' — '+MN.passengers+': '+(p.value==null?dash:fmt(p.value)+' '+U.passengers)+' · '+MN.freight_tonnes+': '+(f.value==null?dash:fmt(f.value)+' '+U.freight_tonnes)};});
+        tip:s.name+' — '+MN.passengers+': '+(p.shareValue==null?dash:fmt(p.shareValue)+' '+U.passengers)+' · '+MN.freight_tonnes+': '+(f.shareValue==null?dash:fmt(f.shareValue)+' '+U.freight_tonnes)};});
     base.stShareHead=MN.passengers+' / '+MN.freight_tonnes;
-    /* Эзлэх хувь = сонгосон цонхны БҮХ сар (сарын график «Бүгд» он дээр 24 сараар таслагддаг ч энэ нь үгүй) */
-    base.stSharePeriod=monthPer(m.winMonths.map(mo=>({month:mo,missing:false,
-      partial:SECTOR_TOTAL_MEASURES.some(k=>(m.measures[k].series.find(c=>c.month===mo)||{}).partial)})));
+    /* Эзлэх хувийн хугацаа = хэмжүүр бүрийн давхцах сарууд (shareMonths) — «Бүгд» он дээр бүх
+       салбарт мэдээтэй үеэр таслагдсан бол ИЛ хэлнэ (зорчигч/ачаа өөр байвал хоёуланг нь). */
+    const shPer=x=>monthPer(x.shareMonths.map(mo=>({month:mo,missing:false,partial:x.sharePartial.indexOf(mo)>=0})));
+    /* Хоёр хэмжүүр ижил сартай бол нэг мөр (дутуу сар — аль нэгэнд нь дутуу бол) */
+    const sameMonths=P.shareMonths.join(',')===F.shareMonths.join(',')||!F.hasData||!P.hasData;
+    const one=P.hasData?P:F;
+    base.stSharePeriod=sameMonths
+      ?monthPer(one.shareMonths.map(mo=>({month:mo,missing:false,partial:P.sharePartial.indexOf(mo)>=0||F.sharePartial.indexOf(mo)>=0})))
+      :(MN.passengers+': '+shPer(P)+' · '+MN.freight_tonnes+': '+shPer(F));
+    base.stShareNote=(P.shareTrimmed||F.shareTrimmed)?T('share_overlap','Эзлэх хувь — бүх салбарт мэдээтэй давхцах хугацаагаар (эх сурвалжууд өөр өөр оноос эхэлдэг тул бүх түүхийн нийлбэрийг харьцуулахгүй). Нийт KPI нь сонгосон хугацааны бүх мэдээ.'):'';
+    base.stHasShareNote=!!base.stShareNote;
     const yoyRows=[];
     SECTOR_TOTAL_MEASURES.forEach(k=>{
       const x=m.measures[k];
@@ -9906,7 +10124,8 @@ class Component extends DCLogic {
           curW:(y.cur/top*100).toFixed(0)+'%',prevW:(y.prev/top*100).toFixed(0)+'%',
           curLabel:String(x.yoyYear),prevLabel:String(x.yoyYear-1),
           sub:y.pct==null?T('yoy_row_none','харьцуулах бүтэн сар алга (өмнөх оны мэдээ эсвэл бүтэн сар байхгүй)')
-            :(y.months.length===1?y.months[0]:y.months[0]+'–'+y.months[y.months.length-1])+' '+T('f_month_unit','сар')+' · '+U[k],
+            :(y.months.length===1?y.months[0]:y.months[0]+'–'+y.months[y.months.length-1])+' '+T('f_month_unit','сар')+' · '+U[k]
+              +(y.excl&&y.excl.length?' · '+yoyExclText(y.excl):''),
           hasBars:y.pct!=null,noBars:y.pct==null});
       });
     });
@@ -12706,7 +12925,8 @@ class Component extends DCLogic {
         sub:wk.wow==null?T('total_kpi_wow_none','харьцуулах бүтэн 7 хоног алга'):(range(prev)+': '+fmt(prev.tonnes)+' '+tUnit)},
       {label:T('total_kpi_yoy','Өмнөх оны мөн үеэс'),value:sg(wk.yoy),
         sub:wk.yoy==null?T('total_kpi_yoy_none','өмнөх оны мөн үеийн мэдээ алга'):
-          (T('total_kpi_yoy_sub','{year} оны мөн үе: {value} тонн').replace('{year}',wk.prevYtd.year).replace('{value}',fmt(wk.prevYtd.tonnes)))}
+          (T('total_kpi_yoy_sub','{year} оны мөн үе: {value} тонн').replace('{year}',wk.prevYtd.year).replace('{value}',fmt(wk.yoyPrev))
+            +(wk.yoyExcl.length?' · '+yoyExclText(wk.yoyExcl):''))}
     ];
     kpis.forEach(k=>{k.tone=/^\+/.test(k.value)?'#0FA37F':/^-/.test(k.value)?'#E2574C':'var(--ink)';});
     /* Тээвэрлэгчийн хоцрогдол — 7 хоногт 0, он дамнасан харьцуулалт дутуу (тоо зохиохгүй, ил хэлнэ) */
@@ -12726,7 +12946,15 @@ class Component extends DCLogic {
     const perWeek=chartPeriodText({dayFrom:last.week_start,dayTo:last.week_end},TP);
     const perYtd=chartPeriodText(wk.ytd?{dayFrom:wk.ytd.from,dayTo:wk.ytd.to}:{},TP);
     const perWeeks=chartPeriodText(wkFull.length?{dayFrom:wkFull[0].week_start,dayTo:wkFull[wkFull.length-1].week_end}:{},TP);
-    return {...out,freightTotHasWeekly:true,freightTotNoWeekly:false,
+    /* Доод «7 хоногийн гүйцэтгэл» (wp) карт — авто тээврийн зорчигчтой ИЖИЛ: дээрх KPI-ийн
+       тоо, нэг эх сурвалж. Өмнө нь энэ датасэтэд 7 хоногийн тайлан байхад «эх сурвалж
+       холбогдоогүй» гэж зөрчилтэй хэлж байв (2026-10-23 тулгалт). */
+    const tone=v=>/^\+/.test(v)?'#0FA37F':/^-/.test(v)?'#E2574C':'var(--ink3)';
+    const freightWp={wpNoData:false,hasData:true,hasPlan:false,
+      total:last.missing?dash:fmt(last.tonnes)+' '+tUnit,ytd:wk.ytd?fmt(wk.ytd.tonnes)+' '+tUnit:dash,
+      wow:sg(wk.wow),wowColor:tone(sg(wk.wow)),yoy:sg(wk.yoy),yoyColor:tone(sg(wk.yoy)),
+      planLabel:dash,planPctLabel:dash,planWidth:'0%',note:''};
+    return {...out,freightTotHasWeekly:true,freightTotNoWeekly:false,freightWp,
       freightTotPerWeek:perWeek,freightTotPerYtd:perYtd,freightTotPerWeeks:perWeeks,
       freightTotRange:range(last)+' '+String(last.week_end||'').slice(0,4),
       freightTotKpis:kpis,freightTotStale:staleNote,freightTotHasStale:!!staleNote,
@@ -13719,7 +13947,8 @@ class Component extends DCLogic {
           return {l:s[0],v:pctTxt(stW.wow),color:pctCol(stW.wow),mockTag:''};
         if(stW&&i===2&&stW.yoy!==null)
           return {l:s[0],v:pctTxt(stW.yoy),color:pctCol(stW.yoy),
-            mockTag:stW.yoyKeys.length<stW.keys.length?' · '+stNames({keys:stW.yoyKeys}):''};
+            mockTag:(stW.yoyKeys.length<stW.keys.length?' · '+stNames({keys:stW.yoyKeys}):'')
+              +(stW.yoyExcl.length?' · '+yoyExclText(stW.yoyExcl):'')};
         if(stW&&i<3)
           return {l:s[0],v:'—',color:'#828EA8',mockTag:' · '+stxt('status.no_data','мэдээлэл алга')};
         if(i===1&&realDeltaPct!=null){
@@ -14361,8 +14590,11 @@ class Component extends DCLogic {
     const roadPaxExtra=(isRoadPax&&this.state.page==='detail')?this.buildRoadPaxAnalysis(dsel):{};
     /* Доод «7 хоногийн гүйцэтгэл» карт — авто тээврийн зорчигчид 7 хоногийн тайлангаас */
     if(roadPaxExtra.roadPaxWp) Object.assign(wp,roadPaxExtra.roadPaxWp);
+    /* Ачааны нэгтгэл, салбарын нэгтгэл — мөн өөрийн 7 хоногийн тайлангаас (нэг эх сурвалж) */
+    if(freightExtra.freightWp) Object.assign(wp,freightExtra.freightWp);
     const isSumTotal=dsel.source==='sectorTotal';
     const stExtra=(isSumTotal&&this.state.page==='detail')?this.buildSectorTotalAnalysis(dsel):{};
+    if(stExtra.stWp) Object.assign(wp,stExtra.stWp);
     const rankEmptyNow=datasetRank(SECTORS[dsel.sector],dsel).length===0;
     const paxChannelsNow=!!paxExtra.paxHasChannels;
     let airExtra={};
