@@ -98,11 +98,8 @@
           "quality": "verified"
         },
         "road": {
-          "metric": null,
-          "quality": "none",
-          "label": "мэдээлэл алга",
-          "would_need": "Авто замын САРЫН цуваа. 2026-09-23-нд road.veritech.inspections silver-т буув (migration 012) — гэхдээ тэр нь ХОНОГИЙН үзлэг: t05 нь 12 сарын цуваа зурдаг тул хоногийн 30 утгыг сарын тэнхлэгт тавибал хуудас ХУДАЛ уншигдана. Дутуу нь: (а) silver.road_inspections-д хоёроос дээш БҮТЭН сарын дата хуримтлагдах, (б) сарын нэгтгэлийг gold-д нэмэх (эсвэл /api/sectors/road/inspections-д by_month нэмэх). Хоёр дахь нэр дэвшигч нь тээврийн хэрэгслийн бүртгэл (road.veritech.vehicle_registry): түүний CREATEDDATE нь системд бүртгэсэн огноо тул сараар ШИНЭЭР бүртгэгдсэн ТХ-ийн цуваа гарна. 2026-09-24-ний probe нь талбарын ТОЛЬ ШААРДЛАГАГҮЙ гэдгийг баталлаа — багана нь нэрээрээ уншигдана (AIMAG, SOUM, PLATENO, MARKNAME, MODELNAME, BUILDYEAR, ENGINECAPACITY, FUELNAME, CLASSNAME, WHEELNAME, COUNTRYNAME, PURPOSENAME, OWNERTYPENAME, VEHICLETYPENAME, IMPORTDATE, CREATEDDATE; grain = ID, PLATENO бараг өвөрмөц). Дутуу нь ЗӨВХӨН БҮТЭН ТАТАЛТ: таталт бүр 1,941,092 мөрийн ердөө 2,000-ыг авч чаддаг — эх сервэр хуудаслалтыг үл тоож ижил хуудсыг давтан буцаана (stopReason=repeated_page). 0.1% дата дээр тоо нийтлэх нь зохиосон тоотой адил тул таталт засагдтал энэ слот хэвээр хоосон.",
-          "blocked_by": "road.veritech.vehicle_registry"
+          "metric": "road.monthly_passenger_series",
+          "quality": "verified"
         },
         "water": {
           "metric": null,
@@ -548,6 +545,23 @@
       "additive": true,
       "quality": "verified",
       "period_note": "2026-10-21: авто тээвэр = билеттэй автобусны зорчигч (road.veritech.passengers, «Хэвийн» билет, хөдлөх өдрөөр) — салбарын нэгтгэлд (migration 024) нэмэгдсэн. Хотын доторх автобус эх сурвалжид алга. Эх сурвалж цонхоор ачаалагдсан тул цоорхойтой долоо хоногийг (/api/sectors/road/passengers/history → coverage.gaps) нийлбэрт оруулахгүй — «дутуу» гэж тэмдэглэнэ."
+    },
+    "road.monthly_passenger_series": {
+      "name": "Авто тээврийн сарын зорчигчийн тоо (цуврал)",
+      "source": "EHBackend.fetchRoadPassengersHistory → EHGlossary.roadPaxSeries → applySectorSeries(\"road\") (index.html); админ: metricSeries",
+      "dataset": "silver.road_passengers",
+      "column": "passengers («Хэвийн» билет, хөдлөх өдрөөр); цоорхойтой сард passengers_covered",
+      "agg": "SUM by month",
+      "filter": "Одоогийн (УБ цагаар) календарийн сар ХАСАГДАНА (hollow цэг). Сүүлийн мэдээтэй оны 1-р сараас завсаргүй; мэдээгүй сар завсарт байвал цуваа огт харуулахгүй.",
+      "transform": "Эх сурвалж цонхоор ачаалагдсан сард: passengers_covered / хамрагдсан хоног × сарын хоног (06-р хэсгийн roadPaxMonthSeries-тэй ижил) — tooltip ба KPI-ийн тайлбарт N/M хоног ИЛ.",
+      "unit": "зорчигч/сар",
+      "additive": true,
+      "quality": "verified",
+      "period_note": "2026-10-23: t05/k04-ийн авто тээврийн слот (өмнө нь «мэдээлэл алга» — үзлэгийн хоногийн цуваа сарын тэнхлэгт тохирохгүй байв). Хотын доторх автобус эх сурвалжид алга.",
+      "period_coverage": {
+        "grain": "month",
+        "excludes_current": true
+      }
     }
   },
   "datasets": {
