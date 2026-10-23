@@ -92,6 +92,22 @@
       });
   }
 
+  /* Авто тээврийн зорчигч тээврийн мэдээний ТҮҮХ (Veritech 15401437, migrations/024):
+     {status,types[],months[{month,days,last_date,passengers,refunded,by_type{},refunded_by_type{}}],
+     by_route[],by_company[],by_channel[],by_vehicle[],by_passenger_type[],upcoming,weekly?}
+     эсвэл {status:'no_data'}. 404/унтарсан бол null → "мэдээлэл алга". */
+  function fetchRoadPassengersHistory(from, to) {
+    if (!BASE) return Promise.resolve(null);
+    var q = [];
+    if (from) q.push('from=' + encodeURIComponent(from));
+    if (to) q.push('to=' + encodeURIComponent(to));
+    return fetchJson(BASE + '/api/sectors/road/passengers/history' + (q.length ? '?' + q.join('&') : ''))
+      .catch(function (e) {
+        console.info('[ErtHub] backend (road/passengers/history) уншигдсангүй:', e.message);
+        return null;
+      });
+  }
+
   /* Зорчигчийн галт тэрэгний ТҮҮХ — сар (ОН/ОУ), чиглэл, төрөл. from/to
      (YYYY-MM-DD) заавал биш. Хариу: {status,months[],by_route[],by_type[]}
      эсвэл {status:'no_data'}. 404/унтарсан бол null → "мэдээлэл алга". */
@@ -162,13 +178,17 @@
   /* Датасэтийн ТҮҮХИЙ мөр — эх сервисийн БҮХ багана (огноо ч мөн). Хариу:
      {status,columns:[{key,label,type}],rows:[[...]],total,truncated} эсвэл
      {status:'no_data'}. Endpoint deploy болоогүй (404) бол null — хүснэгт
-     өмнөх нэгтгэлээрээ үлдэнэ. key: rail-wagon / rail-pax / road-inspections. */
-  function fetchDatasetRows(key, from, to, limit) {
+     өмнөх нэгтгэлээрээ үлдэнэ. key: rail-wagon / rail-pax / road-inspections.
+     opts.params — баганын шүүлт (бэлэн query: in.<багана>=…&min.<багана>=…),
+     opts.facets — цонхны бүтэн датаас шүүлтийн сонголт (утга+тоо, мин/макс). */
+  function fetchDatasetRows(key, from, to, limit, opts) {
     if (!BASE) return Promise.resolve(null);
     var q = [];
     if (from) q.push('from=' + encodeURIComponent(from));
     if (to) q.push('to=' + encodeURIComponent(to));
     if (limit) q.push('limit=' + encodeURIComponent(limit));
+    if (opts && opts.facets) q.push('facets=1');
+    if (opts && opts.params) q.push(opts.params);
     return fetchJson(BASE + '/api/datasets/' + encodeURIComponent(key) + '/rows' + (q.length ? '?' + q.join('&') : ''))
       .catch(function (e) {
         console.info('[ErtHub] backend (datasets/' + key + '/rows) уншигдсангүй:', e.message);
@@ -201,6 +221,7 @@
     fetchRailWagonHistory: fetchRailWagonHistory,
     fetchRailPassengersHistory: fetchRailPassengersHistory,
     fetchRailFreightHistory: fetchRailFreightHistory,
+    fetchRoadPassengersHistory: fetchRoadPassengersHistory,
     fetchRoadInspections: fetchRoadInspections,
     fetchRoadInspectionsHistory: fetchRoadInspectionsHistory,
     fetchVehicleRegistry: fetchVehicleRegistry,

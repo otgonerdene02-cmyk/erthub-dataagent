@@ -71,6 +71,8 @@ body{margin:0;}
    Өмнө нь зөвхөн агаарт (.eh-fill) байсан тул галт тэрэг/вагон/үзлэг дээр
    198px donut | 964px жагсаалт гэх мэт зөрүү гарч байв. layout-audit: row-height-mismatch. */
 .eh-row, .eh-trend-rank.eh-fill { align-items: stretch !important; }
+/* EMP: чиг хандлагын цуваа алга үед хоосон картыг нууж, утгатай карт (Салбарын бүтэц) мөрийг ганцаар эзэлнэ */
+.eh-trend-rank[data-solo="1"] { grid-template-columns: minmax(0, 1fr) !important; }
 .eh-fill-card { display: flex; flex-direction: column; }
 .eh-fill-list { position: relative; flex: 1 1 0; min-height: 220px; }
 .eh-fill-scroll { position: absolute; inset: 0; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }
@@ -110,11 +112,19 @@ body{margin:0;}
   /* FL баганын шүүлт: шошгоны 112px багана гар утсанд chip-ийн зайг иддэг тул дээр нь */
   .eh-fl-row { flex-direction: column !important; gap: 6px !important; }
   .eh-fl-row > :first-child { width: auto !important; padding-top: 0 !important; }
+  /* Тоон хүрээ: 300px баганын сүлжээ гар утсанд хальдаг — нэг багана, оролт уян */
+  .eh-fl-ranges { grid-template-columns: minmax(0, 1fr) !important; align-self: stretch; }
+  .eh-fl-ranges input { width: 0 !important; flex: 1 1 0 !important; min-width: 0; }
   .eh-fill-list { position: static; flex: none; min-height: 0; }
   .eh-fill-scroll { position: static; overflow: visible; padding-right: 0; max-height: 420px; overflow-y: auto; }
   /* 7 хоногийн баганын график: 6–7 багана 244px-д багтаж, огнооны шошго ("10.07")
      хүрээнээсээ гарахгүй. Гурван мөр (утга · багана · огноо) ижил gap-тай байх ЁСТОЙ. */
   .eh-wk { gap: 4px !important; }
+  /* Утгын шошго: 6 оронтой тоо (571,206) ~33px баганад давхцдаг → товчилсон (571K); бүтэн нь tooltip-д */
+  /* Товчилсон span нь inline display:none — deploy-ийн дараа хөтөч ХУУЧИН style.css-ийг
+     кэшилсэн үед (max-age=600) хоёр хэлбэр зэрэг гарахгүй, хуучин харагдац л үлдэнэ */
+  .eh-wk-full { display: none !important; }
+  .eh-wk-short { display: inline !important; }
   .eh-wk-d > * { min-width: 0; font-size: 9px !important; }
   /* Хуудасны толгой (каталог/коммунити/түүх/мэдээ/датасет): гарчиг + баруун талын блок (auto) → давхарлана */
   .eh-pg-h { grid-template-columns: minmax(0, 1fr) !important; gap: 18px !important; align-items: start !important; }

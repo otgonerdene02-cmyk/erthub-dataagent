@@ -360,6 +360,27 @@ function auditLayout(doc, win, opts) {
     }
   });
 
+  /* 5b. label-row-overlap — графикийн утга/огнооны ШОШГОНЫ МӨР (`.eh-wk`, [data-label-row]).
+     text-overlap нь 30%-иас бага давхцлыг алгасдаг тул гар утсанд 7 хоногийн баганын
+     «571,206» шошгууд 9px давхцаж байсныг (2026-10-22) барьдаггүй байв. Шошгоны мөрөнд
+     ЯМАР Ч (>1px) давхцал алдаа. */
+  body.querySelectorAll('.eh-wk, [data-label-row]').forEach((row) => {
+    if (ignored(row) || !visible(row)) return;
+    const leaves = [].slice.call(row.querySelectorAll('*')).filter((e) => !e.children.length && (e.textContent || '').trim() && visible(e))
+      .map((e) => ({ e, r: e.getBoundingClientRect(), t: short(e.textContent, 20) })).filter((x) => x.r.width > 0 && x.r.height > 0);
+    for (let i = 0; i < leaves.length; i++) {
+      for (let j = i + 1; j < leaves.length; j++) {
+        const a = leaves[i].r, b = leaves[j].r;
+        const ix = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const iy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (ix <= 1 || iy <= 1) continue;
+        out.push({ rule: 'label-row-overlap', where: describe(row), text: '"' + leaves[i].t + '" × "' + leaves[j].t + '"',
+          detail: Math.round(ix) + 'px давхцсан (шошгоны мөр — товчил эсвэл зай нэм)' });
+        return;
+      }
+    }
+  });
+
   /* 6. raw-leak — ил гарсан загварын/JS-ийн үлдэгдэл */
   const leak = /\bNaN\b|\bundefined\b|\[object |\{\{|\}\}|\bnull\b(?!\w)|Infinity/;
   const leakSeen = new Set();

@@ -186,6 +186,61 @@
         ytd: Object.assign({ year: y, from: y + '-01-01', to: iso(we) }, ytdOrg(1)),
         prev_ytd: Object.assign({ year: y - 1, from: (y - 1) + '-01-01', to: (y - 1) + iso(we).slice(4) }, ytdOrg(0.88)) } };
   }
+  /* АВТО ТЭЭВРИЙН ЗОРЧИГЧ (/api/sectors/road/passengers/history, migrations/024) — 4
+     тээврийн төрөл; өмнөх оны 1–7-р сар мэдээгүй (эх сурвалжийн цоорхой — харьцуулалт
+     «мэдээ дутуу» болохыг харуулна), weekly — сүүлийн бүтэн 8 долоо хоног. */
+  var RP_TYPES = ['Хот хооронд', 'Улс хооронд', 'Аймаг хооронд', 'Орон нутаг'];
+  var RP_BASE = [180000, 18000, 900, 300];
+  function roadPaxHistory() {
+    var ms = months().filter(function (x) { return x.y === Y || x.m >= 8; });
+    var mrows = ms.map(function (x, i) {
+      var bt = {}, rt = {}, pax = 0, ref = 0;
+      RP_TYPES.forEach(function (t, k) { var v = Math.round(wave(i + k, RP_BASE[k], RP_BASE[k] * 0.15) * x.days / x.dim);
+        bt[t] = v; rt[t] = Math.round(v * 0.11); pax += v; ref += rt[t]; });
+      return { month: x.key, days: x.days, days_in_month: x.dim, last_date: x.key + '-' + pad(x.days), tickets: pax + ref + 40,
+        passengers: pax, refunded: ref, deleted: 40, by_type: bt, refunded_by_type: rt, partial: x.partial };
+    });
+    var tot = mrows.reduce(function (a, m) { return a + m.passengers; }, 0);
+    var share = function (list) { var w = list.reduce(function (a, r) { return a + r[1]; }, 0); var acc = 0;
+      return list.map(function (r, i) { var v = i === list.length - 1 ? tot - acc : Math.round(tot * r[1] / w); acc += v;
+        return Object.assign({ name: r[0], passengers: v }, r[2] ? { route_type: r[2] } : {}); }); };
+    var out = { sector: 'road', metric: 'road_passengers_history', status: 'ok', unit: 'зорчигч', dataset_id: 'road.veritech.passengers',
+      types: RP_TYPES.slice(), months: mrows,
+      totals: { passengers: tot },
+      by_type: RP_TYPES.map(function (t) { return { type: t, passengers: mrows.reduce(function (a, m) { return a + m.by_type[t]; }, 0) }; }),
+      by_route: share([['Да.Дархан - УБ - Да.Дархан', 9, 'Хот хооронд'], ['Ор.Баян Өндөр - УБ - Ор.Баян Өндөр', 8, 'Хот хооронд'],
+        ['Хө.Мөрөн - УБ - Хө.Мөрөн', 6, 'Хот хооронд'], ['Эрээн хот/БНХАУ/ - Дг.Замын-Үүд - Эрээн хот/БНХАУ/', 5, 'Улс хооронд'],
+        ['Өм.Цогтцэций - УБ - Өм.Цогтцэций', 4, 'Хот хооронд'], ['Бн.Баянхонгор - УБ - Бн.Баянхонгор', 4, 'Хот хооронд'],
+        ['До.Хэрлэн - УБ - До.Хэрлэн', 3, 'Хот хооронд'], ['Өв.Арвайхээр - УБ - Өв.Арвайхээр', 3, 'Хот хооронд'],
+        ['Ар.Эрдэнэбулган - УБ - Ар.Эрдэнэбулган', 3, 'Хот хооронд'], ['Тө.Зуунмод - УБ - Тө.Зуунмод', 2, 'Хот хооронд'],
+        ['Дархан-Уул - Орхон - Дархан-Уул', 0.3, 'Аймаг хооронд'], ['Бу.Булган - Ор.Баян-Өндөр - Бу.Булган', 0.1, 'Орон нутаг']]),
+      by_company: share([['Хараацайн жигүүр ХХК', 9], ['Эрдэмтранс ХХК', 6], ['Баянчандмань хурд Хоршоо', 5], ['Атибус ХХК', 5],
+        ['Нөхөрлөлзам ХХК', 4], ['Дэлгэрэхтээх ХХК', 4], ['ЛОТОТ ХХК', 4], ['Шарзам ирээдүй', 4], ['Баянхонгортээвэрчин ХХК', 3],
+        ['Ач буян трэвел ХХК', 3], ['Аман авто транс ХХК', 2]]),
+      by_channel: share([['Онлайн', 66], ['Касс', 28], ['Тапатрип', 5], ['Гэрэгэ', 0.4], [null, 0.1]]),
+      by_vehicle: share([['Том автобус', 91], ['Бага оврын автобус', 4.4], ['Суудлын машин', 2.9], ['Дунд оврын автобус', 1.6]]),
+      by_passenger_type: share([['Том хүн', 94], ['Хүүхэд', 6]]),
+      upcoming: { passengers: 5321, from: Y + '-' + pad(M) + '-' + pad(D), to: Y + '-' + pad(M) + '-' + pad(Math.min(28, D + 20)) } };
+    var lastDay = new Date(Date.UTC(Y, M - 1, D - 1));
+    var we = new Date(lastDay.getTime() - (lastDay.getUTCDay() % 7) * 864e5);
+    var iso = function (d) { return d.toISOString().slice(0, 10); };
+    var weeks = [];
+    for (var i = 7; i >= 0; i--) {
+      var ws = new Date(we.getTime() - (i * 7 + 6) * 864e5), wend = new Date(we.getTime() - i * 7 * 864e5), bt = {}, p = 0;
+      RP_TYPES.forEach(function (t, k) { var v = Math.round(wave(i + k * 3, RP_BASE[k] / 4.3, RP_BASE[k] / 30)); bt[t] = v; p += v; });
+      weeks.push({ week_start: iso(ws), week_end: iso(wend), missing: false, days: 7, passengers: p, by_type: bt });
+    }
+    var yy = +iso(we).slice(0, 4);
+    var ytdBt = {}, ytdP = 0, pyBt = {}, pyP = 0;
+    RP_TYPES.forEach(function (t, k) { ytdBt[t] = RP_BASE[k] * 9; ytdP += ytdBt[t]; pyBt[t] = Math.round(weeks[7].by_type[t] * 0.93); pyP += pyBt[t]; });
+    var pw0 = new Date(Date.parse(weeks[7].week_start) - 364 * 864e5), pw1 = new Date(Date.parse(weeks[7].week_end) - 364 * 864e5);
+    out.weekly = { max_date: iso(lastDay), week_end: iso(we), types: RP_TYPES.slice(), weeks: weeks,
+      ytd: { year: yy, from: yy + '-01-01', to: iso(we), passengers: ytdP, days: 280, by_type: ytdBt },
+      prev_ytd: { year: yy - 1, from: (yy - 1) + '-01-01', to: (yy - 1) + iso(we).slice(4), passengers: Math.round(ytdP * 0.3), days: 84,
+        by_type: {}, comparable: false },
+      prev_year_week: { week_start: iso(pw0), week_end: iso(pw1), passengers: pyP, days: 7, by_type: pyBt, comparable: true } };
+    return out;
+  }
   /* САЛБАРЫН НЭГТГЭЛ (/api/sectors/total/history, gold.sector_daily_total) — агаар
      (flights фикстураас), төмөр зам (зорчигч = railHistory, ачаа = freightTotal); авто —
      эх сурвалжгүй (толинд бий, мөргүй). weekly — хэмжүүр бүрээр сүүлийн бүтэн 8 долоо хоног. */
@@ -209,6 +264,9 @@
       r.passengers = m.passengers; r.passenger_days = m.days; r.passenger_last = m.month + '-' + pad(m.days); });
     freightTotal().months.forEach(function (m) { var r = row(m.month, 'rail', m.days_in_month);
       r.freight_tonnes = m.tonnes; r.freight_days = m.days; r.freight_last = m.last_date; });
+    /* Авто тээвэр — билеттэй зорчигч (migrations/024-ийн UNION) */
+    roadPaxHistory().months.forEach(function (m) { var r = row(m.month, 'road', m.days_in_month);
+      r.passengers = m.passengers; r.passenger_days = m.days; r.passenger_last = m.last_date; });
     rows.sort(function (a, b) { return a.month < b.month ? -1 : a.month > b.month ? 1 : (a.sector < b.sector ? -1 : 1); });
     if (mf || mt) rows = rows.filter(function (r) { return (!mf || r.month >= mf[1]) && (!mt || r.month <= mt[1]); });
     var edge = function (sec, k, first) { var rs = rows.filter(function (r) { return r.sector === sec && r[k] !== null; });
@@ -242,6 +300,12 @@
           comparable: ['air', 'rail'], yoy_cur: ytd.air.value + ytd.rail.value, yoy_prev: prev.air.value + prev.rail.value };
       };
       out.weekly = { passengers: wk('passengers', [28000, 29000]), freight_tonnes: wk('freight_tonnes', [180, 520000]) };
+      /* Авто тээврийн зорчигч — roadPaxHistory-ийн 7 хоногоос (өмнөх оны мөн үе дутуу → comparable-д ороогүй) */
+      var rw = roadPaxHistory().weekly, P = out.weekly.passengers;
+      P.sectors = ['air', 'road', 'rail'];
+      P.weeks.forEach(function (w, i) { var v = rw.weeks[i].passengers; w.by_sector.road = { value: v, days: 7 }; w.value += v; });
+      P.ytd.by_sector.road = { value: rw.ytd.passengers, days: 280 }; P.ytd.value += rw.ytd.passengers;
+      P.prev_ytd.by_sector.road = { value: rw.prev_ytd.passengers, days: 84 };
     }
     return out;
   }
@@ -331,10 +395,27 @@
       if (fa) {
         columns.splice(1, 0, ['org_code', 'Тээвэрлэгч', 'string'], ['org_name', 'Тээвэрлэгчийн нэр', 'string']);
         rows = rows.map(function (r) { return [r[0], 'УБТЗ', 'Улаанбаатар төмөр зам ХНН'].concat(r.slice(1)); });
-        days.slice(0, 4).forEach(function (d, j) { ['Цогтцэций', 'Төмөртэй'].forEach(function (s, i) {
+        /* МТЗ-ийн мөр УБТЗ-ийнхээс ХУУЧИН огноотой (амьд дата: МТЗ сүүлийн бичлэг
+           2026-02-01) — таслагдсан эхний хуудсанд ордоггүй, зөвхөн серверийн
+           шүүлтээр (in.org_code=МТЗ) гарна (FX_ROWS_CAP, FL19). */
+        days.slice(14, 18).forEach(function (d, j) { ['Цогтцэций', 'Төмөртэй'].forEach(function (s, i) {
           rows.push([d, 'МТЗ', 'Монголын төмөр зам ТӨХК', String(1844091747960000 + j * 10 + i), 'Монголын төмөр зам ТӨХК', s, 'Нүүрс',
             null, null, null, null, 0, 0, 20 + i, Math.round((20 + i) * 66.1 * 100) / 100]); }); });
       }
+    } else if (key === 'road-passengers') {
+      columns = [['trip_date', 'Хөдлөх огноо', 'date'], ['source_record_id', 'Билетийн ID', 'string'], ['departure_at', 'Хөдлөх цаг', 'string'],
+        ['route_type', 'Тээврийн төрөл', 'string'], ['route_name', 'Чиглэл', 'string'], ['start_stop', 'Суух буудал', 'string'],
+        ['end_stop', 'Буух буудал', 'string'], ['company_name', 'Тээвэрлэгч', 'string'], ['vehicle_type', 'Тээврийн хэрэгслийн төрөл', 'string'],
+        ['vehicle_plate', 'Улсын дугаар', 'string'], ['passenger_type', 'Зорчигчийн ангилал', 'string'], ['sales_channel', 'Борлуулалтын суваг', 'string'],
+        ['ticket_status', 'Билетийн төлөв', 'string'], ['status_updated_at', 'Төлөв өөрчлөгдсөн цаг', 'string'], ['registered_date', 'Бүртгэсэн огноо', 'date']];
+      var RR = [['Хот хооронд', 'Да.Дархан - УБ - Да.Дархан', 'УБ.Сонгинохайрхан /Драгон/', 'Да.Дархан', 'Эрдэмтранс ХХК', 'Том автобус', '12-34 УБА'],
+        ['Хот хооронд', 'Хө.Мөрөн - УБ - Хө.Мөрөн', 'Хө.Мөрөн', 'УБ.Сонгинохайрхан /Драгон/', 'Минтранс ХХК', 'Том автобус', '44-46 УБЯ'],
+        ['Улс хооронд', 'Эрээн хот/БНХАУ/ - Дг.Замын-Үүд - Эрээн хот/БНХАУ/', 'Дг.Замын-Үүд', 'БНХАУ.Эрээн', 'Дэлгэрэхтээх ХХК', 'Том автобус', '77-19 ДГС'],
+        ['Аймаг хооронд', 'Дархан-Уул - Орхон - Дархан-Уул', 'Да.Дархан', 'Ор.Баян-Өндөр /аймгийн төв/', 'ББ-ОД ХХК-ОРОН НУТАГ', 'Суудлын машин', '46-77 ОРН'],
+        ['Орон нутаг', 'Бу.Булган - Ор.Баян-Өндөр - Бу.Булган', 'Бу.Булган', 'Ор.Баян-Өндөр /аймгийн төв/', 'Эрдэнэт Арслан ХХК-ОРОН НУТАГ', 'Суудлын машин', '02-82 ОРА']];
+      days.slice(0, 12).forEach(function (d, j) { RR.forEach(function (r, i) {
+        rows.push([d, String(26600000 + j * 10 + i), d + ' ' + pad(7 + i * 2) + ':00', r[0], r[1], r[2], r[3], r[4], r[5], r[6],
+          (i + j) % 7 ? 'Том хүн' : 'Хүүхэд', ['Онлайн', 'Касс', 'Тапатрип'][(i + j) % 3], (i + j) % 9 ? 'Хэвийн' : 'Буцаасан', d + ' 06:1' + i, d]); }); });
     } else if (key === 'sector-total') {
       columns = [['record_date', 'Огноо', 'date'], ['sector_code', 'Салбарын код', 'string'], ['sector_name', 'Салбар', 'string'],
         ['passengers', 'Зорчигч', 'int'], ['freight_tonnes', 'Ачаа (тонн)', 'float'], ['passenger_records', 'Зорчигчийн эх бичлэг', 'int'],
@@ -343,8 +424,59 @@
         rows.push([d, 'air', 'Агаарын тээвэр', 5200 + j * 37, Math.round((26 + (j % 5)) * 1000) / 1000 + 20, 40 + j % 6, 40 + j % 6, 'Агаарын тээврийн статистик (ИНЕГ)']);
         rows.push([d, 'rail', 'Төмөр зам', 4100 + j * 21, 78000 + j * 311.5, 28 + j % 4, 2400 + j * 3, 'Ачаа тээврийн мэдээ (УБТЗ, МТЗ), Зорчигчийн галт тэрэгний мэдээ (УБТЗ)']); });
     } else return 404;
-    return { status: rows.length ? 'ok' : 'no_data', dataset: key, total: rows.length, truncated: false,
-      columns: columns.map(function (c) { return { key: c[0], label: c[1], type: c[2] }; }), rows: rows };
+    return rowsContract(u, key, columns, rows);
+  }
+  /* Backend-ийн гэрээ (etransport-backend datasetRows.js): баганын шүүлт in./min./max.,
+     facets=1 → цонхны БҮТЭН мөрөөс (шүүлтгүй) ангилал [[утга, тоо]] ба тоон {min,max},
+     огноогоор буурах эрэмбэ, limit-ээр таслана. Нэгтгэлийн датасэт (rail-freight-all)
+     амьд дээрх шиг ТАСЛАГДСАН (5,000 / 148,196) — хуудас ачаалсан мөрөөсөө биш
+     facet-ээс шүүлтийн сонголт гаргахыг шалгана. */
+  var FX_ROWS_CAP = { 'rail-freight-all': 50 };
+  function rowsContract(u, key, columns, rows) {
+    var qs = (String(u).split('?')[1] || '').split('&').filter(Boolean).map(function (p) {
+      var i = p.indexOf('=');
+      return [decodeURIComponent(i < 0 ? p : p.slice(0, i)), decodeURIComponent(i < 0 ? '' : p.slice(i + 1))];
+    });
+    var keys = columns.map(function (c) { return c[0]; });
+    var inF = {}, lo = {}, hi = {}, any = false;
+    qs.forEach(function (kv) {
+      var m = /^(in|min|max)\.(.+)$/.exec(kv[0]);
+      var ci = m ? keys.indexOf(m[2]) : -1;
+      if (ci < 0 || kv[1] === '') return;
+      any = true;
+      if (m[1] === 'in') (inF[ci] = inF[ci] || []).push(kv[1].trim());
+      else (m[1] === 'min' ? lo : hi)[ci] = +kv[1];
+    });
+    var txt = function (v) { return v == null ? '' : String(v).trim(); };
+    var out = rows.filter(function (r) {
+      for (var a in inF) if (inF[a].indexOf(txt(r[a])) < 0) return false;
+      for (var b in lo) if (r[b] == null || +r[b] < lo[b]) return false;
+      for (var c in hi) if (r[c] == null || +r[c] > hi[c]) return false;
+      return true;
+    }).sort(function (x, y) { return x[0] < y[0] ? 1 : x[0] > y[0] ? -1 : 0; });
+    var cap = FX_ROWS_CAP[key] || 5000, lim = +((qs.find(function (kv) { return kv[0] === 'limit'; }) || [])[1]) || 5000;
+    var page = out.slice(0, Math.min(cap, lim));
+    var res = { status: rows.length ? 'ok' : 'no_data', dataset: key, total: out.length, truncated: page.length < out.length,
+      columns: columns.map(function (c) { return { key: c[0], label: c[1], type: c[2] }; }), rows: page };
+    if (any) { res.filtered = true; res.status = 'ok'; }
+    if (qs.some(function (kv) { return kv[0] === 'facets' && kv[1] === '1'; })) {
+      var fz = {};
+      columns.forEach(function (c, i) {
+        if (c[2] === 'string') {
+          var n = {}, filled = 0;
+          rows.forEach(function (r) { var v = txt(r[i]); if (!v) return; filled++; n[v] = (n[v] || 0) + 1; });
+          var vs = Object.keys(n);
+          if (vs.length >= 2 && vs.length <= 1000 && vs.length < filled)
+            fz[c[0]] = { kind: 'cat', values: vs.sort(function (a, b) { return n[b] - n[a] || (a < b ? -1 : 1); }).map(function (v) { return [v, n[v]]; }) };
+        } else if (c[2] === 'int' || c[2] === 'float') {
+          var nums = rows.map(function (r) { return r[i]; }).filter(function (v) { return v != null && v !== ''; }).map(Number);
+          if (nums.length && Math.min.apply(null, nums) < Math.max.apply(null, nums))
+            fz[c[0]] = { kind: 'range', min: Math.min.apply(null, nums), max: Math.max.apply(null, nums) };
+        }
+      });
+      res.facets = fz;
+    }
+    return res;
   }
   function route(url) {
     var u = String(url);
@@ -357,6 +489,12 @@
     if (fo) return ranged(u, fo[1] === 'all' ? freightTotal() : freightHistory(fo[1]), 'tonnes', []);
     if (u.indexOf('/api/sectors/rail/passengers/history') >= 0)
       return ranged(u, railHistory(), 'passengers', [['by_route', 'passengers']]);
+    if (u.indexOf('/api/sectors/road/passengers/history') >= 0) {
+      var rp = ranged(u, roadPaxHistory(), 'passengers', [['by_route', 'passengers'], ['by_company', 'passengers'],
+        ['by_channel', 'passengers'], ['by_vehicle', 'passengers'], ['by_passenger_type', 'passengers']]);
+      if (/[?&](from|to)=/.test(u)) delete rp.weekly; /* backend: weekly зөвхөн шүүлтгүй дуудлагад */
+      return rp;
+    }
     if (u.indexOf('/api/sectors/total/history') >= 0) return sectorTotal(u);
     if (u.indexOf('/api/sectors/rail/passengers/history') >= 0) return railHistory();
     if (u.indexOf('/api/sectors/rail/summary') >= 0) return railSummary();
