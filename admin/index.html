@@ -447,7 +447,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="../js/erthub-publish.js?v=ffe215f9"></script>
 <script src="../js/erthub-backend.js?v=a96de8ab"></script>
 <script src="../js/erthub-chart.js?v=422174bf"></script>
-<script src="../js/erthub-glossary.js?v=f43104d3"></script>
+<script src="../js/erthub-glossary.js?v=48cb3fdf"></script>
 </head>
 <body>
 
@@ -1843,6 +1843,9 @@ function svgLine(pts,color,w,h,asBar){
   if(!pts||pts.length<2) return '';
   var mx=Math.max.apply(null,pts.map(function(p){return p.v}));
   var mn=Math.min.apply(null,pts.map(function(p){return p.v}));
+  /* DG: багана 0-ээс (сайтын weekAxis()-тэй ижил, 2026-10-23) — min-ээс эхэлбэл 6%-ийн
+     зөрүү хэд дахин мэт харагдана; шугам өөрийн бодит хүрээгээр хэвээр. */
+  if(asBar&&mn>0) mn=0;
   var rng=(mx-mn)||1, pad=4;
   var X=function(i){return pad+i*(w-pad*2)/(pts.length-1)};
   var Y=function(v){return h-pad-((v-mn)/rng)*(h-pad*2)};
@@ -2582,7 +2585,7 @@ var SITE_LOC={
   freight_an:'browse|body',
   road_pax_an:'browse|body',
   /* Салбарын нэгтгэл — датасэтийн самбар (browse), d05_* нь нүүрний «Салбарын харьцаа» (home s5) */
-  sector_total:'browse|body', 'sector_total.d05_period_ytd':'home|s5', 'sector_total.d05_period_year':'home|s5', 'sector_total.d05_off':'home|s5', 'sector_total.m_pax_short':'home|s5', 'sector_total.m_freight_short':'home|s5', 'sector_total.by_pax':'home|s5', 'sector_total.by_freight':'home|s5',
+  sector_total:'browse|body', yoy_lfl:'browse|body', 'sector_total.d05_period_ytd':'home|s5', 'sector_total.d05_period_year':'home|s5', 'sector_total.d05_off':'home|s5', 'sector_total.m_pax_short':'home|s5', 'sector_total.m_freight_short':'home|s5', 'sector_total.by_pax':'home|s5', 'sector_total.by_freight':'home|s5',
   pv_scope:'browse|body',
   sector_chart:'home|s5', chart:'home|s5', compare_window:'home|s6',
   feed:'home|s7', ai:'home|s8',
