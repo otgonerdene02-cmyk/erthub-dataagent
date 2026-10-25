@@ -2062,6 +2062,18 @@ async function groupL() {
     adm.includes('data-ds-card') && adm.includes('data-ds-add') && adm.includes('data-ds-del'));
   check('L4. Каталог "Дата холболт" табд холбогдсон', adm.includes("'<div id=\"mt-ds\">'+lvDatasets()"));
 
+  /* L7 — registry-ийн датасэт БҮР админд монгол нэртэй (2026-10-25: салбарын
+     нэгтгэл "gold.sector_daily_total" гэсэн түүхий кодоор «Датасэт» жагсаалтад гарч
+     байв). Шинэ датасэт нэмэхэд DSMETA + content.json ui.dataset хоёуланд бүртгэ. */
+  const reg7 = readJson('metric_registry.json'), uds7 = readJson('content.json').ui.dataset || {};
+  const dsKeys7 = [...new Set(Object.values(reg7.metrics).map((m) => m.dataset).filter(Boolean))];
+  const meta7 = (adm.match(/var DSMETA=\{([\s\S]*?)\n\};/) || [])[1] || '';
+  const miss7 = dsKeys7.filter((k) => !(meta7.includes("'" + k + "':{n:") || meta7.includes('\n  ' + k + ':'))
+    || !(uds7[k.split('.').join('_')] || {}).name);
+  check('L7. Registry-ийн датасэт бүр админд нэртэй (DSMETA + ui.dataset)', miss7.length === 0, miss7.join(', '));
+  check('L7. Каталогийн «Салбар» сонголтод салбарын нэгтгэл (total) бий',
+    adm.includes(".concat(['total'])") && adm.includes('function dsSectorName('));
+
   check('L5. Каталогийн хайлт НЭРЭЭР ажиллана (d.title БИШ)',
     idx.includes("(d.name||'')+' '+(d.agency||'')") && !idx.includes("d.title+' '+d.desc"),
     'хайлт d.title уншсаар байна');
@@ -2075,6 +2087,9 @@ async function groupL() {
       d.querySelector('[data-tab="metrics"]').click(); await sleep(900);
       const R={};
       R.before=d.querySelectorAll('[data-ds-card]').length;
+      /* L8 — салбарын нэгтгэлийн карт: сонголт "total" дээр, badge монголоор */
+      R.total=[...d.querySelectorAll('[data-ds-card]')].map(c=>{const sel=c.querySelector('select[data-df$="|sector"]');
+        return sel&&sel.querySelector('option[value="total"][selected]')?{v:sel.value,badge:(c.querySelector('h3 .badge')||{}).textContent}:null}).filter(Boolean);
       const add=d.querySelector('[data-ds-add]'); if(!add) return {__err:'нэмэх товч алга'};
       add.click(); await sleep(800);
       R.after=d.querySelectorAll('[data-ds-card]').length;
@@ -2089,6 +2104,9 @@ async function groupL() {
       return R;
     }`, 90000);
     if (R.__err) { bad('L6. Каталогийн DOM шалгалт', R.__err); return; }
+    check('L8. Салбарын нэгтгэлийн картын «Салбар» = total, badge монголоор',
+      R.total.length === 1 && R.total[0].v === 'total' && !/total/i.test(R.total[0].badge || ''),
+      JSON.stringify(R.total));
     check('L6. Шинэ датасэт нэмэгдэнэ', R.after === R.before + 1,
       JSON.stringify({ before: R.before, after: R.after }));
     check('L6. Талбар засахад dirty болж экспортод орно', /өөрчлөлт/.test(R.dirty), R.dirty.trim());
@@ -10101,6 +10119,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
   else if (process.argv.includes('--only=VR')) { await groupVR(); }
   else if (process.argv.includes('--only=I')) { groupI(); }
+  else if (process.argv.includes('--only=L')) { await groupL(); }
   else if (process.argv.includes('--only=AX')) { groupAX(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=Y')) { await groupY(); }

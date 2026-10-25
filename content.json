@@ -2343,6 +2343,14 @@
       "silver_road_inspections": {
         "name": "Техникийн хяналтын үзлэг (үзлэг × өдөр)",
         "agency": "ЗТХЕГ · Veritech"
+      },
+      "silver_road_passengers": {
+        "name": "Авто тээврийн зорчигч (билет × өдөр)",
+        "agency": "АТҮТ · Veritech"
+      },
+      "gold_sector_daily_total": {
+        "name": "Салбарын нэгтгэл (салбар × өдөр)",
+        "agency": "ИНЕГ · УБТЗ · МТЗ · АТҮТ"
       }
     },
     "required_unit": {
