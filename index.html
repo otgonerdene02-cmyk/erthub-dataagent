@@ -32,7 +32,7 @@
   <script src="js/vendor/d3.v7.min.js?v=f2094bbf"></script>
   <script src="js/vendor/topojson-client.min.js?v=25cd02ae"></script>
   <script src="js/vendor/xlsx.full.min.js?v=c9506197"></script>
-  <link rel="stylesheet" href="style.css?v=b87673b2">
+  <link rel="stylesheet" href="style.css?v=3f674fde">
 </helmet>
 
 <div class="eh-app" data-theme="{{ themeAttr }}" style="{{ rootStyle }}">
@@ -2177,6 +2177,115 @@
       </div>
     </div>
 
+    <!-- САЛБАРЫН НЭГТГЭЛ — «Өгөгдөл | Тооцооллын арга» таб. Арга нь аль датасэтийн ямар утгыг
+         яаж нэгтгэснийг Tableau-гийн Data Guide / lineage / Prep урсгалын хэлбэрээр харуулна:
+         танилцуулга → урсгал (эх датасэт → утга → нөхцөл → салбар) → томьёо → ороогүй зүйл. -->
+    <sc-if value="{{ detail.isSumTotal }}">
+      <div data-st-tabs="1" role="tablist" style="display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:22px;overflow-x:auto;">
+        <sc-for list="{{ detail.stM.tabs }}" as="stb" hint-placeholder-count="2">
+          <button role="tab" data-st-tab="{{ stb.id }}" sc-camel-on-click="{{ stb.pick }}" style="{{ stb.style }}">{{ stb.label }}</button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ detail.stM.show }}">
+      <div data-st-method="1" style="display:flex;flex-direction:column;gap:16px;margin-bottom:8px;">
+        <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:stretch;">
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;letter-spacing:-.015em;color:var(--ink);margin-bottom:10px;">{{ detail.stM.t.head }}</div>
+            <div style="font-size:13.5px;color:var(--ink2);line-height:1.65;max-width:72ch;text-wrap:pretty;">{{ detail.stM.t.lead }}</div>
+          </div>
+          <div class="eh-g-2c" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+            <sc-for list="{{ detail.stM.stats }}" as="sst" hint-placeholder-count="4">
+              <div style="background:var(--surface2);border:1px solid var(--line);border-radius:13px;padding:13px 15px;display:flex;flex-direction:column;justify-content:center;min-width:0;">
+                <div style="font-size:9.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;font-family:'JetBrains Mono',monospace;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ sst.label }}</div>
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-.01em;overflow-wrap:anywhere;">{{ sst.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div data-st-flow="1" style="background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">{{ detail.stM.t.flowTitle }}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <sc-for list="{{ detail.stM.measureChips }}" as="smc" hint-placeholder-count="3">
+                <button data-st-measure="1" sc-camel-on-click="{{ smc.pick }}" style="{{ smc.style }}">{{ smc.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--ink3);line-height:1.5;margin-bottom:14px;">{{ detail.stM.t.flowHint }}</div>
+          <div class="eh-st-flow eh-st-flow-head">
+            <div>{{ detail.stM.t.colSource }}</div><div>{{ detail.stM.t.colField }}</div><div>{{ detail.stM.t.colRule }}</div><div>{{ detail.stM.t.colSector }}</div>
+          </div>
+          <sc-for list="{{ detail.stM.rows }}" as="sfr" hint-placeholder-count="4">
+            <div class="eh-st-flow" data-st-row="{{ sfr.id }}" data-st-active="{{ sfr.active }}" style="{{ sfr.rowStyle }}">
+              <div style="border-left:3px solid {{ sfr.color }};">
+                <div style="font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.35;text-wrap:pretty;">{{ sfr.dsName }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin-top:3px;">{{ sfr.agency }}</div>
+                <sc-if value="{{ sfr.hasOpen }}">
+                  <button sc-camel-on-click="{{ sfr.open }}" style="cursor:pointer;font-family:inherit;background:none;border:none;padding:0;margin-top:7px;font-size:11.5px;color:{{ sfr.color }};font-weight:600;text-align:left;">{{ sfr.openLabel }}</button>
+                </sc-if>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <sc-for list="{{ sfr.fields }}" as="sff" hint-placeholder-count="2">
+                  <div style="{{ sff.style }}">
+                    <span style="display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.05em;border-radius:5px;padding:2px 7px;margin-bottom:4px;{{ sff.badgeStyle }}">{{ sff.measure }}</span>
+                    <div style="font-size:12.5px;color:var(--ink);line-height:1.4;text-wrap:pretty;">{{ sff.label }}</div>
+                    <sc-if value="{{ sff.hasTech }}"><div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin-top:2px;overflow-wrap:anywhere;">{{ sff.tech }}</div></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size:12px;color:var(--ink2);line-height:1.5;text-wrap:pretty;">{{ sfr.rule }}</div>
+              <div><span style="display:inline-block;font-size:11.5px;font-weight:600;border-radius:999px;padding:5px 11px;{{ sfr.sectorStyle }}">{{ sfr.sectorName }}</span></div>
+            </div>
+          </sc-for>
+          <div data-st-result="1" style="margin-top:14px;background:var(--surface2);border:1px solid var(--line2);border-radius:13px;padding:14px 16px;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:5px;">{{ detail.stM.t.resultTitle }}</div>
+            <div style="font-size:12.5px;color:var(--ink2);line-height:1.55;text-wrap:pretty;">{{ detail.stM.t.resultNote }}</div>
+          </div>
+        </div>
+
+        <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:stretch;">
+          <div data-st-fields="1" style="background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px 20px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:4px;">{{ detail.stM.t.fieldsTitle }}</div>
+            <div style="font-size:11.5px;color:var(--ink3);margin-bottom:10px;">{{ detail.stM.t.fieldsHint }}</div>
+            <sc-for list="{{ detail.stM.fields }}" as="sfd" hint-placeholder-count="7">
+              <div class="eh-st-field">
+                <div style="font-size:13px;font-weight:600;color:var(--ink);line-height:1.4;">{{ sfd.name }}</div>
+                <div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:7px;padding:4px 8px;display:inline-block;overflow-wrap:anywhere;">{{ sfd.formula }}</div>
+                  <div style="font-size:11.5px;color:var(--ink3);line-height:1.5;margin-top:4px;text-wrap:pretty;">{{ sfd.note }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div data-st-excl="1" style="background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px 20px;">
+              <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;">{{ detail.stM.t.exclTitle }}</div>
+              <sc-for list="{{ detail.stM.excl }}" as="sex" hint-placeholder-count="4">
+                <div style="display:flex;gap:8px;align-items:baseline;font-size:12.5px;color:var(--ink2);line-height:1.5;margin-bottom:7px;"><span style="color:#E2574C;font-weight:700;flex-shrink:0;">✕</span><span style="min-width:0;text-wrap:pretty;">{{ sex.text }}</span></div>
+              </sc-for>
+            </div>
+            <div data-st-mcov="1" style="flex:1;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px 20px;">
+              <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;">{{ detail.stM.t.covTitle }}</div>
+              <sc-if value="{{ detail.stM.hasCov }}">
+                <div class="eh-st-cov eh-st-cov-head"><div></div><div>{{ detail.stCovPaxLabel }}</div><div>{{ detail.stCovFreightLabel }}</div></div>
+                <sc-for list="{{ detail.stCoverage }}" as="smv" hint-placeholder-count="3">
+                  <div class="eh-st-cov">
+                    <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink);font-weight:500;min-width:0;"><span style="width:8px;height:8px;border-radius:50%;background:{{ smv.color }};flex-shrink:0;"></span>{{ smv.name }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ smv.paxTone }};">{{ smv.pax }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ smv.freightTone }};">{{ smv.freight }}</div>
+                  </div>
+                </sc-for>
+              </sc-if>
+              <div style="font-size:11.5px;color:var(--ink3);line-height:1.5;margin-top:10px;text-wrap:pretty;">ⓘ {{ detail.stM.srcNote }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ detail.showDataTab }}">
     <!-- FL3 — хүснэгтийн баганын шүүлт идэвхтэй үед: KPI/график дагаж буйг ил
          хэлж, аль үзүүлэлт хамаарахгүйг нэрлэнэ (бүх датасэтэд нэг мөр). -->
     <sc-if value="{{ detail.pvScope.active }}">
@@ -4647,6 +4756,7 @@
         <div data-eh-card="ddq" data-eh-field="foot" style="font-size:11px;color:var(--ink3);margin-top:20px;padding-top:16px;border-top:1px solid var(--line);line-height:1.5;text-wrap:pretty;">{{ detail.ddqFoot }}</div>
       </div>
     </div>
+    </sc-if>
   </div>
   </sc-if>
 
@@ -8607,6 +8717,27 @@ function sectorWeeklyView(w,sectors){
     weekSlices:slices(last.by_sector),ytdSlices:slices(w.ytd&&w.ytd.by_sector)};
 }
 
+/* «Тооцооллын арга» табын урсгал (Tableau Prep/Catalog lineage загвар): эх датасэт → ашигласан
+   утга → оруулах нөхцөл → салбар. Оролт, томьёо нь backend gold.sector_daily_total
+   (migrations/022–024)-тэй ИЖИЛ байх ёстой — VIEW-д салбар/эх нэмэгдвэл ЭНД нэг мөр нэмж,
+   текстийг content.json → site.sector_total.method.inputs.<id>-д бичнэ.
+   measure: 'all' | 'passengers' | 'freight_tonnes' — сонгоогүй хэмжүүрийн оролт бүдгэрнэ
+   (Tableau lineage: талбар сонгоход зөвхөн түүний эх оролт тодорно). ЦЭВЭР (tests/run.js SM). */
+const SECTOR_TOTAL_LINEAGE=[
+  {id:'air',sector:'air',source:'flights',measures:['passengers','freight_tonnes']},
+  {id:'rail_pax',sector:'rail',source:'railPax',measures:['passengers']},
+  {id:'rail_freight',sector:'rail',source:'railFreightAll',measures:['freight_tonnes']},
+  {id:'road_pax',sector:'road',source:'roadPax',measures:['passengers']}];
+function sectorTotalLineage(measure,T){
+  const ms=(measure==='passengers'||measure==='freight_tonnes')?measure:'all';
+  const P='method.inputs.';
+  return SECTOR_TOTAL_LINEAGE.map(l=>({id:l.id,sector:l.sector,source:l.source,measures:l.measures.slice(),
+    active:ms==='all'||l.measures.indexOf(ms)>=0,
+    fields:l.measures.map(k=>{const s=k==='passengers'?'pax':'freight';
+      return {measure:k,label:T(P+l.id+'.field_'+s,''),tech:T(P+l.id+'.tech_'+s,''),on:ms==='all'||ms===k};}),
+    rule:T(P+l.id+'.rule','')}));
+}
+
 /* 06-р хэсгийн индекс (i06/r06) — авто тээврийн зорчигчийн сарын цуваа (roadPax түүх).
    Эх сурвалж ЦОНХООР ачаалагддаг тул дутуу сарын НИЙТИЙГ бүтэн сартай харьцуулбал худал
    уналт гарна: хамрагдсан (coverage) хоногийн дундаж × сарын хоног = сарын эквивалент,
@@ -9047,6 +9178,8 @@ class Component extends DCLogic {
     roadPaxSel:{}, roadPaxHistVer:0, roadPaxRoutesExpanded:false, roadPaxCompaniesExpanded:false,
     /* Салбарын нэгтгэл — шүүлт (он/сар), хувилбар; нүүрний d05-ийн хэмжүүр (зорчигч/ачаа) */
     sectorTotalSel:{}, sectorTotalVer:0, d05Measure:'passengers',
+    /* Салбарын нэгтгэлийн таб (Өгөгдөл | Тооцооллын арга) ба аргын урсгалын хэмжүүр */
+    stTab:'data', stMethodMeasure:'all',
     airAiThread:null, airAiInput:'',
     mongoliaGeoReady:false, mapSelectedNode:null, pvColWidths:{}, content:null, metricRegistry:null,
     mapProj:'globe', globeRot:[-72,-26], globeZoom:1, globeDragging:false,
@@ -9119,7 +9252,7 @@ class Component extends DCLogic {
     var i=DATASETS.indexOf(d);
     if(i<0) return;
     this.trackDatasetView(d); this.loadFollow(d);
-    this.setState(s=>({dsIndex:i,page:'detail',
+    this.setState(s=>({dsIndex:i,page:'detail',stTab:'data',
       prevPage:opts.prev||(s.page==='detail'?s.prevPage:s.page)}));
     if(!opts.fromUrl) this.pushRoute('browse/'+encodeURIComponent(datasetSlug(d)),opts.replace);
     if(window.scrollTo) window.scrollTo(0,0);
@@ -9777,6 +9910,54 @@ class Component extends DCLogic {
     /* DG-P: донутын хугацааны мөр — оны эхнээс бол хоногийн муж, эс бөгөөс тухайн оны өгөгдөлтэй сарууд */
     return {raw,meas,unit:sh.unit,chartPeriod:chartPeriodText(sh.periodModel,(k,fb)=>stxt('chart.'+k,fb)),period:sh.period};
   }
+  /* Салбарын нэгтгэлийн «Тооцооллын арга» таб. UX жишиг — Tableau: Data Guide (ашигласан
+     өгөгдөл, шүүлт, юу орсон/ороогүй), Catalog lineage (талбар сонгоход эх оролт нь тодорно),
+     Prep-ийн зүүнээс баруун урсгал (оролт → цэвэрлэгээ → нэгтгэл). Урсгал — sectorTotalLineage
+     (цэвэр), текст — content.json → site.sector_total.method, хугацаа — амьд загвараас. */
+  buildSectorTotalMethod(m,chip){
+    const M=(k,fb)=>stxt('sector_total.method.'+k,fb);
+    const ST=(k,fb)=>stxt('sector_total.'+k,fb);
+    const tab=this.state.stTab==='method'?'method':'data';
+    const meas=this.state.stMethodMeasure||'all';
+    const tabStyle=on=>'cursor:pointer;font-family:inherit;font-size:13px;padding:11px 18px;border:none;background:none;border-bottom:2px solid '
+      +(on?'var(--ink);color:var(--ink);font-weight:600;':'transparent;color:var(--ink3);font-weight:500;')+'white-space:nowrap;margin-bottom:-1px;transition:.16s var(--ease);';
+    const tabs=[['data',M('tab_data','Өгөгдөл')],['method',M('tab_method','Тооцооллын арга')]].map(t=>({id:t[0],label:t[1],
+      pick:()=>this.setState({stTab:t[0]}),style:tabStyle(t[0]===tab)}));
+    const MC={passengers:'#2E7CF6',freight_tonnes:'#C2410C'};
+    const MN={passengers:ST('m_pax_short','Зорчигч'),freight_tonnes:ST('m_freight_short','Ачаа')};
+    const measureChips=[['all',M('flow_all','Бүгд')],['passengers',ST('m_pax','Зорчигч тээвэр')],['freight_tonnes',ST('m_freight','Ачаа тээвэр')]]
+      .map(c=>({label:c[1],pick:()=>this.setState({stMethodMeasure:c[0]}),style:chip(c[0]===meas)}));
+    const secName={};
+    (m.allSectors||[]).forEach(s=>{ secName[s.key]=s.name; });
+    const nameOf=k=>secName[k]||ST('names.'+k,{air:'Агаарын тээвэр',road:'Авто тээвэр',rail:'Төмөр зам'}[k]||k);
+    const lin=sectorTotalLineage(meas,(k,fb)=>stxt('sector_total.'+k,fb));
+    const rows=lin.map(l=>{
+      const d=DATASETS.find(x=>x.source===l.source);
+      const color=NEON[l.sector]||'#8CA9E8';
+      return {id:l.id,color,dsName:d?d.name:l.source,agency:d?d.agency:'',hasOpen:!!d,open:()=>{ if(d) this.openDataset(d); },
+        openLabel:M('open_ds','Датасэтийг нээх →'),sectorName:nameOf(l.sector),rule:l.rule,active:l.active?'1':'0',
+        rowStyle:l.active?'':'opacity:.34;filter:saturate(.2);',
+        sectorStyle:'color:'+color+';background:'+color+'1c;',
+        fields:l.fields.map(f=>({label:f.label,tech:f.tech,hasTech:!!f.tech,measure:MN[f.measure],
+          style:f.on?'':'opacity:.4;',
+          badgeStyle:'color:'+MC[f.measure]+';background:'+MC[f.measure]+'18;border:1px solid '+MC[f.measure]+'40;'}))};
+    });
+    const sectorsN=new Set(SECTOR_TOTAL_LINEAGE.map(l=>l.sector)).size;
+    const fields=(Array.isArray(stxt('sector_total.method.fields',null))?stxt('sector_total.method.fields',[]):[])
+      .filter(f=>f&&f.name).map(f=>({name:f.name,formula:f.formula||'',note:f.note||''}));
+    const excl=(Array.isArray(stxt('sector_total.method.excl',null))?stxt('sector_total.method.excl',[]):[]).filter(Boolean).map(x=>({text:x}));
+    const cov=(m.allSectors||[]).map(s=>({name:s.name,color:s.color}));
+    return {show:tab==='method',tabs,measureChips,rows,fields,excl,
+      hasCov:cov.length>0,srcNote:m.source==='fallback'?M('src_fallback',''):M('src_backend',''),
+      stats:[{label:M('stat_inputs','Эх датасэт'),value:String(SECTOR_TOTAL_LINEAGE.length)},
+        {label:M('stat_sectors','Салбар'),value:String(sectorsN)},
+        {label:M('stat_measures','Хэмжүүр'),value:String(SECTOR_TOTAL_MEASURES.length)},
+        {label:M('stat_grain','Нарийвчлал'),value:M('grain','өдөр × салбар')}],
+      t:{head:M('head','Энэ нэгтгэлийг хэрхэн тооцдог вэ'),lead:M('lead',''),flowTitle:M('flow_title',''),flowHint:M('flow_hint',''),
+        colSource:M('col_source',''),colField:M('col_field',''),colRule:M('col_rule',''),colSector:M('col_sector',''),
+        resultTitle:M('result_title','= Салбарын нэгтгэл'),resultNote:M('result_note',''),
+        fieldsTitle:M('fields_title',''),fieldsHint:M('fields_hint',''),exclTitle:M('excl_title',''),covTitle:M('cov_title','')}};
+  }
   /* Салбарын нэгтгэлийн анализын самбар — sectorTotalModel / sectorWeeklyView (цэвэр) →
      темплейт. Текст: content.json → site.sector_total. Шүүлт (он + сар) KPI, сарын
      график, эзлэх хувь, он дамнасан харьцуулалтад; 7 хоногийн тайлан шүүлтээс үл хамаарна. */
@@ -9836,6 +10017,8 @@ class Component extends DCLogic {
     base.stCoverageNote=(missing.length?T('cov_missing','{names} — эх сурвалж холбогдоогүй тул нэгтгэлд ороогүй (0 гэж тооцохгүй).').replace('{names}',missing.join(', ')):'')
       +(m.source==='fallback'?(missing.length?' ':'')+T('cov_fallback','Нэгтгэлийн endpoint ачаалагдаагүй — салбарын датасэтүүдээс сараар нийлүүлэв.'):'');
     base.stHasCoverageNote=!!base.stCoverageNote;
+    /* «Тооцооллын арга» таб — өгөгдөл ирээгүй үед ч харагдана (арга нь өгөгдлөөс үл хамаарна) */
+    base.stM=this.buildSectorTotalMethod(m,chip);
     if(!m.hasData&&keys) txt.noData=stxt('pv_scope.no_match','Хүснэгтийн шүүлтэд таарах мөр алга — шүүлтийг цэвэрлэнэ үү.');
     else if(!m.hasData&&m.years&&m.years.length) txt.noData=T('no_data_range','Сонгосон он, сард мэдээ алга — шүүлтийг өөрчилнө үү.');
     if(!m.hasData) return base;
@@ -14650,6 +14833,8 @@ class Component extends DCLogic {
       /* DG-P: «Салбарын бүтэц»-ийн хугацаа — агаар: шүүлтийн муж; вагон: сүүлийн бүрэн хоног */
       hasRankPeriod:!rankEmptyNow&&(isAirDetail||!!SECTORS[dsel.sector]._rankAsOf),
       rankPeriod:isAirDetail?(airExtra.airPeriod||''):chartPeriodText({asOf:SECTORS[dsel.sector]._rankAsOf},(k,fb)=>stxt('chart.'+k,fb)),notRoadInspect:!isRoadInspect&&!isFreight&&!isSumTotal&&!isRoadPax,...roadExtra,
+      /* Салбарын нэгтгэлийн «Тооцооллын арга» табыг нээсэн үед өгөгдлийн хэсэг нуугдана */
+      showDataTab:!(isSumTotal&&stExtra.stM&&stExtra.stM.show),
       /* Хүснэгтийн дотор талын төлөвийн шүүлт: нэгдсэн шүүлт (түүх ирсэн
          үед дээд талд) байгаа датасэтэд ДАВХАРДАХГҮЙ. */
       /* Түүхий мөрийн хүснэгт (үзлэг) өөрийн баганын шүүлттэй — нэгдсэн хугацааны шүүлт байсан ч самбар нээгдэнэ */
