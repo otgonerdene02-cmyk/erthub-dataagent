@@ -8456,6 +8456,25 @@ async function groupHM() {
     check('HM15. Олон улсын: газар бүр улстай + координаттай, транзитын улс бүр COUNTRY_COORD-д, via өртөө бүр хүснэгтэд',
       !!X && !badP.length && !badT.length && !badV.length, JSON.stringify({ badP, badT, badV }));
   }
+  {
+    /* Хэрэглэгчийн илрүүлсэн алдаа (2026-10-26): бөмбөрцөг дээр нислэг УЛСААР (Хятад нэг цэг) гарч,
+       Европт зөвхөн «Герман» мэт харагдав. Нислэг ХОТООР: олон нисэх буудал → нэг хот, координат хот бүрт. */
+    const ac = idx.match(/\nconst AIR_CITY=\{[\s\S]*?\n\};\n/), al = idx.match(/\nconst AIR_CITY_ALIAS=\{[\s\S]*?\n\};\n/);
+    const fn = idx.match(/\nfunction airCityName\([^)]*\)\{[\s\S]*?\n\}\n/);
+    const X = ac && al && fn ? new Function(ac[0] + al[0] + fn[0] + 'return {AIR_CITY,AIR_CITY_ALIAS,airCityName};')() : null;
+    const n = X ? X.airCityName : () => '?';
+    const cases = [['Сөүл/Инчеон', 'Сөүл'], ['Seoul Ab', 'Сөүл'], ['Бээжин/Дашин', 'Бээжин'], ['Бээжин', 'Бээжин'], [' Хөх хот ', 'Хөх хот'],
+      ['Токио/Ханеда', 'Токио'], ['Внуково/Москва', 'Москва'], ['Тестград', null], [undefined, null], ['', null]];
+    const badC = cases.filter((c) => n(c[0]) !== c[1]);
+    const badA = X ? Object.keys(X.AIR_CITY_ALIAS).filter((k) => !X.AIR_CITY[X.AIR_CITY_ALIAS[k]]) : ['?'];
+    const badL = X ? Object.keys(X.AIR_CITY).filter((k) => { const o = X.AIR_CITY[k];
+      return !o.country || !Array.isArray(o.ll) || o.ll.length !== 2 || Math.abs(o.ll[0]) > 180 || Math.abs(o.ll[1]) > 90; }) : ['?'];
+    const cn = X ? Object.keys(X.AIR_CITY).filter((k) => X.AIR_CITY[k].country === 'Хятад').length : 0;
+    const asCountry = X ? Object.keys(X.AIR_CITY).filter((k) => ['Хятад', 'Япон', 'Герман', 'Турк'].includes(k)) : ['?'];
+    check('HM25. Нислэг ХОТООР: нисэх буудал → хот (Сөүл/Инчеон → Сөүл), танигдаагүй → null, алиас бүр хүснэгтэд, координат хүчинтэй, Хятадад ≥15 хот',
+      !!X && !badC.length && !badA.length && !badL.length && cn >= 15 && !asCountry.length,
+      JSON.stringify({ badC, badA, badL, cn, asCountry }));
+  }
   check('HM9. Өртөөний байршил OSM-оос, таагаагүй (Эрээнцав/Аршаант координатгүй), шугамын бүх өртөө координаттай',
     /const RAIL_STATION_COORD=\{/.test(idx) && !/'эрээнцав':\[/.test(idx) && !/'аршаант':\[/.test(idx));
   check('HM10. Темплейт: chip (салбарын шүүлт), аймаг/цэг/шугам tooltip-тэй, icon pointer-events none',
@@ -8474,7 +8493,7 @@ async function groupHM() {
   }
 
   if (!CHROME) { skipped('HM11 нүүрийн газрын зураг (хөтөч)', 'Chrome олдсонгүй'); return; }
-  const probe = async function (d) {
+  const probe = async function (d, w) {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const v = f(); if (v) return v; await sleep(200); } return null; };
     const map = () => d.querySelector('[data-home-map]');
@@ -8493,6 +8512,8 @@ async function groupHM() {
       scope: [...m.querySelectorAll('[data-hm-scope]')].map((b) => b.dataset.hmScope + ':' + b.dataset.on),
       zoom: [...m.querySelectorAll('[data-hm-zoom]')].map((b) => b.dataset.hmZoom + ':' + b.dataset.on),
       regions: m.querySelectorAll('path.eh-hm-reg').length,
+      tops: [...m.querySelectorAll('[data-hm-top-sector]')].map((x) => [x.dataset.hmTopSector, [...x.querySelectorAll('[data-hm-row]')].map((r) => r.innerText.trim().replace(/\s*\n\s*/g, '|'))]),
+      cursor: (m.querySelector('svg.eh-hm-svg').getAttribute('style') || '').match(/cursor:\s*(\w*)/),
       text: m.innerText });
     const click = async (sel) => { m.querySelector(sel).click(); await sleep(450); };
     /* 1. Олон улсын (анхдагч) */
@@ -8501,6 +8522,14 @@ async function groupHM() {
     await click('[data-hm-chip="all"]');
     await click('[data-hm-zoom="region"]'); const w2 = snap();
     await click('[data-hm-zoom="world"]');
+    /* Бөмбөрцгийг чирэх — цэг шилжинэ */
+    const fx = () => (snap().nodeXY.find((x) => /^✈️ Франкфурт/.test(x[2])) || [null])[0];
+    const svg = m.querySelector('svg.eh-hm-svg'), br = svg.getBoundingClientRect(), dx0 = fx();
+    svg.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, clientX: br.left + 60, clientY: br.top + 60 }));
+    w.dispatchEvent(new w.MouseEvent('mousemove', { clientX: br.left + 140, clientY: br.top + 70 }));
+    await sleep(300); w.dispatchEvent(new w.MouseEvent('mouseup', {})); await sleep(450);
+    const drag = { before: dx0, after: fx() };
+    await click('[data-hm-zoom="world"]');
     /* 2. Дотоод */
     await click('[data-hm-scope="dom"]');
     await until(() => ready(/вагон ачилт/) && m.querySelectorAll('path.eh-hm-reg').length < 60, 15000);
@@ -8508,7 +8537,7 @@ async function groupHM() {
     await click('[data-hm-chip="air"]'); const b = snap();
     await click('[data-hm-chip="all"]'); const c = snap();
     await click('[data-hm-scope="intl"]');
-    return { w0, w1: { nodeTips: w1.nodeTips, chips: w1.chips }, w2: { nodeXY: w2.nodeXY, zoom: w2.zoom }, a,
+    return { w0, drag, w1: { nodeTips: w1.nodeTips, chips: w1.chips }, w2: { nodeXY: w2.nodeXY, zoom: w2.zoom }, a,
       b: { movers: b.movers, air: b.nodeTips.filter((t) => /Агаар/.test(t) && !/^[^—]*аймаг/.test(t)).length, chips: b.chips }, c: { movers: c.movers } };
   };
   const srv = serve();
@@ -8536,6 +8565,19 @@ async function groupHM() {
   check('HM17. Олон улсын: «Агаар» chip унтраахад ✈️ цэг алга, галт тэрэг/автобусны цэг хэвээр',
     R.w1.chips.includes('air:0') && !R.w1.nodeTips.some((t) => /^✈️/.test(t)) && R.w1.nodeTips.some((t) => /^🚆|^🚌/.test(t)),
     JSON.stringify(R.w1.nodeTips.slice(0, 4)));
+  {
+    const air = R.w0.nodeTips.filter((t) => /^✈️/.test(t));
+    const cityTips = air.filter((t) => /^✈️ (Токио|Франкфурт|Истанбул|Хонг Конг|Бээжин) \((Япон|Герман|Турк|Хонг Конг|Хятад)\) — [\d,]+ зорчигч/.test(t));
+    const countryTips = air.filter((t) => /^✈️ (Хятад|Япон|Турк|Герман) — /.test(t));
+    const top = Object.fromEntries((R.w0.tops || []).map((x) => [x[0], x[1]]));
+    check('HM26. Олон улсын нислэг ХОТООР (Токио (Япон), Франкфурт (Герман) …), улсын нэгтгэл цэг алга; доор салбар бүрийн хүрэх хотын жагсаалт',
+      cityTips.length >= 4 && !countryTips.length && ['air', 'rail', 'road'].every((k) => (top[k] || []).length > 0) &&
+      top.air.every((t) => /^.+ · .+\|[\d,]+$/.test(t)) && top.rail.some((t) => /^Эрээн · Хятад\|[\d,]+$/.test(t)),
+      JSON.stringify({ cityTips: cityTips.length, countryTips, top }));
+    check('HM27. Бөмбөрцөг (агаарын хуудас шиг): чирэхэд эргэнэ — Франкфуртын цэг шилжинэ, курсор grab',
+      R.drag.before != null && R.drag.after != null && Math.abs(R.drag.after - R.drag.before) > 5 && /grab/.test((R.w0.cursor || [])[1] || ''),
+      JSON.stringify({ drag: R.drag, cursor: R.w0.cursor }));
+  }
   {
     const ubD = (xy) => { const ub = xy.find((x) => /^Улаанбаатар — /.test(x[2])), e = xy.find((x) => /^(🚆|🚌) Эрээн/.test(x[2]));
       return ub && e ? Math.hypot(ub[0] - e[0], ub[1] - e[1]) : 0; };
