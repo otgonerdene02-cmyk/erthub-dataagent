@@ -1709,7 +1709,7 @@ function groupAX() {
     hd.barRects[0].tip === '1-р сар: 100', hd.barRects[0].tip);
   check('HV-PAX6. Донутын зүсэм бүрт <title>, дэлгэрэнгүйн зорчигчийн трендэд прогноз зурахгүй',
     /<title>\{\{ wd\.tip \}\}<\/title><\/circle>/.test(read('index.html').split('detail.paxDonut')[1] || '') &&
-    /buildTrendChart\(dsSec\.c1d,0,dsSec\._partialValue,dsel\.source==='railPax'\)/.test(src));
+    /buildTrendChart\(dsSec\.c1d,0,dsSec\._partialValue,dsel\.source==='railPax',dsSec\._partialDay\)/.test(src));
   check('AX11. ОУ/Дотоодын донут НИСЛЭГИЙН хувиар (kpis[2]) БИШ, \'75%\' fallback-гүй',
     !/sAir\.kpis\[2\]\[2\]\|\|'75%'/.test(src) && /sAir\.paxSplit/.test(src) &&
     /SECTORS\.air\.paxSplit=\{\.\.\.split,typeFiltered/.test(src));
@@ -4972,10 +4972,10 @@ async function groupBE() {
   check('BE42. "48,210" мөр утга болж кодод ч content.json-д ч үлдээгүй',
     !/'48,210/.test(dcScript()) && !/48,210/.test(fs.readFileSync(path.join(ROOT, 'content.json'), 'utf8')));
   /* Хоосон цуваа график бүтээгчийг нураахгүй (Math.max([]) = -Infinity) */
-  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast)?)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
+  const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast(?:,pday)?)?)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
   let btcOk = false, btcErr = '';
   try {
-    const f = new Function('data', 'off', 'partial', 'noForecast', 'MONTHS', 'stxt', btc42[1]);
+    const f = new Function('data', 'off', 'partial', 'noForecast', 'MONTHS', 'stxt', 'pday', btc42[1]);
     const r = f([], 0, undefined, false, MONTHS25, (p, x) => x);
     btcOk = !!r && /^M/.test(r.line) && !/NaN|Infinity/.test(r.line + r.peak.value);
   } catch (e) { btcErr = e.message; }
@@ -5006,7 +5006,7 @@ async function groupBE() {
   }
   if (btc42) {
     const mk44 = new Function('MONTHS', 'stxt',
-      'return function buildTrendChart(data,off,partial,noForecast){' + btc42[1] + '}')(MONTHS25, (p, x) => x);
+      'return function buildTrendChart(data,off,partial,noForecast,pday){' + btc42[1] + '}')(MONTHS25, (p, x) => x);
     const d9 = v44.slice(0, 9);
     const a44 = mk44(d9, 0), b44 = mk44(d9, 0, 654);
     check('BE44. Дутуу сарын цэг график дээр гарна ("дутуу: 654")',
@@ -5739,10 +5739,10 @@ async function groupBE() {
      АЧААЛАЛ (МЯНГА) · мэдээлэл алга" гэсэн гарчгийн доор ХАВТГАЙ муруй
      зурагдаж, Y тэнхлэг "-6 -3 0 3 6" (сөрөг "мянган" ачаалал!), X
      тэнхлэг "1-р сар … 11-р сар" гэж бичигдэж байв. */
-  const btm = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast)?)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
+  const btm = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast(?:,pday)?)?)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
   if (!btm) { bad('BE39. buildTrendChart() олдсонгүй'); return; }
   const btc = new Function('MONTHS', 'stxt',
-    'return function buildTrendChart(data,off,partial,noForecast){' + btm[1] + '}')(
+    'return function buildTrendChart(data,off,partial,noForecast,pday){' + btm[1] + '}')(
     ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар',
       '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'], sx);
   const zeroCh = btc(new Array(12).fill(0), 0);
@@ -8373,6 +8373,12 @@ async function groupRT() {
   check('RT3. 4–8-р сар мэдээгүй (завсар) → null — хэсэгчилж зурахгүй, 0 зохиохгүй', s9 === null, JSON.stringify(s9));
   const full = { status: 'ok', months: H.months.concat([4, 5, 6, 7, 8].map((m) => ({ month: '2026-0' + m, days: 30, days_in_month: 30, passengers: 3000 }))) };
   const sf = G.roadPaxSeries(full, NOW);
+  /* RT4b — шошгоны «1–N» нь мэдээ ХҮРСЭН өдөр (last_date), өнөөдөр (22) биш: ETL хоцорвол худал хэлнэ */
+  const fullLd = { status: 'ok', months: full.months.map((m) => m.month === '2026-10' ? Object.assign({}, m, { last_date: '2026-10-19' }) : m) };
+  const sl = G.roadPaxSeries(fullLd, NOW);
+  check('RT4b. Одоогийн сарын мэдээ хүрсэн өдөр: last_date 2026-10-19 → partialDay 19, partialDim 31; last_date-гүй бол null',
+    sl && sl.partialDay === 19 && sl.partialDim === 31 && sf && sf.partialDay === null,
+    JSON.stringify({ day: sl && sl.partialDay, dim: sl && sl.partialDim, noLd: sf && sf.partialDay }));
   check('RT4. Бүтэн 1–9-р сар: 9 утга, 9-р сар 1500/15×30 = 3000 (15/30 хоног), одоогийн сар partialValue = 5000',
     sf && sf.counts.length === 9 && sf.counts[8] === 3000 && sf.partials[8].days === 15 && sf.partial === '2026-10' && sf.partialValue === 5000,
     JSON.stringify(sf));
@@ -8839,11 +8845,11 @@ function groupDG() {
 
   /* DG6. Trend график: Y тэнхлэг 0-ээс, legend, дутуу цэгийн tooltip */
   const src = dcScript();
-  const mt = src.match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast)?)?\)\{([\s\S]*?)\n\}\n/);
+  const mt = src.match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast(?:,pday)?)?)?\)\{([\s\S]*?)\n\}\n/);
   if (!mt) { bad('DG6. buildTrendChart() задарсангүй'); }
   else {
     const MONTHS = ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар', '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'];
-    const mk = new Function('MONTHS', 'stxt', 'return function buildTrendChart(data,off,partial,noForecast){' + mt[1] + '}')(MONTHS, (p, x) => x);
+    const mk = new Function('MONTHS', 'stxt', 'return function buildTrendChart(data,off,partial,noForecast,pday){' + mt[1] + '}')(MONTHS, (p, x) => x);
     const d9 = [1343, 900, 1043, 1028, 1213, 1555, 1860, 1871, 1433];
     const withP = mk(d9, 0, 559), noP = mk(d9, 0);
     check('DG6. Y тэнхлэг 0-ээс эхэлнэ (дутуу сар 559 багтсан ч 500 биш)',
@@ -8857,6 +8863,12 @@ function groupDG() {
       /\(1–\d+ хүртэл\): 559 · дутуу сар \(хэсэгчилсэн\)/.test(withP.partialLabel), withP.partialLabel);
     check('DG6. Графикийн богино шошго tooltip-ээс богино (баруун ирмэгт багтана)',
       withP.partialShort.length > 0 && withP.partialShort.length < withP.partialLabel.length, withP.partialShort);
+    /* 2026-10-26: «10-р сар · 142,192 · дутуу» нь бүтэн сартай зэрэгцэж «уналт» мэт уншигдав —
+       шошгонд хамрагдсан хоног, tooltip-д N/M хоног + өдрийн дундаж (559/25 = 22) */
+    const withD = mk(d9, 0, 559, false, { day: 25, dim: 31 });
+    check('DG6b. Мэдээ хүрсэн өдөр өгвөл: шошго «10-р сар 1–25 · 559 · дутуу», tooltip «25/31 хоног» + «өдрийн дундаж 22»',
+      withD.partialShort === '10-р сар 1–25 · 559 · дутуу' && /\(1–25 хүртэл · 25\/31 хоногоор\): 559/.test(withD.partialLabel) &&
+      /өдрийн дундаж 22/.test(withD.partialLabel), withD.partialShort + ' | ' + withD.partialLabel);
     check('DG6. Таамаг ДУТУУ сараас эхлэхгүй: шугам 9 цэг, таамгийн эхлэл = сүүлийн бүтэн сар',
       withP.line.split('L').length === 9 && withP.fcSplitX === noP.fcSplitX, '');
   }

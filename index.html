@@ -17,7 +17,7 @@
 <script src="js/erthub-publish.js?v=ffe215f9"></script>
 <script src="js/erthub-backend.js?v=a96de8ab"></script>
 <script src="js/erthub-chart.js?v=422174bf"></script>
-<script src="js/erthub-glossary.js?v=8aacae8e"></script>
+<script src="js/erthub-glossary.js?v=327f42d5"></script>
 <script src="js/erthub-tip.js?v=ba005e59"></script>
 <script src="js/vendor/dc-runtime.js?v=8fe7df74"></script>
 </head>
@@ -1108,7 +1108,7 @@
 
     
 
-    <div id="sec-05" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;min-width:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ sector.c1 }}{{ t05CovNote }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
+    <div id="sec-05" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#2E7CF6,#2E7CF6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #2E7CF6cc;">05</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;min-width:0;"><span data-eh-card="t05" data-eh-field="title">{{ t05Title }}</span> — {{ t05Sector }} · {{ sector.c1 }}{{ t05CovNote }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
       <button sc-camel-on-click="{{ f05.toggle }}" aria-label="{{ sA11yFilter }}" style="{{ f05.btnStyle }}">⚗</button>
     </div>
     <sc-if value="{{ f05.open }}">
@@ -1134,6 +1134,8 @@
         </div>
       </div>
       <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ trendPeriod }}</div>
+      <div data-t05-scope="1" style="font-size:11.5px;line-height:1.5;color:var(--ink2);margin:-6px 0 12px;">{{ t05Scope }}<sc-if value="{{ t05Cadence }}"><br><span style="color:var(--ink3);">{{ t05Cadence }}</span></sc-if></div>
+      <div data-t05-tabs="1" style="display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px;"><sc-for list="{{ t05Tabs }}" as="tt" hint-placeholder-count="4"><button sc-camel-on-click="{{ tt.select }}" aria-pressed="{{ tt.on }}" style="{{ tt.style }}">{{ tt.label }}</button></sc-for></div>
       <sc-if value="{{ trend.noData }}">
         <div style="height:210px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ trend.noDataNote }}</div>
       </sc-if>
@@ -7776,7 +7778,7 @@ function kpiGridCols(n){
   return n%4===0?4:(n%3===0?3:4);
 }
 
-function buildTrendChart(data,off,partial,noForecast){
+function buildTrendChart(data,off,partial,noForecast,pday){
   /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
      хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
      Math.max.apply(null,[]) = -Infinity, data[-1] = undefined болж график
@@ -7848,11 +7850,17 @@ function buildTrendChart(data,off,partial,noForecast){
   const pY=pv!=null?Y(pv):0;
   /* Дутуу сар = ОДООГИЙН сар (dropPartialMonth). Хүртэлх өдрийг УБ-ийн
      огнооноос авна — сар бүр өөр тул hardcode хийхгүй. */
-  const upToDay=new Date(Date.now()+8*3600000).getUTCDate();
-  const partialLabel=pv!=null?(MONTHS[n+off]||'')+' (1–'+upToDay+' '+stxt('chart.partial_upto','хүртэл')+'): '
-    +Math.round(pv).toLocaleString('en-US')+' · '+stxt('chart.partial_mark','дутуу')+' '+stxt('chart.partial_word','сар (хэсэгчилсэн)'):'';
-  /* График дээрх богино шошго (баруун ирмэгт багтана); бүтэн текст нь tooltip-д. */
-  const partialShort=pv!=null?(MONTHS[n+off]||'')+' · '+Math.round(pv).toLocaleString('en-US')+' · '+stxt('chart.partial_mark','дутуу'):'';
+  /* pday — эх сурвалжийн мэдээ ХҮРСЭН өдөр ({day,dim}); мэдэгдвэл түүгээр (ETL хоцорвол
+     өнөөдрийн огноо «1–26» гэж худал хэлнэ), N/M хоног ба өдрийн дунджийг tooltip-д ИЛ. */
+  const upToDay=(pday&&pday.day>0)?pday.day:new Date(Date.now()+8*3600000).getUTCDate();
+  const pDays=(pday&&pday.day>0&&pday.dim>0)?' · '+stxt('chart.partial_days','{d}/{m} хоногоор').replace('{d}',pday.day).replace('{m}',pday.dim):'';
+  const pAvg=(pv!=null&&upToDay>0)?' · '+stxt('chart.partial_daily_avg','өдрийн дундаж')+' '+Math.round(pv/upToDay).toLocaleString('en-US'):'';
+  const partialLabel=pv!=null?(MONTHS[n+off]||'')+' (1–'+upToDay+' '+stxt('chart.partial_upto','хүртэл')+pDays+'): '
+    +Math.round(pv).toLocaleString('en-US')+' · '+stxt('chart.partial_mark','дутуу')+' '+stxt('chart.partial_word','сар (хэсэгчилсэн)')+pAvg
+    +' · '+stxt('chart.partial_joins','сар дуусахад шугамд нэмэгдэнэ'):'';
+  /* График дээрх богино шошго (баруун ирмэгт багтана); бүтэн текст нь tooltip-д.
+     «1–N» — бүтэн сартай зэрэгцэх бага цэгийг «уналт» гэж уншихаас сэргийлнэ. */
+  const partialShort=pv!=null?(MONTHS[n+off]||'')+' 1–'+upToDay+' · '+Math.round(pv).toLocaleString('en-US')+' · '+stxt('chart.partial_mark','дутуу'):'';
   /* Тайлбар (legend) — зөвхөн графикт ЗУРАГДСАН цувааг нэрлэнэ. */
   const legend=[{key:'actual',label:stxt('chart.legend_actual','Бодит (бүтэн сар)'),lineStyle:'solid'}]
     .concat(pv!=null?[{key:'partial',label:stxt('chart.legend_partial','Хэсэгчилсэн (одоогийн сар)'),lineStyle:'dotted'}]:[])
@@ -10845,6 +10853,8 @@ class Component extends DCLogic {
     /* t05-ийн толгойд "* … дуусаагүй" тэмдэглэгээ ҮҮНЭЭС гарна */
     SECTORS[k]._partialDropped=s.partial||null;
     SECTORS[k]._partialValue=(s.partial&&isFinite(s.partialValue))?s.partialValue:null;
+    /* Дутуу сарын мэдээ хүрсэн өдөр (road: last_date) — мэдэгдэхгүй бол null (өнөөдрөөр) */
+    SECTORS[k]._partialDay=(s.partial&&s.partialDay>0)?{day:s.partialDay,dim:s.partialDim||null}:null;
     /* Цуваа ЭНЭ датасэтийнх — өөр датасэтийн хуудсан дээр муруй гаргахгүй */
     SECTORS[k]._liveSeriesDs=cfg.dataset;
     /* Датасэтийн мета — u07-ийн мөр ба датасэтийн дэлгэрэнгүй ҮҮНЭЭС
@@ -14572,7 +14582,7 @@ class Component extends DCLogic {
     const dsHasTrend=(!dsSec._liveKpis||(!!dsSec._liveSeries&&
       (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name)))&&
       Array.isArray(dsSec.c1d)&&dsSec.c1d.some(v=>+v>0);
-    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue,dsel.source==='railPax'):null;
+    const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue,dsel.source==='railPax',dsSec._partialDay):null;
     /* DG-P: трендийн картын хугацаа — c1d-ийн БОДИТ бичлэгтэй сарууд (c1dYear-ээр).
        Дутуу сар цуваанаас хасагдсан бол тэмдэглэнэ. Цуваа хоосон бол «мэдээлэл алга». */
     const dsTrendKeys=(dsHasTrend&&dsSec.c1dYear)?dsSec.c1d.map((v,i)=>(+v>0?dsSec.c1dYear+'-'+String(i+1).padStart(2,'0'):null)).filter(Boolean):[];
@@ -16061,7 +16071,7 @@ class Component extends DCLogic {
       ? (t05Ser
           ? buildTrendChart(t05Ser,0)
           : buildTrendChart(win.length>1?win:s.c1d,win.length>1?mfr-1:0,
-              mto>=s.c1d.length?s._partialValue:null))
+              mto>=s.c1d.length?s._partialValue:null,false,s._partialDay))
       : Object.assign(buildTrendChart(new Array(12).fill(0),0),
           {showForecast:false,dataNote:stxt('status.no_data','мэдээлэл алга')});
     /* Цуваагүй үед ГРАФИКИЙГ ОГТ зурахгүй. Өмнө нь 12 тэгийн хавтгай
@@ -16307,6 +16317,18 @@ class Component extends DCLogic {
       t05CovNote:(s&&s._partialDropped)
         ?' · '+stxt('status.partial_month','* дуусаагүй сар цэгээр тэмдэглэв')+
           ' ('+s._partialDropped+')':'',
+      /* Цуваа АЛЬ салбарынх вэ — гарчигт «Сарын зорчигч» гэж л бичигдэх тул салбаруудын
+         нэгтгэл мэт уншигдаж байв (2026-10-26). Хамрах хүрээ + шинэчлэгдэх хэмнэлийг ИЛ. */
+      t05Sector:(s&&s.label)||'',
+      t05Scope:[({road:stxt('t05_scope.road',''),rail:stxt('t05_scope.rail','')})[key]||stxt('t05_scope.generic','{sector} салбарын цуваа.').replace('{sector}',(s&&s.label)||''),
+        stxt('t05_scope.not_total','Салбаруудын нэгтгэл биш — өөр салбарыг доорх товчоор сонгоно.')].join(' '),
+      /* Салбарын товч 05-аас ~2300px дээр (шүүлтийн мөр) — энд жижиг хуулбар, ижил select() */
+      t05Tabs:sectorTabs.map(t=>({key:t.key,label:t.label,select:t.select,on:t.key===key?'true':'false',
+        style:'font:inherit;font-size:11px;padding:3px 10px;border-radius:999px;cursor:pointer;white-space:nowrap;'
+          +(t.key===key?`border:1px solid ${t.color};background:${t.color}1f;color:var(--ink);font-weight:600;`
+            :'border:1px solid var(--line2);background:transparent;color:var(--ink3);')})),
+      t05Cadence:(s&&s._partialDropped&&this.seriesVerified('t05',key))
+        ?stxt('t05_scope.cadence','Шугам ба таамаг нь өдрийн мэдээг сараар нийлүүлж, зөвхөн БҮТЭН сараар тооцогдоно — сар дуусахад шинэчлэгдэнэ. Хөндий цэг (одоогийн сар) өдөр бүр өснө.'):'',
       t05Foot:this.txt('t05','foot','Дундаж шугам харуулах'),
       i06Title:this.txt('i06','title','Салбар хоорондын харьцуулалт (индекс)'),
       i06Sub:this.txt('i06','sub','суурь индекс = 100'),

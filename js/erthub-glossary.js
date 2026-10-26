@@ -414,7 +414,7 @@
     if (!(h && h.status === 'ok' && Array.isArray(h.months))) return null;
     var ub = new Date((now == null ? Date.now() : now) + 8 * 3600000);
     var curKey = ub.getUTCFullYear() * 100 + (ub.getUTCMonth() + 1);
-    var by = {}, partial = null, partialValue = null, maxKey = 0;
+    var by = {}, partial = null, partialValue = null, partialDay = null, partialDim = null, maxKey = 0;
     h.months.forEach(function (m) {
       if (!m || !/^\d{4}-\d{2}$/.test(String(m.month))) return;
       var y = +m.month.slice(0, 4), mo = +m.month.slice(5, 7), k = y * 100 + mo;
@@ -422,7 +422,12 @@
       if (days <= 0) return;
       var dim = +m.days_in_month || new Date(Date.UTC(y, mo, 0)).getUTCDate();
       if (k >= curKey) {
-        if (k === curKey) { partial = m.month; partialValue = +m.passengers || 0; }
+        if (k === curKey) {
+          partial = m.month; partialValue = +m.passengers || 0;
+          /* Мэдээ ХҮРСЭН сүүлийн өдөр (өнөөдөр БИШ — ETL хоцорч болно): шошгон дээр «1–N» */
+          var ld = /^\d{4}-\d{2}-(\d{2})/.exec(String(m.last_date || ''));
+          partialDay = ld ? +ld[1] : null; partialDim = dim;
+        }
         return;
       }
       var v = days >= dim ? (+m.passengers || 0)
@@ -450,7 +455,8 @@
        цуваа түүнээс өмнө тасарсан бол (жиш. 4–9-р сар мэдээгүй) өөр сарын нэрээр гарна → хаяна. */
     var adj = partial && curKey === year * 100 + counts.length + 1;
     return { unit: 'зорчигч', year: year, counts: counts, partials: partials, lastMonth: counts.length,
-      partial: adj ? partial : null, partialValue: adj ? partialValue : null, prev: prev };
+      partial: adj ? partial : null, partialValue: adj ? partialValue : null,
+      partialDay: adj ? partialDay : null, partialDim: adj ? partialDim : null, prev: prev };
   }
 
   var api = {
