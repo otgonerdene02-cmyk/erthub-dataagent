@@ -133,7 +133,11 @@
         return row({ month: x.key, days: x.days, days_in_month: x.dim, rows: mtz ? 90 : 2600,
           last_date: x.key + '-' + pad(x.days) }, k); }),
       by_station: (mtz ? ['Цогтцэций', 'Төмөртэй'] : FR_ST).map(function (s, i) {
-        return row({ station: s, rows: 900 - i * 50 }, base * 6 / (i + 1)); }),
+        return row({ station: s, rows: 900 - i * 50 }, base * 6 / (i + 1)); }).concat(mtz ? [] :
+        /* Транзит мөрийн «Өртөө» нь улсын нэр (амьд хариутай ижил) — нүүрийн олон улсын газрын зураг */
+        [['Хятад', 8208], ['ОХУ', 5737], ['Белорус', 2323]].map(function (c) {
+          return { station: c[0], rows: 120, transit_wagons: c[1], transit_tonnes: c[1] * 31, export_wagons: 0, export_tonnes: 0,
+            import_wagons: 0, import_tonnes: 0, domestic_wagons: 0, domestic_tonnes: 0, wagons: c[1], tonnes: c[1] * 31 }; })),
       by_cargo: (mtz ? FR_CG.slice(0, 6) : FR_CG).map(function (c, i) {
         return row({ cargo: c, rows: 700 - i * 40 }, base * 5 / (i + 1.5)); }) };
   }
@@ -209,7 +213,7 @@
       totals: { passengers: tot },
       by_type: RP_TYPES.map(function (t) { return { type: t, passengers: mrows.reduce(function (a, m) { return a + m.by_type[t]; }, 0) }; }),
       by_route: share([['Да.Дархан - УБ - Да.Дархан', 9, 'Хот хооронд'], ['Ор.Баян Өндөр - УБ - Ор.Баян Өндөр', 8, 'Хот хооронд'],
-        ['Хө.Мөрөн - УБ - Хө.Мөрөн', 6, 'Хот хооронд'], ['Эрээн хот/БНХАУ/ - Дг.Замын-Үүд - Эрээн хот/БНХАУ/', 5, 'Улс хооронд'],
+        ['Хө.Мөрөн - УБ - Хө.Мөрөн', 6, 'Хот хооронд'], ['Эрээн хот/БНХАУ/ - Дг.Замын-Үүд - Эрээн хот/БНХАУ/', 5, 'Улс хооронд'], ['Улаан-Үд/ОХУ/ - УБ - Улаан-Үд/ОХУ/', 1, 'Улс хооронд'],
         ['Өм.Цогтцэций - УБ - Өм.Цогтцэций', 4, 'Хот хооронд'], ['Бн.Баянхонгор - УБ - Бн.Баянхонгор', 4, 'Хот хооронд'],
         ['До.Хэрлэн - УБ - До.Хэрлэн', 3, 'Хот хооронд'], ['Өв.Арвайхээр - УБ - Өв.Арвайхээр', 3, 'Хот хооронд'],
         ['Ар.Эрдэнэбулган - УБ - Ар.Эрдэнэбулган', 3, 'Хот хооронд'], ['Тө.Зуунмод - УБ - Тө.Зуунмод', 2, 'Хот хооронд'],
