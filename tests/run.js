@@ -8569,6 +8569,18 @@ async function groupRT() {
     out.cols = g ? getComputedStyle(g).gridTemplateColumns.split(' ').length : 0;
     const c5 = t05Card();
     out.t05 = c5 ? { shown: getComputedStyle(c5).display !== 'none', tips: [...c5.querySelectorAll('circle title')].map((t) => t.textContent), dashed: [...c5.querySelectorAll('circle')].filter((c) => c.getAttribute('stroke-dasharray') === '2 2').length } : null;
+    /* 05-ын өөрийн табаар ус руу: товч алга болж, хуудас үсэрдэг байв (2026-10-26) */
+    const vis5 = () => [...d.querySelectorAll('[data-t05-tabs]')].find((e) => e.getClientRects().length > 0);
+    if (vis5()) {
+      vis5().scrollIntoView({ block: 'center' }); await sleep(300);
+      const tA = vis5().getBoundingClientRect().top;
+      const wb = [...vis5().querySelectorAll('button')].find((b) => /^Ус/.test(b.textContent.trim()));
+      if (wb) wb.click(); await sleep(700);
+      const v2 = vis5();
+      out.t05tabs = { clicked: !!wb, visible: !!v2, which: v2 && v2.getAttribute('data-t05-tabs'), dy: v2 ? Math.round(v2.getBoundingClientRect().top - tA) : null,
+        on: v2 ? [...v2.querySelectorAll('button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()) : [] };
+      await pick('road'); await sleep(300);
+    }
     await pick('water');
     out.water = { notes: [...d.querySelectorAll('[data-empty-note]')].map((e) => e.getAttribute('data-empty-note') + ':' + e.innerText.trim()),
       t05Shown: t05Card() ? getComputedStyle(t05Card()).display !== 'none' : null };
@@ -8593,6 +8605,8 @@ async function groupRT() {
     R.t05 && R.t05.shown && R.t05.tips.length >= 2 && R.t05.tips.every((t) => /\d/.test(t)), JSON.stringify(R.t05));
   check('RT14. Ус (эх сурвалжгүй): KPI ба t05-ийн оронд нэг мөр тайлбар, хоосон график карт нуугдсан',
     R.water.notes.some((n) => /^k04:/.test(n)) && R.water.notes.some((n) => /^t05:/.test(n)) && R.water.t05Shown === false, JSON.stringify(R.water));
+  check('RT16b. t05 табаар ус (цуваагүй) сонгоход товчны мөр хоосон мөрөнд харагдсаар, дэлгэцийн байрлал ≤2px (хуудас үсрэхгүй)',
+    !!(R.t05tabs && R.t05tabs.clicked && R.t05tabs.visible && R.t05tabs.which === 'note' && Math.abs(R.t05tabs.dy) <= 2 && R.t05tabs.on.length === 1 && /^Ус/.test(R.t05tabs.on[0])), JSON.stringify(R.t05tabs));
   check('RT15. i06: цувааагүй салбарын (ус) хавтгай 0 шугам зурагдахгүй',
     R.i06water === false, JSON.stringify(R.i06strokes));
 }
