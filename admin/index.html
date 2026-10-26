@@ -583,6 +583,10 @@ var DSMETA={
   /* road.inspection_* метрикүүдийн датасэт (2026-09-23). Бүртгэлгүй бол
      каталогт "silver.road_inspections" гэсэн түүхий код гарна. */
   'silver.road_passengers':{n:'Авто тээврийн зорчигч (билет × өдөр)', a:'АТҮТ · Veritech', s:'road'},
+  /* rail.weekly_*, road.weekly_pax-ийн датасэт (VIEW, migration 022). Бүртгэлгүй
+     байсан тул «Датасэт» жагсаалт, Дата сангийн шүүлтэд "gold.sector_daily_total"
+     гэсэн түүхий код гарч байв. Олон салбарынх тул s:'total' (өнгө — саармаг). */
+  'gold.sector_daily_total':{n:'Салбарын нэгтгэл (салбар × өдөр)', a:'ИНЕГ · УБТЗ · МТЗ · АТҮТ', s:'total'},
   'silver.road_inspections':{n:'Техникийн хяналтын үзлэг (үзлэг × өдөр)', a:'ЗТХЕГ · Veritech', s:'road'}
 };
 /* Слот бүр ЮУ ХАРУУЛДАГ, түүнээсээ шалтгаалан ямар нэгж шаардахыг энд
@@ -2344,7 +2348,7 @@ function previewFor(id,mini){
 /* ══════════════════ ЗҮҮН БАГАНА ══════════════════ */
 function dsLabel(k){return (DSMETA[k]&&DSMETA[k].n)||k}
 function dsAgency(k){return (DSMETA[k]&&DSMETA[k].a)||utxt('left.source_unknown','эх сурвалж тодорхойгүй')}
-function dsColor(k){return NEON[(DSMETA[k]&&DSMETA[k].s)||'air']}
+function dsColor(k){return NEON[(DSMETA[k]&&DSMETA[k].s)||'air']||'#9AA4B2'}
 
 /* ══════════════════ КАТАЛОГИЙН МОД — ОЛОН ӨНЦӨГТ АНГИЛАЛ ═══════════════
    Нэг ижил виджетүүдийг ДӨРВӨН ӨӨР ангиллаар харна. Нээлттэй өгөгдлийн
@@ -3070,19 +3074,27 @@ function dsField(i,f,lab,long){
     (long?'<textarea data-df="'+i+'|'+f+'" rows="2">'+esc(v)+'</textarea>'
          :'<input data-df="'+i+'|'+f+'" value="'+esc(v)+'">')+'</div>';
 }
+/* Каталогийн салбарын нэр. «total» = салбарын нэгтгэлийн псевдо-салбар (сайтын
+   DATASETS sector:'total') — SECN-д байхгүй тул badge "total" гэж гарч, сонголт нь
+   "Агаарын тээвэр" дээр зогсож, хүрвэл нэгтгэл агаарын датасэт болж хувирдаг байв.
+   Нэр нь сайтын ижил шошгоос (site.sector_total.label) — давхардуулахгүй. */
+function dsSectorName(k){
+  if(k==='total') return (CON.site&&CON.site.sector_total&&CON.site.sector_total.label)||'Салбарын нэгтгэл';
+  return SECN[k]||k||'—';
+}
 function lvDatasets(){
   var list=dsList(), q=(S.q||'').trim().toLowerCase();
-  var secOpts=Object.keys(SECN).filter(function(k){return k!=='plan'&&k!=='other'});
+  var secOpts=Object.keys(SECN).filter(function(k){return k!=='plan'&&k!=='other'}).concat(['total']);
   var html='', shown=0;
   list.forEach(function(d,i){
     var hay=((d.name||'')+' '+(d.agency||'')+' '+(d.desc||'')).toLowerCase();
     if(q&&hay.indexOf(q)<0) return;
     shown++;
     html+='<div class="sgroup" data-ds-card="'+i+'"><h3>'+esc(d.name||('#'+(i+1)))+
-      ' <span class="badge b-zero">'+esc(SECN[d.sector]||d.sector||'—')+'</span></h3>'+
+      ' <span class="badge b-zero">'+esc(dsSectorName(d.sector))+'</span></h3>'+
       '<div class="sfield"><div class="lbl">'+esc(utxt('ds_cat.f_sector','Салбар'))+'</div>'+
       '<select data-df="'+i+'|sector">'+secOpts.map(function(k){
-        return '<option value="'+esc(k)+'"'+(d.sector===k?' selected':'')+'>'+esc(SECN[k]||k)+'</option>'
+        return '<option value="'+esc(k)+'"'+(d.sector===k?' selected':'')+'>'+esc(dsSectorName(k))+'</option>'
       }).join('')+'</select></div>'+
       dsFieldDefs().map(function(f){return dsField(i,f[0],f[1],f[2])}).join('')+
       '<div class="sfield"><div class="lbl">'+esc(utxt('ds_cat.f_badges','Шошго (таслалаар)'))+'</div>'+

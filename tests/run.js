@@ -2065,6 +2065,18 @@ async function groupL() {
     adm.includes('data-ds-card') && adm.includes('data-ds-add') && adm.includes('data-ds-del'));
   check('L4. Каталог "Дата холболт" табд холбогдсон', adm.includes("'<div id=\"mt-ds\">'+lvDatasets()"));
 
+  /* L7 — registry-ийн датасэт БҮР админд монгол нэртэй (2026-10-25: салбарын
+     нэгтгэл "gold.sector_daily_total" гэсэн түүхий кодоор «Датасэт» жагсаалтад гарч
+     байв). Шинэ датасэт нэмэхэд DSMETA + content.json ui.dataset хоёуланд бүртгэ. */
+  const reg7 = readJson('metric_registry.json'), uds7 = readJson('content.json').ui.dataset || {};
+  const dsKeys7 = [...new Set(Object.values(reg7.metrics).map((m) => m.dataset).filter(Boolean))];
+  const meta7 = (adm.match(/var DSMETA=\{([\s\S]*?)\n\};/) || [])[1] || '';
+  const miss7 = dsKeys7.filter((k) => !(meta7.includes("'" + k + "':{n:") || meta7.includes('\n  ' + k + ':'))
+    || !(uds7[k.split('.').join('_')] || {}).name);
+  check('L7. Registry-ийн датасэт бүр админд нэртэй (DSMETA + ui.dataset)', miss7.length === 0, miss7.join(', '));
+  check('L7. Каталогийн «Салбар» сонголтод салбарын нэгтгэл (total) бий',
+    adm.includes(".concat(['total'])") && adm.includes('function dsSectorName('));
+
   check('L5. Каталогийн хайлт НЭРЭЭР ажиллана (d.title БИШ)',
     idx.includes("(d.name||'')+' '+(d.agency||'')") && !idx.includes("d.title+' '+d.desc"),
     'хайлт d.title уншсаар байна');
@@ -2078,6 +2090,9 @@ async function groupL() {
       d.querySelector('[data-tab="metrics"]').click(); await sleep(900);
       const R={};
       R.before=d.querySelectorAll('[data-ds-card]').length;
+      /* L8 — салбарын нэгтгэлийн карт: сонголт "total" дээр, badge монголоор */
+      R.total=[...d.querySelectorAll('[data-ds-card]')].map(c=>{const sel=c.querySelector('select[data-df$="|sector"]');
+        return sel&&sel.querySelector('option[value="total"][selected]')?{v:sel.value,badge:(c.querySelector('h3 .badge')||{}).textContent}:null}).filter(Boolean);
       const add=d.querySelector('[data-ds-add]'); if(!add) return {__err:'нэмэх товч алга'};
       add.click(); await sleep(800);
       R.after=d.querySelectorAll('[data-ds-card]').length;
@@ -2092,6 +2107,9 @@ async function groupL() {
       return R;
     }`, 90000);
     if (R.__err) { bad('L6. Каталогийн DOM шалгалт', R.__err); return; }
+    check('L8. Салбарын нэгтгэлийн картын «Салбар» = total, badge монголоор',
+      R.total.length === 1 && R.total[0].v === 'total' && !/total/i.test(R.total[0].badge || ''),
+      JSON.stringify(R.total));
     check('L6. Шинэ датасэт нэмэгдэнэ', R.after === R.before + 1,
       JSON.stringify({ before: R.before, after: R.after }));
     check('L6. Талбар засахад dirty болж экспортод орно', /өөрчлөлт/.test(R.dirty), R.dirty.trim());
@@ -10016,6 +10034,100 @@ function groupST() {
     (C.site.datasets || []).some(x => x.sector === 'total') && !!(C.site.pv_scope || {}).note_sector_total);
 }
 
+/* ──────────────────────────────── SM ТООЦООЛЛЫН АРГА ──────────────────────────────── */
+/* SM. Салбарын нэгтгэлийн «Тооцооллын арга» таб (2026-10-25): аль датасэтийн ямар утгыг
+   яаж нэгтгэснийг Tableau-гийн Data Guide / lineage хэлбэрээр. Гэрээ:
+     - урсгал (SECTOR_TOTAL_LINEAGE) = backend gold.sector_daily_total-ийн оролт
+       (агаар → зорчигч+ачаа, зорчигчийн галт тэрэг → зорчигч, ачааны нэгтгэл → ачаа,
+       авто зорчигч → зорчигч); хэмжүүр сонгоход зөвхөн түүний оролт тодорно
+     - оролт бүр каталогт байгаа датасэт рүү холбогдоно, текст нь content.json-д
+     - таб солиход өгөгдлийн хэсэг нуугдаж/гарна, өөр датасэт нээхэд «Өгөгдөл» руу буцна */
+async function groupSM() {
+  group('SM. Салбарын нэгтгэл — «Тооцооллын арга» таб');
+  const src = dcScript();
+  const a = src.indexOf('const SECTOR_TOTAL_LINEAGE='), b = src.indexOf('/* 06-р хэсгийн индекс (i06/r06)');
+  check('SM0. Урсгалын блок олдов (SECTOR_TOTAL_LINEAGE · sectorTotalLineage)', a > 0 && b > a);
+  if (!(a > 0 && b > a)) return;
+  const L = new Function(src.slice(a, b) + '\nreturn {SECTOR_TOTAL_LINEAGE,sectorTotalLineage};')();
+  const C = readJson('content.json'), MT = ((C.site || {}).sector_total || {}).method || {};
+  const get = (o, p) => p.split('.').reduce((x, k) => (x == null ? x : x[k]), o);
+  const T = (k, fb) => { const v = get((C.site || {}).sector_total, k); return v == null || v === '' ? fb : v; };
+  const act = (m) => L.sectorTotalLineage(m, T).filter((r) => r.active).map((r) => r.id).join(',');
+  check('SM1. Зорчигч ← агаар, зорчигчийн галт тэрэг, авто зорчигч', act('passengers') === 'air,rail_pax,road_pax', act('passengers'));
+  check('SM1. Ачаа ← агаар, төмөр замын ачааны нэгтгэл', act('freight_tonnes') === 'air,rail_freight', act('freight_tonnes'));
+  check('SM1. «Бүгд» / танихгүй утга → бүх оролт тод', act('all') === 'air,rail_pax,rail_freight,road_pax' && act('xx') === act('all'));
+  const air = L.sectorTotalLineage('freight_tonnes', T).find((r) => r.id === 'air');
+  check('SM2. Агаар: ачаа сонгоход зорчигчийн талбар бүдэг, ачааны талбар тод',
+    air && air.fields.length === 2 && air.fields[0].on === false && air.fields[1].on === true);
+  /* Backend VIEW-ийн хэмжүүрийн хамрах хүрээтэй тулгана — салбар бүр аль хэмжүүртэй */
+  const bySec = {};
+  L.SECTOR_TOTAL_LINEAGE.forEach((l) => { (bySec[l.sector] = bySec[l.sector] || new Set()); l.measures.forEach((m) => bySec[l.sector].add(m)); });
+  check('SM3. Салбар × хэмжүүр = VIEW (агаар: 2, төмөр зам: 2, авто: зорчигч л)',
+    bySec.air.size === 2 && bySec.rail.size === 2 && bySec.road.size === 1 && bySec.road.has('passengers'));
+  const srcs = L.SECTOR_TOTAL_LINEAGE.map((l) => l.source);
+  const missDs = srcs.filter((s) => !src.includes("source:'" + s + "',bind:"));
+  check('SM4. Оролт бүр каталогийн датасэт рүү холбогдоно (DATASETS.source)', missDs.length === 0, missDs.join(', '));
+  const missTxt = [];
+  L.sectorTotalLineage('all', T).forEach((r) => {
+    if (!r.rule) missTxt.push(r.id + '.rule');
+    r.fields.forEach((f) => { if (!f.label) missTxt.push(r.id + '.field_' + f.measure); if (!f.tech) missTxt.push(r.id + '.tech_' + f.measure); });
+  });
+  check('SM5. Оролт бүрийн утга, техникийн нэр, нөхцөл content.json → site.sector_total.method.inputs-д', missTxt.length === 0, missTxt.join(', '));
+  const mBody = src.slice(src.indexOf('  buildSectorTotalMethod(m,chip){'), src.indexOf('  /* Салбарын нэгтгэлийн анализын самбар'));
+  const missM = [...mBody.matchAll(/\bM\('([a-z_0-9]+)'/g)].map((x) => x[1]).filter((k) => MT[k] == null);
+  check('SM6. Табын бүх текст content.json → site.sector_total.method-д', mBody.length > 100 && missM.length === 0, missM.join(', '));
+  check('SM6. Томьёо (7) ба ороогүй зүйл content.json-д', Array.isArray(MT.fields) && MT.fields.length >= 7 &&
+    MT.fields.every((f) => f.name && f.formula && f.note) && Array.isArray(MT.excl) && MT.excl.length >= 3);
+  if (!CHROME) { skipped('SM7–SM9 (DOM)', 'Chrome олдсонгүй'); return; }
+  const ds = (C.site.datasets || []).find((x) => x.sector === 'total') || {};
+  const slug = ds.sector + '__' + String(ds.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html?fx=1#/browse/' + encodeURIComponent(slug);
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      const until=async(f,ms)=>{const t=Date.now()+ms;while(Date.now()<t){if(f())return true;await sleep(150);}return false;};
+      const R={};
+      R.tabs=await until(()=>d.querySelectorAll('[data-st-tab]').length===2,20000);
+      R.dataFirst=!!d.querySelector('[data-ddq-block]')&&!d.querySelector('[data-st-method]');
+      const tab=id=>d.querySelector('[data-st-tab="'+id+'"]');
+      tab('method').click(); await sleep(500);
+      R.method=!!d.querySelector('[data-st-method]'); R.dataHidden=!d.querySelector('[data-ddq-block]');
+      R.rows=[...d.querySelectorAll('[data-st-row]')].map(r=>r.getAttribute('data-st-row')+':'+r.getAttribute('data-st-active'));
+      R.fields=d.querySelectorAll('[data-st-fields] .eh-st-field').length;
+      R.cov=d.querySelectorAll('[data-st-mcov] .eh-st-cov').length;
+      R.text=d.querySelector('[data-st-method]').innerText;
+      d.querySelectorAll('[data-st-measure]')[2].click(); await sleep(400);
+      R.freight=[...d.querySelectorAll('[data-st-row]')].filter(r=>r.getAttribute('data-st-active')==='1').map(r=>r.getAttribute('data-st-row'));
+      tab('data').click(); await sleep(500);
+      R.back=!!d.querySelector('[data-ddq-block]')&&!d.querySelector('[data-st-method]');
+      tab('method').click(); await sleep(300);
+      const open=[...d.querySelectorAll('[data-st-row="rail_pax"] button')][0];
+      if(open) open.click(); await sleep(800);
+      R.nav=w.location.hash; R.otherTabs=d.querySelectorAll('[data-st-tab]').length; R.otherData=!!d.querySelector('[data-ddq-block]');
+      w.history.back(); await sleep(1200);
+      R.reset=!!d.querySelector('[data-ddq-block]')&&!d.querySelector('[data-st-method]');
+      return R;
+    }`, 120000);
+    if (R.__err) bad('SM7. DOM шалгалт ажиллав', R.__err);
+    else {
+      check('SM7. Таб 2 (Өгөгдөл | Тооцооллын арга), анхдагч нь «Өгөгдөл»', R.tabs && R.dataFirst, JSON.stringify({ t: R.tabs, d: R.dataFirst }));
+      check('SM7. «Тооцооллын арга» → самбар гарч, өгөгдлийн хэсэг нуугдана', R.method && R.dataHidden);
+      check('SM7. Урсгал 4 мөр, бүгд тод; томьёо 7; хамрах хугацаа 3 салбар',
+        R.rows.join(',') === 'air:1,rail_pax:1,rail_freight:1,road_pax:1' && R.fields >= 7 && R.cov === 4, JSON.stringify([R.rows, R.fields, R.cov]));
+      check('SM8. «Ачаа тээвэр» → зөвхөн агаар ба ачааны нэгтгэл тод', R.freight.join(',') === 'air,rail_freight', R.freight.join(','));
+      check('SM8. Самбарт NaN/undefined/[object алга', !/NaN|undefined|\[object/.test(R.text));
+      check('SM9. «Өгөгдөл» руу буцахад анализ дахин гарна', R.back);
+      check('SM9. «Датасэтийг нээх» → эх датасэт рүү шилжинэ, тэнд таб алга', /browse\/rail__/.test(decodeURIComponent(R.nav)) && R.otherTabs === 0 && R.otherData,
+        JSON.stringify({ nav: decodeURIComponent(R.nav), t: R.otherTabs }));
+      check('SM9. Нэгтгэл рүү буцахад «Өгөгдөл» таб (төлөв үлдэхгүй)', R.reset);
+    }
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── WK 7 ХОНОГИЙН ТАЙЛАН (нэгтгэлээс) ──────────────────────────────── */
 /* WK. Нүүрний 02-р хэсэг «7 хоногийн тайлан» (w2p/w2c, w2pb/w2cb, w2px/w2cx) салбарын
    нэгтгэлийн weekly-ээс (2026-10-20). Регресс: донут агаарыг 100% гэж, төмөр замыг
@@ -10209,6 +10321,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=AI')) { await groupAI(); }
   else if (process.argv.includes('--only=VR')) { await groupVR(); }
   else if (process.argv.includes('--only=I')) { groupI(); }
+  else if (process.argv.includes('--only=L')) { await groupL(); }
   else if (process.argv.includes('--only=AX')) { groupAX(); }
   else if (process.argv.includes('--only=N')) { await groupN(); }
   else if (process.argv.includes('--only=Y')) { await groupY(); }
@@ -10224,6 +10337,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=AS')) { groupAS(); }
   else if (process.argv.includes('--only=FR')) { groupFR(); }
   else if (process.argv.includes('--only=ST')) { groupST(); }
+  else if (process.argv.includes('--only=SM')) { await groupSM(); }
   else if (process.argv.includes('--only=WK')) { groupWK(); }
   else if (process.argv.includes('--only=RPX')) { groupRPX(); }
   else if (process.argv.includes('--only=RT')) { await groupRT(); }
@@ -10233,7 +10347,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));

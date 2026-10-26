@@ -86,6 +86,19 @@ body{margin:0;}
   .eh-g4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 }
 
+/* Салбарын нэгтгэлийн «Тооцооллын арга» — урсгалын мөр (Tableau Prep: эх датасэт → утга →
+   нөхцөл → салбар). Нүд хооронд «→» сум; гар утсанд 1 багана, сум «↓». */
+.eh-st-flow { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.35fr) minmax(0, 1.3fr) minmax(0, .7fr); gap: 0 26px; align-items: stretch; padding: 12px 0; border-top: 1px solid var(--line); transition: opacity .18s var(--ease), filter .18s var(--ease); }
+.eh-st-flow > div { position: relative; min-width: 0; }
+.eh-st-flow > div:first-child { padding-left: 11px; }
+.eh-st-flow > div + div::before { content: "→"; position: absolute; left: -19px; top: 2px; color: var(--ink3); font-size: 13px; pointer-events: none; }
+.eh-st-flow-head { padding: 0 0 8px; border-top: none; font-family: "JetBrains Mono", monospace; font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink3); }
+.eh-st-flow-head > div:first-child { padding-left: 0; }
+.eh-st-flow-head > div + div::before { content: none; }
+.eh-st-field { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.5fr); gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); }
+.eh-st-cov { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); }
+.eh-st-cov-head { border-top: none; padding-top: 0; font-family: "JetBrains Mono", monospace; font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink3); }
+
 /* Гар утас (≤640px). Нүүр хуудасны grid-үүд inline-style-аар 3–5 багана
    тавьсан тул 390px-д нүд бүр ~70px болж текст хүрээнээсээ гарч давхцдаг
    байв. Класс бүр нэг зан төлөвтэй:
@@ -104,6 +117,12 @@ body{margin:0;}
   .eh-g-1c { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
   .eh-g-2c { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
   .eh-g-2c > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* Салбарын нэгтгэлийн аргын урсгал: нүд бүр дараалан, сум доош */
+  .eh-st-flow { grid-template-columns: minmax(0, 1fr); gap: 18px 0; }
+  .eh-st-flow > div + div { padding-left: 11px; }
+  .eh-st-flow > div + div::before { content: "↓"; left: 0; top: -17px; font-size: 12px; }
+  .eh-st-flow-head { display: none; }
+  .eh-st-field { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   /* 01-р хэсгийн салбарын товч (sticky мөр): гар утсанд зөвхөн СОНГОСОН салбар нэртэй —
      4 нэр зэрэг 3 мөр болж sticky самбар дэлгэцийн 1/7-ийг эзэлдэг байв. Бусад нь дүрс + title. */
   [data-home-sector]:not([data-on="1"]) .eh-sec-chip-l { display: none; }
