@@ -914,6 +914,9 @@
             <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:inherit;font-size:{{ homeMap.ubFs }}px;line-height:1.2;font-weight:700;white-space:nowrap;color:#EAF3FF;text-shadow:0 0 4px #071022,0 0 3px #071022;">{{ homeMap.hubLabel }}</div>
           </foreignObject>
         </svg>
+        <sc-if value="{{ homeMap.wheelHint }}">
+          <div data-hm-wheel-hint="1" data-audit-ignore="түр сануулга — Ctrl-гүй дугуй" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:rgba(4,10,24,.38);border-radius:12px;"><div style="padding:10px 16px;border-radius:12px;background:rgba(7,16,34,.88);border:1px solid rgba(130,190,255,.3);font-size:13px;font-weight:600;color:#EAF3FF;">{{ homeMap.wheelHintText }}</div></div>
+        </sc-if>
         <sc-if value="{{ homeMap.empty }}">
           <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;"><div style="padding:10px 16px;border-radius:12px;background:rgba(7,16,34,.82);border:1px solid rgba(130,190,255,.25);font-size:13px;color:#C8D6EE;">{{ homeMap.emptyText }}</div></div>
         </sc-if>
@@ -9821,7 +9824,7 @@ class Component extends DCLogic {
     /* Ачаа тээвэр: датасэт (source) тус бүрийн шүүлт — хоёр датасэт өөр он хамардаг */
     freightSel:{}, freightHistVer:0, freightStationsExpanded:false, freightCargoExpanded:false,
     /* Авто тээврийн зорчигч: шүүлт (он + сар) ба эрэмбийн дэлгэлт */
-    roadPaxSel:{}, roadPaxHistVer:0, homeMapOff:{}, homeMapScope:'intl', homeMapVer:0, homeGlobeRot:null, homeGlobeZoom:null, homeGlobeDragging:false, roadPaxRoutesExpanded:false, roadPaxCompaniesExpanded:false,
+    roadPaxSel:{}, roadPaxHistVer:0, homeMapOff:{}, homeMapScope:'intl', homeMapVer:0, homeGlobeRot:null, homeGlobeZoom:null, homeGlobeDragging:false, homeWheelHint:false, roadPaxRoutesExpanded:false, roadPaxCompaniesExpanded:false,
     /* Салбарын нэгтгэл — шүүлт (он/сар), хувилбар; нүүрний d05-ийн хэмжүүр (зорчигч/ачаа) */
     sectorTotalSel:{}, sectorTotalVer:0, d05Measure:'passengers',
     /* Салбарын нэгтгэлийн таб (Өгөгдөл | Тооцооллын арга) ба аргын урсгалын хэмжүүр */
@@ -10053,6 +10056,35 @@ class Component extends DCLogic {
     };
     window.addEventListener('mousemove',this._onGlobeMove);
     window.addEventListener('mouseup',this._onGlobeUp);
+    /* Ctrl + хулганы дугуй (ба trackpad-ийн чимхэлт — ctrlKey=true) бөмбөрцгийг
+       томруулна, +/− товчтой ижил төлөв. Ctrl-гүй дугуй хуудсыг ердийнхөөрөө
+       гүйлгэнэ (Google Maps-ийн "cooperative gestures") — нүүрийн зураг дээр
+       богино сануулга гарна. Дугуйн алхмыг rAF-д нэгтгэж кадрт нэг render. */
+    this._onMapWheel=(e)=>{
+      const t=e.target;
+      if(!t||!t.closest) return;
+      const home=t.closest('.eh-hm-svg');
+      const air=!home&&t.closest('.eh-fmap');
+      if(!home&&!air) return;
+      if(home&&this.state.homeMapScope==='dom') return;
+      if(!e.ctrlKey){
+        if(home) this.flashMapWheelHint();
+        return;
+      }
+      e.preventDefault();
+      const dy=e.deltaY*(e.deltaMode===1?33:e.deltaMode===2?400:1);
+      this._wheelF=(this._wheelF||1)*Math.exp(-Math.max(-120,Math.min(120,dy))*0.0025);
+      this._wheelKey=home?'home':'air';
+      if(this._wheelRaf) return;
+      this._wheelRaf=requestAnimationFrame(()=>{
+        this._wheelRaf=null;
+        const f=this._wheelF||1; this._wheelF=1;
+        if(this._wheelKey==='home') this.setState(s=>({homeWheelHint:false,
+          homeGlobeZoom:Math.max(0.8,Math.min(6,(s.homeGlobeZoom||HM_GLOBE_PRESET[s.homeMapZoom==='region'?'region':'world'].zoom)*f))}));
+        else this.setState(s=>({globeZoom:Math.max(0.7,Math.min(2.6,(s.globeZoom||1)*f))}));
+      });
+    };
+    window.addEventListener('wheel',this._onMapWheel,{passive:false});
     if(window.auth){
       this._unsubAuth=window.auth.onAuthStateChanged(user=>{
         this.setState({authed:!!user,authReady:true,
@@ -10085,6 +10117,13 @@ class Component extends DCLogic {
   }
   componentWillUnmount(){ if(this._esc) window.removeEventListener('keydown',this._esc); }
   escClose(){ this.setState({projOpen:-1,subStep:0,reqOpen:false}); }
+  /* Ctrl-гүй дугуй нүүрийн зураг дээр — "Ctrl + дугуйгаар томруулна" сануулгыг
+     ~1.4 сек харуулна. Гүйлгэх бүрд setState хийхгүй (аль хэдийн харагдаж байвал зөвхөн хугацааг сунгана). */
+  flashMapWheelHint(){
+    clearTimeout(this._wheelHintT);
+    this._wheelHintT=setTimeout(()=>this.setState({homeWheelHint:false}),1400);
+    if(!this.state.homeWheelHint) this.setState({homeWheelHint:true});
+  }
   componentDidUpdate(){ this.syncMonths(); }
   syncMonths(){
     const a=this.state.mFrom||1, b=this.state.mTo||12;
@@ -16260,7 +16299,10 @@ class Component extends DCLogic {
     const memoKey=[scope,win.key,!!this.mongoliaAimags,!!this.worldCountries,data?1:0,this.state.homeMapVer||0,flights?flights.length:0,
       off.air?1:0,off.rail?1:0,off.road?1:0,this.state.homeMapZoom||'',Math.round(vw/40),
       String(this.state.homeGlobeRot||''),this.state.homeGlobeZoom||'',this.state.homeGlobeDragging?1:0].join('|');
-    if(this._homeMapMemo&&this._homeMapMemo.key===memoKey) return this._homeMapMemo.val;
+    /* Дугуйн сануулга memo-д ОРОХГҮЙ — түр төлөвөөс болж бөмбөрцгийг дахин барихгүй */
+    if(this._homeMapMemo&&this._homeMapMemo.key===memoKey){
+      const v=this._homeMapMemo.val; v.wheelHint=!!(v.hasZoom&&this.state.homeWheelHint); return v;
+    }
     const val=scope==='intl'?this._buildHomeMapWorld(win,data,flights,off,vw,T):this._buildHomeMap(win,data,flights,off,vw,T);
     /* «Олон улсын | Дотоод» — агаарын хуудасны газрын зургийн сонголттой ижил загвар.
        Анхдагч нь олон улсын (2026-10-26 хэрэглэгч: нүүрэнд олон улсыг дэлхийн зургаар) */
@@ -16838,10 +16880,11 @@ class Component extends DCLogic {
         this._globeDrag={x:e.clientX,y:e.clientY,rot:rot.slice(),zoom,rotKey:'homeGlobeRot',dragKey:'homeGlobeDragging'};
         this.setState({homeGlobeDragging:true});
       },
-      zoomIn:setZoom(1.3),zoomOut:setZoom(1/1.3),zoomInTitle:T('zoom_in','Томруулах'),zoomOutTitle:T('zoom_out','Жижигрүүлэх'),
+      zoomIn:setZoom(1.3),zoomOut:setZoom(1/1.3),zoomInTitle:T('zoom_in','Томруулах')+' (Ctrl + '+T('wheel_word','дугуй')+')',zoomOutTitle:T('zoom_out','Жижигрүүлэх')+' (Ctrl + '+T('wheel_word','дугуй')+')',
       ubX:ub?ub[0].toFixed(1):'-99',ubY:ub?ub[1].toFixed(1):'-99',ubR:px(5).toFixed(2),ubTitle:hub+' — '+T('hub_sub_intl','олон улсын урсгалын эх цэг'),
       ubLx:ub?(ub[0]+px(9)).toFixed(1):'-99',ubLy:ub?(ub[1]+px(4)).toFixed(1):'-99',ubLw:px(110).toFixed(1),ubLh:px(15).toFixed(1),ubFs:px(11).toFixed(2),
       hubLabel:ub?hub:'',chips,chipAll,legend,notes:notes.map(text=>({text})),period,title,sub,hasZoom:true,
+      wheelHint:!!this.state.homeWheelHint,wheelHintText:T('wheel_hint','Томруулах: Ctrl + хулганы дугуй'),
       tops,hasTops:tops.length>0,topTitle:T('top_title','Хүрэх хотууд — зорчигчоор'),
       zoomTabs:[['world',T('zoom_world','Дэлхий')],['region',T('zoom_region','Ойрын бүс')]].map(o=>{
         const on=zk===o[0];

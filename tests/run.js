@@ -8547,6 +8547,18 @@ async function groupHM() {
     await sleep(300); w.dispatchEvent(new w.MouseEvent('mouseup', {})); await sleep(450);
     const drag = { before: dx0, after: fx() };
     await click('[data-hm-zoom="world"]');
+    /* Ctrl + дугуй → томруулна (хуудас гүйлгэхгүй); Ctrl-гүй → хуудас гүйлгэнэ, сануулга гарна */
+    const spread = () => { const xy = snap().nodeXY, ub = xy.find((x) => /^Улаанбаатар — /.test(x[2])), f = xy.find((x) => /^(🚆|🚌) Эрээн/.test(x[2]));
+      return ub && f ? Math.hypot(ub[0] - f[0], ub[1] - f[1]) : 0; };
+    const wheel = (ctrlKey, deltaY) => { const r = svg.getBoundingClientRect(), ev = new w.WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey, deltaY, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }); svg.dispatchEvent(ev); return ev.defaultPrevented; };
+    const s0 = spread(), pIn = wheel(true, -240); await sleep(120); wheel(true, -240); await sleep(450);
+    const s1 = spread(), pOut = wheel(true, 480); await sleep(450); const s2 = spread();
+    const pPlain = wheel(false, 100); await sleep(250);
+    const hintEl = () => m.querySelector('[data-hm-wheel-hint]');
+    const hintOn = !!hintEl(), hintText = hintOn ? hintEl().innerText.trim() : '';
+    await sleep(1700); const hintOff = !hintEl();
+    const wz = { s0, s1, s2, pIn, pOut, pPlain, hintOn, hintText, hintOff };
+    await click('[data-hm-zoom="world"]');
     /* 2. Дотоод */
     await click('[data-hm-scope="dom"]');
     await until(() => ready(/вагон ачилт/) && m.querySelectorAll('path.eh-hm-reg').length < 60, 15000);
@@ -8554,7 +8566,7 @@ async function groupHM() {
     await click('[data-hm-chip="air"]'); const b = snap();
     await click('[data-hm-chip="all"]'); const c = snap();
     await click('[data-hm-scope="intl"]');
-    return { w0, drag, w1: { nodeTips: w1.nodeTips, chips: w1.chips }, w2: { nodeXY: w2.nodeXY, zoom: w2.zoom }, a,
+    return { w0, drag, wz, w1: { nodeTips: w1.nodeTips, chips: w1.chips }, w2: { nodeXY: w2.nodeXY, zoom: w2.zoom }, a,
       b: { movers: b.movers, air: b.nodeTips.filter((t) => /Агаар/.test(t) && !/^[^—]*аймаг/.test(t)).length, chips: b.chips }, c: { movers: c.movers } };
   };
   const srv = serve();
@@ -8599,6 +8611,12 @@ async function groupHM() {
     check('HM27. Бөмбөрцөг (агаарын хуудас шиг): чирэхэд эргэнэ — Франкфуртын цэг шилжинэ, курсор grab',
       R.drag.before != null && R.drag.after != null && Math.abs(R.drag.after - R.drag.before) > 5 && /grab/.test((R.w0.cursor || [])[1] || ''),
       JSON.stringify({ drag: R.drag, cursor: R.w0.cursor }));
+    /* Хэрэглэгчийн шаардлага (2026-10-26): Ctrl + хулганы дугуйгаар томруулдаг болго */
+    const z = R.wz || {};
+    check('HM30. Ctrl + дугуй: дээш — томорно (УБ ↔ Эрээн зай өснө), доош — буцаж жижгэрнэ, хөтчийн zoom/гүйлгэлт хаагдана (preventDefault)',
+      z.s0 > 0 && z.s1 > z.s0 * 1.3 && z.s2 < z.s1 * 0.85 && z.pIn === true && z.pOut === true, JSON.stringify(z));
+    check('HM31. Ctrl-гүй дугуй: хуудас ердийнхөөрөө гүйлгэнэ (preventDefault үгүй), «Ctrl + хулганы дугуй» сануулга түр гараад алга болно',
+      z.pPlain === false && z.hintOn && /Ctrl \+ хулганы дугуй/.test(z.hintText) && z.hintOff, JSON.stringify(z));
   }
   {
     const ubD = (xy) => { const ub = xy.find((x) => /^Улаанбаатар — /.test(x[2])), e = xy.find((x) => /^(🚆|🚌) Эрээн/.test(x[2]));
