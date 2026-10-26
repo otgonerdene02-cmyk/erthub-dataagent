@@ -8366,7 +8366,7 @@ async function groupHM() {
   const grab = (name) => { const m = src.match(new RegExp('\\nfunction ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}\\n')); return m ? m[0] : null; };
   const konst = (n) => { const m = src.match(new RegExp('\\nconst ' + n + '=\\{[\\s\\S]*?\\n?\\};\\n')); return m ? m[0] : null; };
   const pre = ['ROAD_AIMAG_PREFIX', 'INTL_PLACE', 'RAIL_TRANSIT_COUNTRY'].map(konst);
-  const FN = ['roadRouteParts', 'roadRouteEnds', 'homeMapRailTotals', 'homeMapRoadData', 'intlPlaceKey', 'homeMapIntlRoad', 'homeMapRailIntl', 'homeMapFreightIntl'];
+  const FN = ['roadRouteParts', 'roadRouteEnds', 'homeMapRailTotals', 'homeMapRoadData', 'intlPlaceKey', 'homeMapIntlRoad', 'homeMapRailIntl', 'homeMapFreightIntl', 'homeMapRailSum'];
   const fns = FN.map(grab);
   check('HM0. roadRouteEnds / homeMapRailTotals / homeMapRoadData / олон улсын нэгтгэгчид тодорхойлогдсон', pre.every(Boolean) && fns.every(Boolean),
     FN.filter((n, i) => !fns[i]).join(','));
@@ -8444,6 +8444,23 @@ async function groupHM() {
     fi.transit === 16364 && fi.unplaced === 96 && fi.export === 16686 && fi.import === 22348, JSON.stringify(fi));
   check('HM23. Транзит: сар алга / хариу алга → null',
     L.homeMapFreightIntl({ status: 'ok', months: [{ month: '2026-08' }] }, '2026-09') === null && L.homeMapFreightIntl(null, '2026-09') === null);
+  {
+    /* 2026-10-26 хэрэглэгч: «бүтэн жилээр, оны эхнээс өссөн дүнгээр». Гараар бодох фикстур:
+       транзит 1-р сар 10 + 2-р сар 20 = 30 (3-р сар цонхоос гадна), экспорт 5+7 = 12;
+       авто хамралт (31+20)/(31+28) хоног; вагон сар бүрийн дүнгийн нийлбэр Багануур 115+40 = 155. */
+    const f2 = L.homeMapFreightIntl({ status: 'ok', months: [{ month: '2026-01', transit_wagons: 10, export_wagons: 5 },
+      { month: '2026-02', transit_wagons: 20, export_wagons: 7 }, { month: '2026-03', transit_wagons: 999 }],
+      by_station: [{ station: 'Хятад', transit_wagons: 25 }] }, '2026-01', '2026-02');
+    const r2 = L.homeMapRoadData({ status: 'ok', totals: { passengers: 9 }, by_route: [{ name: 'x', passengers: 9 }],
+      months: [{ month: '2026-01', days: 31 }, { month: '2026-02', days: 20 }, { month: '2026-03', days: 1 }] }, '2026-01', '2026-02');
+    const s2 = L.homeMapRailSum([{ stations: { 'Багануур': 115, 'Эрээнцав': 7 }, days: 30, foreign: 3 }, null,
+      { stations: { 'Багануур': 40 }, days: 28, foreign: 2 }]);
+    const s3 = L.homeMapRailSum([{ stations: { A: 1 }, days: 1, foreign: null }, { stations: { A: 2 }, days: 1, foreign: 4 }]);
+    check('HM28. Оны эхнээс өссөн дүн: транзит/экспорт сар бүрийн нийлбэр (30, 12), авто хамралт 51/59, вагон сар бүрийн дүн нэмэгдэнэ (155), алга сар тоологдохгүй',
+      !!f2 && f2.transit === 30 && f2.export === 12 && f2.unplaced === 5 && !!r2 && r2.cov.days === 51 && r2.cov.of === 59 &&
+      !!s2 && s2.stations['Багануур'] === 155 && s2.stations['Эрээнцав'] === 7 && s2.days === 58 && s2.foreign === 5 && s2.months === 2 &&
+      s3.foreign === null && L.homeMapRailSum([null, null]) === null, JSON.stringify({ f2, r2, s2, s3 }));
+  }
   const idx = read('index.html');
   {
     /* Олон улсын газар бүр COUNTRY_COORD-д улстай, транзитын улс бүр байршилтай — эс тэгвэл
@@ -8574,6 +8591,11 @@ async function groupHM() {
       cityTips.length >= 4 && !countryTips.length && ['air', 'rail', 'road'].every((k) => (top[k] || []).length > 0) &&
       top.air.every((t) => /^.+ · .+\|[\d,]+$/.test(t)) && top.rail.some((t) => /^Эрээн · Хятад\|[\d,]+$/.test(t)),
       JSON.stringify({ cityTips: cityTips.length, countryTips, top }));
+    const trTips = R.w0.nodeTips.filter((t) => /^🚆 Транзит · /.test(t));
+    check('HM29. Транзит: улсын төв рүү шулуун шугам алга — коридорын үзүүрт (Замын-Үүд / Сүхбаатар) улсаар шошготой; хугацаа оны эхнээс',
+      trTips.length === 2 && trTips.some((t) => /Замын-Үүд боомтоор — [\d,]+ вагон · Хятад/.test(t)) && trTips.some((t) => /Сүхбаатар боомтоор — [\d,]+ вагон · Орос/.test(t)) &&
+      !R.w0.routeTips.some((t) => /Транзит · (Хятад|Орос|Беларусь|Польш) — /.test(t)) && /-01-01 — /.test(R.w0.text) && /оны эхнээс өссөн дүн/.test(R.w0.text),
+      JSON.stringify({ trTips, routes: R.w0.routeTips.filter((t) => /Транзит/.test(t)), period: (R.w0.text.match(/Хугацаа:.*/) || [''])[0] }));
     check('HM27. Бөмбөрцөг (агаарын хуудас шиг): чирэхэд эргэнэ — Франкфуртын цэг шилжинэ, курсор grab',
       R.drag.before != null && R.drag.after != null && Math.abs(R.drag.after - R.drag.before) > 5 && /grab/.test((R.w0.cursor || [])[1] || ''),
       JSON.stringify({ drag: R.drag, cursor: R.w0.cursor }));
