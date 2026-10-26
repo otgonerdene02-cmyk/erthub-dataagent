@@ -1207,7 +1207,7 @@
     </sc-if>
     <!-- EMP: цуваагүй үед том хоосон график карт БИШ — нэг мөр тайлбар, «Салбарын харьцаа» мөрийг эзэлнэ -->
     <sc-if value="{{ trend.noData }}">
-      <div data-empty-note="t05" style="border:1px dashed var(--line2);border-radius:14px;padding:12px 18px;margin-bottom:14px;font-size:12.5px;color:var(--ink3);background:rgba(var(--surface-rgb),.5);">{{ sector.c1 }} — {{ trend.noDataNote }}</div>
+      <div data-empty-note="t05" style="border:1px dashed var(--line2);border-radius:14px;padding:12px 18px;margin-bottom:14px;font-size:12.5px;color:var(--ink3);background:rgba(var(--surface-rgb),.5);display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;"><span>{{ sector.c1 }} — {{ trend.noDataNote }}</span><div data-t05-tabs="note" style="display:flex;flex-wrap:wrap;gap:6px;margin-left:auto;"><sc-for list="{{ t05Tabs }}" as="tt" hint-placeholder-count="4"><button sc-camel-on-click="{{ tt.select }}" aria-pressed="{{ tt.on }}" style="{{ tt.style }}">{{ tt.label }}</button></sc-for></div></div>
     </sc-if>
     <div class="eh-g-1c" style="display:grid;grid-template-columns:{{ t05Cols }};gap:18px;margin-bottom:50px;align-items:stretch;">
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.93) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:22px;position:relative;overflow:hidden;display:{{ t05CardDisplay }};flex-direction:column;">
@@ -1221,7 +1221,7 @@
       </div>
       <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ trendPeriod }}</div>
       <div data-t05-scope="1" style="font-size:11.5px;line-height:1.5;color:var(--ink2);margin:-6px 0 12px;">{{ t05Scope }}<sc-if value="{{ t05Cadence }}"><br><span style="color:var(--ink3);">{{ t05Cadence }}</span></sc-if></div>
-      <div data-t05-tabs="1" style="display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px;"><sc-for list="{{ t05Tabs }}" as="tt" hint-placeholder-count="4"><button sc-camel-on-click="{{ tt.select }}" aria-pressed="{{ tt.on }}" style="{{ tt.style }}">{{ tt.label }}</button></sc-for></div>
+      <div data-t05-tabs="card" style="display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px;"><sc-for list="{{ t05Tabs }}" as="tt" hint-placeholder-count="4"><button sc-camel-on-click="{{ tt.select }}" aria-pressed="{{ tt.on }}" style="{{ tt.style }}">{{ tt.label }}</button></sc-for></div>
       <sc-if value="{{ trend.noData }}">
         <div style="height:210px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ trend.noDataNote }}</div>
       </sc-if>
@@ -9495,6 +9495,19 @@ class Component extends DCLogic {
       return {page:'vehreg',vehTab:parts[1]};
     return PAGES.some(function(p){return p.id===parts[0]})?{page:parts[0]}:null;
   }
+  /* Дээрх агуулгын өндрийг өөрчилдөг сонголтын дараа товч хэрэглэгчийн хулганы доор
+     үлдэнэ (scroll anchoring) — dc-runtime DOM-ыг дахин барьдаг тул хөтчийн
+     overflow-anchor ажилладаггүй. sel-ийн ХАРАГДАЖ буй эхний элемент = зангуу. */
+  keepAnchor(sel,fn){
+    const vis=()=>[...document.querySelectorAll(sel)].find(e=>e.getClientRects().length>0);
+    const a=vis(), t0=a?a.getBoundingClientRect().top:null;
+    fn();
+    if(t0==null||!window.scrollBy) return;
+    const fix=()=>{ const b=vis(); if(!b) return; const d=b.getBoundingClientRect().top-t0; if(Math.abs(d)>1) window.scrollBy(0,d) };
+    fix();
+    if(window.requestAnimationFrame) requestAnimationFrame(fix);
+    setTimeout(fix,120);
+  }
   pageFromHash(){ var r=this.routeFromHash(); return r?r.page:null }
   pushRoute(path,replace){
     if(!window.history||!window.history.pushState) return;
@@ -17067,7 +17080,10 @@ class Component extends DCLogic {
       t05Scope:[({road:stxt('t05_scope.road',''),rail:stxt('t05_scope.rail','')})[key]||stxt('t05_scope.generic','{sector} салбарын цуваа.').replace('{sector}',(s&&s.label)||''),
         stxt('t05_scope.not_total','Салбаруудын нэгтгэл биш — өөр салбарыг доорх товчоор сонгоно.')].join(' '),
       /* Салбарын товч 05-аас ~2300px дээр (шүүлтийн мөр) — энд жижиг хуулбар, ижил select() */
-      t05Tabs:sectorTabs.map(t=>({key:t.key,label:t.label,select:t.select,on:t.key===key?'true':'false',
+      /* Цуваагүй салбар (ус) дээр карт нуугдаж товч ХАМТ алга болж, дээрх хэсгүүд
+         богиносож хуудас ~400px үсэрдэг байв (2026-10-26) — товч хоосон мөрөнд ч
+         байна, сонгосны дараа товчны мөр дэлгэцийн ИЖИЛ байрлалд үлдэнэ. */
+      t05Tabs:sectorTabs.map(t=>({key:t.key,label:t.label,select:()=>this.keepAnchor('[data-t05-tabs]',t.select),on:t.key===key?'true':'false',
         style:'font:inherit;font-size:11px;padding:3px 10px;border-radius:999px;cursor:pointer;white-space:nowrap;'
           +(t.key===key?`border:1px solid ${t.color};background:${t.color}1f;color:var(--ink);font-weight:600;`
             :'border:1px solid var(--line2);background:transparent;color:var(--ink3);')})),
