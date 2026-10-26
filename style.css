@@ -204,6 +204,13 @@ body{margin:0;}
 /* Боомтын маркерын тэлэх цагираг (веритех dashboard-ийн effectScatter
    rippleEffect-тэй дүйцүүлсэн: brushType stroke, scale ~2.2). */
 @keyframes ripplePulse{from{transform:scale(.9);opacity:.5;}to{transform:scale(2.3);opacity:0;}}
+/* Нүүрийн салбарын газрын зураг: icon замаараа явж, хүрэх цэг дээрээ жижгэрч
+   "газардана" (buildHomeMap → movers/tags). */
+@keyframes ehHmArrive{0%{offset-distance:0%;opacity:0;transform:scale(.55);}9%{opacity:1;transform:scale(1);}84%{opacity:1;transform:scale(1);}100%{offset-distance:100%;opacity:0;transform:scale(.4);}}
+.eh-hm-reg{transition:fill .16s ease;}
+.eh-hm-reg:hover{fill:rgba(95,200,255,.20);}
+@media (prefers-reduced-motion:reduce){.eh-hm-svg g[style*="ehHmArrive"]{animation:none!important;opacity:0;}}
+@media (max-width:640px){.eh-hm{padding:14px 12px 12px!important;border-radius:16px!important;}.eh-hm-chips button{padding:6px 9px!important;}.eh-hm-period{white-space:normal!important;overflow-wrap:anywhere;}}
 @keyframes scanSweep{0%{transform:translateX(-120%);}100%{transform:translateX(320%);}}
 @keyframes barGrow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
 @keyframes glowPulse{0%,100%{opacity:.35;}50%{opacity:.85;}}
