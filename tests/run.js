@@ -5161,7 +5161,7 @@ async function groupBE() {
     JSON.stringify(weekAxis(null)) === JSON.stringify({ base: 0, top: 0, step: 1 }));
   check('BE47. Тэнхлэгийг /50 гэж ХАТУУ бичсэн хуучин мөр үлдээгүй',
     !/\(bmax-bmin\)\*0\.6\)\/50\)\*50/.test(dcScript()) &&
-    /const wax=weekAxis\(okVals\);/.test(dcScript()));
+    /const wax=weekAxis\(okVals(?:\.concat\([^;]*\))?\);/.test(dcScript()));
 
   /* ── BE50. Коммунитийн НИЙТ тоо зохиомол байсан (2026-10-05) ──
      Санал/лайк нь зөвхөн тухайн хэрэглэгчийн session-д (this.state.cVotes)
@@ -8041,7 +8041,7 @@ async function groupDGA() {
     cut(adm, 'function metricSeries(mk){', '/* Метрикийн 7 ХОНОГИЙН'),
     cut(adm, '/* ══════════ ГРАФИКИЙН ХУГАЦАА (DG-P) — preview', 'function previewFor(id,mini){')];
   const dpm = site.match(/\nfunction dropPartialMonth\(counts,year,cov,now\)\{([\s\S]*?)\n\}/);
-  const wsr = site.match(/\nfunction weekSectorReport\(w,keys(?:,gaps)?\)\{([\s\S]*?)\n\}/);
+  const wsr = site.match(/\nfunction weekSectorReport\(w,keys(?:,gaps)?(?:,lastBy)?\)\{([\s\S]*?)\n\}/);
   check('DG-P19. Админы хугацааны функцүүд ба сайтын dropPartialMonth/weekSectorReport олдов',
     parts.every(Boolean) && !!dpm && !!wsr, parts.map((p) => !!p).join(','));
   if (!parts.every(Boolean) || !dpm || !wsr) return;
@@ -10423,7 +10423,7 @@ function groupWK() {
   check('WK0. weekSectorReport · weekSectorTotal · buildWeek · weekAxis олдов', a > 0 && b > a && !!(mB && mT && mA));
   if (!(a > 0 && b > a && mB && mT && mA)) return;
   const NEON = { air: '#A', rail: '#R', road: '#D', water: '#W', public: '#P' };
-  const L = new Function('NEON', src.slice(a, b) + '\nreturn {weekSectorReport,stPct};')(NEON);
+  const L = new Function('NEON', src.slice(a, b) + '\nreturn {weekSectorReport,stPct,weekLag,planYearText};')(NEON);
   const wk = (s, e, air, rail, extra) => Object.assign({ week_start: s, week_end: e, missing: false, value: (air || 0) + (rail || 0),
     by_sector: { air: { value: air, days: 7 }, rail: { value: rail, days: 7 } } }, extra || {});
   const PAX = { sectors: ['air', 'rail'], comparable: ['air', 'rail'], stale: [], week_end: '2026-10-18',
@@ -10472,6 +10472,22 @@ function groupWK() {
   const rN = L.weekSectorReport(PAXR, ['air', 'rail', 'road'], null);
   check('WK5b. Цоорхойгүй үед авто тээвэр нийлбэрт орно: 450 → 1100 (+144.4%), gapKeys хоосон',
     rN.weeks[0].value === 450 && rN.total === 1100 && Math.abs(rN.wow - (1100 / 450 - 1) * 100) < 1e-9 && rN.gapKeys.length === 0);
+  /* 2026-10-26 регресс: цоорхойтой долоо хоног «—» хоосон харагдаж байв → бусад салбарын нийлбэр «≥»
+       10.05–10.11  агаар 100 + төмөр зам 300 = 400 (авто цоорхой) → partial 400, keys [air, rail] */
+  check('WK5c. Цоорхойтой долоо хоног: value null хэвээр, partial = 100 + 300 = 400 (авто хасагдсан); бүтэн долоо хоногт partial алга',
+    rG.weeks[0].value === null && rG.weeks[0].partial === 400 && JSON.stringify(rG.weeks[0].partialKeys) === '["air","rail"]' &&
+    rG.weeks[1].partial === null && rN.weeks[0].partial === null, JSON.stringify(rG.weeks));
+  /* 2026-10-26 регресс: max_date 10.25 ч төмөр зам 10.22 хүртэл → тайлан 10.18-нд зогссоныг ИЛ хэлнэ */
+  const lg = L.weekLag('2026-10-18', '2026-10-25', ['air', 'road', 'rail'], { air: '2026-10-25', road: '2026-10-25', rail: '2026-10-22' });
+  check('WK5d. weekLag: 10.19–10.25 долоо хоногийг зөвхөн төмөр зам (10.22) бүрдүүлээгүй; max_date = week_end бол null',
+    lg && lg.from === '2026-10-19' && lg.to === '2026-10-25' && JSON.stringify(lg.sectors) === '[{"key":"rail","last":"2026-10-22"}]' &&
+    L.weekLag('2026-10-18', '2026-10-18', ['air'], { air: '2026-10-18' }) === null &&
+    L.weekLag('2026-10-18', '2026-10-25', ['air'], { air: '2026-10-25' }) === null, JSON.stringify(lg));
+  const rL = L.weekSectorReport(Object.assign({}, PAX, { max_date: '2026-10-21' }), ['air', 'rail'], null, { air: '2026-10-21', rail: '2026-10-20' });
+  check('WK5e. weekSectorReport.lag: агаар 10.21, төмөр зам 10.20 → хоёулаа 10.25-аас өмнө', !!rL.lag && rL.lag.sectors.length === 2, JSON.stringify(rL.lag));
+  check('WK5f. planYearText: «{year} оны төлөвлөгөө» → «2026 оны төлөвлөгөө»; он заагаагүй текст хэвээр; хоосон → ""',
+    L.planYearText('{year} оны төлөвлөгөө', 2026) === '2026 оны төлөвлөгөө' && L.planYearText('Төлөвлөгөө', 2026) === 'Төлөвлөгөө' &&
+    L.planYearText(null, 2026) === '');
 
   /* 2) buildWeek — сайтын бодит код, гараар бодох фикстур дээр */
   const WSTAT = (x) => [['Оны эхнээс', 'count'], ['Өмнөх 7 хоног', 'pct'], ['Өмнөх оны мөн үе', 'pct'], [x, 'count']];
@@ -10535,6 +10551,19 @@ function groupWK() {
     O.delta.find(x => x.label === 'Төмөр зам').delta === '—' && /мэдээлэл алга/.test(O.delta.find(x => x.label === 'Төмөр зам').mockTag),
     JSON.stringify(O.delta));
   const S = BW(API, REGQ, AIR, { dataset: 'air_flights', measure: 'pax' })('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
+  /* 2026-10-26 регресс: авто тээврийн цоорхойтой долоо хоног «—» биш тасархай «≥» багана, дундаж/оргилд орохгүй */
+  const PXG = JSON.parse(JSON.stringify(PAXR)); PXG.weeks[0].by_sector.road = { value: null, days: 0 };
+  const APIG = { status: 'ok', sectors: [{ sector: 'air', passengers_last: '2026-10-25' }, { sector: 'rail', passengers_last: '2026-10-22' }, { sector: 'road', passengers_last: '2026-10-25' }],
+    months: [{}], weekly: { passengers: Object.assign(PXG, { max_date: '2026-10-25' }), freight_tonnes: CARGO } };
+  const RQ3 = Object.assign({}, REGQ, { w2p: ['air', 'rail', 'road'], w2pb: ['air', 'rail', 'road'], w2px: ['air', 'rail', 'road'] });
+  const PG = BW(APIG, RQ3, AIR)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
+  check('WK14a. Дутуу долоо хоног: «≥400» тасархай багана, tooltip нь орсон/дутуу салбарыг нэрлэнэ; дундаж = зөвхөн бүтэн (1,100); оргил = 10.12',
+    PG.bars[0].value === '≥400' && PG.bars[0].partial === true && /dashed/.test(PG.bars[0].barStyle) && parseFloat(PG.bars[0].heightPct) > 0 &&
+    /Агаарын тээвэр \+ Төмөр зам/.test(PG.bars[0].tip) && /Авто зам: мэдээ дутуу/.test(PG.bars[0].tip) &&
+    /дундаж 1[,.]100/.test(PG.avgRef.label) && PG.bars[1].isPeak && !PG.bars[0].isPeak && PG.bars[1].barStyle === '',
+    JSON.stringify(PG.bars) + ' ' + PG.avgRef.label);
+  check('WK14b. Хоцрогдол: «Төмөр зам 10.22 хүртэл ирсэн тул 10.19–10.25 долоо хоног бүрдээгүй» тайлбарт',
+    /Төмөр зам 10\.22 хүртэл ирсэн тул 10\.19–10\.25/.test(PG.airOnlyNote), PG.airOnlyNote);
   check('WK15. Утгын тохиргоо (агаарын хэмжигдэхүүн) сонгосон бол нэгтгэлийн горим ИДЭВХГҮЙ (хуучин зам)',
     S.bars.length === 7 && !/долоо хоногийн эхний өдөр/.test(S.base));
 
@@ -10577,7 +10606,7 @@ function groupWK() {
   check('WK20. content.json: site.week.axis_weeks / sectors_note ({from},{to},{names}) / stale_note, ui.preview.weekly',
     /\{from\}/.test(CJ.site.week.sectors_note || '') && /\{names\}/.test(CJ.site.week.sectors_note) && /\{names\}/.test(CJ.site.week.stale_note || '') &&
     !!CJ.site.week.axis_weeks && !!CJ.ui.preview.weekly);
-  check('WK21. Темплейт: 7 хоногийн багана бүрт <title> tooltip (HV)', (idx.match(/barGrow \.6s var\(--ease\) both;"><title>\{\{ wb\.tip \}\}<\/title>/g) || []).length === 2);
+  check('WK21. Темплейт: 7 хоногийн багана бүрт <title> tooltip (HV)', (idx.match(/barGrow \.6s var\(--ease\) both;(?:\{\{ wb\.barStyle \}\})?"><title>\{\{ wb\.tip \}\}<\/title>/g) || []).length === 2);
 }
 
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */

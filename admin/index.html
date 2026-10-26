@@ -1824,7 +1824,8 @@ function previewUnit(id,sectorKey){return previewUnitInfo(id,sectorKey).u}
    зурагддаг байсан тул k04/r06-ийн "Хөл бичиг 2" талбар админд
    харагдаж байгаа мөртөө preview-д ОГТ тусдаггүй байв. */
 function footBlock(c,f,v,mini){
-  if(v) return '<div class="ed sp-foot" data-ed="'+f+'">'+esc(v)+'</div>';
+  /* «{year}» — сайтын planYearText()-тэй ижил: УБ-ийн тухайн он (засвар нь талбарт загвараараа) */
+  if(v) return '<div class="ed sp-foot" data-ed="'+f+'">'+esc(String(v).split('{year}').join(String(new Date(Date.now()+8*3600e3).getUTCFullYear())))+'</div>';
   if(!mini&&(f in c)) return '<div class="ed sp-foot empty" data-ed="'+f+'">'+
     esc(utxt('preview.'+(f==='foot2'?'add_foot2':'add_foot'),'+ '+(FL[f]||f)))+'</div>';
   return '';
