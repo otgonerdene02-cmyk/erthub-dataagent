@@ -5987,7 +5987,7 @@ const ROAD_AIMAG_PREFIX={'Ар':'Архангай','Бө':'Баян-Өлгий',
   'Ду':'Дундговь','За':'Завхан','Ор':'Орхон','Өв':'Өвөрхангай','Өм':'Өмнөговь','Сү':'Сүхбаатар',
   'Сэ':'Сэлэнгэ','Тө':'Төв','Ув':'Увс','Хо':'Ховд','Хө':'Хөвсгөл','Хэ':'Хэнтий'};
 /* Чиглэлийн нэрийг ("Ор.Баян Өндөр - УБ - Ор.Баян Өндөр") хоёр төгсгөл болгоно.
-   Төгсгөл бүр: {hub:true} (УБ) · {aimag} · {foreign:true} · null (танигдаагүй).
+   Төгсгөл бүр: {hub:true} (УБ) · {aimag} · {foreign:'ОХУ'|'БНХАУ'|…} · null (танигдаагүй).
    Буудлын нэрэнд зураас ордог (Баян-Өндөр) тул зөвхөн хоосон зайтай " - ", эсвэл
    угтварын өмнөх "-"-ээр хуваана. */
 function roadRouteEnds(name,aimagNames){
@@ -5995,7 +5995,8 @@ function roadRouteEnds(name,aimagNames){
     .reduce((a,p)=>a.concat(p.split(/-(?=[^\s.\-]{1,6}\.)/)),[])
     .map(s=>s.trim()).filter(Boolean);
   const res=s=>{
-    if(/\/(БНХАУ|ОХУ|ШУӨЗО)\//.test(s)||/^(БНХАУ|ОХУ|ӨМӨЗО|ШУӨЗО|БНКазУ)\./.test(s)) return {foreign:true};
+    const fm=/\/(БНХАУ|ОХУ|ШУӨЗО)\//.exec(s)||/^(БНХАУ|ОХУ|ӨМӨЗО|ШУӨЗО|БНКазУ)\./.exec(s);
+    if(fm) return {foreign:fm[1]};
     const m=/^([^\s.]{1,6})\.\s*/.exec(s);
     if(m&&m[1]==='УБ') return {hub:true};
     if(s==='УБ'||/^Улаанбаатар/.test(s)) return {hub:true};
@@ -6017,6 +6018,7 @@ function homeMapRailTotals(json){
   if(iD<0||iS<0) return null;
   const mtd=['loaded_mtd_domestic','loaded_mtd_foreign'].map(k=>keys.indexOf(k)).filter(i=>i>=0);
   const daily=keys.map((k,i)=>(/^loaded_/.test(k)&&!/_mtd_/.test(k))?i:-1).filter(i=>i>=0);
+  const iF=keys.indexOf('loaded_mtd_foreign');
   const num=v=>Number(v)||0;
   const last={}, sum={}, dates={};
   json.rows.forEach(r=>{
@@ -6024,11 +6026,13 @@ function homeMapRailTotals(json){
     if(!s||!d) return;
     dates[d]=1;
     sum[s]=(sum[s]||0)+daily.reduce((a,i)=>a+num(r[i]),0);
-    if(!last[s]||d>last[s].d) last[s]={d,v:mtd.reduce((a,i)=>a+num(r[i]),0)};
+    if(!last[s]||d>last[s].d) last[s]={d,v:mtd.reduce((a,i)=>a+num(r[i]),0),f:iF>=0?num(r[iF]):0};
   });
   const stations={};
   Object.keys(sum).forEach(s=>{ stations[s]=mtd.length?last[s].v:sum[s]; });
-  return {stations,days:Object.keys(dates).length,truncated:!!json.truncated};
+  /* foreign — гадаад руу ачсан вагон (mtd), чиглэлийн улс эх сурвалжид алга; mtd баганагүй бол null */
+  const foreign=iF>=0?Object.keys(last).reduce((a,s)=>a+last[s].f,0):null;
+  return {stations,days:Object.keys(dates).length,truncated:!!json.truncated,foreign};
 }
 /* /api/sectors/road/passengers/history-оос газрын зурагт хэрэгтэйг: by_route
    (хүчинтэй билетийн зорчигч, нийлбэр = totals.passengers), сарын хамралт. */
@@ -6050,8 +6054,15 @@ function homeMapRoadData(json,monthKey){
 const HOME_MAP_GLYPH={
   air:'M22 12c0-.9-.7-1.4-1.6-1.4h-5.3L10 2.8H8.1l2.6 7.8H5.6L3.8 8H2.3l1.1 4-1.1 4h1.5l1.8-2.6h5.1l-2.6 7.8H10l5.1-7.8h5.3c.9 0 1.6-.5 1.6-1.4z',
   rail:'M3 5h12.5c3.3 0 6 2.4 6.6 5.6l.4 2.2V17c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1V6c0-.6.4-1 1-1zM4 7.5v3.5h3.5V7.5zM9.5 7.5v3.5H13V7.5zM15 7.5v3.5h5.4c-.5-2-2.4-3.5-4.6-3.5zM5 18.6a1.7 1.7 0 1 0 3.4 0zM15 18.6a1.7 1.7 0 1 0 3.4 0z',
-  road:'M3 6h15.2c1.8 0 3.3 1.2 3.7 3l.9 4.2V16c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1zM3.8 8v3.6h3.6V8zM9 8v3.6h3.6V8zM14.2 8v3.6h3.6V8zM19.2 8.3v3.3h2.1l-.6-2.3c-.2-.6-.8-1-1.5-1zM5 17.4a2 2 0 1 0 4 0zM15.5 17.4a2 2 0 1 0 4 0z'
+  road:'M3 6h15.2c1.8 0 3.3 1.2 3.7 3l.9 4.2V16c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1zM3.8 8v3.6h3.6V8zM9 8v3.6h3.6V8zM14.2 8v3.6h3.6V8zM19.2 8.3v3.3h2.1l-.6-2.3c-.2-.6-.8-1-1.5-1zM5 17.4a2 2 0 1 0 4 0zM15.5 17.4a2 2 0 1 0 4 0z',
+  /* Олон улсын давхарга — бөмбөрцөг; өргөрөг/уртрагийн тор нь evenodd нүх */
+  intl:'M12 2a10 10 0 1 1 0 20a10 10 0 1 1 0-20zM7.2 11.2C7.4 7.6 8.8 4.9 10.6 3.4C6.6 4 3.6 7.2 3.1 11.2zM7.2 12.8C7.4 16.4 8.8 19.1 10.6 20.6C6.6 20 3.6 16.8 3.1 12.8zM16.8 11.2C16.6 7.6 15.2 4.9 13.4 3.4C17.4 4 20.4 7.2 20.9 11.2zM16.8 12.8C16.6 16.4 15.2 19.1 13.4 20.6C17.4 20 20.4 16.8 20.9 12.8zM8.6 11.2C8.8 7.8 10.1 5 12 3.6C13.9 5 15.2 7.8 15.4 11.2zM8.6 12.8C8.8 16.2 10.1 19 12 20.4C13.9 19 15.2 16.2 15.4 12.8z'
 };
+/* Олон улсын давхаргын өнгө — салбарын өнгөнөөс (ногоон/ягаан/хөх) ялгарах шар. */
+const HOME_MAP_INTL='#FFC857';
+/* Авто чиглэлийн гадаад төгсгөлийн код (roadRouteEnds) → COUNTRY_COORD-ийн улс.
+   ӨМӨЗО, ШУӨЗО нь БНХАУ-ын засаг захиргааны нэгж. */
+const ROAD_FOREIGN_COUNTRY={'ОХУ':'Орос','БНХАУ':'Хятад','ӨМӨЗО':'Хятад','ШУӨЗО':'Хятад','БНКазУ':'Казахстан'};
 function aimagKey(raw){ return String(raw).replace(/\s*\(.*\)\s*$/,'').trim(); }
 function hashHue(str){
   let h=0; for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))>>>0;
@@ -15832,7 +15843,7 @@ class Component extends DCLogic {
     const vw=this.state.viewportW||1280;
     const flights=(this._flightsCache&&this._flightsCache[win.y])||null;
     const memoKey=[win.key,!!this.mongoliaAimags,data?1:0,this.state.homeMapVer||0,flights?flights.length:0,
-      off.air?1:0,off.rail?1:0,off.road?1:0,Math.round(vw/40)].join('|');
+      off.air?1:0,off.rail?1:0,off.road?1:0,off.intl?1:0,Math.round(vw/40)].join('|');
     if(this._homeMapMemo&&this._homeMapMemo.key===memoKey) return this._homeMapMemo.val;
     const val=this._buildHomeMap(win,data,flights,off,vw,T);
     this._homeMapMemo={key:memoKey,val};
@@ -15841,10 +15852,10 @@ class Component extends DCLogic {
   _buildHomeMap(win,data,flights,off,vw,T){
     const d3=window.d3;
     const SK=['air','rail','road'];
-    const COL={air:NEON.air,rail:NEON.rail,road:NEON.road};
-    const NAME={air:T('sector_air','Агаарын тээвэр'),rail:T('sector_rail','Төмөр зам'),road:T('sector_road','Авто тээвэр')};
-    const UNIT={air:T('unit_air','зорчигч'),rail:T('unit_rail','вагон ачилт'),road:T('unit_road','зорчигч')};
-    const GL={air:'✈️',rail:'🚆',road:'🚌'};
+    const COL={air:NEON.air,rail:NEON.rail,road:NEON.road,intl:HOME_MAP_INTL};
+    const NAME={air:T('sector_air','Агаарын тээвэр'),rail:T('sector_rail','Төмөр зам'),road:T('sector_road','Авто тээвэр'),intl:T('sector_intl','Олон улсын')};
+    const UNIT={air:T('unit_air','зорчигч'),rail:T('unit_rail','вагон ачилт'),road:T('unit_road','зорчигч'),intl:T('unit_intl','зорчигч')};
+    const GL={air:'✈️',rail:'🚆',road:'🚌',intl:'🌐'};
     const nf=n=>fmtNum(Math.round(n));
     /* DG-P: «Хугацаа: 2026-09-01 — 2026-09-30 · 30 хоног» — бусад графиктай нэг загвар */
     const period=T('period_prefix','Хугацаа:')+' '+win.from+' — '+win.to+' · '+win.days+' '+T('period_days','хоног')+' · '+T('period_note','сүүлийн бүтэн сар');
@@ -15852,10 +15863,19 @@ class Component extends DCLogic {
     /* 1. Салбар бүрийн цэг ба урсгал (өгөгдөл ирээгүй бол null — тоо зохиохгүй) */
     const S={};
     if(flights){
-      const by={}; let tot=0, unplaced=0;
+      const by={}, ib={}; let tot=0, unplaced=0, itot=0, iun=0;
       flights.forEach(f=>{
-        if(f.year!==win.y||f.month!==win.m||airFlightKind(f.ou)!=='dom') return;
-        const p=f.pax||0; tot+=p;
+        if(f.year!==win.y||f.month!==win.m) return;
+        const kind=airFlightKind(f.ou), p=f.pax||0;
+        /* Олон улсын нислэг — хүрэх улсаар (агаарын хуудасны газрын зурагтай ижил f.cntry) */
+        if(kind==='intl'){
+          itot+=p;
+          if(!f.cntry||!COUNTRY_COORD[f.cntry]){ iun+=p; return; }
+          const o=ib[f.cntry]||(ib[f.cntry]={pax:0,fl:0}); o.pax+=p; o.fl++;
+          return;
+        }
+        if(kind!=='dom') return;
+        tot+=p;
         if(!f.city||!DOMESTIC_AIRPORT_COORD[f.city]){ unplaced+=p; return; }
         const o=by[f.city]||(by[f.city]={pax:0,fl:0}); o.pax+=p; o.fl++;
       });
@@ -15864,7 +15884,7 @@ class Component extends DCLogic {
         return {id:'air:'+c,name:c,ll:[a.lng,a.lat],aimag:aimagKey(a.aimag),v:by[c].pax,
           sub:by[c].fl+' '+T('flights_word','нислэг')};
       });
-      S.air={total:tot,pts,unplaced,hub:true};
+      S.air={total:tot,pts,unplaced,hub:true,intl:{total:itot,by:ib,unplaced:iun}};
     }
     if(data&&data.rail){
       const grp={}; const miss=[]; let tot=0;
@@ -15882,7 +15902,7 @@ class Component extends DCLogic {
         o.sub=o.parts.length>1?o.parts.sort((a,b)=>b[1]-a[1]).map(p=>p[0]+' '+nf(p[1])).join(', '):'';
         return o;
       });
-      S.rail={total:tot,pts,miss,days:data.rail.days};
+      S.rail={total:tot,pts,miss,days:data.rail.days,foreign:data.rail.foreign};
     }
     /* Аймгийн полигон (geojson) хэрэгтэй — авто нь аймгийн цэгтэй, төмөр замын
        өртөөг аймагт geoContains-оор хамааруулна. */
@@ -15898,12 +15918,22 @@ class Component extends DCLogic {
     const centroid={};
     geo.features.forEach(f=>{ const c=pathGen.centroid(f); if(c&&!isNaN(c[0])) centroid[f.properties.name]=c; });
     if(data&&data.road){
-      const by={}, pairs={}; let foreign=0, unknown=0;
+      const by={}, pairs={}, fby={}; let foreign=0, unknown=0, fun=0;
       data.road.routes.forEach(r=>{
         const v=Number(r.passengers)||0;
         const e=roadRouteEnds(r.name,aimagNames);
         if(!e){ unknown+=v; return; }
-        if((e[0]&&e[0].foreign)||(e[1]&&e[1].foreign)){ foreign+=v; return; }
+        if((e[0]&&e[0].foreign)||(e[1]&&e[1].foreign)){
+          foreign+=v;
+          const fe=e[0]&&e[0].foreign?e[0]:e[1], oe=fe===e[0]?e[1]:e[0];
+          const cn=ROAD_FOREIGN_COUNTRY[fe.foreign];
+          if(!cn||!COUNTRY_COORD[cn]){ fun+=v; return; }
+          const o=fby[cn]||(fby[cn]={pax:0,from:{}}); o.pax+=v;
+          /* Гарах цэг танигдаагүй бол шугам зурахгүй (таахгүй) — дүн нь хаалганд л орно */
+          const ok=oe&&oe.hub?'УБ':(oe&&oe.aimag?oe.aimag:'');
+          if(ok) o.from[ok]=(o.from[ok]||0)+v;
+          return;
+        }
         const ends=e.filter(x=>x&&x.aimag).map(x=>x.aimag);
         const hub=e.some(x=>x&&x.hub);
         if(!ends.length){ unknown+=v; return; }
@@ -15914,7 +15944,7 @@ class Component extends DCLogic {
       });
       const pts=Object.keys(by).filter(a=>centroid[a]).map(a=>({id:'road:'+a,name:a,xy:centroid[a],aimag:a,v:by[a],
         sub:T('road_sub','энэ аймгийг холбосон чиглэлүүд')}));
-      S.road={total:data.road.total,pts,pairs,foreign,unknown,cov:data.road.cov};
+      S.road={total:data.road.total,pts,pairs,foreign,unknown,cov:data.road.cov,intl:{total:foreign,by:fby,unplaced:fun}};
     }
     /* Цэгийн дэлгэцийн байрлал + аймаг (төмөр зам — geoContains) */
     if(!this._hmContains) this._hmContains={};
@@ -15937,27 +15967,70 @@ class Component extends DCLogic {
        хэмжээг багасгаж, хөдөлгөөнт шошгыг хасна. */
     const narrow=contentW<640, ks=narrow?0.55:1;
     const ub=proj(UB_COORD);
+    /* Тойргийн талбай ∝ тоо. Өмнө нь салбар бүр өөрийн дээд утгаар масштабтай байсан тул
+       Ханбумбат (28 мянга) ба авто Орхон (7.7 мянга) ижил хэмжээтэй харагдаж байв —
+       зорчигчтой салбарууд одоо нэг масштабтай (шүүлтээс үл хамаарна, toggle хийхэд
+       хэмжээ үсрэхгүй). Төмөр зам нь вагон — өөр нэгж тул тусдаа масштаб. */
+    const intlC={};
+    ['air','road'].forEach(k=>{ if(S[k]&&S[k].intl) Object.keys(S[k].intl.by).forEach(c=>{
+      const o=intlC[c]||(intlC[c]={air:0,road:0,fl:0,from:{}}), b=S[k].intl.by[c];
+      o[k]+=b.pax;
+      if(b.fl) o.fl+=b.fl;
+      if(b.from) Object.keys(b.from).forEach(f=>{ o.from[f]=(o.from[f]||0)+b.from[f]; });
+    }); });
+    const paxVals=[].concat(S.air?S.air.pts.map(p=>p.v):[],S.road?S.road.pts.map(p=>p.v):[],
+      Object.keys(intlC).map(c=>intlC[c].air+intlC[c].road));
+    const scaleMax={pax:Math.max(1,...paxVals),rail:S.rail?Math.max(1,...S.rail.pts.map(p=>p.v)):1};
+    const rOf=(k,v)=>(v>0?px(3)+px(23)*Math.sqrt(v/scaleMax[k==='rail'?'rail':'pax']):px(2))*(narrow?0.6:1);
+    /* Олон улсын хаалга — гадаад улс газрын зургаас гадна тул УБ-аас тухайн улс руу
+       чиглэсэн шулууны ЗУРГИЙН ИРМЭГТ огтлолцох цэгт тавина (чиглэл = жинхэнэ азимут).
+       Ирмэгийн дагуу давхцвал периметрээр нь шилжүүлнэ. */
+    if(!off.intl){
+      const m=px(30), x0=m, x1=W-m, y0=m, y1=H-m, Wf=x1-x0, Hf=y1-y0, P=2*(Wf+Hf);
+      const toS=(x,y)=>Math.abs(y-y0)<0.5?x-x0:Math.abs(x-x1)<0.5?Wf+(y-y0):Math.abs(y-y1)<0.5?Wf+Hf+(x1-x):2*Wf+Hf+(y1-y);
+      const fromS=s=>{ s=((s%P)+P)%P;
+        if(s<Wf) return [x0+s,y0]; s-=Wf; if(s<Hf) return [x1,y0+s]; s-=Hf; if(s<Wf) return [x1-s,y1]; s-=Wf; return [x0,y1-s]; };
+      const gates=Object.keys(intlC).map(c=>{
+        const o=intlC[c], v=(vis('air')?o.air:0)+(vis('road')?o.road:0);
+        if(!v) return null;
+        const t=proj(COUNTRY_COORD[c]); if(!t) return null;
+        const dx=t[0]-ub[0], dy=t[1]-ub[1];
+        const tt=Math.min(dx>0?(x1-ub[0])/dx:dx<0?(x0-ub[0])/dx:Infinity, dy>0?(y1-ub[1])/dy:dy<0?(y0-ub[1])/dy:Infinity);
+        if(!isFinite(tt)) return null;
+        const ex=Math.max(x0,Math.min(x1,ub[0]+dx*tt)), ey=Math.max(y0,Math.min(y1,ub[1]+dy*tt));
+        return {id:'intl:'+c,name:c,v,air:vis('air')?o.air:0,road:vis('road')?o.road:0,fl:o.fl,from:vis('road')?o.from:{},
+          s:toS(ex,ey),r:rOf('intl',v)};
+      }).filter(Boolean).sort((a,b)=>a.s-b.s);
+      for(let i=1;i<gates.length;i++){
+        const need=gates[i-1].r+gates[i].r+px(6);
+        if(gates[i].s-gates[i-1].s<need) gates[i].s=gates[i-1].s+need;
+      }
+      gates.forEach(g=>{ g.xy=fromS(g.s); });
+      const itot=['air','road'].reduce((a,k)=>a+(vis(k)&&S[k].intl?S[k].intl.total:0),0);
+      if(gates.length||itot) S.intl={total:itot,pts:gates};
+    }
     const arcD=(a,b,bend)=>{
       const cx=(a[0]+b[0])/2-(b[1]-a[1])*bend, cy=(a[1]+b[1])/2+(b[0]-a[0])*bend;
       return {d:'M'+a[0].toFixed(1)+','+a[1].toFixed(1)+' Q'+cx.toFixed(1)+','+cy.toFixed(1)+' '+b[0].toFixed(1)+','+b[1].toFixed(1),
         len:Math.hypot(b[0]-a[0],b[1]-a[1])*1.08};
     };
     const routes=[], movers=[], tags=[];
-    const mover=(k,d,len,seed,label,flip)=>{
+    const mover=(k,d,len,seed,label,flip,color)=>{
+      color=color||COL[k];
       const speed={air:62,rail:26,road:34}[k];
       const dur=Math.max(3.2,Math.min(18,len/speed)).toFixed(1);
       const delay=((hashHue(seed)/360)*dur).toFixed(2);
       const anim="offset-path:path('"+d+"');offset-distance:0%;animation:ehHmArrive "+dur+"s linear infinite;animation-delay:-"+delay+"s;";
       const s=(px({air:26,rail:24,road:21}[k]*ks)/24).toFixed(3);
       const rot=k==='air'?'auto':'0deg';
-      movers.push({k,color:COL[k],path:HOME_MAP_GLYPH[k],tr:'scale('+(flip&&k!=='air'?'-':'')+s+','+s+') translate(-12,-12)',
-        style:anim+'offset-rotate:'+rot+';filter:drop-shadow(0 0 '+px(3)+'px '+COL[k]+');'});
-      if(label&&!narrow&&len>px(150)) tags.push({color:COL[k],text:label,style:anim+'offset-rotate:0deg;',
+      movers.push({k,color,path:HOME_MAP_GLYPH[k],tr:'scale('+(flip&&k!=='air'?'-':'')+s+','+s+') translate(-12,-12)',
+        style:anim+'offset-rotate:'+rot+';filter:drop-shadow(0 0 '+px(3)+'px '+color+');'});
+      if(label&&!narrow&&len>px(150)) tags.push({color,text:label,style:anim+'offset-rotate:0deg;',
         fx:px(9).toFixed(1),fy:(-px(22)).toFixed(1),fw:px(120).toFixed(1),fh:px(14).toFixed(1),fs:px(10).toFixed(2),
         lx2:px(9).toFixed(1),ly2:(-px(9)).toFixed(1)});
     };
     const topIds={};
-    SK.forEach(k=>{ if(S[k]) S[k].pts.slice().sort((a,b)=>b.v-a.v).slice(0,2).forEach(p=>{ topIds[p.id]=1; }); });
+    SK.concat('intl').forEach(k=>{ if(S[k]) S[k].pts.slice().sort((a,b)=>b.v-a.v).slice(0,2).forEach(p=>{ topIds[p.id]=1; }); });
     if(vis('air')){
       const mx=S.air.pts.reduce((m,p)=>Math.max(m,p.v),0)||1;
       S.air.pts.forEach((p,i)=>{
@@ -15980,6 +16053,27 @@ class Component extends DCLogic {
         if(i<14) mover('road',r.d,r.len,pk,topIds['road:'+ab[1]]&&ab[0]==='УБ'?(inb?ab[1]+' → УБ':'УБ → '+ab[1]):'',fl);
       });
     }
+    if(vis('intl')){
+      const gs=S.intl.pts, mxA=gs.reduce((m,g)=>Math.max(m,g.air),0)||1;
+      const roadLegs=[];
+      gs.forEach((g,i)=>{
+        if(g.air){
+          const out=i%2===0, a=out?ub:g.xy, b=out?g.xy:ub, r=arcD(a,b,out?0.08:-0.08);
+          routes.push({d:r.d,color:COL.intl,w:(0.8+2.4*Math.sqrt(g.air/mxA)).toFixed(2),dash:'2 5',
+            title:T('hub','Улаанбаатар')+' ↔ '+g.name+' — '+nf(g.air)+' '+UNIT.air+' · '+g.fl+' '+T('flights_word','нислэг')+' · '+NAME.intl});
+          mover('air',r.d,r.len,g.id,topIds[g.id]?(out?'УБ → '+g.name:g.name+' → УБ'):'',b[0]<a[0],COL.intl);
+        }
+        Object.keys(g.from).forEach(f=>roadLegs.push({g,f,v:g.from[f]}));
+      });
+      const mxR=roadLegs.reduce((m,l)=>Math.max(m,l.v),0)||1;
+      roadLegs.sort((a,b)=>b.v-a.v).forEach((l,i)=>{
+        const a=l.f==='УБ'?ub:centroid[l.f]; if(!a) return;
+        const r=arcD(a,l.g.xy,-0.06);
+        routes.push({d:r.d,color:COL.intl,w:(0.7+2.2*Math.sqrt(l.v/mxR)).toFixed(2),dash:'1 4',
+          title:(l.f==='УБ'?T('hub','Улаанбаатар'):l.f)+' ↔ '+l.g.name+' — '+nf(l.v)+' '+UNIT.road+' · '+NAME.road+' · '+T('road_intl','улс хоорондын чиглэл')});
+        if(i<8) mover('road',r.d,r.len,'ri'+l.f+l.g.name,'',l.g.xy[0]<a[0],COL.intl);
+      });
+    }
     const tracks=[];
     if(vis('rail')){
       RAIL_LINES.forEach((ln,li)=>{
@@ -15999,23 +16093,28 @@ class Component extends DCLogic {
 
     /* 3. Цэгүүд (бөмбөлөг) — хэмжээ салбар ДОТРОО sqrt масштаб */
     const nodes=[], ripples=[], labels=[];
-    SK.forEach(k=>{
-      if(!vis(k)) return;
-      const pts=S[k].pts, mx=pts.reduce((m,p)=>Math.max(m,p.v),0)||1;
-      pts.forEach(p=>{
-        const r=(p.v>0?px(3.2)+px(9.5)*Math.sqrt(p.v/mx):px(2.2))*(narrow?0.6:1);
-        p.r=r;
+    const SKI=SK.concat('intl');
+    if(S.intl) S.intl.pts.forEach(g=>{
+      g.sub=[g.air?GL.air+' '+NAME.air+' '+nf(g.air)+' ('+g.fl+' '+T('flights_word','нислэг')+')':'',
+        g.road?GL.road+' '+NAME.road+' '+nf(g.road):''].filter(Boolean).join(' · ');
+    });
+    /* Том тойргийг эхэлж зурна — жижиг нь дээр нь гарч hover-оо алдахгүй */
+    const allPts=[];
+    SKI.forEach(k=>{ if(vis(k)) S[k].pts.forEach(p=>{ p.r=k==='intl'?p.r:rOf(k,p.v); allPts.push({p,k}); }); });
+    allPts.sort((a,b)=>b.p.r-a.p.r).forEach(({p,k})=>{
+      const r=p.r;
+      {
         nodes.push({cx:p.xy[0].toFixed(1),cy:p.xy[1].toFixed(1),r:r.toFixed(2),color:COL[k],
-          fillOp:p.v>0?'0.30':'0.12',
+          fillOp:p.v>0?(k==='intl'?'0.34':'0.26'):'0.12',
           title:GL[k]+' '+p.name+(p.aimag&&p.aimag!==p.name?' ('+p.aimag+')':'')+' — '+nf(p.v)+' '+UNIT[k]+(p.sub?' · '+p.sub:'')});
         if(topIds[p.id]) ripples.push({cx:p.xy[0].toFixed(1),cy:p.xy[1].toFixed(1),r:r.toFixed(2),color:COL[k],
           style:'transform-box:fill-box;transform-origin:center;animation:ripplePulse '+(2.6+hashHue(p.id)%5*0.3).toFixed(1)+'s ease-out infinite;'});
-      });
+      }
     });
     /* Шошго — салбар бүрийн том 3 цэг, давхцвал алгасна */
     const lfs=px(narrow?9.5:11.5), boxes=[{x:ub[0]+px(8),y:ub[1]-px(10),w:px(84),h:px(16)}];
     const cand=[];
-    SK.forEach(k=>{ if(vis(k)) S[k].pts.slice().sort((a,b)=>b.v-a.v).slice(0,3).forEach(p=>cand.push({p,k})); });
+    SKI.forEach(k=>{ if(vis(k)) S[k].pts.slice().sort((a,b)=>b.v-a.v).slice(0,k==='intl'?5:3).forEach(p=>cand.push({p,k})); });
     cand.sort((a,b)=>b.p.r-a.p.r).forEach(({p,k})=>{
       if(p.name===T('hub','Улаанбаатар')) return;
       const tw=Math.min(px(150),p.name.length*lfs*0.6);
@@ -16054,7 +16153,17 @@ class Component extends DCLogic {
           +'border:1px solid '+(on?COL[k]+'aa':'rgba(160,190,230,.22)')+';background:'+(on?COL[k]+'1f':'rgba(255,255,255,.03)')+';'
           +'color:'+(on?'#EAF3FF':'#8193B2')+';opacity:'+(has?'1':'.7')+';transition:.16s var(--ease);'};
     });
-    const allOn=SK.every(k=>!off[k]);
+    {
+      const on=!off.intl, has=!!((S.air&&S.air.intl)||(S.road&&S.road.intl));
+      const v=['air','road'].reduce((a,k)=>a+(S[k]&&S[k].intl&&!off[k]?S[k].intl.total:0),0);
+      chips.push({key:'intl',path:HOME_MAP_GLYPH.intl,label:NAME.intl,val:has?nf(v)+' '+UNIT.intl:T('no_data','мэдээлэл алга'),
+        on:on?'1':'0',color:COL.intl,toggle:()=>this.toggleHomeMapSector('intl'),
+        title:(on?T('chip_hide','Газрын зургаас нуух'):T('chip_show','Газрын зурагт харуулах'))+' — '+NAME.intl,
+        style:'cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:11px;'
+          +'border:1px solid '+(on?COL.intl+'aa':'rgba(160,190,230,.22)')+';background:'+(on?COL.intl+'1f':'rgba(255,255,255,.03)')+';'
+          +'color:'+(on?'#EAF3FF':'#8193B2')+';opacity:'+(has?'1':'.7')+';transition:.16s var(--ease);'});
+    }
+    const allOn=SKI.every(k=>!off[k]);
     const chipAll={label:T('chip_all','Бүгд'),toggle:()=>this.toggleHomeMapSector('all'),
       style:'cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;padding:8px 14px;border-radius:11px;'
         +(allOn?'border:1px solid #EAF3FF;background:#EAF3FF;color:#0B1426;':'border:1px solid rgba(160,190,230,.3);background:transparent;color:#B9C8E2;')};
@@ -16062,6 +16171,8 @@ class Component extends DCLogic {
       text:NAME[k]+' — '+T('legend_'+k,{air:'дотоодын нислэгийн зорчигч, нисэх буудлаар',
         rail:'сарын вагон ачилт, өртөөгөөр (шугам — өртөө хоорондын схем)',
         road:'билеттэй зорчигч, чиглэлийн аймгаар'}[k])}));
+    legend.push({glyph:GL.intl,color:COL.intl,path:HOME_MAP_GLYPH.intl,
+      text:NAME.intl+' — '+T('legend_intl','УБ-аас гадаад руу нислэг ба улс хоорондын автобус, хүрэх улсын чиглэлд зургийн ирмэг дээр')});
     const notes=[];
     if(!S.air) notes.push(NAME.air+': '+T('no_data','мэдээлэл алга'));
     else if(S.air.unplaced) notes.push(NAME.air+': '+nf(S.air.unplaced)+' '+UNIT.air+' '+T('note_unplaced','байршил тодорхойгүй буудлынх — газрын зурагт ороогүй'));
@@ -16069,14 +16180,16 @@ class Component extends DCLogic {
     else{
       const miss=S.rail.miss.filter(m=>m[1]>0);
       if(miss.length) notes.push(NAME.rail+': '+miss.map(m=>m[0]+' '+nf(m[1])).join(', ')+' '+UNIT.rail+' — '+T('note_rail_miss','өртөөний байршил тодорхойгүй тул газрын зурагт ороогүй'));
+      if(S.rail.foreign) notes.push(NAME.rail+': '+T('note_rail_foreign','гадаад руу ачилт')+' '+nf(S.rail.foreign)+' '+UNIT.rail+' — '+T('note_rail_foreign_why','хүрэх улс эх сурвалжид алга тул олон улсын давхаргад ороогүй (өртөөний дүнд багтсан)'));
       if(S.rail.days&&S.rail.days<win.days) notes.push(NAME.rail+': '+win.days+' '+T('note_days_of','хоногоос')+' '+S.rail.days+' '+T('note_days_have','хоногийн мэдээ'));
     }
     if(!S.road) notes.push(NAME.road+': '+T('no_data','мэдээлэл алга'));
     else{
-      if(S.road.foreign) notes.push(NAME.road+': '+T('note_road_foreign','улс хоорондын')+' '+nf(S.road.foreign)+' '+UNIT.road+' '+T('note_offmap','газрын зурагт ороогүй (нийтэд багтсан)'));
       if(S.road.cov&&S.road.cov.days<S.road.cov.of) notes.push(NAME.road+': '+S.road.cov.of+' '+T('note_days_of','хоногоос')+' '+S.road.cov.days+' '+T('note_road_cov','хоног нь бүрэн хамрагдсан (эх сурвалжийн цоорхой)'));
     }
-    notes.push(T('note_scale','Бөмбөлгийн хэмжээ салбар ДОТРОО харьцангуй — нэгж нь өөр (зорчигч ≠ вагон)'));
+    const iun=(S.air&&S.air.intl?S.air.intl.unplaced:0)+(S.road&&S.road.intl?S.road.intl.unplaced:0);
+    if(iun) notes.push(NAME.intl+': '+nf(iun)+' '+UNIT.intl+' '+T('note_intl_unplaced','хүрэх улсын байршил тодорхойгүй — газрын зурагт ороогүй'));
+    notes.push(T('note_scale','Тойргийн талбай тоотой пропорциональ: агаар, авто, олон улсын зорчигч НЭГ масштабтай; төмөр зам (вагон) өөр нэгж тул тусдаа масштабтай'));
     const ubTitle=T('hub','Улаанбаатар')+' — '+T('hub_sub','салбаруудын төв зангилаа');
     return {ready:true,notReady:false,viewBox:'0 0 '+W+' '+H,regions,rings,tracks,routes,nodes,ripples,movers,tags,labels,
       ubX:ub[0].toFixed(1),ubY:ub[1].toFixed(1),ubR:px(5).toFixed(2),ubTitle,
