@@ -258,6 +258,10 @@ const COLLECTOR = `
       if(!t||!/[\\u0400-\\u04FF]/.test(t)) continue;
       var el=n.parentElement; if(!el) continue;
       if(el.closest('script,style,noscript,template')) continue;
+      /* data-tc-data — газрын нэр (аймаг, нисэх буудал, өртөө) зэрэг ӨГӨГДЛӨӨС ирдэг
+         текст (нүүрийн салбарын газрын зураг). Файлд бүртгэх боломжгүй; бусад текст
+         (chip, легенд, тэмдэглэл) нь энэ тэмдэглэгээний ГАДНА тул шалгагдсаар байна. */
+      if(el.closest('[data-tc-data]')) continue;
       var cs=w2.getComputedStyle(el);
       if(cs.display==='none'||cs.visibility==='hidden') continue;
       window.__seen.push(t);

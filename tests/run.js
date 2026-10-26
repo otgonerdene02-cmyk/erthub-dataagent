@@ -223,6 +223,9 @@ function groupB() {
       /* `sector_total` — салбарын нэгтгэлийн самбар, T('kpi_pax') туслахаар
          (stxt('sector_total.'+k)); түлхүүр бүрийг ST21 баталгаажуулна. */
       'sector_total',
+      /* `home_map` — нүүрийн салбарын газрын зураг, T('title') туслахаар (stxt('home_map.'+k));
+         түлхүүр бүрийг HM14 баталгаажуулна. */
+      'home_map',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -8351,6 +8354,111 @@ async function groupRI() {
 /* RT — нүүрний авто тээвэр (2026-10-23 хэрэглэгч: «05 хоосон график, 04 гурван карт 4 баганад
    сондгой, шүүлтийн мөрөнд "Авто тээвэр" ганцаараа»). t05/k04-ийн авто тээврийн слот зорчигчийн
    сарын цуваагаар (EHGlossary.roadPaxSeries), эх сурвалжгүй салбарт хоосон карт биш нэг мөр. */
+/* HM — нүүрийн «Салбарын газрын зураг» (2026-10-25 хэрэглэгч: «агаарын газрын зургийг нүүрэнд,
+   бүх салбарын датаг icon-оор ялган, map дээрээ салбарын шүүлттэй»). Гараар бодох фикстур:
+   rail-wagon — Багануур 09-29 mtd 100+5, 09-30 mtd 110+5 → СҮҮЛИЙН мөр = 115 (нийлбэр 220 БИШ);
+   Эрээнцав 7; 2 огноо. mtd баганагүй бол өдрийн loaded_* нийлбэр: 3+10 = 13.
+   Авто чиглэл: «Хо.Жаргалант - УБ» → [УБ, Ховд]; «Ор.Баян-Өндөр-Бу.Булган» → Орхон↔Булган;
+   «Улаан-Үд/ОХУ/ - УБ» → гадаад; «Тө.Зуун мод- Лавай төв» → [Төв, null]. */
+async function groupHM() {
+  group('HM. Нүүр · салбарын газрын зураг');
+  const src = dcScript();
+  const grab = (name) => { const m = src.match(new RegExp('\\nfunction ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}\\n')); return m ? m[0] : null; };
+  const pre = src.match(/\nconst ROAD_AIMAG_PREFIX=\{[\s\S]*?\};\n/);
+  const fns = ['roadRouteEnds', 'homeMapRailTotals', 'homeMapRoadData'].map(grab);
+  check('HM0. roadRouteEnds / homeMapRailTotals / homeMapRoadData тодорхойлогдсон', !!pre && fns.every(Boolean));
+  if (!pre || !fns.every(Boolean)) return;
+  const L = new Function(pre[0] + fns.join('\n') + '\nreturn {roadRouteEnds,homeMapRailTotals,homeMapRoadData};')();
+  const C = ['record_date', 'station_name', 'loaded_mtd_domestic', 'loaded_mtd_foreign', 'loaded_covered_domestic', 'unloaded_mtd_domestic']
+    .map((k) => ({ key: k }));
+  const rt = L.homeMapRailTotals({ columns: C, rows: [
+    ['2026-09-29', 'Багануур', 100, 5, 3, 50], ['2026-09-30', 'Багануур', 110, 5, 10, 60], ['2026-09-30', 'Эрээнцав', 7, 0, 7, 1]] });
+  check('HM1. Төмөр зам: өртөөний СҮҮЛИЙН мөрийн mtd = сарын дүн (Багануур 115, Эрээнцав 7), буулгалт ороогүй',
+    rt && rt.stations['Багануур'] === 115 && rt.stations['Эрээнцав'] === 7 && rt.days === 2, JSON.stringify(rt));
+  const rt2 = L.homeMapRailTotals({ columns: C.filter((c) => !/_mtd_/.test(c.key)), rows: [
+    ['2026-09-29', 'Багануур', 3], ['2026-09-30', 'Багануур', 10]] });
+  check('HM2. mtd баганагүй бол өдрийн ачилтын нийлбэр (3+10 = 13)', rt2 && rt2.stations['Багануур'] === 13, JSON.stringify(rt2));
+  check('HM3. Мөргүй / буруу хариу → null (0 гэж зохиохгүй)',
+    L.homeMapRailTotals(null) === null && L.homeMapRailTotals({ columns: C, rows: [] }) === null && L.homeMapRailTotals({ status: 'no_data' }) === null);
+  const AN = ['Дархан-Уул', 'Орхон', 'Ховд'];
+  const E = (n) => JSON.stringify(L.roadRouteEnds(n, AN));
+  check('HM4. Чиглэлийн төгсгөл: УБ ↔ аймгийн угтвар (VIP, «До. Баян Уул» хоосон зайтай ч)',
+    E('Хо.Жаргалант - УБ - Хо.Жаргалант') === '[{"aimag":"Ховд"},{"hub":true}]' &&
+    E('Хо.Жаргалант /VIP/ - УБ - Хо.Жаргалант /VIP/') === '[{"aimag":"Ховд"},{"hub":true}]' &&
+    E('До. Баян Уул - УБ - До. Баян Уул') === '[{"aimag":"Дорнод"},{"hub":true}]',
+    [E('Хо.Жаргалант - УБ - Хо.Жаргалант'), E('До. Баян Уул - УБ - До. Баян Уул')].join(' '));
+  check('HM5. Зайгүй зураас: «Ор.Баян-Өндөр-Бу.Булган» → Орхон, Булган (Баян-Өндөр таслагдахгүй); бүтэн аймгийн нэр',
+    E('Ор.Баян-Өндөр-Бу.Булган-Ор.Баян-Өндөр') === '[{"aimag":"Орхон"},{"aimag":"Булган"}]' &&
+    E('Дархан-Уул - Орхон - Дархан-Уул') === '[{"aimag":"Дархан-Уул"},{"aimag":"Орхон"}]',
+    E('Ор.Баян-Өндөр-Бу.Булган-Ор.Баян-Өндөр'));
+  check('HM6. Гадаад (ОХУ/БНХАУ/ӨМӨЗО/БНКазУ) танигдана, танигдаагүй буудал null',
+    E('Улаан-Үд/ОХУ/ - УБ - Улаан-Үд/ОХУ/') === '[{"foreign":true},{"hub":true}]' &&
+    E('Бө.Өлгий - БНКазУ.Астана - Бө.Өлгий') === '[{"aimag":"Баян-Өлгий"},{"foreign":true}]' &&
+    E('Тө.Зуун мод- Лавай төв- Тө.Зуун мод') === '[{"aimag":"Төв"},null]', E('Тө.Зуун мод- Лавай төв- Тө.Зуун мод'));
+  const rd = L.homeMapRoadData({ status: 'ok', totals: { passengers: 150 },
+    months: [{ month: '2026-09', days: 15, passengers: 150 }],
+    by_route: [{ name: 'Хо.Жаргалант - УБ - Хо.Жаргалант', passengers: 100 }, { name: 'Улаан-Үд/ОХУ/ - УБ - Улаан-Үд/ОХУ/', passengers: 50 }] }, '2026-09');
+  check('HM7. Авто: нийт = totals.passengers (150), хамралт 15/30 (days_in_month алга ч сарын түлхүүрээс)',
+    rd && rd.total === 150 && rd.cov && rd.cov.days === 15 && rd.cov.of === 30 && rd.routes.length === 2, JSON.stringify(rd));
+  check('HM8. Авто: by_route алга / ok биш → null',
+    L.homeMapRoadData({ status: 'ok', by_route: [] }, '2026-09') === null && L.homeMapRoadData({ status: 'no_data' }, '2026-09') === null);
+  const idx = read('index.html');
+  check('HM9. Өртөөний байршил OSM-оос, таагаагүй (Эрээнцав/Аршаант координатгүй), шугамын бүх өртөө координаттай',
+    /const RAIL_STATION_COORD=\{/.test(idx) && !/'эрээнцав':\[/.test(idx) && !/'аршаант':\[/.test(idx));
+  check('HM10. Темплейт: chip (салбарын шүүлт), аймаг/цэг/шугам tooltip-тэй, icon pointer-events none',
+    /data-hm-chip="\{\{ hc\.key \}\}"/.test(idx) && /class="eh-hm-reg"[^>]*><title>\{\{ ar\.title \}\}/.test(idx) &&
+    /\{\{ hn\.title \}\}/.test(idx) && /\{\{ rt\.title \}\}/.test(idx) && /<g pointer-events="none" style="\{\{ mv\.style \}\}">/.test(idx));
+  {
+    const a = idx.indexOf('  homeMapWindow(){'), b = idx.indexOf('  _buildHomeMap(', a), e = idx.indexOf('\n  // "Улаанбаатараас чиглэсэн', b);
+    const body = a > 0 && e > 0 ? idx.slice(a, e) : '';
+    const used = new Set([...body.matchAll(/\bT\('([a-z_]+)'/g)].map((m) => m[1]).filter((k) => !/_$/.test(k)));
+    ['air', 'rail', 'road'].forEach((k) => { if (/T\('legend_'\+k/.test(body)) used.add('legend_' + k); });
+    const have = Object.keys((JSON.parse(read('content.json')).site || {}).home_map || {});
+    const miss = [...used].filter((k) => !have.includes(k)), dead = have.filter((k) => !used.has(k));
+    check('HM14. home_map.* — кодын түлхүүр бүр content.json-д, content.json-д үхмэл түлхүүргүй',
+      used.size > 20 && !miss.length && !dead.length, 'дутуу: ' + miss.join(',') + ' · үхмэл: ' + dead.join(','));
+  }
+
+  if (!CHROME) { skipped('HM11 нүүрийн газрын зураг (хөтөч)', 'Chrome олдсонгүй'); return; }
+  const probe = async function (d) {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const v = f(); if (v) return v; await sleep(200); } return null; };
+    const map = () => d.querySelector('[data-home-map]');
+    await until(() => map() && map().querySelector('svg.eh-hm-svg') && map().querySelectorAll('g[style*="ehHmArrive"]').length > 0
+      && /вагон/.test(map().innerText), 40000);
+    const m = map();
+    if (!m) return { none: true };
+    const snap = () => ({
+      movers: m.querySelectorAll('g[style*="ehHmArrive"]').length,
+      nodeTips: [...m.querySelectorAll('circle > title')].map((t) => t.textContent),
+      chips: [...m.querySelectorAll('[data-hm-chip]')].map((b) => b.dataset.hmChip + ':' + (b.dataset.on || '')),
+      regions: m.querySelectorAll('path.eh-hm-reg').length,
+      text: m.innerText });
+    const a = snap();
+    m.querySelector('[data-hm-chip="air"]').click(); await sleep(400);
+    const b = snap();
+    m.querySelector('[data-hm-chip="all"]').click(); await sleep(400);
+    const c = snap();
+    return { a, b: { movers: b.movers, air: b.nodeTips.filter((t) => /Агаар/.test(t) && !/^[^—]*аймаг/.test(t)).length, chips: b.chips }, c: { movers: c.movers } };
+  };
+  const srv = serve();
+  const prevSrc = PROBE_SRC;
+  PROBE_SRC = '/index.html?fx=1';
+  let R;
+  try { R = await runProbe('async function(d,w){return (' + probe.toString() + ')(d,w);}', 70000); }
+  finally { PROBE_SRC = prevSrc; srv.close(); }
+  if (!R || R.__err || R.none) { bad('HM11. Нүүрийн газрын зургийн probe', JSON.stringify(R)); return; }
+  check('HM11. Сайт: газрын зураг 3 салбарын chip-тэй, аймаг (≥20), хөдөлгөөнт icon-той, NaN/undefined алга',
+    R.a.chips.join() === 'all:,air:1,rail:1,road:1' && R.a.regions >= 20 && R.a.movers > 0 && !/NaN|undefined/.test(R.a.text),
+    JSON.stringify({ chips: R.a.chips, regions: R.a.regions, movers: R.a.movers }));
+  check('HM12. Сайт: цэг бүр tooltip «нэр — тоо нэгж» (агаар/төмөр зам/авто гурвуулаа)',
+    R.a.nodeTips.length > 0 && R.a.nodeTips.filter((t) => !/төв зангилаа/.test(t)).every((t) => /— [\d,]+ /.test(t)) &&
+    ['Агаарын тээвэр', 'Төмөр зам', 'Авто тээвэр'].every((n) => R.a.nodeTips.some((t) => t.includes(n)) || R.a.text.includes(n)),
+    JSON.stringify(R.a.nodeTips.slice(0, 6)));
+  check('HM13. Сайт: «Агаар» chip дарахад агаарын icon/цэг алга болж, «Бүгд» сэргээнэ (I5-ийн зарчим)',
+    R.b.chips.includes('air:0') && R.b.movers < R.a.movers && R.c.movers === R.a.movers,
+    JSON.stringify({ a: R.a.movers, b: R.b, c: R.c }));
+}
 async function groupRT() {
   group('RT. Нүүрний авто тээвэр — t05 цуваа · k04 мөр · хоосон төлөв');
   const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
@@ -8714,7 +8822,7 @@ function groupDG() {
      + салбарын нэгтгэл 5 (7 хоногийн карт, 8 долоо хоног, сараар — хэмжүүр бүрт sc-for; эзлэх хувь, өмнөх оны мөн үе).
      + авто тээврийн зорчигч 10 (7 хоногийн тайлан, төрлийн донут, төрлийн карт (sc-for), сарын график,
      харьцаа, чиглэл, тээвэрлэгч, суваг, ангилал, ТХ). Бүрдлийг DG-P16 браузераар тулгана. */
-  check('DG-P8. Хугацааны мөр: 22 + үзлэг 6 + ачааны нэгтгэл 6 + нүүр 6 + салбарын нэгтгэл 5 + авто зорчигч 10 = 55 карт', nPer === 55, 'n=' + nPer);
+  check('DG-P8. Хугацааны мөр: 22 + үзлэг 6 + ачааны нэгтгэл 6 + нүүр 6 + салбарын нэгтгэл 5 + авто зорчигч 10 + нүүрийн газрын зураг 1 = 56 карт', nPer === 56, 'n=' + nPer);
   check('DG-P8. Тус бүр өгөгдлөөс уншина (chartPeriod / airPeriod биндинг)',
     /chartPeriod:chartPeriodText\(m,T\)/.test(idxP) && /airPeriod:chartPeriodText\(/.test(idxP) &&
     /{{ detail.chartPeriod }}/.test(idxP) && /{{ detail.airPeriod }}/.test(idxP));
@@ -10334,11 +10442,12 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=RPX')) { groupRPX(); }
   else if (process.argv.includes('--only=RT')) { await groupRT(); }
   else if (process.argv.includes('--only=RI')) { await groupRI(); }
+  else if (process.argv.includes('--only=HM')) { await groupHM(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
