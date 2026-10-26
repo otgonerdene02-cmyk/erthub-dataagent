@@ -9937,8 +9937,8 @@ function groupST() {
 async function groupSM() {
   group('SM. Салбарын нэгтгэл — «Тооцооллын арга» таб');
   const src = dcScript();
-  const a = src.indexOf('const SECTOR_TOTAL_LINEAGE='), b = src.indexOf('/* 06-р хэсгийн индекс (i06/r06)');
-  check('SM0. Урсгалын блок олдов (SECTOR_TOTAL_LINEAGE · sectorTotalLineage)', a > 0 && b > a);
+  const a = src.indexOf('function aggLineage('), b = src.indexOf('/* 06-р хэсгийн индекс (i06/r06)');
+  check('SM0. Урсгалын блок олдов (aggLineage · SECTOR_TOTAL_LINEAGE · sectorTotalLineage)', a > 0 && b > a);
   if (!(a > 0 && b > a)) return;
   const L = new Function(src.slice(a, b) + '\nreturn {SECTOR_TOTAL_LINEAGE,sectorTotalLineage};')();
   const C = readJson('content.json'), MT = ((C.site || {}).sector_total || {}).method || {};
@@ -9965,7 +9965,8 @@ async function groupSM() {
     r.fields.forEach((f) => { if (!f.label) missTxt.push(r.id + '.field_' + f.measure); if (!f.tech) missTxt.push(r.id + '.tech_' + f.measure); });
   });
   check('SM5. Оролт бүрийн утга, техникийн нэр, нөхцөл content.json → site.sector_total.method.inputs-д', missTxt.length === 0, missTxt.join(', '));
-  const mBody = src.slice(src.indexOf('  buildSectorTotalMethod(m,chip){'), src.indexOf('  /* Салбарын нэгтгэлийн анализын самбар'));
+  /* Ерөнхий бүтээгч (buildAggMethod) — нэгтгэл бүрийн method блокт бүх түлхүүр байх ёстой (AG2 ачааныхыг) */
+  const mBody = src.slice(src.indexOf('  buildAggMethod(dsel,ctx){'), src.indexOf('  /* Салбарын нэгтгэлийн арга'));
   const missM = [...mBody.matchAll(/\bM\('([a-z_0-9]+)'/g)].map((x) => x[1]).filter((k) => MT[k] == null);
   check('SM6. Табын бүх текст content.json → site.sector_total.method-д', mBody.length > 100 && missM.length === 0, missM.join(', '));
   check('SM6. Томьёо (7) ба ороогүй зүйл content.json-д', Array.isArray(MT.fields) && MT.fields.length >= 7 &&
@@ -9989,7 +9990,9 @@ async function groupSM() {
       R.fields=d.querySelectorAll('[data-st-fields] .eh-st-field').length;
       R.cov=d.querySelectorAll('[data-st-mcov] .eh-st-cov').length;
       R.text=d.querySelector('[data-st-method]').innerText;
+      R.recon=[...d.querySelectorAll('[data-st-recon-row]')].map(r=>r.getAttribute('data-st-recon-row')+':'+(/✓/.test(r.innerText)?'ok':/⚠/.test(r.innerText)?'diff':'-'));
       d.querySelectorAll('[data-st-measure]')[2].click(); await sleep(400);
+      R.reconF=[...d.querySelectorAll('[data-st-recon-row]')].map(r=>r.getAttribute('data-st-recon-row'));
       R.freight=[...d.querySelectorAll('[data-st-row]')].filter(r=>r.getAttribute('data-st-active')==='1').map(r=>r.getAttribute('data-st-row'));
       tab('data').click(); await sleep(500);
       R.back=!!d.querySelector('[data-ddq-block]')&&!d.querySelector('[data-st-method]');
@@ -10009,10 +10012,106 @@ async function groupSM() {
         R.rows.join(',') === 'air:1,rail_pax:1,rail_freight:1,road_pax:1' && R.fields >= 7 && R.cov === 4, JSON.stringify([R.rows, R.fields, R.cov]));
       check('SM8. «Ачаа тээвэр» → зөвхөн агаар ба ачааны нэгтгэл тод', R.freight.join(',') === 'air,rail_freight', R.freight.join(','));
       check('SM8. Самбарт NaN/undefined/[object алга', !/NaN|undefined|\[object/.test(R.text));
+      check('SM8. Тулгалт: зорчигч, ачаа хоёул «✓» (салбаруудын нийлбэр = KPI)', R.recon.join(',') === 'passengers:ok,freight_tonnes:ok', R.recon.join(','));
+      check('SM8. «Ачаа тээвэр» → тулгалтад зөвхөн ачаа', R.reconF.join(',') === 'freight_tonnes', R.reconF.join(','));
       check('SM9. «Өгөгдөл» руу буцахад анализ дахин гарна', R.back);
       check('SM9. «Датасэтийг нээх» → эх датасэт рүү шилжинэ, тэнд таб алга', /browse\/rail__/.test(decodeURIComponent(R.nav)) && R.otherTabs === 0 && R.otherData,
         JSON.stringify({ nav: decodeURIComponent(R.nav), t: R.otherTabs }));
       check('SM9. Нэгтгэл рүү буцахад «Өгөгдөл» таб (төлөв үлдэхгүй)', R.reset);
+    }
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
+/* ──────────────────────────────── AG НЭГТГЭЛ ДАТАСЭТИЙН АРГА ──────────────────────────────── */
+/* AG. 1-ээс олон датасэтийн тоон утгыг нэмдэг НЭГТГЭЛ датасэт БҮР «Тооцооллын арга» табтай
+   (2026-10-26 хэрэглэгчийн шаардлага, CLAUDE.md «Нэгтгэл датасэт (AGG)»). Гэрээ:
+     - aggReconcile: эх сурвалжгүй (null) оролт 0 гэж нийлбэрт ОРОХГҮЙ, ≤0.5 зөрүү = таарсан
+     - нэгтгэл датасэт (нэр нь «нэгтгэл», эсвэл FREIGHT_SOURCES.total) бүр AGG_METHODS-д бүртгэлтэй
+     - оролт бүр каталогийн датасэт, текст бүр content.json → site.<text>.method-д
+     - ачааны нэгтгэл: УБТЗ + МТЗ урсгал, тулгалт «✓», салбар (УБТЗ/МТЗ) хуудсанд таб алга */
+async function groupAG() {
+  group('AG. Нэгтгэл датасэт — «Тооцооллын арга» таб (бүх нэгтгэлд)');
+  const src = dcScript();
+  const a = src.indexOf('function aggLineage('), b = src.indexOf('/* 06-р хэсгийн индекс (i06/r06)');
+  check('AG0. Ерөнхий блок олдов (aggLineage · aggReconcile · AGG_METHODS)', a > 0 && b > a);
+  if (!(a > 0 && b > a)) return;
+  const L = new Function(src.slice(a, b) + '\nreturn {aggLineage,aggReconcile,AGG_METHODS,railFreightTotalLineage};')();
+  /* AG1 — гараар бодох фикстур: 100 + 50 (+ мэдээгүй) = 150 */
+  const parts = [{ name: 'А', value: 100 }, { name: 'Б', value: 50 }, { name: 'В', value: null }];
+  const r1 = L.aggReconcile(parts, 150), r2 = L.aggReconcile(parts, 152), r3 = L.aggReconcile(parts, null), r4 = L.aggReconcile(parts, 150.4);
+  check('AG1. 100 + 50 + (мэдээгүй) = 150, KPI 150 → таарсан; мэдээгүй нь missing (0 биш)',
+    r1.sum === 150 && r1.ok === true && r1.parts.length === 2 && r1.missing.length === 1 && r1.missing[0].name === 'В', JSON.stringify(r1));
+  check('AG1. KPI 152 → зөрүү −2, таараагүй', r2.ok === false && r2.diff === -2, JSON.stringify(r2));
+  check('AG1. KPI алга → харьцуулахгүй (ok:null); бөөрөнхийлөлт 0.4 → таарсан', r3.ok === null && r3.diff === null && r4.ok === true);
+  /* AG2 — бүртгэл: нэгтгэл датасэт бүр AGG_METHODS-д (шинэ нэгтгэл нэмбэл энд унана) */
+  const aggByName = [...src.matchAll(/\{sector:'[^']+',name:'([^']*нэгтгэл[^']*)'[\s\S]*?source:'(\w+)'/g)].map((m) => m[2]);
+  const fsTotal = [...src.matchAll(/(\w+):\{org:'[^']+',rows:'[^']+',schema:'[^']+',total:true\}/g)].map((m) => m[1]);
+  const need = [...new Set(aggByName.concat(fsTotal))];
+  const missReg = need.filter((s) => !L.AGG_METHODS[s]);
+  check('AG2. Нэгтгэл датасэт бүр AGG_METHODS-д (' + need.join(', ') + ')', need.length >= 2 && missReg.length === 0, 'бүртгэлгүй: ' + missReg.join(', '));
+  const C = readJson('content.json');
+  const get = (o, p) => p.split('.').reduce((x, k) => (x == null ? x : x[k]), o);
+  const mBody = src.slice(src.indexOf('  buildAggMethod(dsel,ctx){'), src.indexOf('  /* Салбарын нэгтгэлийн арга'));
+  const keysM = [...new Set([...mBody.matchAll(/\bM\('([a-z_0-9]+)'/g)].map((x) => x[1]))];
+  Object.keys(L.AGG_METHODS).forEach((k) => {
+    const cfg = L.AGG_METHODS[k], MT = get(C.site, cfg.text + '.method') || {};
+    const T = (p, fb) => { const v = get(get(C.site, cfg.text), p); return v == null || v === '' ? fb : v; };
+    const lin = L.aggLineage(cfg.list, cfg.sfx, 'all', T);
+    const missDs = cfg.list.map((l) => l.source).filter((s) => !src.includes("source:'" + s + "',bind:"));
+    const missTxt = [];
+    lin.forEach((r) => { if (!r.rule) missTxt.push(r.id + '.rule');
+      r.fields.forEach((f) => { if (!f.label) missTxt.push(r.id + '.field_' + f.measure); if (!f.tech) missTxt.push(r.id + '.tech_' + f.measure); }); });
+    const missKeys = keysM.filter((x) => MT[x] == null);
+    check('AG2. ' + k + ': ≥2 эх датасэт, бүгд каталогт', cfg.list.length >= 2 && missDs.length === 0, missDs.join(', '));
+    check('AG2. ' + k + ': оролт бүрийн утга/техникийн нэр/нөхцөл + табын бүх текст site.' + cfg.text + '.method-д',
+      missTxt.length === 0 && missKeys.length === 0, missTxt.concat(missKeys).join(', '));
+    check('AG2. ' + k + ': томьёо (≥5) ба ороогүй зүйл (≥2)', Array.isArray(MT.fields) && MT.fields.length >= 5 &&
+      MT.fields.every((f) => f.name && f.formula && f.note) && Array.isArray(MT.excl) && MT.excl.length >= 2);
+  });
+  /* AG3 — ачааны нэгтгэл = backend VIEW (021): УБТЗ + МТЗ, хоёул тонн ба вагон */
+  const fl = L.railFreightTotalLineage('wagons', (p, fb) => fb);
+  check('AG3. Ачааны нэгтгэл ← УБТЗ, МТЗ; «Вагон» сонгоход вагоны талбар л тод',
+    fl.map((r) => r.id).join(',') === 'ubtz,mtz' && fl.every((r) => r.active && r.fields[0].on === false && r.fields[1].on === true));
+  if (!CHROME) { skipped('AG4–AG5 (DOM)', 'Chrome олдсонгүй'); return; }
+  const ds = (C.site.datasets || []).find((x) => x.name === 'Төмөр замын ачаа тээврийн нэгтгэл') || {};
+  const slug = ds.sector + '__' + String(ds.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html?fx=1#/browse/' + encodeURIComponent(slug);
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      const until=async(f,ms)=>{const t=Date.now()+ms;while(Date.now()<t){if(f())return true;await sleep(150);}return false;};
+      const R={};
+      R.tabs=await until(()=>d.querySelectorAll('[data-st-tab]').length===2,20000);
+      R.dataFirst=!!d.querySelector('[data-ddq-block]')&&!d.querySelector('[data-st-method]');
+      const tab=id=>d.querySelector('[data-st-tab="'+id+'"]');
+      if(!R.tabs) return R;
+      tab('method').click();
+      await until(()=>d.querySelectorAll('[data-st-recon-row]').length>0,8000);
+      R.method=!!d.querySelector('[data-st-method]'); R.dataHidden=!d.querySelector('[data-ddq-block]');
+      R.rows=[...d.querySelectorAll('[data-st-row]')].map(r=>r.getAttribute('data-st-row')+':'+r.getAttribute('data-st-active'));
+      R.recon=[...d.querySelectorAll('[data-st-recon-row]')].map(r=>r.getAttribute('data-st-recon-row')+':'+(/✓/.test(r.innerText)?'ok':/⚠/.test(r.innerText)?'diff':'-'));
+      R.reconText=[...d.querySelectorAll('[data-st-recon-row]')].map(r=>r.innerText.replace(/\\s+/g,' ')).join(' | ');
+      R.cov=d.querySelectorAll('[data-st-mcov] .eh-st-cov').length;
+      R.text=d.querySelector('[data-st-method]').innerText;
+      R.tips=[...d.querySelectorAll('[data-st-recon] [data-tip]')].every(e=>/ — /.test(e.getAttribute('data-tip')));
+      const open=[...d.querySelectorAll('[data-st-row="mtz"] button')][0];
+      if(open) open.click(); await sleep(900);
+      R.nav=w.location.hash; R.otherTabs=d.querySelectorAll('[data-st-tab]').length; R.otherData=!!d.querySelector('[data-ddq-block]');
+      return R;
+    }`, 120000);
+    if (R.__err) bad('AG4. DOM шалгалт ажиллав', R.__err);
+    else {
+      check('AG4. Ачааны нэгтгэл: таб 2, анхдагч нь «Өгөгдөл»', R.tabs && R.dataFirst, JSON.stringify({ t: R.tabs, d: R.dataFirst }));
+      check('AG4. «Тооцооллын арга» → самбар, өгөгдлийн хэсэг нуугдана; урсгал УБТЗ, МТЗ', R.method && R.dataHidden && (R.rows || []).join(',') === 'ubtz:1,mtz:1', JSON.stringify(R.rows));
+      check('AG4. Тулгалт: тонн, вагон хоёул «✓» (УБТЗ + МТЗ = KPI)', (R.recon || []).join(',') === 'tonnes:ok,wagons:ok', (R.recon || []).join(',') + ' · ' + R.reconText);
+      check('AG4. Хамрах хугацаа: толгой + 2 тээвэрлэгч; NaN/undefined алга; tooltip «нэр — утга»',
+        R.cov === 3 && !/NaN|undefined|\[object/.test(R.text || '') && R.tips, JSON.stringify({ cov: R.cov, tips: R.tips }));
+      check('AG5. «Датасэтийг нээх» (МТЗ) → салбарын хуудас, тэнд таб алга', /browse\/rail__/.test(decodeURIComponent(R.nav || '')) && R.otherTabs === 0 && R.otherData,
+        JSON.stringify({ nav: decodeURIComponent(R.nav || ''), t: R.otherTabs }));
     }
   } finally {
     PROBE_SRC = '/admin/index.html';
@@ -10230,6 +10329,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=FR')) { groupFR(); }
   else if (process.argv.includes('--only=ST')) { groupST(); }
   else if (process.argv.includes('--only=SM')) { await groupSM(); }
+  else if (process.argv.includes('--only=AG')) { await groupAG(); }
   else if (process.argv.includes('--only=WK')) { groupWK(); }
   else if (process.argv.includes('--only=RPX')) { groupRPX(); }
   else if (process.argv.includes('--only=RT')) { await groupRT(); }
@@ -10238,7 +10338,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
