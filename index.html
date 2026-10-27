@@ -17,7 +17,7 @@
 <script src="js/erthub-publish.js?v=ffe215f9"></script>
 <script src="js/erthub-backend.js?v=a96de8ab"></script>
 <script src="js/erthub-chart.js?v=422174bf"></script>
-<script src="js/erthub-glossary.js?v=b5f2bd05"></script>
+<script src="js/erthub-glossary.js?v=e7103a43"></script>
 <script src="js/erthub-tip.js?v=ba005e59"></script>
 <script src="js/vendor/dc-runtime.js?v=8fe7df74"></script>
 </head>
@@ -10587,6 +10587,17 @@ class Component extends DCLogic {
     (api.sectors||[]).forEach(s=>{ if(s&&s[lastKey]) lastBy[s.sector]=s[lastKey]; });
     return EHGlossary.weekReport(w,keys,rg?{road:rg}:null,lastBy);
   }
+  /* Hero «ЗОРЧИГЧ / ӨДӨР» — бүртгэлийн метрик (widgets.hero_px.metric) ба салбар (sectors[]),
+     нэгтгэлийн weekly, авто тээврийн цоорхой — weekSectorTotal()-тэй ИЖИЛ эх. null = тоо алга. */
+  heroPxStat(){
+    const reg=this.state.metricRegistry, w=reg&&reg.widgets&&reg.widgets.hero_px;
+    if(!(w&&w.metric)||typeof EHGlossary==='undefined'||!EHGlossary.heroPax) return null;
+    const rh=this._roadPaxAll, rg=rh&&rh.coverage&&Array.isArray(rh.coverage.gaps)?rh.coverage.gaps:null;
+    /* Шошгын үг — content.json site.hero.px_* (ил зам — B3; fallback нь EHGlossary.heroPax-д) */
+    const H={px_period:stxt('hero.px_period',''),px_period_week:stxt('hero.px_period_week',''),px_partial:stxt('hero.px_partial','')};
+    return EHGlossary.heroPax(this.sectorTotalData?this.sectorTotalData():null,w.metric,
+      Array.isArray(w.sectors)?w.sectors:null,rg?{road:rg}:null,(k,fb)=>H[k]||fb);
+  }
   sectorShareFromTotal(keys){
     const api=this.sectorTotalData?this.sectorTotalData():null;
     const meas=this.state.d05Measure==='freight_tonnes'?'freight_tonnes':'passengers';
@@ -17767,18 +17778,17 @@ class Component extends DCLogic {
       // ч зассан тул txt() унших бүрдээ (сүлжээ тасарсан үед ч) зөв үсгээр
       // гарна — алдаа автоматаар арилна.
       heroPxTitle:this.txt('hero_px','title','ЗОРЧИГЧ / ӨДӨР'),
-      // H5: hero_px эх сурвалжгүй (registry: widgets.hero_px.sectors.road,
-      // quality!=='verified') тул 0 — K/M форматлагч ("312K" маягийн)
-      // ХЭРЭГЛЭХГүй, цэвэр "0" (w2p/w2c-д олдсон нэгжийн давхар масштабын
-      // алдаанаас сэргийлэх зорилгоор).
-      /* H5-ийн дараах засвар: цэвэр "0" нь "өнөөдөр зорчигч байхгүй" гэж
-         УНШИГДАЖ, 04-р хэсгийн амьд "148,470 зорчигч/сар"-тай зөрчилдөж
-         байв. Бусад бүх хоосон слот "— · мэдээлэл алга" гэж ил хэлдэг тул
-         ticker-ийг ч ижил гэрээнд оруулав (status.no_data ДАХИН ашиглана —
-         текстийг давхардуулахгүй). */
-      heroPxValue:this.isWidgetMock('hero_px')?'—':'312K',
-      heroPxNote:this.isWidgetMock('hero_px')
-        ?' · '+stxt('status.no_data','мэдээлэл алга'):'',
+      /* hero_px — салбарын нэгтгэлийн сүүлийн БҮТЭН 7 хоногийн (Да–Ня) өдрийн дундаж
+         (heroPxStat → EHGlossary.heroPax, админы ticker preview-тэй НЭГ функц). Хугацаа
+         шошгонд «(10.19–10.25 · 7 хоногийн дундаж)» (DG-P); цоорхойтой/дутуу салбар → «≥» +
+         нэрлэнэ. Бүртгэлд холбогдоогүй эсвэл нэгтгэл алга бол цэвэр "0" БИШ — бусад хоосон
+         слоттой ижил "— · мэдээлэл алга" (status.no_data ДАХИН ашиглана, BE34). Өмнө нь
+         "312K" хатуу тоо байв. */
+      ...(()=>{
+        const hp=this.isWidgetMock('hero_px')?null:this.heroPxStat();
+        return {heroPxValue:hp?hp.display:'—',
+          heroPxNote:hp?' ('+hp.note+')':' · '+stxt('status.no_data','мэдээлэл алга')};
+      })(),
       ukTitle:this.txt('uk','title','Порталын нийт үзүүлэлт'),
       /* Хугацааны шошго ТООЦООЛОГДОНО ({year}/{q} — УБ огноогоор): өмнө нь "2026 · III
          улирал" гэж хатуу бичигдсэн тул IV улиралд ч хуучнаараа үлдэж байв. */
