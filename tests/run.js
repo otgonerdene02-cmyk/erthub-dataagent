@@ -5130,9 +5130,9 @@ async function groupBE() {
      СӨРӨГ тонн зарлаж, бүх багана дээд гуравны нэгд шахагдаж байв.
      Шалтгаан нь алхам `/50` гэж ХАТУУ бичигдсэн — зорчигчийн мянгад
      тохирно ч тоннд хэтэрхий бүдүүн. Доорх тоонууд ГАРААР бодогдсон. */
-  const waSrc = dcScript().match(/function weekAxis\(vals\)\{([\s\S]*?)\n\}/);
-  if (!waSrc) { bad('BE47. weekAxis() олдсонгүй'); return; }
-  const weekAxis = new Function('return function weekAxis(vals){' + waSrc[1] + '}')();
+  /* 2026-10-27-нөөс js/erthub-glossary.js-д (EHGlossary.weekAxis) — сайт ба админы preview НЭГ функц */
+  const weekAxis = (() => { try { return require(path.join(ROOT, 'js', 'erthub-glossary.js')).weekAxis; } catch (e) { return null; } })();
+  if (typeof weekAxis !== 'function') { bad('BE47. EHGlossary.weekAxis() олдсонгүй'); return; }
   /* Ачаа (тонн): mx 44.212, mn 13.253 → span 30.959, span/2 = 15.48 →
      алхам 10^floor(log10 15.48) = 10. Шал floor((13.253−18.575)/10)×10
      = −10 ч бүх утга ≥ 0 тул 0 болно. Тааз ceil((44.212+4.644)/10)×10 = 50. */
@@ -5160,9 +5160,10 @@ async function groupBE() {
   check('BE47. Хоосон цуваа → 0/0 (өмнөх хамгаалалт хэвээр)',
     JSON.stringify(weekAxis([])) === JSON.stringify({ base: 0, top: 0, step: 1 }) &&
     JSON.stringify(weekAxis(null)) === JSON.stringify({ base: 0, top: 0, step: 1 }));
-  check('BE47. Тэнхлэгийг /50 гэж ХАТУУ бичсэн хуучин мөр үлдээгүй',
-    !/\(bmax-bmin\)\*0\.6\)\/50\)\*50/.test(dcScript()) &&
-    /const wax=weekAxis\(okVals(?:\.concat\([^;]*\))?\);/.test(dcScript()));
+  check('BE47. Тэнхлэгийг /50 гэж ХАТУУ бичсэн хуучин мөр үлдээгүй; багана EHGlossary.weekBars → weekAxis (бүртгэгдсэн + «≥» утгаар)',
+    !/\(bmax-bmin\)\*0\.6\)\/50\)\*50/.test(dcScript()) && !/\nfunction weekAxis\(/.test(dcScript()) &&
+    /EHGlossary\.weekBars\(\{vals:barVals,/.test(dcScript()) &&
+    /var ax = weekAxis\(ok\.concat\(parts\.filter/.test(read('js/erthub-glossary.js')));
 
   /* ── BE50. Коммунитийн НИЙТ тоо зохиомол байсан (2026-10-05) ──
      Санал/лайк нь зөвхөн тухайн хэрэглэгчийн session-д (this.state.cVotes)
@@ -8046,13 +8047,15 @@ async function groupDGA() {
   const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
   const adm = adminScript(), site = dcScript();
   const cut = (src, a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i + 1); return (i < 0 || j < 0) ? null : src.slice(i, j); };
-  const parts = [cut(adm, 'function stWeek(mk){', 'function stWeekVal('),
+  /* stWeek → stWeekVal → stWeekReport (pvWeekModel нь stWeekReport-оор — сайтын weekSectorTotal-тэй НЭГ дүрэм) */
+  const parts = [cut(adm, 'function stWeek(mk){', '/* Сайтын sectorSummaryToSeries()-ийн толь'),
     cut(adm, 'function computeSeries(byYear,latest){', '/* Метрикийн БОДИТ утга'),
     cut(adm, 'function metricSeries(mk){', '/* Метрикийн 7 ХОНОГИЙН'),
     cut(adm, '/* ══════════ ГРАФИКИЙН ХУГАЦАА (DG-P) — preview', 'function previewFor(id,mini){')];
   const dpm = site.match(/\nfunction dropPartialMonth\(counts,year,cov,now\)\{([\s\S]*?)\n\}/);
-  const wsr = site.match(/\nfunction weekSectorReport\(w,keys(?:,gaps)?(?:,lastBy)?\)\{([\s\S]*?)\n\}/);
-  check('DG-P19. Админы хугацааны функцүүд ба сайтын dropPartialMonth/weekSectorReport олдов',
+  /* 7 хоногийн тайлан — сайт ба админ НЭГ функц (EHGlossary.weekReport, 2026-10-27) */
+  const wsr = typeof G.weekReport === 'function' && /return EHGlossary\.weekReport\(w,keys,/.test(site) ? G.weekReport : null;
+  check('DG-P19. Админы хугацааны функцүүд ба сайтын dropPartialMonth/EHGlossary.weekReport олдов',
     parts.every(Boolean) && !!dpm && !!wsr, parts.map((p) => !!p).join(','));
   if (!parts.every(Boolean) || !dpm || !wsr) return;
   check('DG-P19. Сайт ба админ НЭГ функцээр (EHGlossary.chartPeriod) бичнэ',
@@ -8110,7 +8113,7 @@ async function groupDGA() {
   const wk = (a, b, miss) => ({ week_start: a, week_end: b, missing: !!miss, by_sector: miss ? {} : { air: { value: 5 }, rail: { value: 7 } } });
   const WP = { sectors: ['air', 'rail'], weeks: [wk('2026-09-28', '2026-10-04'), wk('2026-10-05', '2026-10-11', true), wk('2026-10-12', '2026-10-18')] };
   const KS = mkKit({ FEED, ST: { state: 'ready', weekly: { passengers: WP } } });
-  const sr = new Function('w', 'keys', 'gaps', wsr[1])(WP, ['air'], null);
+  const sr = wsr(WP, ['air'], null);
   const siteW = G.chartPeriod({ dayFrom: sr.weeks[0].start, dayTo: sr.weeks[sr.weeks.length - 1].end, nWeeks: sr.weeks.length }, (k, fb) => fb);
   const w2 = ['w2p', 'w2pb', 'w2px'].map((id) => KS.pvPeriodText(id));
   check('DG-P22. 02-р хэсэг (зорчигч): нэгтгэлийн бүх долоо хоног — гараар 2026-09-28 — 2026-10-18 · 3 долоо хоног',
@@ -10469,11 +10472,15 @@ function groupWK() {
   const a = src.indexOf('/* ── САЛБАРЫН НЭГТГЭЛ (sectorTotal)'), b = src.indexOf('/* Зорчигчийн сарын график — ОН/ОУ-ийг ЭЭЛЖ');
   const mB = src.match(/\n    const fmtWeekVal=\(n\)=>\{[\s\S]*?\n    const wPax=buildWeek\(/);
   const mT = src.match(/\n  weekSectorTotal\(wt,widgetId\)\{([\s\S]*?)\n  \}\n/);
-  const mA = src.match(/\nfunction weekAxis\(vals\)\{[\s\S]*?\n\}\n/);
-  check('WK0. weekSectorReport · weekSectorTotal · buildWeek · weekAxis олдов', a > 0 && b > a && !!(mB && mT && mA));
-  if (!(a > 0 && b > a && mB && mT && mA)) return;
+  /* weekReport · weekLag · weekAxis · weekBars — js/erthub-glossary.js (сайт ба админы preview НЭГ функц, 2026-10-27) */
+  const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+  const gOk = ['weekReport', 'weekLag', 'weekAxis', 'weekBars'].every((k) => typeof G[k] === 'function');
+  check('WK0. EHGlossary.weekReport/weekLag/weekAxis/weekBars · weekSectorTotal · buildWeek олдов; index.html-д хуулбар алга',
+    a > 0 && b > a && !!(mB && mT) && gOk && !/\nfunction (weekSectorReport|weekLag|weekAxis)\(/.test(src));
+  if (!(a > 0 && b > a && mB && mT && gOk)) return;
   const NEON = { air: '#A', rail: '#R', road: '#D', water: '#W', public: '#P' };
-  const L = new Function('NEON', src.slice(a, b) + '\nreturn {weekSectorReport,stPct,weekLag,planYearText};')(NEON);
+  const L = Object.assign(new Function('NEON', src.slice(a, b) + '\nreturn {stPct,planYearText};')(NEON),
+    { weekSectorReport: G.weekReport, weekLag: G.weekLag });
   const wk = (s, e, air, rail, extra) => Object.assign({ week_start: s, week_end: e, missing: false, value: (air || 0) + (rail || 0),
     by_sector: { air: { value: air, days: 7 }, rail: { value: rail, days: 7 } } }, extra || {});
   const PAX = { sectors: ['air', 'rail'], comparable: ['air', 'rail'], stale: [], week_end: '2026-10-18',
@@ -10566,14 +10573,13 @@ function groupWK() {
     water: { label: 'Ус, далайн тээвэр' }, public: { label: 'Нийтийн тээвэр' } };
   const GLYPH = { air: 'a', road: 'd', rail: 'r', water: 'w', public: 'p' };
   const SECTOR_DELTA = { pax: ['road', 'rail', 'air', 'water'].map(k => [k, '—', '', 0]), cargo: ['road', 'rail', 'air', 'water'].map(k => [k, '—', '', 0]) };
-  const weekAxis = new Function(mA[0] + '\nreturn weekAxis;')();
+  const weekAxis = G.weekAxis;
   /* Ачааны YoY-ийн зогссон тээвэрлэгчийн тэмдэглэл (HR9) — сайтын цэвэр функц */
   const fsoM = dcScript().match(/\nfunction freightStaleOrgs\(all,since\)\{([\s\S]*?)\n\}/);
   const FSO = fsoM ? new Function('all', 'since', fsoM[1]) : () => [];
-  const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
   const mk = new Function('WEEK_LABELS', 'weekAxis', 'stxt', 'EHChart', 'EHGlossary', 'SECTORS', 'GLYPH', 'NEON', 'SECTOR_DELTA', 'stPct', 'weeklyAir', 'chartPeriodText', 'freightStaleOrgs',
     'return function(){' + mB[0].replace(/\n    const wPax=buildWeek\($/, '') + '\nreturn buildWeek;}');
-  const wst = new Function('weekSectorReport', 'return function(wt,widgetId){' + mT[1] + '}')(L.weekSectorReport);
+  const wst = new Function('EHGlossary', 'return function(wt,widgetId){' + mT[1] + '}')(G);
   const REGQ = { w2p: ['air', 'rail'], w2pb: ['air', 'rail'], w2px: ['air', 'rail'], w2c: ['air', 'rail'], w2cb: ['air', 'rail'], w2cx: ['air', 'rail'] };
   const ctx = (api, regq, spec) => ({
     valueSpecRaw: () => spec || null, lastFullWeekWindow: () => null, weekFlightsSum: () => null, txt: () => '',
@@ -10686,29 +10692,57 @@ function groupWK() {
   /* 3) Админы preview — сайттай НЭГ эх сурвалж, нэг дүрэм */
   const adm = adminScript();
   const sa = adm.indexOf('var ST={state:'), sb = adm.indexOf('/* Сайтын sectorSummaryToSeries()-ийн толь');
-  const fA = adm.match(/\nfunction loadSectorTotalWeekly\(\)\{[\s\S]*?\n\}\n[\s\S]*?\nfunction stWeeklySeries\(id\)\{[\s\S]*?\n\}\n/);
+  const fA = adm.match(/\nfunction loadSectorTotalWeekly\(\)\{[\s\S]*?\n\}\n[\s\S]*?\nfunction stWeekReport\(id\)\{[\s\S]*?\n\}\n/);
   check('WK16. Админ: нэгтгэлийг ачаална (loadSectorTotalWeekly), 4 метрик ST_METRIC-д', sa > 0 && !!fA &&
     /Promise\.all\(\[loadFeed\(\),[^\]]*loadSectorTotalWeekly\(\)\]\)/.test(adm) && /'rail\.weekly_pax':\['passengers','rail'\]/.test(adm) &&
     /'rail\.weekly_cargo':\['freight_tonnes','rail'\]/.test(adm));
   if (sa > 0 && fA) {
     const decl = adm.slice(sa, adm.indexOf('\n', adm.indexOf("'road.weekly_pax':['passengers','road']")) + 1);
-    const env = new Function('parts', 'spec', decl + fA[0] +
-      '\nfunction sectorParts(){return parts}\nfunction valueSpecOf(){return spec}\nST.weekly=arguments[2];ST.gaps=arguments[3]||null;ST.state="ready";' +
-      '\nreturn {stWeek:stWeek,stWeekVal:stWeekVal,stWeeklySeries:stWeeklySeries};');
+    /* pvSlotVerified — толгой картын бүртгэлд verified слот (админы жинхэнэ функцийн stub) */
+    const env = new Function('parts', 'spec', 'EHGlossary', decl + fA[0] +
+      '\nfunction sectorParts(){return parts}\nfunction valueSpecOf(){return spec}' +
+      '\nfunction pvSlotVerified(id,k){return parts.some(function(p){return p.k===k&&p.q==="verified"})}' +
+      '\nST.weekly=arguments[3];ST.gaps=arguments[4]||null;ST.state="ready";' +
+      '\nreturn {stWeek:stWeek,stWeekVal:stWeekVal,stWeekReport:stWeekReport};');
     const parts = [{ k: 'air', q: 'verified', m: 'air.weekly_pax' }, { k: 'rail', q: 'verified', m: 'rail.weekly_pax' }, { k: 'road', q: 'none', m: null }];
-    const E = env(parts, null, API.weekly);
-    const ser = E.stWeeklySeries('w2p');
+    const E = env(parts, null, G, API.weekly);
+    const rep = E.stWeekReport('w2p');
     const lastRail = E.stWeekVal(API.weekly.passengers.weeks[1], 'rail');
-    check('WK17. Админы preview = сайт: багана [400, 500] (10.05, 10.12), төмөр зам 350 — ижил фикстур',
-      JSON.stringify(ser) === JSON.stringify([{ label: '10.05', v: 400 }, { label: '10.12', v: 500 }]) && lastRail === 350, JSON.stringify(ser));
-    /* Эх сурвалжийн цоорхой — сайтын weekSectorReport(gaps)-тэй ИЖИЛ: 10.05 долоо хоног цоорхойд орвол алгасна */
-    const E3 = env(parts.slice(0, 1), null, API.weekly, { air: [{ from: '2026-10-07', to: '2026-10-08' }] });
-    check('WK18a. Админ: цоорхойтой долоо хоног preview-д ч алгасагдана (сайттай ижил); road.weekly_pax ST_METRIC-д',
-      E3.stWeekVal(API.weekly.passengers.weeks[0], 'air') === null && E3.stWeekVal(API.weekly.passengers.weeks[1], 'air') === 150 &&
-      /'road\.weekly_pax':\['passengers','road'\]/.test(adm) && /fetchRoadPassengersHistory/.test(fA[0]));
-    const E2 = env(parts.slice(0, 1), null, API.weekly);
+    check('WK17. Админы preview = сайт (НЭГ функц EHGlossary.weekReport): багана [400, 500] (10.05, 10.12), төмөр зам 350 — ижил фикстур',
+      !!rep && JSON.stringify(rep.weeks.map((x) => [x.start.slice(5), x.value])) === '[["10-05",400],["10-12",500]]' && lastRail === 350 &&
+      JSON.stringify(rep) === JSON.stringify(G.weekReport(API.weekly.passengers, ['air', 'rail'], null, {})), JSON.stringify(rep && rep.weeks));
+    /* 2026-10-27 регресс: админ цоорхойтой долоо хоногийг АЛГАСЧ (stWeeklySeries), сайт «≥» багана зурж байв →
+       админ ч сайтын weekReport-оор: 10.05–10.11 авто тээврийн цоорхой (10.07–10.09) → partial 450, авто зураастай */
+    const P3 = parts.slice(0, 2).concat([{ k: 'road', q: 'verified', m: 'road.weekly_pax' }]);
+    const RG = { road: [{ from: '2026-10-07', to: '2026-10-09' }] };
+    const E3 = env(P3, null, G, { passengers: PAXR }, RG);
+    const r3 = E3.stWeekReport('w2p'), site3 = G.weekReport(PAXR, ['air', 'rail', 'road'], RG, {});
+    check('WK18a. Админ: цоорхойтой долоо хоног алгасагдахгүй — «≥450» (partial), авто 3 хоног дутуу; сайтын weekReport-той ЯГ ижил; ганц салбарын утга (stWeekVal) цоорхойд null',
+      !!r3 && r3.weeks[0].value === null && r3.weeks[0].partial === 450 && r3.weeks[0].parts[2].gapDays === 3 &&
+      JSON.stringify(r3) === JSON.stringify(site3) && E3.stWeekVal(PAXR.weeks[0], 'road') === null && E3.stWeekVal(PAXR.weeks[0], 'air') === 100 &&
+      /'road\.weekly_pax':\['passengers','road'\]/.test(adm) && /fetchRoadPassengersHistory/.test(fA[0]), JSON.stringify(r3 && r3.weeks[0]));
+    const E2 = env(parts.slice(0, 1), null, G, API.weekly);
     check('WK18. Админ: төмөр замын слотыг салгавал багана ӨӨРЧЛӨГДӨНӨ [100, 150]; утгын тохиргоотой бол нэгтгэлийн цуваа алга',
-      JSON.stringify(E2.stWeeklySeries('w2p').map(x => x.v)) === '[100,150]' && env(parts, { measure: 'pax' }, API.weekly).stWeeklySeries('w2p') === null);
+      JSON.stringify(E2.stWeekReport('w2p').weeks.map((x) => x.value)) === '[100,150]' && env(parts, { measure: 'pax' }, G, API.weekly).stWeekReport('w2p') === null);
+    /* Админы preview-ийн багана (pvWeekChart) = сайтын buildWeek багана — ижил фикстур (PAXR + цоорхой), ижил нэр */
+    const fC = adm.match(/\nfunction pvWeekChart\(rep,unit,mini,accent\)\{[\s\S]*?\n\}\n/);
+    if (!fC) bad('WK18b. pvWeekChart() олдсонгүй');
+    else {
+      const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const SECN = { air: SECTORS.air.label, road: SECTORS.road.label, rail: SECTORS.rail.label };
+      const pvC = new Function('EHGlossary', 'SECN', 'NEON', 'esc', 'pvSiteT', fC[0] + '\nreturn pvWeekChart;')(G, SECN, NEON, esc, (g, k, fb) => fb);
+      const html = pvC(r3, 'хүн', false, '#B');
+      const attr = (re) => [...html.matchAll(re)].map((m) => m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+      const vals = attr(/data-pvwk-bar="\d+" data-v="([^"]*)"/g), segTips = attr(/<i data-pvwk-seg="[^"]*" title="([^"]*)"/g);
+      /* Сайтын тал: buildWeek (PR — ижил PAXR + ижил цоорхой) */
+      const S3 = BWG(APIR, RQ3)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
+      const sVals = S3.bars.map((x) => x.value), sTips = [].concat(...S3.bars.map((x) => x.segs.map((s) => s.tip)));
+      check('WK18b. Админы pvWeekChart = сайтын buildWeek: утга [≥450, 1,100], салбарын хэсгийн tooltip ижил, авто зураастай «7-оос 3 хоногт мэдээ дутуу», легенд «мэдээ дутуу»',
+        JSON.stringify(vals) === JSON.stringify(sVals) && JSON.stringify(vals) === JSON.stringify(['≥450', (1100).toLocaleString()]) && JSON.stringify(segTips) === JSON.stringify(sTips) &&
+        segTips.includes('10.05–10.11 · Авто зам — 50 хүн · 7-оос 3 хоногт мэдээ дутуу (эх сурвалжийн цоорхой)') &&
+        /data-pvwk-seg="road"[^>]*style="[^"]*repeating-linear-gradient/.test(html) && /data-pvwk-leg="gap"/.test(html) &&
+        !/data-pvwk-leg="gap"/.test(pvC(rep, 'хүн', false, '#B')), JSON.stringify({ vals, sVals, segTips, sTips }));
+    }
   }
   /* 4) Бүртгэл — гурван виджетийн бүлэг төмөр замтай */
   const R = readJson('metric_registry.json');
@@ -10829,7 +10863,7 @@ function groupHR() {
    HP. Hero «ЗОРЧИГЧ / ӨДӨР» (hero_px) — салбарын нэгтгэлийн 7 хоногийн өдрийн дундаж
    (2026-10-27). Өмнө нь «312K» хатуу тоо, дараа нь «— · мэдээлэл алга» байв.
      HP1  EHGlossary.heroPax — 3 салбар × 7 өдрийн гараар бодох фикстур
-     HP2  02-р хэсэгтэй (w2p, weekSectorReport) тулгалт: нийт / «≥» = heroPax.sum
+     HP2  02-р хэсэгтэй (w2p, EHGlossary.weekReport) тулгалт: нийт / «≥» = heroPax.sum
      HP3  Registry + content.json гэрээ (total.daily_pax_avg, period:"day", site.hero.px_*)
      HP4  Админы хугацааны шалгуур: period:"day" нь filter-ийн «долоо хоног»-оос давуу
      HP5  Сайт ба админ НЭГ функцийг ижил оролтоор дуудна (эх код)
@@ -10917,12 +10951,11 @@ async function groupHP() {
   const tt = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, GAPS, T);
   check('HP1. Шошгын үг content.json site.hero.px_*-ээс (T)', !!tt && tt.note === 'ZZ10.19/10.25ZZ · YYАвто тээвэрYY', tt && tt.note);
 
-  /* HP2. 02-р хэсэгтэй тулгалт — сайтын weekSectorReport (w2p) ИЖИЛ фикстур дээр */
+  /* HP2. 02-р хэсэгтэй тулгалт — w2p-ийн EHGlossary.weekReport (сайт ба админы preview, #107) ИЖИЛ фикстур дээр */
   const src = dcScript();
-  const a = src.indexOf('/* ── САЛБАРЫН НЭГТГЭЛ (sectorTotal)'), b = src.indexOf('/* Зорчигчийн сарын график — ОН/ОУ-ийг ЭЭЛЖ');
-  if (!(a > 0 && b > a)) bad('HP2. weekSectorReport эх код олдсонгүй');
+  if (typeof G.weekReport !== 'function') bad('HP2. EHGlossary.weekReport олдсонгүй');
   else {
-    const L = new Function('NEON', src.slice(a, b) + '\nreturn {weekSectorReport};')({});
+    const L = { weekSectorReport: G.weekReport };
     const w2 = L.weekSectorReport(mkApi(DAYS).weekly.passengers, KEYS, null);
     check('HP2. Бүтэн долоо хоног: w2p нийт (14,700) = hero × 7, ИЖИЛ долоо хоног',
       w2.total === full.sum && w2.weekStart === full.from && w2.weekEnd === full.to, w2.total + ' vs ' + full.sum);
@@ -11118,7 +11151,8 @@ async function groupHE() {
             tip: ((sg.querySelector('title') || {}).textContent || '').trim() }; });
         return { v: vals[i] || '', h: Math.round(b.getBoundingClientRect().height), dashed: cs.borderTopStyle === 'dashed', segs };
       });
-      out[id + 'Leg'] = [...c.querySelectorAll('.eh-wk-leg span')].map((x) => x.textContent.trim());
+      /* зөвхөн өнгөт тэмдэгтэй span — runtime {{ }}-ийг дотоод span-д ороодог тул давхар тоологдохгүй */
+      out[id + 'Leg'] = [...c.querySelectorAll('.eh-wk-leg span')].filter((x) => x.querySelector('i')).map((x) => x.textContent.trim());
     }
     const sec = (n) => { const h = d.getElementById('sec-' + n); if (!h) return ''; let t = '', e = h.nextElementSibling, k = 0;
       while (e && !/^sec-\d\d$/.test(e.id || '') && k++ < 60) { t += ' ' + (e.innerText || ''); e = e.nextElementSibling; } return t.replace(/\s+/g, ' '); };
@@ -11130,6 +11164,32 @@ async function groupHE() {
     out.recent = g7 ? [...g7.querySelectorAll('button')].map((x) => x.innerText.replace(/\s+/g, ' ').trim()) : [];
     out.noData = [];
     ['01', '02', '04', '05', '06', '07'].forEach((n) => { const t = sec(n); for (let i = t.indexOf('мэдээлэл алга'); i >= 0; i = t.indexOf('мэдээлэл алга', i + 1)) out.noData.push(n + ': ' + t.slice(Math.max(0, i - 80), i + 13).trim()); });
+    /* HE4 — ИЖИЛ фикстур (цоорхой тарьсан) дээр админы w2p/w2c preview (CLAUDE.md «ХОЁР талыг ХАМТ») */
+    const fr = w.frameElement; fr.src = '/admin/index.html?fx=1';
+    let a = null;
+    for (let i = 0; i < 80; i++) { await sleep(250); try { a = fr.contentDocument; } catch (e) { a = null; }
+      if (a && a.body && a.body.innerHTML.length > 8000 && String(fr.contentWindow.location.href).indexOf('admin') >= 0) break; }
+    await sleep(3500);
+    for (let i = 0; i < 60 && a.querySelector('.pvfeed'); i++) await sleep(500);
+    const aw = fr.contentWindow;
+    const go = (id) => { let b, n = 0; while ((b = a.querySelector('[data-back]')) && n++ < 6) b.click();
+      const s = a.querySelector('[data-section="sec-02"]'); if (!s) return false; s.click();
+      const c = a.querySelector('[data-widget="' + id + '"]'); if (!c) return false; c.click(); return true; };
+    const legOf = () => [...a.querySelectorAll('#pvhost .pvwk-leg span')].map((x) => x.textContent.trim());
+    out.admin = {};
+    for (const id of ['w2p', 'w2c']) {
+      if (!go(id)) { out.admin[id] = null; continue; }
+      await until(() => a.querySelector('#pvhost [data-pvwk-bar]'), 15000);
+      out.admin[id] = { bars: [...a.querySelectorAll('#pvhost [data-pvwk-bar]')].map((b) => ({ v: b.getAttribute('data-v'),
+        h: Math.round(b.getBoundingClientRect().height),
+        segs: [...b.querySelectorAll('[data-pvwk-seg]')].map((sg) => ({ hatch: /repeating-linear-gradient/.test(aw.getComputedStyle(sg).backgroundImage),
+          h: Math.round(sg.getBoundingClientRect().height * 10) / 10, tip: sg.getAttribute('title') || '' })) })),
+      leg: legOf(), legField: !!a.querySelector('.e-fm [data-sf="week.legend_gap"]') };
+      const f = a.querySelector('.e-fm [data-sf="week.legend_gap"]');
+      if (f) { const ov = f.value; f.value = 'ZZLEGZZ'; f.dispatchEvent(new aw.Event('input', { bubbles: true }));
+        out.admin[id].legLive = legOf(); f.value = ov; f.dispatchEvent(new aw.Event('input', { bubbles: true })); }
+    }
+    out.admin.dirty = (a.getElementById('dirtyMsg') || {}).textContent || '';
     return out;
   };
   const FX = read('tests/lib/feed-fixtures.js');
@@ -11143,7 +11203,7 @@ async function groupHE() {
   PROBE_SRC = '/index.html?fx=1';
   SERVE_OVERRIDE = Object.assign({}, prevOv || {}, { '/tests/lib/feed-fixtures.js': PATCH + FX });
   let R;
-  try { R = await runProbe('async function(d,w){return (' + probe.toString() + ')(d,w);}', 120000); }
+  try { R = await runProbe('async function(d,w){return (' + probe.toString() + ')(d,w);}', 180000); }
   finally { PROBE_SRC = prevSrc; SERVE_OVERRIDE = prevOv; srv.close(); }
   if (!R || R.__err) { bad('HE3. Нүүрний probe', JSON.stringify(R)); return; }
   const P = R.charts.w2p || [], C = R.charts.w2c || [];
@@ -11183,6 +11243,31 @@ async function groupHE() {
   const extra = R.noData.filter((x) => !ALLOW.test(x.replace(/мэдээлэл алга$/, '')));
   check('HE3i. Нүүрийн «мэдээлэл алга» зөвхөн эх сурвалжгүй зүйлд (ус/далай, төлөвлөгөө, авто ачаа) — ' + R.noData.length + ' газар',
     R.noData.length > 0 && extra.length === 0, JSON.stringify(extra));
+  /* HE4. Админы preview (w2p/w2c) = сайт — ИЖИЛ фикстур, ИЖИЛ тарьсан цоорхой (2026-10-27 регресс: preview нь
+     цоорхойтой долоо хоногийг АЛГАСДАГ шугам зурж, сайт «≥» давхарласан багана зурж байв). Багана бүрийн
+     утга, салбарын хэсэг бүрийн tooltip ба зураас, легендийг хоёр талаас тулгана. */
+  const A = R.admin || {};
+  const cmpBars = (site, adm) => {
+    if (!adm || !adm.bars) return ['админы preview-д багана алга'];
+    const out = []; if (site.length !== adm.bars.length) out.push('баганын тоо ' + site.length + ' ≠ ' + adm.bars.length);
+    const sg = (b) => b.segs.map((s) => s.tip + (s.hatch ? ' #зураас' : '')).join(' | ');
+    site.forEach((b, i) => { const x = adm.bars[i]; if (!x) return;
+      if (b.v !== x.v) out.push(i + ': утга сайт «' + b.v + '» ≠ админ «' + x.v + '»');
+      if (sg(b) !== sg(x)) out.push(i + ': хэсэг сайт «' + sg(b) + '» ≠ админ «' + sg(x) + '»'); });
+    return out; };
+  const dP = cmpBars(P, A.w2p), dC = cmpBars(C, A.w2c);
+  check('HE4a. Админы w2p preview = сайт: 8 багана, утга («≥» ч), салбарын хэсэг бүрийн tooltip ба зураас ижил', dP.length === 0, dP.join(' || ').slice(0, 900));
+  check('HE4a. Админы w2c preview = сайт (ачаа — цоорхойгүй, давхарласан хэсэг ижил)', dC.length === 0, dC.join(' || ').slice(0, 900));
+  const ap = ((A.w2p && A.w2p.bars) || []).filter((b) => /^≥/.test(b.v));
+  check('HE4b. Админ: цоорхойтой 2 долоо хоног алгасагдахгүй — «≥» багана, оройд зураастай авто тээвэр (≥7px) «7-оос N хоногт мэдээ дутуу»',
+    ap.length === 2 && ap.every((b) => { const t = b.segs[b.segs.length - 1];
+      return b.h > 0 && t && t.hatch && t.h >= 7 && /Авто тээвэр — [\d,]+ хүн · 7-оос \d хоногт мэдээ дутуу/.test(t.tip); }), JSON.stringify(ap).slice(0, 700));
+  check('HE4c. Админы легенд = сайтын легенд (зорчигч: салбарууд + «мэдээ дутуу»; ачаа: «мэдээ дутуу» алга)',
+    !!A.w2p && !!A.w2c && JSON.stringify(A.w2p.leg) === JSON.stringify(R.w2pLeg) && JSON.stringify(A.w2c.leg) === JSON.stringify(R.w2cLeg),
+    JSON.stringify([A.w2p && A.w2p.leg, R.w2pLeg, A.w2c && A.w2c.leg, R.w2cLeg]));
+  check('HE4d. «мэдээ дутуу» легенд w2p дээр засварлагдана (Preview-ийн нийтлэг текст), ачаанд цоорхойгүй тул талбар алга; бичих даруйд preview-д, буцаахад цэвэр',
+    !!A.w2p && A.w2p.legField && (A.w2p.legLive || []).includes('ZZLEGZZ') && !!A.w2c && !A.w2c.legField && /алга/.test(A.dirty || ''),
+    JSON.stringify([A.w2p && A.w2p.legLive, A.w2c && A.w2c.legField, A.dirty]));
 }
 
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */

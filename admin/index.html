@@ -273,6 +273,20 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
   border:1px solid var(--line);background:#fff;color:var(--ink2)}
 .pvmeas.on{border-color:#0C1428;background:#0C1428;color:#EEF3FA;font-weight:600}
 .pvax{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:8.5px;color:#7D8CA8;margin-top:5px}
+/* 02-р хэсгийн 7 хоногийн багана (pvWeekChart) — сайтын картын жижигрүүлсэн хуулбар */
+.pvwk{margin-top:10px}
+.pvwk-r{display:flex;gap:4px}
+.pvwk-r>*{flex:1;min-width:0;text-align:center}
+.pvwk-v{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:7.5px;color:#465575;margin-bottom:3px;white-space:nowrap}
+.pvwk-v .pk{color:#0C1428;font-weight:700}
+.pvwk-c{align-items:stretch;border-bottom:1px solid rgba(20,32,58,.14)}
+.pvwk-col{position:relative}
+.pvwk-b{position:absolute;left:0;right:0;bottom:0;min-height:3px;border-radius:4px 4px 2px 2px;overflow:hidden;display:flex;flex-direction:column-reverse}
+.pvwk-b>i{display:block;min-height:0}
+.pvwk-x{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:7.5px;color:#7D8CA8;margin-top:3px;white-space:nowrap}
+.pvwk-leg{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:6px;font-size:9.5px;color:#465575}
+.pvwk-leg span{display:inline-flex;align-items:center;gap:4px}
+.pvwk-leg i{width:9px;height:9px;border-radius:2px;flex:none;display:inline-block}
 /* DG-P: сайтын картын «Хугацаа: …» мөр — гарчгаас 6px доор (sp-top margin-bottom 13px) */
 .pvper{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:#7D8CA8;margin:-7px 0 12px;overflow-wrap:anywhere}
 .pvplan{display:flex;align-items:center;gap:8px;margin-top:10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;color:#7D8CA8}
@@ -449,7 +463,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="../js/erthub-publish.js?v=ffe215f9"></script>
 <script src="../js/erthub-backend.js?v=a96de8ab"></script>
 <script src="../js/erthub-chart.js?v=422174bf"></script>
-<script src="../js/erthub-glossary.js?v=439ba1b2"></script>
+<script src="../js/erthub-glossary.js?v=e7103a43"></script>
 </head>
 <body>
 
@@ -986,7 +1000,8 @@ function loadSectorTotalWeekly(){
   if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchSectorTotal){ ST.state='off'; return Promise.resolve() }
   ST.state='loading';
   /* Авто тээвэр — эх сурвалжийн цоорхой (road history coverage.gaps): сайтын
-     weekSectorTotal()-тэй ИЖИЛ — цоорхойтой давхцсан долоо хоног бичлэггүйтэй адил. */
+     weekSectorTotal()-тэй ИЖИЛ — EHGlossary.weekReport цоорхойтой долоо хоногийг
+     «≥» (бүртгэгдсэн хэсгийн нийлбэр) + зураастай дутуу салбар болгоно. */
   var gp=EHBackend.fetchRoadPassengersHistory?EHBackend.fetchRoadPassengersHistory().then(function(h){
     ST.gaps=(h&&h.coverage&&Array.isArray(h.coverage.gaps))?{road:h.coverage.gaps}:null;
     /* t05.road — сайтын applySectorSeries('road')-тэй ИЖИЛ цэвэр функц (EHGlossary.roadPaxSeries) */
@@ -1016,28 +1031,28 @@ function stWeek(mk){
   if(!w||!Array.isArray(w.weeks)||!w.weeks.length||(w.sectors||[]).indexOf(m[1])<0) return null;
   return {w:w,sec:m[1]};
 }
+/* Нэг салбарын долоо хоногийн утга — сайтын EHGlossary.weekReport-той НЭГ дүрэм: бичлэггүй
+   эсвэл эх сурвалжийн цоорхойтой (ST.gaps) бол null (0 зохиохгүй). */
 function stWeekVal(x,sec){
-  if(!x||x.missing) return null;
-  var g=ST.gaps&&ST.gaps[sec];
-  if(g&&g.some(function(r){return r&&r.from<=x.week_end&&r.to>=x.week_start})) return null;
-  var b=x.by_sector&&x.by_sector[sec];
-  return (b&&b.value!=null&&isFinite(Number(b.value)))?Number(b.value):null;
+  if(!x||typeof EHGlossary==='undefined'||!EHGlossary.weekReport) return null;
+  var r=EHGlossary.weekReport({sectors:[sec],weeks:[x]},[sec],ST.gaps||null);
+  return r?r.weeks[0].value:null;
 }
-/* w2p/w2c-ийн багана — сайтын weekSectorReport().weeks-тэй ижил: долоо хоног бүрийн
-   нийлбэр ЗӨВХӨН холбогдсон (verified, нуугаагүй) слотын салбараар. Метрик салгавал
-   цуваа ӨӨРЧЛӨГДӨНӨ. Бичлэггүй долоо хоногийг алгасна (0 зохиохгүй). */
-function stWeeklySeries(id){
-  if(typeof valueSpecOf==='function'&&valueSpecOf(id)) return null;
-  var ps=sectorParts(id).filter(function(p){return p.q==='verified'&&stWeek(p.m)});
-  if(!ps.length) return null;
-  var w=stWeek(ps[0].m).w;
-  var out=[];
-  w.weeks.forEach(function(x){
-    var t=0;
-    for(var i=0;i<ps.length;i++){ var v=stWeekVal(x,ST_METRIC[ps[i].m][1]); if(v===null) return; t+=v; }
-    out.push({label:String(x.week_start||'').slice(5).replace('-','.'),v:Math.round(t)});
-  });
-  return out.length>1?out:null;
+/* 02-р хэсэг (w2p/w2c ба доторх w2pb/w2px, w2cb/w2cx) — сайтын weekSectorTotal()-тэй НЭГ
+   функц (EHGlossary.weekReport), НЭГ дүрэм: агаар үргэлж + толгой картын бүртгэлд verified
+   салбар, авто тээврийн цоорхой (ST.gaps), хоцрогдол (sectors[].*_last). Утгын тохиргоо
+   (measure) сонгосон эсвэл нэгтгэл алга бол null (сайтын stOn — агаарын хуучин зам).
+   2026-10-27: өмнө нь өөрийн хуулбар логикоор цоорхойтой долоо хоногийг АЛГАСЧ, сайт «≥»
+   баганаар зурж байв (CLAUDE.md «ХОЁР талыг ХАМТ»). Слотыг салгавал багана ӨӨРЧЛӨГДӨНӨ. */
+function stWeekReport(id){
+  var head=id.indexOf('w2c')===0?'w2c':'w2p';
+  var sp=typeof valueSpecOf==='function'?valueSpecOf(head):null;
+  if((sp&&sp.measure)||ST.state!=='ready'||!ST.weekly||typeof EHGlossary==='undefined'||!EHGlossary.weekReport) return null;
+  var cargo=head==='w2c', w=ST.weekly[cargo?'freight_tonnes':'passengers'];
+  var ks=((w&&w.sectors)||[]).filter(function(k){return k==='air'||pvSlotVerified(head,k)});
+  var lastKey=cargo?'freight_last':'passengers_last', lastBy={};
+  ((ST.api&&ST.api.sectors)||[]).forEach(function(s){ if(s&&s[lastKey]) lastBy[s.sector]=s[lastKey]; });
+  return EHGlossary.weekReport(w,ks,ST.gaps||null,lastBy);
 }
 /* Сайтын sectorSummaryToSeries()-ийн толь: unit ЗААВАЛ, одоогийн (УБ) сар
    хасагдана, сүүлийн оны 1-р сараас завсаргүй. Зөрүүтэй бол preview ба сайт
@@ -1922,6 +1937,31 @@ function svgBarsH(parts,w){
         esc(p.n)+'</span></div>';
   }).join('');
 }
+/* 02-р хэсгийн 7 хоногийн багана (w2p/w2c) — сайтын buildWeek()-тэй НЭГ функц (EHGlossary.weekBars)
+   ба НЭГ өгөгдөл (stWeekReport): утга, өндөр (тэнхлэг 0-ээс), «≥» дутуу долоо хоног, салбараар
+   давхарласан хэсэг (өнгө = сайтын донут = NEON), дутуу салбар оройд зураастай + tooltip
+   «7-оос N хоногт мэдээ дутуу», легенд. Текст сайттай НЭГ (content.json site.week/status/range).
+   Загвар нь сайтын картын жижигрүүлсэн хуулбар: утгын мөр · багана · огноо · легенд. */
+function pvWeekChart(rep,unit,mini,accent){
+  var T=function(p,fb){var i=p.indexOf('.');return pvSiteT(p.slice(0,i),p.slice(i+1),fb)};
+  var md=function(s){return String(s||'').slice(5).replace('-','.')};
+  var wb=EHGlossary.weekBars({vals:rep.weeks.map(function(x){return x.value}),
+    labels:rep.weeks.map(function(x){return md(x.start)}),rep:rep,unit:unit,T:T,
+    name:function(k){return SECN[k]||k},color:function(k){return NEON[k]||'#8A93AB'}});
+  var row=function(cls,f){return '<div class="pvwk-r '+cls+'">'+wb.bars.map(f).join('')+'</div>'};
+  return '<div class="pvwk" data-pvwk="1">'+
+    (mini?'':row('pvwk-v',function(b){return '<span'+(b.isPeak?' class="pk"':'')+'>'+esc(b.valueShort)+'</span>'}))+
+    '<div class="pvwk-r pvwk-c" style="height:'+(mini?30:84)+'px">'+wb.bars.map(function(b,i){
+      var c=b.empty?'#C9D2E3':(accent||'#8A93AB');
+      return '<div class="pvwk-col"><div class="pvwk-b" data-pvwk-bar="'+i+'" data-v="'+esc(b.value)+'" title="'+esc(b.tip)+'"'+
+        ' style="height:'+b.heightPct+';background:linear-gradient(180deg,'+c+','+c+'88)">'+
+        b.segs.map(function(s){return '<i data-pvwk-seg="'+esc(s.key)+'" title="'+esc(s.tip)+'" style="flex:0 1 '+s.h+';'+s.style+'"></i>'}).join('')+
+        '</div></div>'}).join('')+'</div>'+
+    (mini?'':row('pvwk-x',function(b){return '<span>'+esc(b.label)+'</span>'})+
+      (wb.legend.length?'<div class="pvwk-leg">'+wb.legend.map(function(l){
+        return '<span data-pvwk-leg="'+esc(l.key)+'"><i style="'+l.sw+'"></i>'+esc(l.label)+'</span>'}).join('')+'</div>':''))+
+    '</div>';
+}
 /* Слот бүрийн бодит "юу харагдах вэ" — verified бол утга, none бол 0 */
 /* Виджетийн УТГЫН тохиргоо (widgets.<id>.value) preview-д тусах ёстой —
    эс тэгвэл админ хэмжигдэхүүнээ сольсон хэрнээ зүүн талын preview
@@ -2009,14 +2049,8 @@ function pvSlotVerified(id,k){
    долоо хоногийн цуваа бүхэлдээ («N долоо хоног»), эс бөгөөс flights feed-ийн
    сүүлийн бүтэн 7 хоног. Задаргаа/харьцуулалт нь толгой картынхаа мөрийг дагана. */
 function pvWeekModel(id){
-  var head=id.indexOf('w2c')===0?'w2c':'w2p';
-  var sp=valueSpecOf(head);
-  if(!(sp&&sp.measure)&&ST.state==='ready'&&ST.weekly){
-    var w=ST.weekly[head==='w2c'?'freight_tonnes':'passengers'];
-    var ks=((w&&w.sectors)||[]).filter(function(k){return k==='air'||pvSlotVerified(head,k)});
-    if(w&&Array.isArray(w.weeks)&&w.weeks.length&&ks.length)
-      return {dayFrom:w.weeks[0].week_start,dayTo:w.weeks[w.weeks.length-1].week_end,nWeeks:w.weeks.length};
-  }
+  var rep=stWeekReport(id);
+  if(rep) return {dayFrom:rep.weeks[0].start,dayTo:rep.weeks[rep.weeks.length-1].end,nWeeks:rep.weeks.length};
   return (FEED.state==='ready'&&FEED.weekFrom)?{dayFrom:FEED.weekFrom,dayTo:FEED.weekTo}:{};
 }
 /* Сарын цуваа — preview-ийн line-ийн ЯГ тэр цуваа (утгын тохиргоо → registry
@@ -2284,15 +2318,20 @@ function previewFor(id,mini){
        ухарна. */
     var pv=sectorParts(id), tv2=pv.reduce(function(a,p){return a+p.v},0);
     var un=previewUnit(id,'air');
-    /* Багана нь СОНГОСОН МЕТРИКЭЭС хамаарна (metricAnySeries). Метрик
-       салгасан эсвэл цуваагүй метрик сонгосон үед FEED-ийн хуучин
-       өдрүүдийг ҮРГЭЛЖЛҮҮЛЭН зурахгүй — салбарын зурвас руу ухарна. */
-    var mkB=headMetric(id), stS=stWeeklySeries(id), days=stS||metricAnySeries(mkB), isDay=!stS&&!!metricDaily(mkB);
-    var chart=(days&&days.length>1)
+    /* Салбарын нэгтгэл ирсэн бол сайтын buildWeek()-тэй НЭГ багана (pvWeekChart: «≥» дутуу
+       долоо хоног, салбараар давхарласан, зураастай хэсэг, легенд). Эс бөгөөс багана нь
+       СОНГОСОН МЕТРИКЭЭС хамаарна (metricAnySeries). Метрик салгасан эсвэл цуваагүй метрик
+       сонгосон үед FEED-ийн хуучин өдрүүдийг ҮРГЭЛЖЛҮҮЛЭН зурахгүй — салбарын зурвас руу ухарна. */
+    var mkB=headMetric(id), rep=stWeekReport(id), days=rep?null:metricAnySeries(mkB), isDay=!rep&&!!metricDaily(mkB);
+    var md=function(s){return String(s||'').slice(5).replace('-','.')};
+    var chart=rep
+      ? pvWeekChart(rep,un,mini,accent)+
+        '<div class="pvax">'+esc(md(rep.weeks[0].start))+' — '+esc(md(rep.weeks[rep.weeks.length-1].start))+
+        ' · '+esc(rep.weeks.length+' '+utxt('preview.weekly','долоо хоног (Да–Ня) · салбаруудын нийт'))+'</div>'
+      : (days&&days.length>1)
       ? svgLine(days,accent,W,mini?26:40,true)+
         '<div class="pvax">'+esc(days[0].label)+' — '+esc(days[days.length-1].label)+
         ' · '+esc(isDay?utxt('preview.daily7','7 хоногийн өдөр тутам')
-                      :stS?(days.length+' '+utxt('preview.weekly','долоо хоног (Да–Ня) · салбаруудын нийт'))
                       :(days.length+' '+utxt('preview.points','цэг')))+'</div>'
       : (pv.length?svgBarsH(pv.slice(0,mini?3:5),W)
                  :'<div class="pvempty">'+esc(utxt('preview.no_series','цуваа алга'))+'</div>');
@@ -3928,6 +3967,8 @@ function chromeFields(id){
   out.push('sector_total.d05_period_ytd','sector_total.d05_period_year','sector_total.d05_off',
            'sector_total.m_pax_short','sector_total.m_freight_short','sector_total.by_pax','sector_total.by_freight',
            'sector_total.unit_pax','sector_total.unit_tonne','status.share_single','ui.preview.d05_fallback');
+  /* (4г) 02-р хэсгийн багана — цоорхойтой долоо хоногийн легенд (сайтын buildWeek-тэй НЭГ текст) */
+  out.push('week.legend_gap');
   /* (5) ҮХМЭЛ ТАЛБАР ҮҮСГЭХГҮЙ: зам бүрийг pathAffectsPreview()-ээр
          шалгаж, preview-д ҮНЭХЭЭР нөлөөлдгийг нь л үлдээнэ. Нөхцөл
          (метрик, дата, хэлбэр) өөрчлөгдөхөд жагсаалт өөрөө дагана. */

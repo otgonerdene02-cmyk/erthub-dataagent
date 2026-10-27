@@ -510,7 +510,200 @@
       partialDay: adj ? partialDay : null, partialDim: adj ? partialDim : null, prev: prev };
   }
 
+  /* (5е) Нүүрний 02-р хэсэг «7 хоногийн тайлан» — нэгтгэлийн weekly[measure]-ээс ЗӨВХӨН `keys`
+     салбараар (бүртгэлд холбогдсон, backend-д бий). Сайт (index.html weekSectorTotal → buildWeek)
+     ба админы w2p/w2c preview ХОЁУЛАА ЭНИЙГ дуудна (2026-10-27: preview цоорхойтой долоо хоногийг
+     өөрийн хуулбар логикоор АЛГАСЧ, сайт «≥» баганаар зурж байв). tests/run.js WK бүлэг.
+     - weeks[].value: долоо хоногийн нийлбэр; аль нэг салбар бичлэггүй бол null (дутуу
+       нийлбэрийг бүтэн мэт харуулахгүй, 0 зохиохгүй)
+     - wow: сүүлийн хоёр долоо хоног хоёулаа бүтэн үед л; салбар бүрд ч мөн адил
+     - ytd: оны эхнээс keys-ийн нийлбэр; yoy: зөвхөн comparable ∩ keys салбараар
+     - gaps {салбар:[{from,to}]} — эх сурвалжийн цоорхой (авто тээвэр: road history
+       coverage.gaps). Цоорхойтой давхцсан салбар-долоо хоног бичлэггүйтэй адил (null) —
+       хожуу орсон цөөн билетийг бүтэн долоо хоног мэт нийлүүлэхгүй (DG: дутуу ≠ бүтэн).
+       ytdGapKeys — оны эхнээс хүрээнд цоорхойтой салбар (дуудагч ИЛ нэрлэнэ).
+     - partial — нийт бүрдээгүй (цоорхой/бичлэггүй салбартай) долоо хоногт БҮРТГЭГДСЭН бүх
+       утгын нийлбэр (доод хязгаар «≥», бүтэн нийт БИШ) — цоорхойтой салбарын бүртгэгдсэн
+       хэсэг ч орно (2026-10-27: 09.14–09.20-нд авто тээврийн 7 хоногоос 5 нь бүтэн, 21,298
+       зорчигч байхад бүхэлд нь хасаж «≥82.2K» гэж харуулж байв); partialKeys — бүтэн орсон
+       салбарууд. parts — салбар бүрийн бүртгэгдсэн утга ба цоорхойтой хоног (давхарласан багана).
+     null бол дуудагч агаарын хуучин замаар (weeklyAirStats). */
+  function weekReport(w, keys, gaps, lastBy) {
+    if (!(w && Array.isArray(w.weeks) && w.weeks.length)) return null;
+    var avail = w.sectors || [];
+    var ks = (keys || []).filter(function (k) { return avail.indexOf(k) >= 0; });
+    if (!ks.length) return null;
+    var num = function (v) { return (v === null || v === undefined || v === '' || !isFinite(+v)) ? null : +v; };
+    var gapIn = function (k, from, to) {
+      return !!(gaps && Array.isArray(gaps[k]) && from && to && gaps[k].some(function (g) { return g && g.from <= to && g.to >= from; }));
+    };
+    var val = function (b, k) { return (b && b[k]) ? num(b[k].value) : null; };
+    var valW = function (x, k) { return gapIn(k, x.week_start, x.week_end) ? null : val(x.by_sector, k); };
+    var sumK = function (b, list) { var t = 0; for (var i = 0; i < list.length; i++) { var v = val(b, list[i]); if (v === null) return null; t += v; } return t; };
+    var sumW = function (x) { var t = 0; for (var i = 0; i < ks.length; i++) { var v = valW(x, ks[i]); if (v === null) return null; t += v; } return t; };
+    var pct = function (a, b) { return (a !== null && b !== null && b > 0) ? (a / b - 1) * 100 : null; };
+    var DAY = 86400000, iso = function (s) { return Date.parse(String(s).slice(0, 10) + 'T00:00:00Z'); };
+    var gapDays = function (k, from, to) {
+      if (!(gaps && Array.isArray(gaps[k]) && from && to)) return 0;
+      var n = 0;
+      gaps[k].forEach(function (g) {
+        if (!g || !(g.from <= to && g.to >= from)) return;
+        n += Math.round((Math.min(iso(g.to), iso(to)) - Math.max(iso(g.from), iso(from))) / DAY) + 1;
+      });
+      return Math.min(7, n);
+    };
+    var parts = function (x) {
+      return ks.map(function (k) {
+        return { key: k, value: x.missing ? null : val(x.by_sector, k), gap: gapIn(k, x.week_start, x.week_end),
+          gapDays: gapDays(k, x.week_start, x.week_end) };
+      });
+    };
+    var part = function (x, ps) {
+      if (x.missing) return null;
+      var rec = ps.filter(function (p) { return p.value !== null; });
+      return rec.length ? { value: rec.reduce(function (t, p) { return t + p.value; }, 0),
+        keys: ps.filter(function (p) { return p.value !== null && !p.gap; }).map(function (p) { return p.key; }) } : null;
+    };
+    var weeks = w.weeks.map(function (x) {
+      var v = x.missing ? null : sumW(x), ps = parts(x), p = v === null ? part(x, ps) : null;
+      return { start: x.week_start, end: x.week_end, value: v,
+        gap: ks.filter(function (k) { return gapIn(k, x.week_start, x.week_end); }),
+        partial: p ? p.value : null, partialKeys: p ? p.keys : [], parts: ps };
+    });
+    var last = w.weeks[w.weeks.length - 1], prev = w.weeks.length > 1 ? w.weeks[w.weeks.length - 2] : null;
+    var bySector = {};
+    ks.forEach(function (k) {
+      var v = last.missing ? null : valW(last, k), p = (prev && !prev.missing) ? valW(prev, k) : null;
+      bySector[k] = { value: v, prev: p, wow: pct(v, p) };
+    });
+    var total = weeks[weeks.length - 1].value, prevTotal = weeks.length > 1 ? weeks[weeks.length - 2].value : null;
+    var cmp = ks.filter(function (k) { return (w.comparable || []).indexOf(k) >= 0; });
+    var yCur = (cmp.length && w.ytd) ? sumK(w.ytd.by_sector, cmp) : null;
+    var yPrev = (cmp.length && w.prev_ytd) ? sumK(w.prev_ytd.by_sector, cmp) : null;
+    return { keys: ks, weeks: weeks, total: total, prevTotal: prevTotal, wow: pct(total, prevTotal), bySector: bySector,
+      ytd: w.ytd ? sumK(w.ytd.by_sector, ks) : null, ytdYear: w.ytd ? w.ytd.year : null,
+      yoy: pct(yCur, yPrev), yoyKeys: cmp, weekStart: last.week_start, weekEnd: last.week_end,
+      stale: (w.stale || []).filter(function (k) { return ks.indexOf(k) >= 0; }),
+      gapKeys: ks.filter(function (k) { return weeks.some(function (x) { return x.gap.indexOf(k) >= 0; }); }),
+      ytdGapKeys: w.ytd ? ks.filter(function (k) { return gapIn(k, w.ytd.from, w.ytd.to); }) : [],
+      lag: weekLag(w.week_end, w.max_date, ks, lastBy) };
+  }
+
+  /* Дараагийн долоо хоног яагаад тайланд ороогүйг тайлбарлана: хамгийн сүүлийн огноо
+     (max_date) тайлангийн долоо хоногоос хойш байхад тэр долоо хоногийг (Да–Ня) бүрэн
+     хамраагүй салбарууд. lastBy {салбар:'YYYY-MM-DD'} (sectors[].passengers_last). */
+  function weekLag(weekEnd, maxDate, keys, lastBy) {
+    if (!weekEnd || !maxDate || !(maxDate > weekEnd) || !lastBy) return null;
+    var add = function (s, n) { var d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    var from = add(weekEnd, 1), to = add(weekEnd, 7);
+    /* Дараагийн долоо хоногийг ядаж нэг салбар БҮРЭН хамарсан үед л хоцрогдол — эс бөгөөс тэр
+       долоо хоног өөрөө дуусаагүй (2026-10-27: Да 10.26-нд «бүгд 10.25 хүртэл ирсэн тул
+       10.26–11.01 бүрдээгүй» гэж явагдаж буй долоо хоногийг хоцрогдол мэт хэлж байв). */
+    if (maxDate < to) return null;
+    var behind = (keys || []).filter(function (k) { return lastBy[k] && lastBy[k] < to; })
+      .map(function (k) { return { key: k, last: lastBy[k] }; });
+    return behind.length ? { from: from, to: to, maxDate: maxDate, sectors: behind } : null;
+  }
+
+  /* 7 хоногийн баганын Y тэнхлэгийн хүрээ (tests/run.js BE47 — гараар бодсон фикстур).
+     ЯАГААД: алхам нь урьд `/50` гэж ХАТУУ бичигдсэн байв. Зорчигчийн мянгад тохирно ч
+     ачааны тонн (13–44) дээр хэтэрхий бүдүүн: тэнхлэг -50…50 болж бүх багана дээд гуравны
+     нэгд шахагдаж, хөл бичигт "тэнхлэг -50-с эхэлнэ" гэж СӨРӨГ тонн зарладаг байв. Одоо
+     алхам нь УТГЫН МАСШТАБААС гарна (buildTrendChart-ийн niceStep-тэй ижил зарчим). */
+  function weekAxis(vals) {
+    if (!vals || !vals.length) return { base: 0, top: 0, step: 1 };
+    var mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals);
+    /* Бүх утга тэнцүү бол хүрээг утгын ӨӨРИЙНХ нь хэмжээнээс гаргана (0 бол 1) — эс тэгвэл
+       span=0 болж алхам тодорхойгүй болно. */
+    var span = (mx - mn) || Math.abs(mx) || 1;
+    var step = Math.pow(10, Math.floor(Math.log10(span / 2))) || 1;
+    var base = Math.floor((mn - span * 0.6) / step) * step;
+    var top = Math.ceil((mx + span * 0.15) / step) * step;
+    /* Хүн, тонн зэрэг СӨРӨГ БАЙЖ ЧАДАХГҮЙ хэмжигдэхүүнд тэнхлэг 0-ээс (DG): 5,000-аас эхэлсэн
+       тэнхлэг 7 хоног хоорондын ялгааг хэтрүүлж, датасэтийн ижил графикаас (0-ээс) өөр
+       хэлбэр зурдаг байв. */
+    if (mn >= 0) base = 0;
+    return { base: base, top: top, step: step };
+  }
+
+  /* (5ж) 02-р хэсгийн 7 хоногийн БАГАНА — сайт (index.html buildWeek) ба админы w2p/w2c preview
+     ХОЁУЛАА ЭНИЙГ дуудна: ижил утга, өндөр, «≥» дутуу долоо хоног, салбараар давхарласан хэсэг,
+     tooltip, легенд. o = {vals, labels, rep (weekReport эсвэл null — агаарын өдрийн багана), unit,
+     T(зам, fallback) — content.json site.<зам>, name(салбар) — нэр, color(салбар) — өнгө}.
+     - Нийт бүрдээгүй долоо хоног «—» хоосон үлдэхгүй: бүртгэгдсэн дүн «≥» (DG: дутуу ≠ бүтэн);
+       тэнхлэгт багтана, дундаж/оргилд ОРОХГҮЙ. Бичлэггүй (null) долоо хоног тэнхлэгт орохгүй.
+     - segs — салбар бүр өөрийн өнгөөр (2026-10-27 регресс: «≥» багана тунгалаг тасархай хүрээ
+       байсан тул бүтэн мэдээтэй салбарууд байхад ХООСОН мэт уншигдаж байв); дутуу салбар оройд
+       зураастай (≥8px: мэдээ бага/алга ч харагдана). rep алга бол segs/legend хоосон.
+     - valueShort — гар утсанд (571K); бүтэн тоо ширээний дэлгэц ба tooltip-д. */
+  var WEEK_SEG_KEYS = ['air', 'road', 'rail'];
+  function weekHatch(c) { return 'background:repeating-linear-gradient(135deg,' + c + ' 0 3px,' + c + '2e 3px 6px);min-height:8px;'; }
+  function weekShort(v) {
+    return v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e5 ? Math.round(v / 1e3) + 'K' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'K' : String(Math.round(v));
+  }
+  function weekBars(o) {
+    var T = typeof o.T === 'function' ? o.T : function (k, fb) { return fb; };
+    var name = typeof o.name === 'function' ? o.name : function (k) { return k; };
+    var color = typeof o.color === 'function' ? o.color : function () { return '#828EA8'; };
+    var rep = o.rep || null, unit = o.unit || '', vals = o.vals || [], labels = o.labels || [];
+    var has = function (v) { return v !== null && v !== undefined; };
+    var ok = vals.filter(has), hasBars = ok.length > 0;
+    var bmax = hasBars ? Math.max.apply(null, ok) : 0;
+    var parts = rep ? rep.weeks.map(function (x) { return x.partial; }) : vals.map(function () { return null; });
+    var ax = weekAxis(ok.concat(parts.filter(function (v) { return v !== null; })));
+    var base = ax.base, top = ax.top;
+    var hPct = function (v) { return (top === base ? 50 : (v - base) / (top - base) * 100).toFixed(1) + '%'; };
+    var md = function (s) { return String(s || '').slice(5).replace('-', '.'); };
+    var nm = function (keys) { return keys.map(name).join(' + '); };
+    var noData = T('status.no_data', 'мэдээлэл алга');
+    var peakI = vals.indexOf(bmax);
+    var segsOf = function (wk, rng) {
+      var ps = wk.parts.filter(function (p) { return p.gap || p.value === null || p.value > 0; })
+        .sort(function (a, c) {
+          return ((a.gap || a.value === null) - (c.gap || c.value === null)) || (WEEK_SEG_KEYS.indexOf(a.key) - WEEK_SEG_KEYS.indexOf(c.key));
+        });
+      var tot = ps.reduce(function (t, p) { return t + (p.value || 0); }, 0) || 1;
+      return ps.map(function (p) {
+        var c = color(p.key), dutuu = !!(p.gap || p.value === null);
+        return { key: p.key, h: ((p.value || 0) / tot * 100).toFixed(2) + '%', style: dutuu ? weekHatch(c) : 'background:' + c + ';', dutuu: dutuu,
+          tip: rng + ' · ' + name(p.key) + ' — ' + (p.value === null ? noData : Math.round(p.value).toLocaleString() + ' ' + unit) +
+            (p.gap ? ' · ' + T('week.seg_gap', '7-оос {n} хоногт мэдээ дутуу (эх сурвалжийн цоорхой)').replace('{n}', p.gapDays) : '') };
+      });
+    };
+    var bars = vals.map(function (v, i) {
+      var wk = rep ? rep.weeks[i] : null, rng = wk ? md(wk.start) + '–' + md(wk.end) : labels[i], b;
+      if (has(v)) b = { label: labels[i], value: (rep ? Math.round(v) : v).toLocaleString(), valueShort: weekShort(v), heightPct: hPct(v) };
+      else if (parts[i] !== null) {
+        b = { label: labels[i], value: '≥' + Math.round(parts[i]).toLocaleString(), valueShort: '≥' + weekShort(parts[i]),
+          heightPct: hPct(parts[i]), partial: true };
+      } else b = { label: labels[i], value: '—', valueShort: '—', heightPct: '0%', empty: true };
+      b.isPeak = i === peakI;
+      b.segs = (wk && b.value !== '—') ? segsOf(wk, rng) : [];
+      if (b.partial) {
+        var full = wk.partialKeys, miss = rep.keys.filter(function (k) { return full.indexOf(k) < 0; });
+        b.tip = rng + ' — ' + b.value + ' ' + unit + (full.length ? ' · ' + nm(full) : '') + ' · ' +
+          T('week.partial_tip', '{names}: мэдээ дутуу (эх сурвалжийн цоорхой) — нийт бүрэн биш').replace('{names}', nm(miss));
+      } else {
+        var gk = wk ? wk.gap : [];
+        b.tip = rng + ' — ' + (b.value === '—'
+          ? (gk.length ? T('week.gap_tip', '{names}: эх сурвалжийн цоорхой — дутуу').replace('{names}', nm(gk)) : noData)
+          : b.value + ' ' + unit);
+      }
+      return b;
+    });
+    var yTicks = [0, 0.5, 1].map(function (fr) { return { pct: (fr * 100).toFixed(1) + '%', label: Math.round(base + fr * (top - base)).toLocaleString() }; });
+    var avgVal = hasBars ? ok.reduce(function (a, v) { return a + v; }, 0) / ok.length : 0;
+    var avg = { pct: (top === base ? 50 : (avgVal - base) / (top - base) * 100).toFixed(1) + '%',
+      label: hasBars ? (T('range.average', 'дундаж') + ' ' + Math.round(avgVal).toLocaleString()) : noData };
+    var legend = !rep ? [] : WEEK_SEG_KEYS.filter(function (k) { return rep.keys.indexOf(k) >= 0; })
+      .map(function (k) { return { key: k, label: name(k), sw: 'background:' + color(k) + ';' }; })
+      .concat(bars.some(function (b) { return b.segs.some(function (s) { return s.dutuu; }); })
+        ? [{ key: 'gap', label: T('week.legend_gap', 'мэдээ дутуу (эх сурвалжийн цоорхой)'), sw: weekHatch('#828EA8') }] : []);
+    return { bars: bars, yTicks: yTicks, avg: avg, base: base, top: top, legend: legend, hasBars: hasBars };
+  }
+
   var api = {
+    weekReport: weekReport, weekLag: weekLag, weekAxis: weekAxis, weekBars: weekBars,
     roadPaxSeries: roadPaxSeries,
     airPaxSplit: airPaxSplit, norm: norm, airFlightKind: airFlightKind, KIND_LABEL: KIND_LABEL, AIR_KIND: AIR_KIND,
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
