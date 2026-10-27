@@ -452,6 +452,210 @@
       note: note, from: x.week_start, to: x.week_end, keys: ks, used: used, missing: miss, gap: gap, short: short };
   }
 
+  /* (5з) Нүүрний 01-р хэсэг «Үндсэн үзүүлэлт» ба «Салбарын харьцаа» (d05) — НЭГДСЭН шүүлтийн
+     ОГНООНЫ мужаар салбар бүрийн НЭГ хэмжүүр (зорчигч эсвэл ачаа тонн), НЭГ хугацаа, НЭГ
+     харьцуулалт. Эх: салбарын нэгтгэлийн өдрийн мөр (/api/datasets/sector-total/rows —
+     gold.sector_daily_total). Сайт (livestrip, buildDonut) ба админы ls/d05 preview ХОЁУЛАА
+     ЭНИЙГ дуудна. 2026-10-27 хэрэглэгчийн шаардлага: «нэг карт нь цаг хугацааны шугамтай,
+     нөгөө нь шугамгүй — салбар бүр нэг логик, нэг хугацааны дата харуул» (өмнө нь авто —
+     хоногийн үзлэг, төмөр зам — хоногийн вагон, агаар — сарын нислэг байв). tests/run.js HK. */
+  var DAY_MS = 86400000;
+  function isoAdd(s, n) { var d = new Date(String(s).slice(0, 10) + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function isoDiff(a, b) { return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / DAY_MS); }
+  /* Нэг жилийн өмнөх ижил огноо (2024-02-29 → 2023-02-28) */
+  function isoYearBack(s) {
+    var y = +s.slice(0, 4) - 1, m = s.slice(5, 7), d = +s.slice(8, 10);
+    var dim = new Date(Date.UTC(y, +m, 0)).getUTCDate();
+    return y + '-' + m + '-' + String(Math.min(d, dim)).padStart(2, '0');
+  }
+  /* /rows хариу → [{date, sector, passengers, freight_tonnes}] (багана нэрээр — дараалал
+     өөрчлөгдсөн ч эвдрэхгүй). Утга null = тухайн хэмжүүрийн эх сурвалж алга (0 БИШ). */
+  function stDailyRows(res) {
+    if (!(res && res.status === 'ok' && Array.isArray(res.columns) && Array.isArray(res.rows))) return null;
+    var ix = {};
+    res.columns.forEach(function (c, i) { if (c && c.key) ix[c.key] = i; });
+    if (ix.record_date == null || ix.sector_code == null) return null;
+    var num = function (v) { return (v === null || v === undefined || v === '' || !isFinite(+v)) ? null : +v; };
+    return res.rows.map(function (r) {
+      return { date: dayOf(r[ix.record_date]), sector: String(r[ix.sector_code] || ''),
+        passengers: ix.passengers == null ? null : num(r[ix.passengers]),
+        freight_tonnes: ix.freight_tonnes == null ? null : num(r[ix.freight_tonnes]) };
+    }).filter(function (r) { return r.date && r.sector; });
+  }
+  /* Мөрүүд → {by:{огноо:{салбар:{passengers,freight_tonnes}}}, first, last}. VIEW-д (огноо, салбар)
+     давтагдашгүй — хэд хэдэн хэсгээр (жилээр) татахад давхцсан мөр НЭМЭГДЭХГҮЙ, сүүлийнх нь үлдэнэ. */
+  function stDailyIndex(rows) {
+    var by = {}, first = null, last = null;
+    (rows || []).forEach(function (r) {
+      var d = by[r.date] || (by[r.date] = {});
+      d[r.sector] = { passengers: r.passengers, freight_tonnes: r.freight_tonnes };
+      if (!first || r.date < first) first = r.date;
+      if (!last || r.date > last) last = r.date;
+    });
+    return { by: by, first: first, last: last };
+  }
+  /* Шүүлтийн бэлэн муж. anchor = сүүлийн БҮТЭН өдөр (нэгтгэлийн weekly[хэмжүүр].week_end — 02-р
+     хэсэг, hero-той ижил; бүх салбар бүтэн мэдээтэй). Өгөгдмөл 'ytd' — d05 ба газрын зураг
+     (оны эхнээс) хоёртой ИЖИЛ хугацаа. */
+  var HOME_PRESETS = ['7d', '30d', '90d', 'mtd', 'ytd', '12m'];
+  function homeRange(preset, anchor) {
+    if (!DAY_RE.test(String(anchor || ''))) return null;
+    var a = String(anchor).slice(0, 10);
+    var from = preset === '7d' ? isoAdd(a, -6) : preset === '30d' ? isoAdd(a, -29) : preset === '90d' ? isoAdd(a, -89)
+      : preset === 'mtd' ? a.slice(0, 8) + '01' : preset === '12m' ? isoAdd(a, -364) : a.slice(0, 4) + '-01-01';
+    return { from: from, to: a, preset: HOME_PRESETS.indexOf(preset) >= 0 ? preset : 'ytd' };
+  }
+  /* Харьцуулах хугацаа: ≤92 хоног → өмнөх ИЖИЛ урттай хугацаа (WoW/MoM-ийн ерөнхий хэлбэр);
+     түүнээс урт → өмнөх оны мөн үе (улирлын хэлбэлзэлтэй тээврийн тоог урт мужид өмнөх
+     хугацаатай харьцуулбал худал өсөлт/уналт гарна). */
+  function rangeCompare(from, to) {
+    var n = isoDiff(from, to) + 1;
+    if (n <= 92) return { mode: 'prev', from: isoAdd(from, -n), to: isoAdd(from, -1), n: n };
+    var f = isoYearBack(from), t = isoYearBack(to);
+    return { mode: 'yoy', from: f, to: t, n: isoDiff(f, t) + 1 };
+  }
+  /* Spark-ийн хувиар: ≤92 хоног — өдөр, ≤731 — 7 хоног, түүнээс урт — 30 хоног. Хувиарыг
+     ТӨГСГӨЛӨӨС (to) хойш тоолно — сүүлийн цэг үргэлж сонгосон өдрөөр дуусна; эхний дутуу
+     хэсэг spark-д орохгүй (нийт дүнд орно). Аль нэг өдөр нь мэдээгүй хувиар null — дутуу
+     нийлбэрийг бүтэн мэт зурахгүй (DG). */
+  function stBuckets(from, to, size) {
+    var out = [], end = to;
+    while (isoDiff(from, end) + 1 >= size) { out.unshift({ from: isoAdd(end, -(size - 1)), to: end }); end = isoAdd(end, -size); }
+    return out;
+  }
+  /* idx — stDailyIndex; o = {from, to, measure, keys, gaps {салбар:[{from,to}]}}.
+     Салбар бүр: value — мужид бүртгэгдсэн нийлбэр; days — мэдээтэй (цоорхойд ороогүй) өдөр;
+     lower — days < n (≥, доод хязгаар); харьцуулалт — хоёр тал БҮТЭН бол нийлбэрээр, хоёулаа
+     ≥90% бол ӨДРИЙН ДУНДЖААР (basis:'avg' — ил хэлнэ), эс бөгөөс pct=null + шалтгаан (reason).
+     Мэдээгүй салбар value=null — 0 ЗОХИОХГҮЙ. */
+  function periodStrip(idx, o) {
+    o = o || {};
+    if (!(idx && idx.by) || !DAY_RE.test(String(o.from || '')) || !DAY_RE.test(String(o.to || '')) || o.from > o.to) return null;
+    var meas = o.measure === 'freight_tonnes' ? 'freight_tonnes' : 'passengers';
+    var n = isoDiff(o.from, o.to) + 1, cmp = rangeCompare(o.from, o.to);
+    var size = n <= 92 ? 1 : n <= 731 ? 7 : 30;
+    var gaps = o.gaps || {};
+    var inGap = function (k, d) { return !!(Array.isArray(gaps[k]) && gaps[k].some(function (g) { return g && g.from <= d && g.to >= d; })); };
+    var cell = function (k, d) { var x = idx.by[d] && idx.by[d][k]; return x && x[meas] !== null && x[meas] !== undefined ? x[meas] : null; };
+    var span = function (k, from, to) {
+      var v = 0, any = false, days = 0, last = null;
+      for (var d = from; d <= to; d = isoAdd(d, 1)) {
+        var c = cell(k, d);
+        if (c === null) continue;
+        v += c; any = true; last = d;
+        if (!inGap(k, d)) days++;
+      }
+      return { value: any ? v : null, days: days, n: isoDiff(from, to) + 1, last: last };
+    };
+    var series = function (k, from, to) {
+      return stBuckets(from, to, size).map(function (b) { var s = span(k, b.from, b.to);
+        return { from: b.from, to: b.to, v: s.days === s.n ? s.value : null, rec: s.value }; });
+    };
+    var sectors = {}, total = 0, any = false;
+    (o.keys || []).forEach(function (k) {
+      var c = span(k, o.from, o.to), p = span(k, cmp.from, cmp.to);
+      var pct = null, basis = null, reason = null, rec = c.value;
+      /* Мужийн талаас бага өдөр мэдээтэй бол бүртгэгдсэн нийлбэрийг «тухайн хугацааны дүн» гэж
+         харуулахгүй (жиш. авто 2023-05–06: 5/61 хоног → «≥21 зорчигч» худал сэтгэгдэл) — rec-д үлдэнэ */
+      if (c.value !== null && c.days < c.n * 0.5) { reason = 'thin'; c = { value: null, days: c.days, n: c.n, last: c.last }; }
+      else if (c.value === null) reason = 'none';
+      else if (p.value === null) reason = 'no_prev';
+      else if (c.days === c.n && p.days === p.n && p.value > 0) { pct = (c.value / p.value - 1) * 100; basis = 'sum'; }
+      else if (c.days >= c.n * 0.9 && p.days >= p.n * 0.9 && p.value > 0 && c.days > 0 && p.days > 0) {
+        pct = ((c.value / c.days) / (p.value / p.days) - 1) * 100; basis = 'avg';
+      } else reason = c.days < c.n * 0.9 ? 'short' : 'prev_short';
+      if (c.value !== null) { total += c.value; any = true; }
+      sectors[k] = { key: k, value: c.value, rec: rec, days: c.days, n: c.n, lower: c.value !== null && c.days < c.n, last: c.last,
+        prev: p.value, prevDays: p.days, prevN: p.n, pct: pct, basis: basis, reason: reason,
+        series: c.value === null ? [] : series(k, o.from, o.to), prevSeries: c.value === null ? [] : series(k, cmp.from, cmp.to) };
+    });
+    return { from: o.from, to: o.to, n: n, cmp: cmp, measure: meas, bucket: size, keys: (o.keys || []).slice(), sectors: sectors,
+      total: any ? total : null, hasData: any };
+  }
+  /* Spark зам — нэг масштабаар одоогийн (line) ба харьцуулах (prevLine) хугацаа; null цэг
+     шугамыг тасална. hits — цэг бүрийн hover муж (x, w) + tip (HV: нэр — утга). ЦЭВЭР. */
+  function sparkPaths(cur, prev, o) {
+    o = o || {};
+    var w = o.w || 120, h = o.h || 32, pad = o.pad == null ? 3 : o.pad;
+    var vals = (cur || []).concat(prev || []).map(function (p) { return p && p.v; }).filter(function (v) { return v !== null && v !== undefined && isFinite(v); });
+    var n = Math.max((cur || []).length, (prev || []).length);
+    if (!vals.length || n < 2) return { line: '', prevLine: '', area: '', hits: [], dot: null };
+    var mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals), rng = (mx - mn) || 1;
+    var X = function (i) { return pad + i * (w - pad * 2) / (n - 1); };
+    var Y = function (v) { return h - pad - (h - pad * 2) * ((v - mn) / rng); };
+    var path = function (list) {
+      var s = '', pen = false;
+      (list || []).forEach(function (p, i) {
+        if (!p || p.v === null || p.v === undefined) { pen = false; return; }
+        s += (pen ? ' L' : (s ? ' M' : 'M')) + X(i).toFixed(1) + ',' + Y(p.v).toFixed(1); pen = true;
+      });
+      return s;
+    };
+    var line = path(cur), lastI = -1;
+    (cur || []).forEach(function (p, i) { if (p && p.v !== null && p.v !== undefined) lastI = i; });
+    var bw = (w - pad * 2) / (n - 1);
+    var hits = (cur || []).map(function (p, i) {
+      return { x: Math.max(0, X(i) - bw / 2).toFixed(1), w: Math.max(1, Math.min(bw, w)).toFixed(1), i: i };
+    });
+    return { line: line, prevLine: path(prev), hits: hits,
+      dot: lastI >= 0 ? { cx: X(lastI).toFixed(1), cy: Y(cur[lastI].v).toFixed(1) } : null };
+  }
+  /* 01-р зурвасын нүдний ТЕКСТ (тоо, өөрчлөлтийн хувь, тайлбар) — сайт (lsStripCell) ба админы
+     strip5 preview НЭГ функц. T(key, fb) — content.json site.home_range; o.noData — мэдээгүй үеийн
+     үг. «≥» — мужийн зарим өдөр мэдээгүй (доод хязгаар). ЦЭВЭР. */
+  function periodCell(hs, k, T, o) {
+    o = o || {};
+    var x = (hs && hs.sectors && hs.sectors[k]) || null;
+    var noData = o.noData || T('no_data', 'мэдээлэл алга');
+    var fmt = function (v) { return Math.round(v).toLocaleString('en-US'); };
+    if (!(x && x.value !== null)) {
+      return { live: false, value: '—', delta: '—', dir: 'flat', pct: null,
+        note: (x && x.reason === 'thin') ? T('thin', 'мэдээ дутуу — {d}/{n} хоног').replace('{d}', x.days).replace('{n}', x.n) : noData };
+    }
+    var cmpW = hs.cmp.mode === 'yoy' ? T('cmp_yoy_short', 'Өмнөх оны мөн үе') : T('cmp_prev_short', 'Өмнөх {n} хоног').replace('{n}', hs.cmp.n);
+    var note = x.reason === 'no_prev' ? cmpW + ' — ' + noData
+      : x.reason === 'prev_short' ? T('prev_short', '{cmp}: мэдээ дутуу ({d}/{n} хоног) — харьцуулахгүй').replace('{cmp}', cmpW).replace('{d}', x.prevDays).replace('{n}', x.prevN)
+      : x.reason === 'short' ? T('short', 'мэдээтэй {d}/{n} хоног — харьцуулахгүй').replace('{d}', x.days).replace('{n}', x.n)
+      : cmpW + ': ' + fmt(x.prev) + (x.basis === 'avg' ? ' · ' + T('basis_avg', 'өдрийн дунджаар') : '');
+    if (x.lower && x.reason !== 'short') note = T('days', '{d}/{n} хоног мэдээтэй').replace('{d}', x.days).replace('{n}', x.n) + ' · ' + note;
+    var pct = x.pct;
+    return { live: true, value: (x.lower ? '≥' : '') + fmt(x.value),
+      delta: pct === null ? '—' : (pct >= 0 ? '+' : '−') + Math.abs(pct).toFixed(1) + '%',
+      dir: pct === null ? 'flat' : pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat', pct: pct, note: note };
+  }
+  /* Spark-ийн нэг цэгийн хугацааны үг (periodStrip.bucket) — widgets.ls.foot-ийн «{bucket}» */
+  function bucketWord(size, T) {
+    return size === 1 ? T('bucket_day', '1 өдөр') : size === 7 ? T('bucket_week', '7 хоног')
+      : size === 30 ? T('bucket_30', '30 хоног') : T('bucket_month', '1 сар');
+  }
+  /* Хувийн харьцааны текст — 0-ээс их ч 0.05%-иас бага хувийг «0.0%» гэж бичвэл «огт
+     тээвэр хийгээгүй» мэт уншигдана (2026-10-27: агаарын ачаа 8,521 тн = нийтийн 0.03%). d05 (сайт,
+     админ). digits — бутархайн орон (төвийн том тоо 0, жагсаалт 1). */
+  function shareText(pct, digits) {
+    if (pct === null || pct === undefined || !isFinite(pct)) return '—';
+    var d = digits == null ? 1 : digits, step = Math.pow(10, -Math.max(1, d));
+    if (pct <= 0) return '0%';
+    if (pct < step) return '<' + step.toFixed(Math.max(1, d)) + '%';
+    if (pct < 100 && pct > 100 - step) return '>' + (100 - step).toFixed(Math.max(1, d)) + '%';
+    if (d === 0 && (pct < 0.5 || (pct > 99.5 && pct < 100))) return pct.toFixed(1) + '%';
+    return pct.toFixed(d) + '%';
+  }
+  /* Нумын ХАРАГДАХ хувь — 0-ээс их хувь бүр дор хаяж minPct (өгөгдмөл 1.5) өнцөгтэй, бусад нь
+     хувь тэнцүүлэн багасна (нийлбэр 100). Шошго/tooltip ЖИНХЭНЭ хувийг бичнэ; энэ нь зөвхөн нум
+     харагдахгүй болж «тээвэр алга» гэж ойлгогдохоос сэргийлнэ. 0 / мэдээгүй → 0. ЦЭВЭР. */
+  function shareArcs(values, minPct) {
+    var m = minPct == null ? 1.5 : minPct;
+    var pos = (values || []).map(function (v) { return (v > 0 && isFinite(v)) ? +v : 0; });
+    var tot = pos.reduce(function (a, b) { return a + b; }, 0);
+    if (!tot) return pos.map(function () { return 0; });
+    var pct = pos.map(function (v) { return v / tot * 100; });
+    var small = pct.map(function (p) { return p > 0 && p < m; });
+    var need = 0, big = 0;
+    pct.forEach(function (p, i) { if (small[i]) need += m - p; else big += p; });
+    if (!need || !big) return pct;
+    return pct.map(function (p, i) { return p <= 0 ? 0 : small[i] ? m : p - need * (p / big); });
+  }
+
   /* (5д) Авто тээврийн зорчигчийн САРЫН цуваа (/api/sectors/road/passengers/history) →
      sectorSummaryToSeries()-ийн ИЖИЛ хэлбэр {unit, year, counts, lastMonth, partial,
      partialValue, prev} + partials. Нүүрний t05/k04 (сайт) ба админы t05 preview ХОЁУЛАА
@@ -638,8 +842,10 @@
      - valueShort — гар утсанд (571K); бүтэн тоо ширээний дэлгэц ба tooltip-д. */
   var WEEK_SEG_KEYS = ['air', 'road', 'rail'];
   function weekHatch(c) { return 'background:repeating-linear-gradient(135deg,' + c + ' 0 3px,' + c + '2e 3px 6px);min-height:8px;'; }
+  /* ≥10K бүхэл мянгаар (86K) — 8 багана ~31px-д «≥86.4K» гэх 6 тэмдэгт хөрш шошготой давхцдаг байв
+     (2026-10-27, 390px); бүтэн тоо tooltip-д. tests/run.js WK. */
   function weekShort(v) {
-    return v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e5 ? Math.round(v / 1e3) + 'K' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'K' : String(Math.round(v));
+    return v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e4 ? Math.round(v / 1e3) + 'K' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'K' : String(Math.round(v));
   }
   function weekBars(o) {
     var T = typeof o.T === 'function' ? o.T : function (k, fb) { return fb; };
@@ -709,6 +915,9 @@
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,
     filterColumns: filterColumns, rowMatchesCols: rowMatchesCols, periodSpan: periodSpan, weekSpan: weekSpan, chartPeriod: chartPeriod,
+    stDailyRows: stDailyRows, stDailyIndex: stDailyIndex, homeRange: homeRange, HOME_PRESETS: HOME_PRESETS,
+    rangeCompare: rangeCompare, periodStrip: periodStrip, sparkPaths: sparkPaths, isoAdd: isoAdd, isoDiff: isoDiff,
+    periodCell: periodCell, bucketWord: bucketWord, shareText: shareText, shareArcs: shareArcs,
     sectorShare: sectorShare, heroPax: heroPax, condActive: condActive, condMatch: condMatch, dayOf: dayOf, facetSuggest: facetSuggest, numOf: numOf
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

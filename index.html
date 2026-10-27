@@ -17,7 +17,7 @@
 <script src="js/erthub-publish.js?v=ffe215f9"></script>
 <script src="js/erthub-backend.js?v=a96de8ab"></script>
 <script src="js/erthub-chart.js?v=422174bf"></script>
-<script src="js/erthub-glossary.js?v=e7103a43"></script>
+<script src="js/erthub-glossary.js?v=30931668"></script>
 <script src="js/erthub-tip.js?v=ba005e59"></script>
 <script src="js/vendor/dc-runtime.js?v=8fe7df74"></script>
 </head>
@@ -32,7 +32,7 @@
   <script src="js/vendor/d3.v7.min.js?v=f2094bbf"></script>
   <script src="js/vendor/topojson-client.min.js?v=25cd02ae"></script>
   <script src="js/vendor/xlsx.full.min.js?v=c9506197"></script>
-  <link rel="stylesheet" href="style.css?v=64f90d09">
+  <link rel="stylesheet" href="style.css?v=08035d82">
 </helmet>
 
 <div class="eh-app" data-theme="{{ themeAttr }}" style="{{ rootStyle }}">
@@ -746,57 +746,37 @@
         <div style="display:flex;align-items:center;gap:9px;padding-right:14px;border-right:1px solid var(--line);flex-shrink:0;">
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.09em;font-family:'JetBrains Mono',monospace;white-space:nowrap;">{{ sFilterInterval }}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          <sc-raw-select ref="{{ fromRef }}" sc-camel-on-change="{{ onFrom }}" style="height:38px;border:1px solid var(--line2);border-radius:10px;background:rgba(var(--ink-rgb),.05);box-shadow:inset 0 1px 3px rgba(12,20,40,.07);color:var(--ink);font-family:inherit;font-size:12.5px;padding:0 11px;outline:none;cursor:pointer;">
-              <option value="1">{{ sMonth1 }}</option>
-              <option value="2">{{ sMonth2 }}</option>
-              <option value="3">{{ sMonth3 }}</option>
-              <option value="4">{{ sMonth4 }}</option>
-              <option value="5">{{ sMonth5 }}</option>
-              <option value="6">{{ sMonth6 }}</option>
-              <option value="7">{{ sMonth7 }}</option>
-              <option value="8">{{ sMonth8 }}</option>
-              <option value="9">{{ sMonth9 }}</option>
-              <option value="10">{{ sMonth10 }}</option>
-              <option value="11">{{ sMonth11 }}</option>
-              <option value="12">{{ sMonth12 }}</option>
-          </sc-raw-select>
+        <div class="eh-home-dates" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <input type="date" data-home-from="1" value="{{ homeFrom }}" min="{{ homeDateMin }}" max="{{ homeDateMax }}" title="{{ homeDateFromL }}" aria-label="{{ homeDateFromL }}" sc-camel-on-change="{{ onHomeFrom }}" style="{{ dateInputStyle }}">
           <span style="color:var(--ink3);font-size:13px;">—</span>
-          <sc-raw-select ref="{{ toRef }}" sc-camel-on-change="{{ onTo }}" style="height:38px;border:1px solid var(--line2);border-radius:10px;background:rgba(var(--ink-rgb),.05);box-shadow:inset 0 1px 3px rgba(12,20,40,.07);color:var(--ink);font-family:inherit;font-size:12.5px;padding:0 11px;outline:none;cursor:pointer;">
-              <option value="1">{{ sMonth1 }}</option>
-              <option value="2">{{ sMonth2 }}</option>
-              <option value="3">{{ sMonth3 }}</option>
-              <option value="4">{{ sMonth4 }}</option>
-              <option value="5">{{ sMonth5 }}</option>
-              <option value="6">{{ sMonth6 }}</option>
-              <option value="7">{{ sMonth7 }}</option>
-              <option value="8">{{ sMonth8 }}</option>
-              <option value="9">{{ sMonth9 }}</option>
-              <option value="10">{{ sMonth10 }}</option>
-              <option value="11">{{ sMonth11 }}</option>
-              <option value="12">{{ sMonth12 }}</option>
-          </sc-raw-select>
+          <input type="date" data-home-to="1" value="{{ homeTo }}" min="{{ homeDateMin }}" max="{{ homeDateMax }}" title="{{ homeDateToL }}" aria-label="{{ homeDateToL }}" sc-camel-on-change="{{ onHomeTo }}" style="{{ dateInputStyle }}">
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <sc-for list="{{ rangePresets }}" as="rp" hint-placeholder-count="7">
-            <button sc-camel-on-click="{{ rp.pick }}" style="{{ rp.style }}">{{ rp.label }}</button>
+          <sc-for list="{{ rangePresets }}" as="rp" hint-placeholder-count="6">
+            <button data-home-preset="{{ rp.key }}" sc-camel-on-click="{{ rp.pick }}" style="{{ rp.style }}">{{ rp.label }}</button>
           </sc-for>
         </div>
-        <div style="margin-left:auto;font-size:11.5px;color:var(--ink2);font-family:'JetBrains Mono',monospace;white-space:nowrap;flex-shrink:0;">{{ rangeLabel }}</div>
       </div>
-      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink2);font-family:'JetBrains Mono',monospace;">
-        <span style="white-space:nowrap;">{{ monthReadout }}</span>
-        <span style="color:var(--ink3);white-space:nowrap;">{{ tableMonthNote }}</span>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:11px;line-height:1.45;font-family:'JetBrains Mono',monospace;">
+        <span data-home-cmp="1" style="color:var(--ink2);">{{ filterCmp }}</span>
+        <span data-home-scope="1" style="color:var(--ink3);">{{ filterScope }}</span>
       </div>
       </sc-if>
     </div>
 
     <div style="margin-top:26px;background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:14px 16px;">
-      <div style="display:flex;align-items:center;gap:10px;padding:2px 8px 12px;">
+      <div class="eh-ls-head" style="display:flex;align-items:center;gap:10px;padding:2px 8px 12px;">
         <div style="width:6px;height:6px;border-radius:50%;background:#0E8F63;animation:pulseGlow 2.2s infinite;flex-shrink:0;"></div>
         <div data-eh-card="ls" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ lsTitle }}</div>
         <div style="flex:1;min-width:12px;height:1px;background:var(--line);"></div>
-        
+        <sc-if value="{{ lsHasRange }}">
+          <div data-chart-period="1" data-ls-period="1" class="eh-ls-period" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink2);white-space:nowrap;">{{ lsPeriod }}</div>
+          <span data-ls-measure="1" style="display:inline-flex;gap:5px;flex-shrink:0;">
+            <sc-for list="{{ lsMeasureChips }}" as="lm" hint-placeholder-count="2">
+              <button data-ls-meas="{{ lm.key }}" sc-camel-on-click="{{ lm.pick }}" style="{{ lm.style }}">{{ lm.label }}</button>
+            </sc-for>
+          </span>
+        </sc-if>
       </div>
       <div class="eh-ls-grid" style="display:grid;grid-template-columns:repeat({{ lsCols }},minmax(0,1fr));gap:0;">
         <sc-for list="{{ livestrip }}" as="ls" hint-placeholder-count="5">
@@ -814,8 +794,12 @@
             </div>
             <div style="display:flex;align-items:flex-end;gap:8px;margin-top:9px;">
               <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;color:{{ ls.deltaColor }};white-space:nowrap;">{{ ls.delta }}</span>
-              <svg sc-camel-view-box="0 0 120 32" sc-camel-preserve-aspect-ratio="none" style="flex:1;height:18px;min-width:0;display:block;">
-                <path d="{{ ls.spark }}" fill="none" stroke="{{ ls.color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+              <svg data-ls-spark="{{ ls.key }}" sc-camel-view-box="0 0 120 32" sc-camel-preserve-aspect-ratio="none" style="flex:1;height:22px;min-width:0;display:block;{{ ls.sparkStyle }}">
+                <path d="{{ ls.prevSpark }}" fill="none" stroke="{{ ls.color }}" stroke-opacity=".42" stroke-width="1.3" stroke-dasharray="3 3" stroke-linecap="round" vector-effect="non-scaling-stroke" pointer-events="none"></path>
+                <path d="{{ ls.spark }}" fill="none" stroke="{{ ls.color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"></path>
+                <sc-for list="{{ ls.hits }}" as="hp" hint-placeholder-count="0">
+                  <rect x="{{ hp.x }}" y="0" width="{{ hp.w }}" height="32" fill="transparent"><title>{{ hp.tip }}</title></rect>
+                </sc-for>
               </svg>
             </div>
             <div class="eh-ls-foot" style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ink3);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px;" title="{{ ls.footText }}"><span data-eh-card="ls" data-eh-field="foot" style="{{ ls.footBaseStyle }}">{{ lsFoot }}</span><span style="{{ ls.footNoteStyle }}">{{ ls.footNote }}</span></div>
@@ -826,6 +810,14 @@
           </div>
         </sc-for>
       </div>
+      <sc-if value="{{ lsHasRange }}">
+        <div data-ls-legend="1" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;padding:10px 10px 2px 13px;margin-top:4px;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);">
+          <span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><i style="width:16px;height:0;border-top:2px solid var(--ink2);display:inline-block;"></i>{{ lsLegendCur }}</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><i style="width:16px;height:0;border-top:1.5px dashed var(--ink3);display:inline-block;"></i>{{ lsLegendPrev }}</span>
+          <span data-eh-card="ls" data-eh-field="foot" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ lsFoot }}</span>
+          <span data-ls-total="1" style="margin-left:auto;color:var(--ink2);font-weight:600;white-space:nowrap;">{{ lsTotal }}</span>
+        </div>
+      </sc-if>
     </div>
 
     <div data-home-map="1" class="eh-hm" style="margin-top:26px;position:relative;overflow:hidden;border-radius:22px;border:1px solid rgba(110,170,240,.22);background:radial-gradient(120% 90% at 50% 40%,#10233F 0%,#0A1730 55%,#071022 100%);box-shadow:var(--shadow-lg);padding:20px 22px 16px;color:#DCE8FA;">
@@ -972,14 +964,30 @@
     <div id="sec-02" style="margin:34px 0 14px;display:flex;align-items:center;gap:12px;"><div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;background:linear-gradient(135deg,#1B7FA6,#1B7FA6bb);border-radius:7px;padding:4px 9px;letter-spacing:.02em;flex-shrink:0;box-shadow:0 5px 12px -4px #1B7FA6cc;">02</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:500;white-space:nowrap;flex-shrink:0;">{{ sSec02 }}</span><span style="flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,rgba(var(--ink-rgb),.16),rgba(var(--ink-rgb),.03));"></span>
     </div>
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
-      <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
-        <div>
+      <div class="eh-g-1c" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.55fr);gap:18px 30px;align-items:end;margin-bottom:22px;">
+        <div style="min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekPaxPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2p" data-eh-field="title">{{ w2pTitle }}</span>{{ w2pMark }} · {{ weekPaxUnit }}</div></div>
           <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-2px 0 8px;">{{ weekPaxPeriod }}</div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;">{{ weekPaxTotal }}</div>
           <sc-if value="{{ weekPaxAirOnlyNote }}">
           <div style="font-size:10.5px;color:var(--ink3);margin-top:6px;max-width:340px;">{{ weekPaxAirOnlyNote }}</div>
           </sc-if>
+        </div>
+        <!-- Салбар хоорондын харьцуулалт — толгойн баруун талд (хоосон зайг ашиглана) -->
+        <div data-wk-sectors="w2px" style="min-width:0;background:rgba(var(--ink-rgb),.025);border:1px solid var(--line);border-radius:14px;padding:12px 14px 13px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;margin-bottom:10px;">
+            <div data-eh-card="w2px" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2pxTitle }}{{ w2pxMark }}</div>
+            <div data-eh-card="w2px" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ w2pxFoot }}</div>
+          </div>
+          <div class="eh-g-2c" style="display:grid;grid-template-columns:repeat({{ weekPaxDeltaCols }},minmax(0,1fr));gap:10px;">
+            <sc-for list="{{ weekPaxDelta }}" as="dl" hint-placeholder-count="5">
+              <div style="border-left:2px solid {{ dl.color }};padding-left:11px;min-width:0;{{ dl.rowStyle }}">
+                <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ dl.glyph }} {{ dl.label }}</div>
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:var(--ink);line-height:1;white-space:nowrap;">{{ dl.value }}<span style="font-size:10px;color:var(--ink3);font-weight:500;margin-left:3px;">{{ dl.unit }}</span></div>
+                <div style="font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ dl.deltaColor }};margin-top:6px;">{{ dl.delta }}{{ dl.mockTag }}</div>
+              </div>
+            </sc-for>
+          </div>
         </div>
       </div>
       <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px;align-items:stretch;">
@@ -1053,29 +1061,32 @@
           </div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);">
-        <div data-eh-card="w2px" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2pxTitle }}{{ w2pxMark }}</div>
-        <div data-eh-card="w2px" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ w2pxFoot }}</div>
-      </div>
-      <div class="eh-g-2c" style="display:grid;grid-template-columns:repeat({{ weekPaxDeltaCols }},minmax(0,1fr));gap:10px;margin-top:10px;">
-        <sc-for list="{{ weekPaxDelta }}" as="dl" hint-placeholder-count="5">
-          <div style="border-left:2px solid {{ dl.color }};padding-left:12px;{{ dl.rowStyle }}">
-            <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ dl.glyph }} {{ dl.label }}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;">{{ dl.value }} <span style="font-size:10px;color:var(--ink3);font-weight:400;">{{ dl.unit }}</span></div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:{{ dl.deltaColor }};margin-top:3px;">{{ dl.delta }}{{ dl.mockTag }}</div>
-          </div>
-        </sc-for>
-      </div>
     </div>
     <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;margin-bottom:16px;">
-      <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
-        <div>
+      <div class="eh-g-1c" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.55fr);gap:18px 30px;align-items:end;margin-bottom:22px;">
+        <div style="min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:5px;height:15px;border-radius:3px;background:{{ weekCargoPlan.color }};flex-shrink:0;"></div><div style="font-size:11.5px;color:var(--ink);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;"><span data-eh-card="w2c" data-eh-field="title">{{ w2cTitle }}</span>{{ w2cMark }} · {{ weekCargoUnit }}</div></div>
           <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-2px 0 8px;">{{ weekCargoPeriod }}</div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;">{{ weekCargoTotal }}</div>
           <sc-if value="{{ weekCargoAirOnlyNote }}">
           <div style="font-size:10.5px;color:var(--ink3);margin-top:6px;max-width:340px;">{{ weekCargoAirOnlyNote }}</div>
           </sc-if>
+        </div>
+        <!-- Салбар хоорондын харьцуулалт — толгойн баруун талд (хоосон зайг ашиглана) -->
+        <div data-wk-sectors="w2cx" style="min-width:0;background:rgba(var(--ink-rgb),.025);border:1px solid var(--line);border-radius:14px;padding:12px 14px 13px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;margin-bottom:10px;">
+            <div data-eh-card="w2cx" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2cxTitle }}{{ w2cxMark }}</div>
+            <div data-eh-card="w2cx" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ w2cxFoot }}</div>
+          </div>
+          <div class="eh-g-2c" style="display:grid;grid-template-columns:repeat({{ weekCargoDeltaCols }},minmax(0,1fr));gap:10px;">
+            <sc-for list="{{ weekCargoDelta }}" as="dl" hint-placeholder-count="5">
+              <div style="border-left:2px solid {{ dl.color }};padding-left:11px;min-width:0;{{ dl.rowStyle }}">
+                <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ dl.glyph }} {{ dl.label }}</div>
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:var(--ink);line-height:1;white-space:nowrap;">{{ dl.value }}<span style="font-size:10px;color:var(--ink3);font-weight:500;margin-left:3px;">{{ dl.unit }}</span></div>
+                <div style="font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ dl.deltaColor }};margin-top:6px;">{{ dl.delta }}{{ dl.mockTag }}</div>
+              </div>
+            </sc-for>
+          </div>
         </div>
       </div>
       <div class="eh-g-1c eh-row" style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px;align-items:stretch;">
@@ -1148,19 +1159,6 @@
             </sc-for>
           </div>
         </div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);">
-        <div data-eh-card="w2cx" data-eh-field="title" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);">{{ w2cxTitle }}{{ w2cxMark }}</div>
-        <div data-eh-card="w2cx" data-eh-field="foot" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ w2cxFoot }}</div>
-      </div>
-      <div class="eh-g-2c" style="display:grid;grid-template-columns:repeat({{ weekCargoDeltaCols }},minmax(0,1fr));gap:10px;margin-top:10px;">
-        <sc-for list="{{ weekCargoDelta }}" as="dl" hint-placeholder-count="5">
-          <div style="border-left:2px solid {{ dl.color }};padding-left:12px;{{ dl.rowStyle }}">
-            <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ dl.glyph }} {{ dl.label }}</div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:var(--ink);line-height:1;">{{ dl.value }}<span style="font-size:10px;color:var(--ink3);font-weight:500;margin-left:3px;">{{ dl.unit }}</span></div>
-            <div style="font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ dl.deltaColor }};margin-top:6px;">{{ dl.delta }}{{ dl.mockTag }}</div>
-          </div>
-        </sc-for>
       </div>
     </div>
     <sc-if value="{{ section02MockNote }}">
@@ -1374,7 +1372,8 @@
           <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink2);">
             <div style="width:8px;height:8px;border-radius:50%;background:{{ da.color }};flex-shrink:0;"></div>
             <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ da.label }}</div>
-            <div style="font-family:'JetBrains Mono',monospace;color:var(--ink);">{{ da.pctText }}</div>
+            <div data-d05-val="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);white-space:nowrap;">{{ da.valText }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;color:var(--ink);min-width:44px;text-align:right;">{{ da.pctText }}</div>
           </div>
         </sc-for>
       </div>
@@ -2972,7 +2971,7 @@
     <sc-if value="{{ detail.isAirDetail }}">
     <sc-if value="{{ detail.showAirFilters }}">
       <div style="display:flex;flex-direction:column;gap:11px;padding:14px 16px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">{{ sSec01 }}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px;">{{ sAirFHead }}</div>
         <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;min-width:52px;">{{ detail.t.year }}</div>
           <sc-for list="{{ detail.airYearChips }}" as="yc" hint-placeholder-count="3">
@@ -9205,6 +9204,11 @@ const SECTOR_TOTAL_KEY='total';
 /* Эзлэх хувь: 0-ээс их боловч 0.05%-иас бага бол «0.0%» биш «<0.1%» (агаарын ачаа төмөр замын
    хажууд) — бодит утга 0 мэт уншигдахгүй. */
 function stPct(p){ return p==null?'—':(p>0&&p<0.05?'<0.1%':p.toFixed(1)+'%'); }
+/* 01-р зурвасын хугацааны метрик (НЭГДСЭН шүүлтийн огнооны муж) → [хэмжүүр, салбар]. Эх: салбарын
+   нэгтгэлийн өдрийн мөр (EHGlossary.periodStrip). Шинэ салбар нэгтгэлд нэмэгдвэл ЭНД нэг мөр +
+   metric_registry.json metrics + widgets.ls.sectors.<k> (админы PERIOD_METRIC-тэй ИЖИЛ толь). */
+const HOME_PERIOD_METRIC={'air.period_pax':['passengers','air'],'air.period_cargo':['freight_tonnes','air'],
+  'road.period_pax':['passengers','road'],'rail.period_pax':['passengers','rail'],'rail.period_cargo':['freight_tonnes','rail']};
 
 /* ИНЕГ feed-ийн нислэгийн мөр → сарын агаарын зорчигч/ачаа. ЦЭВЭР (tests/run.js ST).
    Ачаа = ачаа + шуудан (кг → тонн) — backend (ACHAA_CARGO + ACHAA_POST)-тэй ижил. */
@@ -9812,6 +9816,9 @@ class Component extends DCLogic {
     roadPaxSel:{}, roadPaxHistVer:0, homeMapOff:{}, homeMapScope:'intl', homeMapVer:0, homeGlobeRot:null, homeGlobeZoom:null, homeGlobeDragging:false, homeWheelHint:false, roadPaxRoutesExpanded:false, roadPaxCompaniesExpanded:false,
     /* Салбарын нэгтгэл — шүүлт (он/сар), хувилбар; нүүрний d05-ийн хэмжүүр (зорчигч/ачаа) */
     sectorTotalSel:{}, sectorTotalVer:0, d05Measure:'passengers',
+    /* 01-р хэсгийн НЭГДСЭН шүүлтийн огнооны муж: бэлэн муж (homePreset) эсвэл гараар өгсөн
+       огноо (homeFrom/homeTo). d05Measure нь 01-р зурвас ба d05-ийн НЭГ хэмжүүр. */
+    homePreset:'ytd', homeFrom:'', homeTo:'', homeDailyVer:0,
     /* Салбарын нэгтгэлийн таб (Өгөгдөл | Тооцооллын арга) ба аргын урсгалын хэмжүүр */
     stTab:'data', stMethodMeasure:'all',
     airAiThread:null, airAiInput:'',
@@ -9982,7 +9989,7 @@ class Component extends DCLogic {
       if(!this.applyRoute(r)){ this._pendingRoute=r; this.resolvePendingRoute(true) }
     };
     window.addEventListener('popstate',this._onPop);
-    this.loadGlobe(); this.syncMonths(); this.loadSources(); this.loadMongoliaGeo();
+    this.loadGlobe(); this.loadSources(); this.loadMongoliaGeo();
     /* loadEtransportBackend-ийг ТУСАД НЬ дуудахгүй — SOURCES.railWagon
        дамжуулан loadSources() дуудна (давхар fetch хийхгүй). */
     this.auditBindings(); this.loadContent(); this.loadMetricRegistry();
@@ -10108,12 +10115,6 @@ class Component extends DCLogic {
     clearTimeout(this._wheelHintT);
     this._wheelHintT=setTimeout(()=>this.setState({homeWheelHint:false}),1400);
     if(!this.state.homeWheelHint) this.setState({homeWheelHint:true});
-  }
-  componentDidUpdate(){ this.syncMonths(); }
-  syncMonths(){
-    const a=this.state.mFrom||1, b=this.state.mTo||12;
-    if(this._fromEl && this._fromEl.value!==String(a)) this._fromEl.value=String(a);
-    if(this._toEl && this._toEl.value!==String(b)) this._toEl.value=String(b);
   }
   componentWillUnmount(){ if(this.rotInterval) clearInterval(this.rotInterval); }
   async loadGlobe(){
@@ -10598,9 +10599,188 @@ class Component extends DCLogic {
     return EHGlossary.heroPax(this.sectorTotalData?this.sectorTotalData():null,w.metric,
       Array.isArray(w.sectors)?w.sectors:null,rg?{road:rg}:null,(k,fb)=>H[k]||fb);
   }
+  /* ── 01-р хэсэг: НЭГДСЭН шүүлтийн огнооны муж → салбарын нэгтгэлийн ӨДРИЙН мөр ──────────────
+     Эх: /api/datasets/sector-total/rows (gold.sector_daily_total, өдөр × салбар). 01-р зурвас ба
+     d05 «Салбарын харьцаа» ХОЁУЛАА эндээс (EHGlossary.periodStrip) — нэг хугацаа, нэг хэмжүүр.
+     Цонхыг жилээр хэсэглэн татна (өдөрт ≤3 салбар → жилд ~1,100 мөр < 5,000). Анхны цонх =
+     хоёр оны өмнөх 1-р сарын 1 → өнөөдөр: бүх бэлэн муж (12 сар + өмнөх оны мөн үе ч) дахин
+     татахгүй; түүнээс эрт огноо сонговол ДУТУУ хэсгийг л нэмж татна. Endpoint алга/унтарсан
+     бол _stDaily=null → зурвас ба d05 хуучин замаараа (сайт ЯГ өмнөх шигээ ажиллана). */
+  homeMeasure(){ return this.state.d05Measure==='freight_tonnes'?'freight_tonnes':'passengers'; }
+  /* Бэлэн мужийн төгсгөл — сүүлийн БҮТЭН долоо хоногийн Ням (нэгтгэлийн weekly[хэмжүүр].week_end):
+     бүх салбар бүтэн мэдээтэй өдөр, 02-р хэсэг ба hero-той ижил. Алга бол ачаалсан мөрийн сүүлийн өдөр. */
+  homeAnchor(meas){
+    const api=this.sectorTotalData?this.sectorTotalData():null;
+    const w=api&&api.status==='ok'&&api.weekly&&api.weekly[meas];
+    const we=w&&EHGlossary.dayOf(w.week_end);
+    return we||(this._stDaily&&this._stDaily.last)||null;
+  }
+  homeRangeSel(){
+    if(typeof EHGlossary==='undefined') return null;
+    const st=this.state, G=EHGlossary;
+    if(G.dayOf(st.homeFrom)&&G.dayOf(st.homeTo)) return {from:st.homeFrom,to:st.homeTo,preset:'custom'};
+    const a=this.homeAnchor(this.homeMeasure());
+    return a?G.homeRange(st.homePreset||'ytd',a):null;
+  }
+  ensureHomeDaily(r){
+    if(typeof EHGlossary==='undefined') return;
+    const G=EHGlossary, today=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+    r=r||this.homeRangeSel();
+    const lo0=(+(r?r.to:today).slice(0,4)-2)+'-01-01';
+    const c=r?G.rangeCompare(r.from,r.to):null;
+    this.loadHomeDaily(c&&c.from<lo0?c.from:lo0,r&&r.to>today?r.to:today);
+  }
+  async loadHomeDaily(from,to){
+    if(typeof EHBackend==='undefined'||!EHBackend.enabled||!EHBackend.fetchDatasetRows||typeof EHGlossary==='undefined'){ this._stDailyFailed=true; return; }
+    const G=EHGlossary, have=this._stDailySpan;
+    if(!G.dayOf(from)||!G.dayOf(to)||from>to||(have&&have[0]<=from&&have[1]>=to)) return;
+    /* Ачаалсан цонхноос ГАДУУРХ хэсэг л (цонх тасралтгүй үлдэнэ) */
+    const segs=!have?[[from,to]]:[from<have[0]?[from,G.isoAdd(have[0],-1)]:null,to>have[1]?[G.isoAdd(have[1],1),to]:null].filter(Boolean);
+    const key=segs.map(s=>s.join('~')).join('|');
+    /* Уншигдаагүй цонхыг render бүрд ДАХИН татахгүй (зурах бүрд дуудагддаг) */
+    if(this._stDailyLoading===key||this._stDailyFailKey===key) return;
+    this._stDailyLoading=key;
+    const parts=[];
+    segs.forEach(s=>{ for(let a=s[0];a<=s[1];a=G.isoAdd(a,366)){ const e=G.isoAdd(a,365); parts.push([a,e<s[1]?e:s[1]]); } });
+    const res=await Promise.all(parts.map(p=>EHBackend.fetchDatasetRows('sector-total',p[0],p[1],5000)));
+    if(this._stDailyLoading!==key) return;
+    this._stDailyLoading=null;
+    let rows=[];
+    for(let i=0;i<res.length;i++){
+      const r=res[i];
+      if(r&&r.status==='no_data') continue;
+      const list=G.stDailyRows(r);
+      /* Хэсэг уншигдаагүй/таслагдсан бол цонхыг БҮРЭН гэж бүртгэхгүй — дутуу өдрийг «мэдээгүй» гэж худал хэлэхгүй */
+      if(!list||r.truncated){
+        this._stDailyFailKey=key; if(!this._stDaily) this._stDailyFailed=true;
+        this.setState(s=>({homeDailyVer:(s.homeDailyVer||0)+1}));
+        return;
+      }
+      rows=rows.concat(list.filter(x=>x.date>=parts[i][0]&&x.date<=parts[i][1]));
+    }
+    this._stDailyRows=(this._stDailyRows||[]).concat(rows);
+    this._stDaily=G.stDailyIndex(this._stDailyRows);
+    this._stDailySpan=have?[from<have[0]?from:have[0],to>have[1]?to:have[1]]:[from,to];
+    this.setState(s=>({homeDailyVer:(s.homeDailyVer||0)+1}));
+  }
+  /* Шүүлтийн мужийн загвар (memo). Сонгосон муж + харьцуулах хугацаа ачаалагдаагүй бол татаж
+     эхлүүлээд өмнөх загварыг stale-ээр буцаана (тоо ЗОХИОХГҮЙ — шинэ мужийн тоог дутуу датагаар бодохгүй). */
+  homeStrip(meas){
+    const d=this._stDaily, r=this.homeRangeSel();
+    /* Анхны ачаалт ч эндээс (зурвас/d05 зурагдах бүрд — давхар хүсэлтийг loadHomeDaily таслана) */
+    if(!d){ this.ensureHomeDaily(r); return null; }
+    if(!r) return null;
+    meas=meas||this.homeMeasure();
+    const rh=this._roadPaxAll, rg=rh&&rh.coverage&&Array.isArray(rh.coverage.gaps)?rh.coverage.gaps:null;
+    const keys=homeSectorKeys();
+    const k=[r.from,r.to,meas,keys.join(','),this.state.homeDailyVer||0,rg?rg.length:0].join('|');
+    if(this._hsMemo&&this._hsMemo.k===k) return this._hsMemo.m;
+    const c=EHGlossary.rangeCompare(r.from,r.to), sp=this._stDailySpan;
+    if(!sp||sp[0]>c.from||sp[1]<r.to){
+      this.ensureHomeDaily(r);
+      const old=this._hsMemo&&this._hsMemo.m;
+      return old&&old.measure===meas?Object.assign({},old,{stale:true}):null;
+    }
+    const m=EHGlossary.periodStrip(d,{from:r.from,to:r.to,measure:meas,keys,gaps:rg?{road:rg}:null});
+    if(m) m.preset=r.preset;
+    this._hsMemo={k,m};
+    return m;
+  }
+  /* 01-р зурвасын слот шинэ замаар (хугацааны метрик) холбогдсон эсэх — registry ls.sectors.<k> */
+  lsPeriodOn(k){
+    const reg=this.state.metricRegistry, w=reg&&reg.widgets&&reg.widgets.ls, s=w&&w.sectors&&w.sectors[k];
+    return !!(s&&s.quality==='verified'&&HOME_PERIOD_METRIC[s.metric]);
+  }
+  homePresetLabel(p){
+    return stxt('home_range.preset_'+p,{'7d':'сүүлийн 7 хоног','30d':'сүүлийн 30 хоног','90d':'сүүлийн 90 хоног',
+      mtd:'энэ сар',ytd:'оны эхнээс','12m':'сүүлийн 12 сар'}[p]||'');
+  }
+  /* 01-р зурвасын нүд — EHGlossary.periodStrip загвараас. Салбар бүр ИЖИЛ хэмжүүр, хугацаа,
+     харьцуулалт; spark = сонгосон хугацаа (шугам) + харьцуулах хугацаа (тасархай) нэг масштабаар,
+     цэг бүр hover-т «огноо — дүн нэгж» (HV). Эх сурвалжгүй салбарт шугам ЗУРАХГҮЙ (EMP). */
+  lsStripCell(k,hs,on){
+    const G=EHGlossary, x=hs.sectors[k]||null, cargo=hs.measure==='freight_tonnes';
+    const T=(key,fb)=>stxt('home_range.'+key,fb);
+    const name=SECTORS[k].label, noData=hs.pending?stxt('feed.stamp_pending','дата ачаалж байна…'):stxt('status.no_data','мэдээлэл алга');
+    /* Тоо, хувь, тайлбар — админы strip5 preview-тэй НЭГ функц (EHGlossary.periodCell) */
+    /* Слот хугацааны бус метрикт холбогдсон бол (админ өөр метрик сонгосон) тоог нь зурваст ХОЛИХГҮЙ —
+       шалтгааныг хэлнэ. Өөр хэмжүүр/хугацааны дүнг зэрэгцүүлбэл «салбар бүр өөр логик» буцаж ирнэ. */
+    const reg=this.state.metricRegistry, sv=reg&&reg.widgets&&reg.widgets.ls&&reg.widgets.ls.sectors&&reg.widgets.ls.sectors[k];
+    const pc=this.lsPeriodOn(k)?G.periodCell(hs,k,T,{noData})
+      :{live:false,value:'—',delta:'—',dir:'flat',pct:null,note:(sv&&sv.metric)?T('not_period','огнооны мужаар тооцогдохгүй үзүүлэлт'):noData};
+    const live=pc.live;
+    const unit=cargo?stxt('sector_total.unit_tonne','тонн'):stxt('sector_total.unit_pax','зорчигч');
+    const fmt=v=>Math.round(v).toLocaleString('en-US');
+    const md=s=>String(s||'').slice(5).replace('-','.');
+    const rng=b=>b.from===b.to?md(b.from):md(b.from)+'–'+md(b.to);
+    const sp=live?G.sparkPaths(x.series,x.prevSeries,{w:120,h:32,pad:3}):{line:'',prevLine:'',hits:[]};
+    const hits=sp.hits.map(h=>{
+      const b=x.series[h.i], p=x.prevSeries[h.i];
+      const cur=b.v!==null?fmt(b.v)+' '+unit:(b.rec!=null?'≥'+fmt(b.rec)+' '+unit+' · '+stxt('home_range.partial','мэдээ дутуу'):noData);
+      return {x:h.x,w:h.w,tip:name+' · '+rng(b)+' — '+cur+(p?' · '+rng(p)+' — '+(p.v!==null?fmt(p.v)+' '+unit:noData):'')};
+    });
+    const dir=pc.dir, note=pc.note;
+    const src=!live?null:k==='air'?'flights':cargo?(k==='rail'?'railFreightAll':null):(k==='rail'?'railPax':k==='road'?'roadPax':null);
+    return {key:k,label:name,
+      value:pc.value,unit:live?unit:'',
+      ...this.lsSourceLink(k,live,src),color:live?NEON[k]:'#828EA8',on,
+      select:()=>this.setState({activeSector:k}),glyph:GLYPH[k],
+      metric:(cargo?T('m_freight','Ачаа'):T('m_pax','Зорчигч'))+' · '+(hs.preset&&hs.preset!=='custom'?this.homePresetLabel(hs.preset):hs.n+' '+T('days_word','хоног')),
+      delta:pc.delta,
+      short:this.stxt('sector_short.'+k,{road:'Авто тээвэр',rail:'Төмөр зам',air:'Агаар',water:'Усан зам'}[k]),
+      deltaColor:!live?'#828EA8':dir==='up'?'#0E8F63':dir==='down'?'#C8443A':'#6B7896',
+      spark:sp.line,prevSpark:sp.prevLine,hits,sparkStyle:live&&sp.line?'':'visibility:hidden;',
+      /* Виджетийн засварлагдах хөл бичиг (lsFoot) доод мөрөнд НЭГ удаа — нүдэнд нуугдана (DOM-д үлдэнэ) */
+      footText:note,footNote:note,footBaseStyle:'display:none;',footNoteStyle:'',
+      cellStyle:'position:relative;display:flex;flex-direction:column;gap:0;align-items:stretch;text-align:left;background:'
+        +(on?NEON[k]+'12':'transparent')+';border:none;border-radius:14px;cursor:pointer;font-family:inherit;padding:15px 10px 12px 13px;transition:.18s var(--ease);',
+      railStyle:'position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:2px;background:'+(on?NEON[k]:'transparent')+';',
+      valueStyle:'font-family:\'Space Grotesk\',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.025em;line-height:1;color:'+(live?'var(--ink)':'var(--ink3)')+';'};
+  }
+  /* 01-р зурвасын хөл бичиг (widgets.ls.foot) — «{bucket}» = spark-ийн нэг цэгийн хугацаа (өдөр /
+     7 хоног / 30 хоног — periodStrip.bucket). Хуучин зам (hs=null) — сарын цуваа (widgets.ls.value). */
+  lsFootText(hs){
+    const w=EHGlossary.bucketWord(hs&&hs.bucket,(key,fb)=>stxt('home_range.'+key,fb));
+    return this.txt('ls','foot','Нэг цэг = {bucket}').replace('{bucket}',w);
+  }
+  /* 01-р зурвасын толгой (хугацаа, хэмжүүр) ба доод мөр (шугам/тасархайн тайлбар, нийт) */
+  lsStripChrome(hs,cells){
+    const T=(key,fb)=>stxt('home_range.'+key,fb), cargo=hs?hs.measure==='freight_tonnes':this.homeMeasure()==='freight_tonnes';
+    const mt=this.homeMeasure();
+    const chip=(on)=>'cursor:pointer;font-family:inherit;border-radius:999px;padding:4px 11px;font-size:11px;white-space:nowrap;'
+      +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);');
+    const measureChips=[['passengers',stxt('sector_total.m_pax_short','Зорчигч')],['freight_tonnes',stxt('sector_total.m_freight_short','Ачаа')]].map(c=>({
+      key:c[0],label:c[1],style:chip(mt===c[0]),pick:()=>{ this.setState({d05Measure:c[0]}); }}));
+    if(!hs||!hs.from) return {lsHasRange:false,lsPeriod:'',lsMeasureChips:measureChips,lsLegendCur:'',lsLegendPrev:'',lsTotal:''};
+    const live=cells.filter(c=>c.unit);
+    const lower=live.some(c=>c.value.charAt(0)==='≥');
+    const tot=live.length?live.reduce((t,c)=>t+(hs.sectors[c.key].value||0),0):null;
+    const unit=cargo?stxt('sector_total.unit_tonne','тонн'):stxt('sector_total.unit_pax','зорчигч');
+    return {lsHasRange:true,
+      lsPeriod:chartPeriodText({dayFrom:hs.from,dayTo:hs.to},(k,fb)=>stxt('chart.'+k,fb))+(hs.stale?' · '+stxt('feed.stamp_pending','дата ачаалж байна…'):''),
+      lsMeasureChips:measureChips,
+      lsLegendCur:hs.from+' — '+hs.to,
+      lsLegendPrev:hs.cmp.from+' — '+hs.cmp.to+' ('+(hs.cmp.mode==='yoy'?T('cmp_yoy','өмнөх оны мөн үе'):T('cmp_prev','өмнөх {n} хоног').replace('{n}',hs.cmp.n))+')',
+      lsTotal:tot===null?'':T('total','Нийт')+': '+(lower?'≥':'')+Math.round(tot).toLocaleString('en-US')+' '+unit};
+  }
   sectorShareFromTotal(keys){
     const api=this.sectorTotalData?this.sectorTotalData():null;
     const meas=this.state.d05Measure==='freight_tonnes'?'freight_tonnes':'passengers';
+    /* НЭГДСЭН шүүлтийн муж (01-р зурвастай ИЖИЛ хугацаа, ИЖИЛ дүн) — өдрийн мөр ирсэн бол */
+    const hs=this.homeStrip?this.homeStrip(meas):null;
+    if(hs&&hs.hasData){
+      const raw=keys.map(k=>{ const x=hs.sectors[k], v=x&&x.value!==null?x.value:null;
+        return {key:k,label:SECTORS[k].label,color:NEON[k],v:v>0?v:0,live:v>0,lower:!!(x&&x.lower)}; });
+      if(raw.some(r=>r.live)){
+        const md=s=>String(s||'').slice(5).replace('-','.');
+        const per=hs.preset==='ytd'?stxt('sector_total.d05_period_ytd','{year} оны эхнээс ({from}–{to})').replace('{year}',hs.to.slice(0,4))
+          :stxt('sector_total.d05_period_range','{from} — {to}');
+        const unit=meas==='passengers'?stxt('sector_total.unit_pax','зорчигч'):stxt('sector_total.unit_tonne','тонн');
+        return {raw,meas,unit,chartPeriod:chartPeriodText({dayFrom:hs.from,dayTo:hs.to},(k,fb)=>stxt('chart.'+k,fb)),
+          period:per.replace('{from}',hs.preset==='ytd'?md(hs.from):hs.from).replace('{to}',hs.preset==='ytd'?md(hs.to):hs.to)+' · '
+            +(meas==='passengers'?stxt('sector_total.by_pax','зорчигчоор'):stxt('sector_total.by_freight','ачаагаар (тонн)'))};
+      }
+    }
     /* Дүн, хугацаа, тэмдэглэл — EHGlossary.sectorShare (админы d05 preview-тэй НЭГ функц) */
     const sh=EHGlossary.sectorShare(api,meas,(k,fb)=>stxt('sector_total.'+k,fb));
     if(!sh) return null;
@@ -11691,9 +11871,10 @@ class Component extends DCLogic {
      kpis[0]-ийн эх сурвалж нь амьд датагаас хамаарна: вагон/үзлэг ирсэн бол
      тэр нь толгой мөр, үгүй бол зорчигчийн сарын мөр (applyRailWagonData /
      applyRoadInspectionData-тай ИЖИЛ дүрэм). Холбогдоогүй бол холбоос гаргахгүй. */
-  lsSourceLink(k,verified){
+  lsSourceLink(k,verified,srcOver){
     const has=o=>!!(o&&o.count!=null);
-    const src=!verified?null:k==='air'?'flights'
+    /* srcOver — НЭГДСЭН шүүлтийн нүд: тухайн ХЭМЖҮҮРИЙН эх датасэт (зорчигч / ачаа) */
+    const src=srcOver!==undefined?srcOver:!verified?null:k==='air'?'flights'
       :k==='rail'?(has(this._railWagonLoading)?'railWagon':'railPax')
       :k==='road'?(has(this._roadInspections)?'roadInspect':'roadPax'):null;
     const d=src&&DATASETS.find(x=>x.source===src);
@@ -12631,31 +12812,52 @@ class Component extends DCLogic {
      SECTOR_TABLES нь бүхэлдээ зохиомол дата байсан тул хоёуланг нь
      хаслаа. `tableMonthNote` нь одоо үргэлж "огнооны багана байхгүй"
      хувилбараа өгнө: сарын шүүлт хамаарах хүснэгт үлдсэнгүй. */
+  /* 01-р хэсгийн НЭГДСЭН шүүлт — ОГНООНЫ муж (2026-10-27, хэрэглэгчийн шаардлага: «огноо өгч
+     шүүх»). Өмнө нь оноо заахгүй 1–12 сарын сонголт байсан бөгөөд зөвхөн 05-р графикт хамаарч,
+     толгой нь «доорх бүх үзүүлэлтэд хамаарна» гэж ХУДАЛ хэлж байв. Одоо: эхлэх/дуусах огноо +
+     бэлэн муж (GA/Looker-ийн date range picker хэв маяг); 01-р зурвас, 05-р хэсгийн салбарын
+     харьцаа (d05) ба чиг хандлага (t05, сараар) дагана; хамаарахгүй хэсгийг ил нэрлэнэ. */
+  setHomePreset(p){
+    this.setState({homePreset:p,homeFrom:'',homeTo:''});
+    const a=this.homeAnchor(this.homeMeasure());
+    if(a) this.ensureHomeDaily(EHGlossary.homeRange(p,a));
+  }
+  setHomeDate(which,v){
+    const G=EHGlossary, d=G.dayOf(v), cur=this.homeRangeSel()||{};
+    /* Хоосолбол бэлэн муж руу буцна */
+    if(!d){ this.setState({homeFrom:'',homeTo:''}); return; }
+    let from=which==='from'?d:cur.from, to=which==='to'?d:cur.to;
+    if(!from) from=d; if(!to) to=d;
+    if(from>to){ if(which==='from') to=from; else from=to; }
+    this.setState({homeFrom:from,homeTo:to});
+    this.ensureHomeDaily({from,to});
+  }
   buildTable(){
-    const mFrom=this.state.mFrom||1, mTo=this.state.mTo||12;
-    const full=mFrom===1&&mTo===12;
+    const G=typeof EHGlossary!=='undefined'?EHGlossary:null;
+    const r=G?this.homeRangeSel():null, st=this.state;
+    const T=(k,fb)=>stxt('home_range.'+k,fb);
+    const preset=G&&G.dayOf(st.homeFrom)&&G.dayOf(st.homeTo)?'custom':(st.homePreset||'ytd');
+    /* Сонгох хил — нэгтгэлийн хамгийн эрт бичлэг … өнөөдөр (УБ) */
+    const api=this.sectorTotalData?this.sectorTotalData():null;
+    const firsts=((api&&api.sectors)||[]).map(s=>G&&G.dayOf(s.passengers_first||s.freight_first)).filter(Boolean).sort();
+    const today=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+    const chip=on=>'cursor:pointer;font-family:inherit;border-radius:9px;padding:7px 13px;font-size:12px;white-space:nowrap;flex-shrink:0;transition:.16s var(--ease);'
+      +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);box-shadow:var(--shadow);');
+    const chipLbl={'7d':'7 хоног','30d':'30 хоног','90d':'90 хоног',mtd:'Энэ сар',ytd:'Оны эхнээс','12m':'12 сар'};
+    const head=preset==='custom'?T('custom','Сонгосон муж'):T('chip_'+preset,chipLbl[preset]||'');
+    const n=r?G.isoDiff(r.from,r.to)+1:0;
+    const dateInput='height:38px;box-sizing:border-box;border:1px solid var(--line2);border-radius:10px;background:rgba(var(--ink-rgb),.05);box-shadow:inset 0 1px 3px rgba(12,20,40,.07);color:var(--ink);font-family:\'JetBrains Mono\',monospace;font-size:12px;padding:0 10px;outline:none;cursor:pointer;';
     return {
-      tableMonthNote:stxt('range.table_no_date','Энэ хүснэгтэд огнооны багана байхгүй — сарын шүүлт хамаарахгүй'),
-      monthFrom:mFrom,monthTo:mTo,
-      fromRef:(el)=>{ this._fromEl=el; if(el) el.value=String(mFrom); },
-      toRef:(el)=>{ this._toEl=el; if(el) el.value=String(mTo); },
-      monthOptions:Array.from({length:12},(_,i)=>({value:i+1,label:(i+1)+'-р сар'})),
-      onFrom:(e)=>{const v=parseInt(e.target.value,10);this.setState(s=>({mFrom:v,mTo:Math.max(v,s.mTo||12)}));},
-      onTo:(e)=>{const v=parseInt(e.target.value,10);this.setState(s=>({mTo:v,mFrom:Math.min(v,s.mFrom||1)}));},
-      rangePresets:[[stxt('range.all','Бүгд'),1,12],[stxt('range.h1','1-р хагас'),1,6],
-        [stxt('range.h2','2-р хагас'),7,12],[stxt('range.q1','1-р улирал'),1,3],
-        [stxt('range.q2','2-р улирал'),4,6],[stxt('range.q3','3-р улирал'),7,9],
-        [stxt('range.q4','4-р улирал'),10,12]].map(p=>({
-        label:p[0],
-        pick:()=>this.setState({mFrom:p[1],mTo:p[2]}),
-        style:'cursor:pointer;font-family:inherit;border-radius:9px;padding:7px 13px;font-size:12px;white-space:nowrap;flex-shrink:0;transition:.16s var(--ease);'
-          +(mFrom===p[1]&&mTo===p[2]?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);box-shadow:var(--shadow);')
-      })),
-      rangeLabel:full?stxt('range.all_months','Бүх 12 сар')
-        :(mFrom+stxt('range.from_suffix','-р сараас')+' '+mTo+stxt('range.to_suffix','-р сар')+
-          ' · '+(mTo-mFrom+1)+' '+stxt('range.months_word','сар')),
-      filterSummary:full?stxt('range.all_months','Бүх 12 сар')
-        :mFrom+'–'+mTo+' '+stxt('range.months_word','сар')};
+      homeFrom:r?r.from:'',homeTo:r?r.to:'',homeDateMin:firsts[0]||'',homeDateMax:today,dateInputStyle:dateInput,
+      homeDateFromL:T('from','Эхлэх огноо'),homeDateToL:T('to','Дуусах огноо'),
+      onHomeFrom:e=>this.setHomeDate('from',e.target.value),onHomeTo:e=>this.setHomeDate('to',e.target.value),
+      rangePresets:(G?G.HOME_PRESETS:[]).map(p=>({key:p,label:T('chip_'+p,chipLbl[p]),
+        pick:()=>this.setHomePreset(p),style:chip(preset===p)})),
+      rangeLabel:r?head+' · '+r.from+' — '+r.to+' · '+n+' '+T('days_word','хоног'):stxt('feed.stamp_pending','дата ачаалж байна…'),
+      /* Хамрах хүрээ ИЛ (FL3-ийн [data-pv-scope]-тэй ижил санаа): аль хэсэг шүүлтийг дагадаг/дагадаггүй */
+      filterScope:T('scope','Хамаарна: 01 Үндсэн үзүүлэлт · 05 Чиг хандлага (сараар) ба Салбарын харьцаа. Бусад хэсэг өөрийн хугацаатай: 02 — сүүлийн 8 бүтэн долоо хоног, 04 — сүүлийн мэдээ.'),
+      filterCmp:r?T('cmp_note','Харьцуулалт: {cmp}').replace('{cmp}',(()=>{ const c=G.rangeCompare(r.from,r.to);
+        return c.from+' — '+c.to+' ('+(c.mode==='yoy'?T('cmp_yoy','өмнөх оны мөн үе'):T('cmp_prev','өмнөх {n} хоног').replace('{n}',c.n))+')'; })()):''};
   }
   subNav(items,current,setter){
     return items.map(it=>({id:it[0],label:it[1],hint:it[2]||'',
@@ -15860,7 +16062,8 @@ class Component extends DCLogic {
       sOrbMedT:this.stxt('hero.diagram.orbit_media.title','Олон нийт · хэвлэл'),
       sOrbMedS:this.stxt('hero.diagram.orbit_media.sub','Судалгаа · тайлан'),
       homeMap:this.buildHomeMap(),
-      sSec01:this.stxt('sections.sec-01','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
+      sSec01:this.stxt('sections.sec-01','Нэгдсэн шүүлт — огноо ба хэмжүүр'),
+      sAirFHead:this.stxt('detail.air_f_head','Нэгдсэн шүүлт — доорх бүх үзүүлэлтэд хамаарна'),
       sSec02:this.stxt('sections.sec-02','Долоо хоногийн тайлан'),
       sSec03:this.stxt('sections.sec-03','Коммунитийн онцлох'),
       sSec06:this.stxt('sections.sec-06','Салбар хоорондын харьцуулалт (индекс)'),
@@ -16078,7 +16281,10 @@ class Component extends DCLogic {
     const st=this.sectorShareFromTotal?this.sectorShareFromTotal(keys):null;
     const d05Spec=st?null:this.valueFromSpec('d05');
     const raw=st?st.raw:keys.map(k=>{
-      const live=this.kpiVerified('d05',k);
+      /* Хугацааны метрикт (HOME_PERIOD_METRIC) холбогдсон слот нэгтгэлгүйгээр утгагүй — салбарын KPI-г
+         (өөр нэгжтэй: үзлэг, нислэг) донутад нэмэхгүй, «мэдээлэл алга» */
+      const reg=this.state.metricRegistry, ws=reg&&reg.widgets&&reg.widgets.d05&&reg.widgets.d05.sectors;
+      const live=this.kpiVerified('d05',k)&&!(ws&&ws[k]&&HOME_PERIOD_METRIC[ws[k].metric]);
       let v=live?(parseFloat(String(SECTORS[k].kpis[0][1]).replace(/[^0-9.]/g,''))||0):0;
       /* Утгын тохиргоо ЗӨВХӨН air салбарт (мөр түвшний дата зөвхөн тэнд). */
       if(d05Spec&&k==='air'&&live) v=d05Spec.raw;
@@ -16086,15 +16292,22 @@ class Component extends DCLogic {
     });
     const total=raw.reduce((s,r)=>s+r.v,0)||1;
     const circ=2*Math.PI*46;
+    const G=typeof EHGlossary!=='undefined'?EHGlossary:null;
+    /* 0-ээс их ч өчүүхэн хувь (агаарын ачаа 8,521 тн = 0.03%) нум харагдахгүй, «0.0%» гэж бичигдэж
+       «огт тээвэр хийгээгүй» мэт уншигддаг байв (2026-10-27). Нум — дор хаяж 1.5% өнцөг
+       (EHGlossary.shareArcs), шошго/tooltip — ЖИНХЭНЭ хувь «<0.1%» + бодит дүн. */
+    const vis=G&&G.shareArcs?G.shareArcs(raw.map(r=>r.v)):raw.map(r=>r.v/total*100);
+    const pctOf=(p,d)=>G&&G.shareText?G.shareText(p,d):p.toFixed(d)+'%';
     let acc=0;
-    const arcs=raw.map(r=>{
-      const pct=r.v/total*100;
-      const dash=`${(pct/100*circ).toFixed(1)} ${circ.toFixed(1)}`;
+    const arcs=raw.map((r,i)=>{
+      const pct=r.v/total*100, vp=vis[i];
+      const dash=`${(vp/100*circ).toFixed(1)} ${circ.toFixed(1)}`;
       const offset=(-acc/100*circ).toFixed(1);
-      acc+=pct;
+      acc+=vp;
+      const val=st&&r.live?(r.lower?'≥':'')+Math.round(r.v).toLocaleString('en-US')+' '+st.unit:'';
       /* Холбогдоогүй салбарт «0.0%» гэж бичихгүй — мэдээлэл алга (HV/DG). */
-      return {label:r.label,color:r.color,pct:pct.toFixed(1),pctText:r.live?pct.toFixed(1)+'%':'—',dash,offset,opacity:r.key===activeKey?1:0.45,
-        tip:r.label+' — '+(r.live?(st?Math.round(r.v).toLocaleString('en-US')+' '+st.unit+' · ':'')+pct.toFixed(1)+'%':stxt('status.no_data','мэдээлэл алга'))};
+      return {label:r.label,color:r.color,pct:pct.toFixed(1),pctText:r.live?pctOf(pct,1):'—',valText:val,dash,offset,opacity:r.key===activeKey?1:0.45,
+        tip:r.label+' — '+(r.live?(val?val+' · ':'')+pctOf(pct,1):stxt('status.no_data','мэдээлэл алга'))};
     });
     /* DG: ганц салбар 100% болбол ЗОХИОМОЛ биш гэдгийг ил хэлнэ (бусад салбар
        холбогдоогүй). Нийт 0 бол "олдсонгүй". */
@@ -16117,7 +16330,7 @@ class Component extends DCLogic {
        мэдээтэй салбарыг нэрээр нь харуулна (донут бодит харьцааг хэлж байх) */
     const act0=raw.find(r=>r.key===activeKey)||raw[0];
     const act=(st&&!act0.live)?(raw.filter(r=>r.live).sort((a,b)=>b.v-a.v)[0]||act0):act0;
-    const activePct=(act.v/total*100).toFixed(0);
+    const actP=act.v/total*100, activePct=actP.toFixed(0);
     /* DG-P: донутын хугацаа = холбогдсон салбар бүрийн KPI-ийн хугацаа. Салбарууд
        өөр хугацаатай бол салбараар нь нэрлэнэ (нэг мужид шахахгүй). */
     const liveKeys=raw.filter(r=>r.live).map(r=>r.key);
@@ -16131,7 +16344,7 @@ class Component extends DCLogic {
       +(on?'border:1px solid var(--ink);background:var(--ink);color:#EEF3FA;font-weight:600;':'border:1px solid var(--line);background:var(--surface);color:var(--ink2);');
     const measureChips=st?[['passengers',stxt('sector_total.m_pax_short','Зорчигч')],['freight_tonnes',stxt('sector_total.m_freight_short','Ачаа')]].map(c=>({
       label:c[1],style:mchip(mt===c[0]),pick:()=>this.setState({d05Measure:c[0]})})):[];
-    return {period,arcs,activePct,activePctLabel:(act.live?activePct+'%':'—'),activeName:act.label,note,hasNote:!!note,
+    return {period,arcs,activePct,activePctLabel:(act.live?pctOf(actP,0):'—'),activeName:act.label,note,hasNote:!!note,
       measureChips,hasMeasure:!!st};
   }
   buildGlobe(){
@@ -17553,7 +17766,11 @@ class Component extends DCLogic {
       const x=Math.cos(ang*Math.PI/180)*rad, y=Math.sin(ang*Math.PI/180)*rad;
       return {key:k,color:NEON[k],delay:(i*0.3)+'s',pos:`position:absolute;left:${110+x}px;top:${110+y}px;transform:translate(-50%,-50%);`};
     });
-    const mfr=this.state.mFrom||1, mto=this.state.mTo||12;
+    /* 05-р хэсгийн сарын цонх — НЭГДСЭН шүүлтийн огнооны мужаас: муж тухайн салбарын цувааны
+       (c1dYear) онд бүхэлдээ багтвал тэр сарууд, он дамнасан/өөр он бол бүтэн жил. */
+    const hr=this.homeRangeSel();
+    const inYr=!!(hr&&s.c1dYear&&+hr.from.slice(0,4)===+s.c1dYear&&+hr.to.slice(0,4)===+s.c1dYear);
+    const mfr=inYr?+hr.from.slice(5,7):1, mto=inYr?+hr.to.slice(5,7):12;
     const win=s.c1d.slice(mfr-1,mto);
     // H5 (нэмэлт): "05" хэсэг идэвхтэй салбарын c1d-г шууд зурдаг байсан ч
     // энэ массив зөвхөн air-д бодит (registry: t05.sectors=['air']) —
@@ -17608,7 +17825,6 @@ class Component extends DCLogic {
     const t05Period=chartPeriodText((t05Verified&&s.c1dYear)?{
       periodKeys:t05Src.map((v,i)=>+v>0?s.c1dYear+'-'+String(t05Off+i+1).padStart(2,'0'):null).filter(Boolean),
       partialDropped:!t05Ser&&!!s._partialDropped&&(win.length<=1||mto>s.c1d.length)}:{},(k,fb)=>stxt('chart.'+k,fb));
-    const wsum=win.reduce((a,b)=>a+b,0), wavg=win.length?Math.round(wsum/win.length):0;
     const mSel={cx:0,cy:0,value:'',label:'',has:false};
     const particles=Array.from({length:14},(_,i)=>{
       const depth=(i%4)*40+30;
@@ -17634,11 +17850,23 @@ class Component extends DCLogic {
     /* Зурвасаас нуусан салбарыг гаргахгүй. Дээрх `sectorTabs` (навигаци)
        нь ӨӨР зүйл тул хөндөхгүй — тэндээс салбар алга болвол хэрэглэгч
        тухайн салбарын хуудас руу орох замаа алдана. */
-    const livestrip=this.visibleSectorKeys('ls',keys).map(k=>{
+    /* НЭГДСЭН шүүлтийн муж (2026-10-27): салбарын нэгтгэлийн өдрийн мөр ирсэн ба слот хугацааны
+       метриктэй (HOME_PERIOD_METRIC) бол БҮХ нүд нэг логикоор — нэг хэмжүүр, нэг хугацаа, нэг
+       харьцуулалт, ижил spark. Өмнө нь авто — хоногийн үзлэг (30 хоногийн шугамтай), төмөр зам —
+       хоногийн вагон (хавтгай шугам), агаар — сарын нислэг (хавтгай) гэж өөр өөр байв. Мөр
+       ирээгүй бол доорх хуучин зам (салбар бүрийн KPI мөр) хэвээр. */
+    const lsKeys=this.visibleSectorKeys('ls',keys);
+    const lsPer=lsKeys.some(k=>this.lsPeriodOn(k));
+    /* Хугацааны метрикт холбогдсон ч өдрийн мөр хараахан ирээгүй/уншигдаагүй бол хуучин
+       (салбар бүр өөр хэмжүүртэй) мөр рүү БУЦАХГҮЙ — ижил нүд «ачаалж байна»/«мэдээлэл алга»-тай */
+    const hs=lsPer?(this.homeStrip()||{sectors:{},measure:this.homeMeasure(),cmp:null,n:0,
+      preset:this.state.homePreset||'ytd',pending:!this._stDailyFailed}):null;
+    const livestrip=lsKeys.map(k=>{
+      if(hs) return this.lsStripCell(k,hs,k===key);
       const sk=SECTORS[k];
       const on=k===key, dir=sk.kpis[0][4];
       const q=this.sectorQuality('ls',k), verified=this.kpiVerified('ls',k);
-      const lsFootTxt=this.txt('ls','foot','өмнөх сартай харьцуулбал · 12 сарын график');
+      const lsFootTxt=this.lsFootText(null);
       const vs=(k==='air'&&verified)?lsSpec:null;
       /* Мөр ӨӨРИЙН цуваатай бол (k[6] — авто замын үзлэгийн 30 хоногийн
          дата) spark-ыг ТҮҮНЭЭС зурна: хавтгай шугамын хажууд "+7.3%"
@@ -17669,7 +17897,7 @@ class Component extends DCLogic {
           {road:'Авто тээвэр',rail:'Төмөр зам',air:'Агаар',water:'Усан зам'}[k]),
         deltaColor:(function(d){return verified?(d==='up'?'#0E8F63':(d==='down'?'#C8443A':'#6B7896')):'#828EA8'})(vs?vs.dir:dir),
         // Тохиргоотой бол сар тутмын БОДИТ цуваа; үгүй бол өмнөх зан төлөв.
-        spark:(vs&&vs.spark)||(ownSeries?pathFor(ownSeries,120,32,3).line:flatSpark),
+        spark:(vs&&vs.spark)||(ownSeries?pathFor(ownSeries,120,32,3).line:flatSpark),prevSpark:'',hits:[],sparkStyle:'',
         /* Хөл бичиг: виджетийн ерөнхий текст ("өмнөх сартай харьцуулбал
            · 12 сарын график") нь ХОЁР зүйлийг зэрэг мэдэгдэнэ — (а)
            харьцуулалт өмнөх САРтай, (б) доорх муруй 12 САРын. Иймд
@@ -17799,7 +18027,7 @@ class Component extends DCLogic {
       ukMockNote:this.isWidgetMock('uk')
         ?stxt('status.uk_mock','* Түр дата — KPI_UNIFIED тогтмол утга, бодит эх сурвалжид холбогдоогүй.'):'',
       lsTitle:this.txt('ls','title','ҮНДСЭН ҮЗҮҮЛЭЛТҮҮД'),
-      lsFoot:this.txt('ls','foot','өмнөх сартай харьцуулбал · 12 сарын график'),
+      lsFoot:this.lsFootText(hs),
       w2pTitle:this.txt('w2p','title','Долоо хоногийн нийт зорчигч тээвэр'),
       w2pFoot:planYearText(this.txt('w2p','foot','{year} оны төлөвлөгөө')),
       w2pbTitle:this.txt('w2pb','title','Төрлийн хуваарь · 7 хоног'),
@@ -17879,6 +18107,7 @@ class Component extends DCLogic {
         };
       }),
       livestrip,
+      ...this.lsStripChrome(hs,livestrip),
       /* Салбар нуухад grid-ийн багана дагаж багасна — эс тэгвэл
          нуусан нүд ХООСОН үлдэж, харагдац цоорхойтой болно. */
       lsCols:String(Math.max(1,livestrip.length)),
@@ -17897,13 +18126,7 @@ class Component extends DCLogic {
       status:this.buildStatus(s.bars),
       diverging:buildDiverging(key),
       recent:this.buildRecent(),
-      trend,monthSel:mSel,
-      // monthReadout нь t05-ийн ЯГ ТЭР win/wavg-г ашигладаг тул t05Verified
-      // худал үед мөн адил "0 · мэдээлэл алга" шошготой байх ёстой.
-      monthReadout:(t05Verified?(mfr===1&&mto===12?stxt('range.all_months','Бүх 12 сар')
-          :(mfr+'–'+mto+' '+stxt('range.months_word','сар'))):stxt('range.all_months','Бүх 12 сар'))
-        +' · '+stxt('range.average','дундаж')+' '+
-        (t05Verified?wavg.toLocaleString():'0 · '+stxt('status.no_data','мэдээлэл алга'))
+      trend,monthSel:mSel
     };
   }
 }

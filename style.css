@@ -147,7 +147,7 @@ body{margin:0;}
   /* Товчилсон span нь inline display:none — deploy-ийн дараа хөтөч ХУУЧИН style.css-ийг
      кэшилсэн үед (max-age=600) хоёр хэлбэр зэрэг гарахгүй, хуучин харагдац л үлдэнэ */
   .eh-wk-full { display: none !important; }
-  .eh-wk-short { display: inline !important; }
+  .eh-wk-short { display: inline !important; font-size: 9.5px; }
   .eh-wk-d > * { min-width: 0; font-size: 9px !important; }
   /* Хуудасны толгой (каталог/коммунити/түүх/мэдээ/датасет): гарчиг + баруун талын блок (auto) → давхарлана */
   .eh-pg-h { grid-template-columns: minmax(0, 1fr) !important; gap: 18px !important; align-items: start !important; }
@@ -190,6 +190,14 @@ body{margin:0;}
   /* Нэг мөрт таслагдаж байсан шошго/тэмдэглэл мэдээлэл алдахгүй мөр шилжинэ */
   .eh-uk-l { white-space: normal !important; line-height: 1.35; }
   .eh-ls-foot { white-space: normal !important; overflow: visible !important; }
+  /* 01 — огнооны муж: хоёр огноо нэг мөрөнд дэлгэцийн өргөнийг дүүргэнэ (хүрээнээс гарахгүй) */
+  .eh-home-dates { flex: 1 1 100% !important; }
+  .eh-home-dates input { flex: 1 1 0; min-width: 0; }
+  .eh-ls-period { white-space: normal !important; }
+  /* 01 зурвасын толгой: гарчиг + хэмжүүрийн chip эхний мөрөнд, хугацаа доод мөрөнд бүтэн өргөнөөр
+     (нэг мөрөнд шахвал хугацаа 5 мөр болж, «Ачаа» chip дэлгэцээс гардаг байв) */
+  .eh-ls-head { flex-wrap: wrap !important; row-gap: 6px !important; }
+  .eh-ls-head .eh-ls-period { order: 9; flex: 1 1 100%; }
   /* Сектор KPI карт (4-багана → 2): 40px тоо + нэгж 159px-д багтахгүй */
   .eh-k4-p { padding: 16px 14px 0 !important; }
   .eh-k4-v { flex-wrap: wrap; }
