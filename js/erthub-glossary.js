@@ -401,6 +401,51 @@
       period: period + ' · ' + (meas === 'passengers' ? t('by_pax', 'зорчигчоор') : t('by_freight', 'ачаагаар (тонн)')) };
   }
 
+  /* (5е) Hero «ЗОРЧИГЧ / ӨДӨР» (hero_px) — салбарын нэгтгэлийн 7 хоногийн тайлангаас
+     (/api/sectors/total/history → weekly.passengers) СҮҮЛИЙН БҮТЭН долоо хоног (Да–Ня).
+     Сайт (heroPxStat) ба админы ticker preview ХОЁУЛАА ЭНИЙГ дуудна — өөр тоо, өөр хугацаа
+     зурахгүй. mk = metric_registry.json → widgets.hero_px.metric:
+       total.daily_pax_avg — keys салбарын (null бол weekly.sectors бүгд) нийлбэр ÷ 7; 02-р
+         хэсгийн «Долоо хоногийн нийт зорчигч» (w2p)-тэй ИЖИЛ долоо хоног → sum = w2p-ийн нийт
+       <салбар>.weekly_pax — тухайн салбарын долоо хоногийн нийлбэр (÷ 1)
+     Салбар бичлэггүй, эх сурвалжийн цоорхойтой (gaps {салбар:[{from,to}]} — w2p-тэй ижил
+     хасагдана) эсвэл 7-оос цөөн хоногтой бол нийлбэр нь ДООД хязгаар → lower, «≥», тэмдэглэлд
+     салбарыг нэрлэнэ. Долоо хоног бүхэлдээ бичлэггүй (missing), нэг ч салбар ороогүй, эсвэл
+     мэдэгдэхгүй метрик бол null — тоо ЗОХИОХГҮЙ («—»). T(түлхүүр, fallback) = site.hero. */
+  function heroPax(apiRes, mk, keys, gaps, T) {
+    var t = typeof T === 'function' ? T : function (k, fb) { return fb; };
+    var W = apiRes && apiRes.status === 'ok' && apiRes.weekly && apiRes.weekly.passengers;
+    if (!(W && Array.isArray(W.weeks) && W.weeks.length)) return null;
+    var avail = W.sectors || [], per, ks, m = /^([a-z]+)\.weekly_pax$/.exec(String(mk || ''));
+    if (mk === 'total.daily_pax_avg') { per = 7; ks = keys ? keys.slice() : avail.slice(); }
+    else if (m) { per = 1; ks = [m[1]]; }
+    else return null;
+    ks = ks.filter(function (k) { return avail.indexOf(k) >= 0; });
+    var x = W.weeks[W.weeks.length - 1];
+    if (!ks.length || !x || x.missing) return null;
+    var num = function (v) { return (v === null || v === undefined || v === '' || !isFinite(+v)) ? null : +v; };
+    var gapIn = function (k) { return !!(gaps && Array.isArray(gaps[k]) && gaps[k].some(function (g) {
+      return g && g.from <= x.week_end && g.to >= x.week_start; })); };
+    var used = [], miss = [], short = [], sum = 0;
+    ks.forEach(function (k) {
+      var b = x.by_sector && x.by_sector[k], v = (b && !gapIn(k)) ? num(b.value) : null;
+      if (v === null) { miss.push(k); return; }
+      sum += v; used.push(k);
+      if (b.days != null && +b.days < 7) short.push(k);
+    });
+    if (!used.length) return null;
+    var names = {};
+    (apiRes.sectors || []).forEach(function (s) { if (s && s.sector) names[s.sector] = s.name || s.sector; });
+    var off = miss.concat(short), value = Math.round(sum / per);
+    var md = function (s) { return String(s || '').slice(5).replace('-', '.'); };
+    var note = (per === 7 ? t('px_period', '{from}–{to} · 7 хоногийн дундаж') : t('px_period_week', '{from}–{to}'))
+      .replace('{from}', md(x.week_start)).replace('{to}', md(x.week_end));
+    if (off.length) note += ' · ' + t('px_partial', '{names} — мэдээлэл дутуу')
+      .replace('{names}', off.map(function (k) { return names[k] || k; }).join(', '));
+    return { value: value, sum: sum, per: per, lower: off.length > 0, display: (off.length ? '≥ ' : '') + value.toLocaleString('en-US'),
+      note: note, from: x.week_start, to: x.week_end, keys: ks, used: used, missing: miss, short: short };
+  }
+
   /* (5д) Авто тээврийн зорчигчийн САРЫН цуваа (/api/sectors/road/passengers/history) →
      sectorSummaryToSeries()-ийн ИЖИЛ хэлбэр {unit, year, counts, lastMonth, partial,
      partialValue, prev} + partials. Нүүрний t05/k04 (сайт) ба админы t05 preview ХОЁУЛАА
@@ -465,7 +510,7 @@
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,
     filterColumns: filterColumns, rowMatchesCols: rowMatchesCols, periodSpan: periodSpan, weekSpan: weekSpan, chartPeriod: chartPeriod,
-    sectorShare: sectorShare, condActive: condActive, condMatch: condMatch, dayOf: dayOf, facetSuggest: facetSuggest, numOf: numOf
+    sectorShare: sectorShare, heroPax: heroPax, condActive: condActive, condMatch: condMatch, dayOf: dayOf, facetSuggest: facetSuggest, numOf: numOf
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.EHGlossary = api;

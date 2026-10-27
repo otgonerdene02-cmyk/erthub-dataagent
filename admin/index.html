@@ -302,8 +302,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
   text-transform:uppercase;color:#8494B0;background:rgba(20,32,58,.05);
   border-radius:4px;padding:2px 5px;margin-left:auto;white-space:nowrap}
 /* Гүйдэг мөр (hero) — сайт дээр карт БИШ, нимгэн зурвас */
-.pvticker{background:#101A30;border-radius:7px;padding:7px 11px;display:flex;
-  align-items:center;gap:9px;overflow:hidden}
+/* flex-wrap — hero_px-ийн хугацааны шошго («(10.19–10.25 · 7 хоногийн дундаж)») нарийн
+   preview-д таслагдахгүй, дараагийн мөрөнд орно */
+.pvticker{background:#101A30;border-radius:7px;padding:7px 11px;display:flex;flex-wrap:wrap;
+  align-items:center;gap:4px 9px;overflow:hidden}
 .pvticker .t{font-family:var(--mono);font-size:10px;color:#8FA3C8;white-space:nowrap}
 .pvticker .v{font-family:var(--mono);font-size:12.5px;font-weight:600;color:#EAF1FF;white-space:nowrap}
 .pvticker .d{margin-left:auto;font-family:var(--mono);font-size:8px;color:#5E7099;white-space:nowrap}
@@ -447,7 +449,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="../js/erthub-publish.js?v=ffe215f9"></script>
 <script src="../js/erthub-backend.js?v=a96de8ab"></script>
 <script src="../js/erthub-chart.js?v=422174bf"></script>
-<script src="../js/erthub-glossary.js?v=327f42d5"></script>
+<script src="../js/erthub-glossary.js?v=8e6ca7ba"></script>
 </head>
 <body>
 
@@ -605,7 +607,8 @@ var FIXED_UNIT={
   'i06.':'индекс (1-р сар=100)','r06.':'индекс (1-р сар=100)',
   'k04.air':'mixed','k04.road':'mixed','k04.rail':'mixed','k04.water':'км',
   'ls.air':'нислэг', 'ls.road':'үзлэг', 'ls.rail':'вагон', 'ls.water':'км',
-  'hero_px.road':'хүн'
+  /* hero_px — хавтгай бичлэг (салбаруудын нийлбэр, total.daily_pax_avg) тул ганц слот */
+  'hero_px.':'хүн'
 };
 var SUM_WIDGETS={d05:1,w2p:1,w2px:1,w2c:1,w2cx:1};
 var DERIVES_FROM={w2pb:'w2p',w2cb:'w2c'};
@@ -918,6 +921,8 @@ function metricValue(mk){
     if(mk==='road.inspection_count'||mk==='road.inspection_kpi_set') return INSP.count;
     return null;
   }
+  /* Өдрийн дундаж зорчигч (hero_px) — сайтын heroPxStat()-тэй НЭГ функц */
+  if(mk==='total.daily_pax_avg'){ var hp=pvHeroPax('hero_px',mk); return hp?hp.value:null; }
   /* 7 хоногийн метрик: нэгтгэл ирсэн бол ТҮҮНЭЭС (сайттай нэг цонх); төмөр зам
      зөвхөн нэгтгэлээс. */
   if(ST_METRIC[mk]){
@@ -994,6 +999,15 @@ function loadSectorTotalWeekly(){
     if(!d||d.status!=='ok'||!d.weekly){ ST.state='error'; return }
     ST.weekly=d.weekly; ST.state='ready';
   },function(){ ST.state='error' });
+}
+/* Hero «ЗОРЧИГЧ / ӨДӨР» (hero_px) — сайтын heroPxStat()-тэй НЭГ функц (EHGlossary.heroPax):
+   ижил нэгтгэл (ST.api), ижил салбар (widgets.<id>.sectors), ижил цоорхой (ST.gaps), ижил
+   текст (content.json site.hero). null — тоо алга (сайт «— · мэдээлэл алга»). */
+function pvHeroPax(id,mk){
+  if(!mk||typeof EHGlossary==='undefined'||!EHGlossary.heroPax) return null;
+  var w=REG.widgets[id]||{};
+  return EHGlossary.heroPax(ST.api,mk,Array.isArray(w.sectors)?w.sectors:null,ST.gaps||null,
+    function(k,fb){return pvSiteT('hero',k,fb)});
 }
 /* Метрикийн нэгтгэлийн 7 хоног: {w, sec} эсвэл null (нэгтгэл алга / салбар weekly-д алга). */
 function stWeek(mk){
@@ -2113,11 +2127,16 @@ function previewFor(id,mini){
     var tvRes=widgetValueRes(id);
     var tv=tvRes?tvRes.rounded:(mk?metricValue(mk):null);
     var tu=TEXT_ONLY[id]?'':previewUnit(id,slotsOf(id)[0].key);
+    /* hero_px — тоо («≥» доод хязгаар) ба хугацааны шошго сайтын heroPxStat()-тэй НЭГ
+       функцээс. Тоо алга бол сайттай ижил «— · мэдээлэл алга» (өмнө нь «0» — сайт «—»). */
+    var hp=(!tvRes&&id==='hero_px')?pvHeroPax(id,mk):null;
+    var tn=hp?'('+hp.note+')':(tv==null?'· '+pvSiteT('status','no_data','мэдээлэл алга'):'');
     return '<div class="sitepv'+(mini?' mini':'')+'" style="--sc:'+accent+'">'+
       '<div class="pvticker">'+
-        '<span class="v">'+(tv==null?'0':esc(nf(tv)))+'</span>'+
+        '<span class="v">'+esc(hp?hp.display:(tv==null?'—':nf(tv)))+'</span>'+
         '<span class="ed t" data-ed="title">'+esc(title)+'</span>'+
         (tu?'<span class="t">'+esc(tu)+'</span>':'')+
+        (tn&&!mini?'<span class="t" data-hero-note="1">'+esc(tn)+'</span>':'')+
         '<span class="d">'+esc(utxt('preview.ticker_tag','гүйдэг мөр'))+'</span>'+
       '</div></div>';
   }
@@ -3977,8 +3996,11 @@ function periodLabel(k){
    тэнд өөр виджетийн зарчмыг иш татсан байдаг (жиш. weekly_pax-ийн
    тэмдэглэлд hero_fl-ийн "сүүлийн бүтэн САР" гэж дурдсан) тул уншвал
    7 хоногийн метрик "сарын" гэж ХУДАЛ ангилагдана. */
+/* `period` ИЛ зарлагдсан бол ТҮҮНИЙГ (жиш. total.daily_pax_avg — 7 хоногийн цонхоос
+   дундажласан ӨДРИЙН тоо: filter-т «долоо хоног» гэж бичигдсэн ч нарийвчлал нь өдөр). */
 function periodOfMetric(mk){
   var m=REG.metrics&&REG.metrics[mk]; if(!m) return null;
+  if(m.period&&periodLabel(m.period)) return m.period;
   return periodOfText(m.filter)||periodOfText(m.name)||periodOfText(m.unit)||null;
 }
 /* Виджет ХАРАГДАХ байдлаараа ямар хугацаа амладаг вэ. Гарчиг эхэнд,
@@ -4136,7 +4158,7 @@ function repaintPreview(){
    сольдог тул хамгаалалтыг зөрчихгүйгээр уян хатан байдал өгнө. */
 /* Утга солих боломжтой виджетүүд. Зөвхөн air-ийн МӨР ТҮВШНИЙ дата дээр
    ажилладаг тул air слоттой (эсвэл air метриктэй) виджетүүд л энд орно.
-   `uk` (зөвхөн текст), `hero_px` (нийтийн тээвэр, эх сурвалжгүй),
+   `uk` (зөвхөн текст), `hero_px` (салбаруудын нэгтгэл — air feed-ийн мөр биш),
    `u07` (зөвхөн датасэтийн шинэчлэлт — доор тайлбар) ОРОХГҮЙ. */
 var VALUE_TARGETS={
   hero_fl:'air_flights', ls:'air_flights', k04:'air_flights',

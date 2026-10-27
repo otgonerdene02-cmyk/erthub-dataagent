@@ -646,7 +646,7 @@ async function groupC() {
   } finally { srv.close(); }
 }
 
-const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n  await sleep(3500);\n  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);\n  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',\n    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',\n    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',\n    r06:'sec-06',u07:'sec-07'};\n  const norm=t=>t.replace(/[\\s\\u00a0]+/g,' ').trim();\n  const pvT=()=>norm(d.getElementById('pvhost').innerText);\n  const edT=()=>norm(d.querySelector('.edit2').innerText);\n  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost rect,#pvhost circle,#pvhost path,'+\n      '#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvrk i,'+\n      '#pvhost .pvcd .d,#pvhost .sp-val'))\n    .map(e=>e.tagName+':'+(e.getAttribute('height')||e.getAttribute('d')||\n      e.getAttribute('stroke-dasharray')||e.getAttribute('style')||e.textContent)).join('|');\n  const snap=()=>({t:pvT(),g:geo()});\n  const go=id=>{ let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();\n    const s=d.querySelector('[data-section=\"'+SEC[id]+'\"]'); if(!s) return false;\n    s.click(); const c=d.querySelector('[data-widget=\"'+id+'\"]'); if(!c) return false;\n    c.click(); return true; };\n  const probeAll=(q,attr,mk,scope)=>{ const out={};\n    [].slice.call(d.querySelectorAll(q)).map(x=>x.getAttribute(attr)).forEach(k=>{\n      const e=d.querySelector('['+attr+'=\"'+k+'\"]'); if(!e) return;\n      const ov=e.value, pr=mk(k);\n      e.value=pr; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n      out[k]=scope().indexOf(pr)>=0?'PASS':'FAIL';\n      e.value=ov; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n    }); return out; };\n  const R={rows:[]};\n  for(const id of Object.keys(SEC)){\n    const row={id:id};\n    if(!go(id)){ row.nav=false; R.rows.push(row); continue }\n    row.nav=true;\n    const pw=()=>!!d.querySelector('[data-periodwarn]');\n    row.pw0=pw();\n    const s0=snap();\n    const sels=[].slice.call(d.querySelectorAll('[data-slot]'));\n    if(!sels.length){ row.swap='N/A'; row.back='N/A' }\n    else{\n      const sel=sels[0], cur=sel.value;\n      const en=[].slice.call(sel.options).filter(o=>!o.disabled&&o.value!==cur).map(o=>o.value);\n      const all=[].slice.call(sel.options).map(o=>o.value).filter(v=>v!==cur);\n      const pref=en.filter(v=>v);\n      const tgt=pref.length?pref[0]:(en.length?en[0]:all[0]);\n      sel.value=tgt; sel.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s1=snap();\n      row.pwSwap=pw();\n      row.swap=(s1.t!==s0.t||s1.g!==s0.g);\n      row.swapInfo=(cur||'—')+' → '+(tgt||'—');\n      const s2=d.querySelector('[data-slot]');\n      s2.value=cur; s2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s3=snap();\n      row.pwBack=pw();\n      row.back=(s3.t===s0.t&&s3.g===s0.g);\n    }\n    const tf=probeAll('[data-tf]','data-tf',k=>'ZZ'+k.toUpperCase()+'ZZ',pvT);\n    const sf=probeAll('.e-fm [data-sf]','data-sf',()=>'ZZSFZZ',pvT);\n    const rf=probeAll('[data-rf]','data-rf',()=>'ZZRFZZ',edT);\n    row.tfN=Object.keys(tf).length; row.sfN=Object.keys(sf).length; row.rfN=Object.keys(rf).length;\n    row.dead=[].concat(Object.entries(tf),Object.entries(sf),Object.entries(rf))\n      .filter(x=>x[1]!=='PASS').map(x=>x[0]);\n    row.text=Object.values(tf).every(v=>v==='PASS');\n    R.rows.push(row);\n  }\n  if(go('hero_px')){\n    const sx=d.querySelector('[data-slot]');\n    sx.value='air.weekly_pax'; sx.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const vis=()=>{const b=d.querySelector('[data-periodwarn]');\n      return !!b&&b.style.display!=='none'};\n    R.px={warn:vis()};\n    const fb=d.querySelector('[data-periodwarn] [data-autoname]');\n    R.px.fix=fb?fb.getAttribute('data-autoname'):null;\n    if(fb) fb.click();\n    R.px.title=(d.querySelector('[data-tf=\"title\"]')||{}).value;\n    R.px.warnAfterFix=vis();\n    const sy=d.querySelector('[data-slot]');\n    sy.value=''; sy.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const cc=d.querySelector('[data-tcancel]'); if(cc&&!cc.disabled) cc.click();\n  }\n  if(go('ls')){\n    const pv=()=>{const x=d.getElementById('pendRow');return !!x&&x.style.display!=='none'};\n    const t1=d.querySelector('[data-tf=\"title\"]');\n    const orig=t1.value;\n    t1.value='ZZDRAFTZZ'; t1.dispatchEvent(new w.Event('input',{bubbles:true}));\n    R.dr={bar:pv()};\n    let q,qn=0; while((q=d.querySelector('[data-back]'))&&qn++<6) q.click();\n    R.dr.barAway=pv();\n    go('ls');\n    R.dr.kept=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZDRAFTZZ';\n    d.querySelector('[data-penddrop]').click();\n    R.dr.dropped=(d.querySelector('[data-tf=\"title\"]')||{}).value===orig&&!pv();\n    const t2=d.querySelector('[data-tf=\"title\"]');\n    t2.value='ZZAPPLYZZ'; t2.dispatchEvent(new w.Event('input',{bubbles:true}));\n    let q2,qm=0; while((q2=d.querySelector('[data-back]'))&&qm++<6) q2.click();\n    d.querySelector('[data-pendsave]').click();\n    go('ls');\n    R.dr.applied=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZAPPLYZZ'&&!pv();\n    const t3=d.querySelector('[data-tf=\"title\"]');\n    t3.value=orig; t3.dispatchEvent(new w.Event('input',{bubbles:true}));\n    const sv=d.querySelector('[data-tsave]'); if(sv&&!sv.disabled) sv.click();\n  }\n  if(go('hero_fl')){\n    const a1=d.querySelector('[data-slot]'), c1=a1.value;\n    const fo=[].slice.call(a1.options).filter(function(o){\n      return !o.disabled&&o.value.indexOf('field:')===0&&o.value.indexOf('field:|')!==0})[0];\n    if(fo){\n      a1.value=fo.value; a1.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt={pick:fo.value,mid:d.getElementById('dirtyMsg').textContent};\n      /* render() дараа select нь ШИНЭ зангилаа — ДАХИН асууж авна */\n      const a2=d.querySelector('[data-slot]');\n      R.rt.fresh=(a1!==a2);\n      a2.value=c1; a2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt.back=d.getElementById('dirtyMsg').textContent;\n      R.rt.card=(d.querySelector('#pvhost')||{}).innerText;\n    }\n  }\n  R.dirty=d.getElementById('dirtyMsg').textContent;\n  return R;\n}";
+const PROBE_F = "async function(d,w){\n  const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n  await sleep(3500);\n  for(let i=0;i<120&&d.querySelector('.pvfeed');i++) await sleep(500);\n  const SEC={hero_fl:'hero',hero_px:'hero',uk:'portal-kpi',ls:'sec-01',\n    w2p:'sec-02',w2pb:'sec-02',w2px:'sec-02',w2c:'sec-02',w2cb:'sec-02',\n    w2cx:'sec-02',k04:'sec-04',t05:'sec-05',d05:'sec-05',i06:'sec-06',\n    r06:'sec-06',u07:'sec-07'};\n  const norm=t=>t.replace(/[\\s\\u00a0]+/g,' ').trim();\n  const pvT=()=>norm(d.getElementById('pvhost').innerText);\n  const edT=()=>norm(d.querySelector('.edit2').innerText);\n  const geo=()=>[].slice.call(d.querySelectorAll('#pvhost rect,#pvhost circle,#pvhost path,'+\n      '#pvhost .pvsc .v,#pvhost .pvgc .v,#pvhost .pvrow b,#pvhost .pvrk i,'+\n      '#pvhost .pvcd .d,#pvhost .sp-val'))\n    .map(e=>e.tagName+':'+(e.getAttribute('height')||e.getAttribute('d')||\n      e.getAttribute('stroke-dasharray')||e.getAttribute('style')||e.textContent)).join('|');\n  const snap=()=>({t:pvT(),g:geo()});\n  const go=id=>{ let b,n=0; while((b=d.querySelector('[data-back]'))&&n++<6) b.click();\n    const s=d.querySelector('[data-section=\"'+SEC[id]+'\"]'); if(!s) return false;\n    s.click(); const c=d.querySelector('[data-widget=\"'+id+'\"]'); if(!c) return false;\n    c.click(); return true; };\n  const probeAll=(q,attr,mk,scope)=>{ const out={};\n    [].slice.call(d.querySelectorAll(q)).map(x=>x.getAttribute(attr)).forEach(k=>{\n      const e=d.querySelector('['+attr+'=\"'+k+'\"]'); if(!e) return;\n      const ov=e.value, pr=mk(k);\n      e.value=pr; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n      out[k]=scope().indexOf(pr)>=0?'PASS':'FAIL';\n      e.value=ov; e.dispatchEvent(new w.Event('input',{bubbles:true}));\n    }); return out; };\n  const R={rows:[]};\n  for(const id of Object.keys(SEC)){\n    const row={id:id};\n    if(!go(id)){ row.nav=false; R.rows.push(row); continue }\n    row.nav=true;\n    const pw=()=>!!d.querySelector('[data-periodwarn]');\n    row.pw0=pw();\n    const s0=snap();\n    const sels=[].slice.call(d.querySelectorAll('[data-slot]'));\n    if(!sels.length){ row.swap='N/A'; row.back='N/A' }\n    else{\n      const sel=sels[0], cur=sel.value;\n      const en=[].slice.call(sel.options).filter(o=>!o.disabled&&o.value!==cur).map(o=>o.value);\n      const all=[].slice.call(sel.options).map(o=>o.value).filter(v=>v!==cur);\n      const pref=en.filter(v=>v);\n      const tgt=pref.length?pref[0]:(en.length?en[0]:all[0]);\n      sel.value=tgt; sel.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s1=snap();\n      row.pwSwap=pw();\n      row.swap=(s1.t!==s0.t||s1.g!==s0.g);\n      row.swapInfo=(cur||'—')+' → '+(tgt||'—');\n      const s2=d.querySelector('[data-slot]');\n      s2.value=cur; s2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      const s3=snap();\n      row.pwBack=pw();\n      row.back=(s3.t===s0.t&&s3.g===s0.g);\n    }\n    const tf=probeAll('[data-tf]','data-tf',k=>'ZZ'+k.toUpperCase()+'ZZ',pvT);\n    const sf=probeAll('.e-fm [data-sf]','data-sf',()=>'ZZSFZZ',pvT);\n    const rf=probeAll('[data-rf]','data-rf',()=>'ZZRFZZ',edT);\n    row.tfN=Object.keys(tf).length; row.sfN=Object.keys(sf).length; row.rfN=Object.keys(rf).length;\n    row.dead=[].concat(Object.entries(tf),Object.entries(sf),Object.entries(rf))\n      .filter(x=>x[1]!=='PASS').map(x=>x[0]);\n    row.text=Object.values(tf).every(v=>v==='PASS');\n    R.rows.push(row);\n  }\n  if(go('hero_px')){\n    const sx=d.querySelector('[data-slot]'), px0=sx.value;\n    R.px0=px0;\n    sx.value='air.weekly_pax'; sx.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const vis=()=>{const b=d.querySelector('[data-periodwarn]');\n      return !!b&&b.style.display!=='none'};\n    R.px={warn:vis()};\n    const fb=d.querySelector('[data-periodwarn] [data-autoname]');\n    R.px.fix=fb?fb.getAttribute('data-autoname'):null;\n    if(fb) fb.click();\n    R.px.title=(d.querySelector('[data-tf=\"title\"]')||{}).value;\n    R.px.warnAfterFix=vis();\n    const sy=d.querySelector('[data-slot]');\n    sy.value=px0; sy.dispatchEvent(new w.Event('change',{bubbles:true}));\n    const cc=d.querySelector('[data-tcancel]'); if(cc&&!cc.disabled) cc.click();\n  }\n  if(go('ls')){\n    const pv=()=>{const x=d.getElementById('pendRow');return !!x&&x.style.display!=='none'};\n    const t1=d.querySelector('[data-tf=\"title\"]');\n    const orig=t1.value;\n    t1.value='ZZDRAFTZZ'; t1.dispatchEvent(new w.Event('input',{bubbles:true}));\n    R.dr={bar:pv()};\n    let q,qn=0; while((q=d.querySelector('[data-back]'))&&qn++<6) q.click();\n    R.dr.barAway=pv();\n    go('ls');\n    R.dr.kept=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZDRAFTZZ';\n    d.querySelector('[data-penddrop]').click();\n    R.dr.dropped=(d.querySelector('[data-tf=\"title\"]')||{}).value===orig&&!pv();\n    const t2=d.querySelector('[data-tf=\"title\"]');\n    t2.value='ZZAPPLYZZ'; t2.dispatchEvent(new w.Event('input',{bubbles:true}));\n    let q2,qm=0; while((q2=d.querySelector('[data-back]'))&&qm++<6) q2.click();\n    d.querySelector('[data-pendsave]').click();\n    go('ls');\n    R.dr.applied=(d.querySelector('[data-tf=\"title\"]')||{}).value==='ZZAPPLYZZ'&&!pv();\n    const t3=d.querySelector('[data-tf=\"title\"]');\n    t3.value=orig; t3.dispatchEvent(new w.Event('input',{bubbles:true}));\n    const sv=d.querySelector('[data-tsave]'); if(sv&&!sv.disabled) sv.click();\n  }\n  if(go('hero_fl')){\n    const a1=d.querySelector('[data-slot]'), c1=a1.value;\n    const fo=[].slice.call(a1.options).filter(function(o){\n      return !o.disabled&&o.value.indexOf('field:')===0&&o.value.indexOf('field:|')!==0})[0];\n    if(fo){\n      a1.value=fo.value; a1.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt={pick:fo.value,mid:d.getElementById('dirtyMsg').textContent};\n      /* render() дараа select нь ШИНЭ зангилаа — ДАХИН асууж авна */\n      const a2=d.querySelector('[data-slot]');\n      R.rt.fresh=(a1!==a2);\n      a2.value=c1; a2.dispatchEvent(new w.Event('change',{bubbles:true}));\n      R.rt.back=d.getElementById('dirtyMsg').textContent;\n      R.rt.card=(d.querySelector('#pvhost')||{}).innerText;\n    }\n  }\n  R.dirty=d.getElementById('dirtyMsg').textContent;\n  return R;\n}";
 
 /* ── Хугацааны нарийвчлалын (period grain) логикийг АДМИНЫ ЭХ КОДООС
    гаргаж авна. Тест хуулбар бичихгүй: админ юу боддог, тест ЯГ түүгээр
@@ -796,7 +796,7 @@ async function groupF() {
     check('F6. Бодит registry — виджетүүдэд ХУДАЛ анхааруулга алга',
       noisy.length === 0, noisy.join(', '));
     const REG_B = JSON.parse(JSON.stringify(REG_R));
-    REG_B.widgets.hero_px.sectors.road.metric = 'air.weekly_pax';
+    REG_B.widgets.hero_px.metric = 'air.weekly_pax';
     const wb = kit(REG_B, CON_R).periodMismatchWarn('hero_px');
     check('F6. Blocker регресс: "ЗОРЧИГЧ / ӨДӨР" + 7 хоногийн метрик → ИЛРЭНЭ',
       !!wb && wb.indexOf('7 ХОНОГ') >= 0, wb ? wb.slice(0, 90) : '(анхааруулга гарсангүй)');
@@ -1503,7 +1503,7 @@ async function groupI3() {
     check('I6. 16 виджет бүгд нээгдэнэ', rows.length === 16 && rows.every((r) => r.nav !== false),
       'нээгдээгүй: ' + rows.filter((r) => r.nav === false).map((r) => r.id).join(', '));
     /* Утга солих боломжтой виджетүүдийн жагсаалт админы эх кодоос —
-       hero_px (нийтийн тээвэр, мөр түвшний дата алга) ба u07 (зөвхөн
+       hero_px (салбаруудын нэгтгэл, air feed-ийн мөр биш — HP) ба u07 (зөвхөн
        датасэтийн шинэчлэлт харуулдаг) энд ОРОХГҮЙ нь ЗӨВ. */
     const admSrc = read('admin/index.html');
     const vtBlock = admSrc.slice(admSrc.indexOf('var VALUE_TARGETS='), admSrc.indexOf('};', admSrc.indexOf('var VALUE_TARGETS=')));
@@ -5944,12 +5944,13 @@ async function groupBE() {
   /* ── BE34. Hero ticker-ийн зорчигч — цэвэр "0" БИШ ──
      "0 ЗОРЧИГЧ / ӨДӨР" нь "өнөөдөр зорчигч байхгүй" гэж уншигдаж, 04-р
      хэсгийн амьд "148,470 зорчигч/сар"-тай зөрчилдөж байв. */
+  /* 2026-10-27-оос hero_px амьд (HP бүлэг) — тоо алга үеийн гэрээ хэвээр: "—" + "мэдээлэл алга" */
   check('BE34. hero_px эх сурвалжгүй үед "0" гэж ХУДАЛ тоо гаргахгүй',
-    !dcScript().includes("heroPxValue:this.isWidgetMock('hero_px')?'0':") &&
-    dcScript().includes("heroPxValue:this.isWidgetMock('hero_px')?'—':"));
+    !/heroPxValue:[^\n]*'0'/.test(dcScript()) &&
+    dcScript().includes("const hp=this.isWidgetMock('hero_px')?null:this.heroPxStat();") &&
+    dcScript().includes("heroPxValue:hp?hp.display:'—'"));
   check('BE34. Оронд нь "мэдээлэл алга" гэж ИЛ хэлнэ (status.no_data ДАХИН ашиглав)',
-    dcScript().includes("heroPxNote:this.isWidgetMock('hero_px')") &&
-    dcScript().includes("stxt('status.no_data'") &&
+    dcScript().includes("heroPxNote:hp?' ('+hp.note+')':' · '+stxt('status.no_data','мэдээлэл алга')") &&
     read('index.html').includes('{{ heroPxTitle }}</span>{{ heroPxNote }}'));
 
   /* ── BE35. Админы preview нь үзлэгийн АМЬД тоог уншина ──
@@ -10748,6 +10749,216 @@ function groupHR() {
     /<sc-if value="\{\{ detail\.dqAnyDim \}\}">\s*<div class="eh-g4 eh-g-2c"[^>]*>\s*<sc-for list="\{\{ detail\.dims \}\}"/.test(tpl));
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   HP. Hero «ЗОРЧИГЧ / ӨДӨР» (hero_px) — салбарын нэгтгэлийн 7 хоногийн өдрийн дундаж
+   (2026-10-27). Өмнө нь «312K» хатуу тоо, дараа нь «— · мэдээлэл алга» байв.
+     HP1  EHGlossary.heroPax — 3 салбар × 7 өдрийн гараар бодох фикстур
+     HP2  02-р хэсэгтэй (w2p, weekSectorReport) тулгалт: нийт / «≥» = heroPax.sum
+     HP3  Registry + content.json гэрээ (total.daily_pax_avg, period:"day", site.hero.px_*)
+     HP4  Админы хугацааны шалгуур: period:"day" нь filter-ийн «долоо хоног»-оос давуу
+     HP5  Сайт ба админ НЭГ функцийг ижил оролтоор дуудна (эх код)
+     HP6  Хөтөч (?fx=1): нүүрний ticker = админы preview = фикстураас гараар бодсон;
+          w2p-ийн нийт ижил долоо хоног; холбоос салгахад хоёулаа «— · мэдээлэл алга»
+   ══════════════════════════════════════════════════════════════════ */
+async function groupHP() {
+  group('HP. Hero «ЗОРЧИГЧ / ӨДӨР» — нэгтгэлийн сүүлийн бүтэн 7 хоногийн өдрийн дундаж');
+  const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+  const CJ = readJson('content.json'), RG = readJson('metric_registry.json');
+  /* 3 салбар × 7 өдөр (Да 10-19 … Ня 10-25) — гараар:
+       агаар 1,000 × 7 = 7,000 · авто 500…1,100 = 5,600 · төмөр зам 300 × 7 = 2,100
+       нийт 14,700 ÷ 7 = 2,100 */
+  const DAYS = { air: [1000, 1000, 1000, 1000, 1000, 1000, 1000], road: [500, 600, 700, 800, 900, 1000, 1100],
+    rail: [300, 300, 300, 300, 300, 300, 300] };
+  const NAMES = { air: 'Агаарын тээвэр', road: 'Авто тээвэр', rail: 'Төмөр зам' };
+  const wkOf = (start, end, days) => {
+    const by = {}; let v = 0;
+    Object.keys(days).forEach((k) => { const ds = days[k].filter((x) => x != null);
+      by[k] = { value: ds.reduce((t, x) => t + x, 0), days: ds.length }; v += by[k].value; });
+    return { week_start: start, week_end: end, missing: false, value: v, by_sector: by };
+  };
+  const mkApi = (days, extra) => ({ status: 'ok', sectors: ['air', 'road', 'rail'].map((k) => ({ sector: k, name: NAMES[k] })), months: [{}],
+    weekly: { passengers: Object.assign({ sectors: ['air', 'road', 'rail'], comparable: ['air', 'rail'], stale: [], week_end: '2026-10-25',
+      weeks: [wkOf('2026-10-12', '2026-10-18', { air: [900, 900, 900, 900, 900, 900, 900], road: [1, 1, 1, 1, 1, 1, 1], rail: [2, 2, 2, 2, 2, 2, 2] }),
+        wkOf('2026-10-19', '2026-10-25', days)] }, extra || {}) } });
+  const KEYS = ['air', 'road', 'rail'];
+
+  /* HP1. Цэвэр функц */
+  check('HP1. EHGlossary.heroPax экспортлогдсон', typeof G.heroPax === 'function');
+  if (typeof G.heroPax !== 'function') return;
+  const full = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, null);
+  check('HP1. Бүтэн долоо хоног: 14,700 ÷ 7 = 2,100 (доод хязгаар биш)',
+    !!full && full.sum === 14700 && full.value === 2100 && full.display === '2,100' && full.lower === false && full.per === 7, JSON.stringify(full));
+  check('HP1. Хугацааны шошго — сүүлийн бүтэн долоо хоног (DG-P)',
+    !!full && full.note === '10.19–10.25 · 7 хоногийн дундаж' && full.from === '2026-10-19' && full.to === '2026-10-25', full && full.note);
+  const odd = JSON.parse(JSON.stringify(DAYS)); odd.air[0] = 1003;   /* 14,703 ÷ 7 = 2,100.43 → 2,100; 14,704 → 2,100.57 → 2,101 */
+  const odd2 = JSON.parse(JSON.stringify(DAYS)); odd2.air[0] = 1004;
+  check('HP1. Бүхэл тоонд бөөрөнхийлнө (14,703 → 2,100 · 14,704 → 2,101)',
+    G.heroPax(mkApi(odd), 'total.daily_pax_avg', KEYS, null).value === 2100 && G.heroPax(mkApi(odd2), 'total.daily_pax_avg', KEYS, null).value === 2101);
+  /* Авто тээврийн эх сурвалжийн цоорхой долоо хоногтой давхцвал — нийлбэрт ОРОХГҮЙ (w2p-тэй ижил), «≥» */
+  const GAPS = { road: [{ from: '2026-10-22', to: '2026-10-30' }] };
+  const gp = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, GAPS);
+  check('HP1. Цоорхойтой авто тээвэр → (7,000 + 2,100) ÷ 7 = ≥ 1,300, авто тээврийг нэрлэнэ',
+    !!gp && gp.sum === 9100 && gp.value === 1300 && gp.lower === true && gp.display === '≥ 1,300' &&
+    gp.missing.join() === 'road' && gp.note === '10.19–10.25 · 7 хоногийн дундаж · Авто тээвэр — мэдээлэл дутуу', JSON.stringify(gp));
+  const gpOut = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, { road: [{ from: '2026-10-26', to: '2026-10-30' }] });
+  check('HP1. Долоо хоногоос ГАДУУРХ цоорхой нөлөөлөхгүй', !!gpOut && gpOut.value === 2100 && gpOut.lower === false, JSON.stringify(gpOut));
+  /* Төмөр зам 1 өдөр дутуу (6 хоног): 7,000 + 5,600 + 1,800 = 14,400 ÷ 7 = 2,057.1 → ≥ 2,057 */
+  const sh = JSON.parse(JSON.stringify(DAYS)); sh.rail[6] = null;
+  const sp = G.heroPax(mkApi(sh), 'total.daily_pax_avg', KEYS, null);
+  check('HP1. 7-оос цөөн хоногтой салбар → 14,400 ÷ 7 = ≥ 2,057, «Төмөр зам — мэдээлэл дутуу»',
+    !!sp && sp.sum === 14400 && sp.value === 2057 && sp.lower === true && sp.short.join() === 'rail' &&
+    /Төмөр зам — мэдээлэл дутуу$/.test(sp.note), JSON.stringify(sp));
+  /* Салбар бичлэггүй (by_sector-д алга) */
+  const noRail = mkApi(DAYS); delete noRail.weekly.passengers.weeks[1].by_sector.rail;
+  const nr = G.heroPax(noRail, 'total.daily_pax_avg', KEYS, null);
+  check('HP1. Бичлэггүй салбар 0 гэж тооцогдохгүй → (7,000 + 5,600) ÷ 7 = ≥ 1,800',
+    !!nr && nr.value === 1800 && nr.lower === true && nr.missing.join() === 'rail', JSON.stringify(nr));
+  const sub = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', ['air', 'rail'], null);
+  check('HP1. Бүртгэлийн салбараар (агаар + төмөр зам) → 9,100 ÷ 7 = 1,300', !!sub && sub.value === 1300 && sub.lower === false, JSON.stringify(sub));
+  const all = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', null, null);
+  check('HP1. Салбар заагаагүй (null) → weekly.sectors бүгд', !!all && all.value === 2100 && all.keys.join() === 'air,road,rail');
+  const rw = G.heroPax(mkApi(DAYS), 'road.weekly_pax', KEYS, null);
+  check('HP1. road.weekly_pax → авто тээврийн 7 хоногийн нийлбэр 5,600 (÷ 1), шошго «10.19–10.25»',
+    !!rw && rw.value === 5600 && rw.per === 1 && rw.note === '10.19–10.25' && rw.keys.join() === 'road', JSON.stringify(rw));
+  const missW = mkApi(DAYS); missW.weekly.passengers.weeks[1].missing = true;
+  const allGap = { air: [{ from: '2026-10-01', to: '2026-10-31' }], road: [{ from: '2026-10-01', to: '2026-10-31' }], rail: [{ from: '2026-10-01', to: '2026-10-31' }] };
+  check('HP1. Тоо ЗОХИОХГҮЙ: долоо хоног missing / нэгтгэл алга / weekly алга / мэдэгдэхгүй метрик / бүх салбар цоорхой → null',
+    G.heroPax(missW, 'total.daily_pax_avg', KEYS, null) === null && G.heroPax(null, 'total.daily_pax_avg', KEYS, null) === null &&
+    G.heroPax({ status: 'no_data' }, 'total.daily_pax_avg', KEYS, null) === null &&
+    G.heroPax({ status: 'ok', months: [], weekly: null }, 'total.daily_pax_avg', KEYS, null) === null &&
+    G.heroPax(mkApi(DAYS), 'air.flight_count_last_month', KEYS, null) === null && G.heroPax(mkApi(DAYS), null, KEYS, null) === null &&
+    G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', ['water'], null) === null &&
+    G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, allGap) === null);
+  const T = (k, fb) => ({ px_period: 'ZZ{from}/{to}ZZ', px_partial: 'YY{names}YY' })[k] || fb;
+  const tt = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, GAPS, T);
+  check('HP1. Шошгын үг content.json site.hero.px_*-ээс (T)', !!tt && tt.note === 'ZZ10.19/10.25ZZ · YYАвто тээвэрYY', tt && tt.note);
+
+  /* HP2. 02-р хэсэгтэй тулгалт — сайтын weekSectorReport (w2p) ИЖИЛ фикстур дээр */
+  const src = dcScript();
+  const a = src.indexOf('/* ── САЛБАРЫН НЭГТГЭЛ (sectorTotal)'), b = src.indexOf('/* Зорчигчийн сарын график — ОН/ОУ-ийг ЭЭЛЖ');
+  if (!(a > 0 && b > a)) bad('HP2. weekSectorReport эх код олдсонгүй');
+  else {
+    const L = new Function('NEON', src.slice(a, b) + '\nreturn {weekSectorReport};')({});
+    const w2 = L.weekSectorReport(mkApi(DAYS).weekly.passengers, KEYS, null);
+    check('HP2. Бүтэн долоо хоног: w2p нийт (14,700) = hero × 7, ИЖИЛ долоо хоног',
+      w2.total === full.sum && w2.weekStart === full.from && w2.weekEnd === full.to, w2.total + ' vs ' + full.sum);
+    const w2g = L.weekSectorReport(mkApi(DAYS).weekly.passengers, KEYS, GAPS);
+    const lw = w2g.weeks[w2g.weeks.length - 1];
+    check('HP2. Цоорхойтой: w2p нийт null, «≥» багана (9,100) = hero-ийн нийлбэр, ижил салбар',
+      w2g.total === null && lw.partial === gp.sum && lw.partialKeys.join() === gp.used.join(), JSON.stringify(lw));
+  }
+
+  /* HP3. Registry + content */
+  const hp = RG.widgets.hero_px || {}, mt = (RG.metrics || {})['total.daily_pax_avg'] || {};
+  check('HP3. widgets.hero_px: metric total.daily_pax_avg, quality verified, sectors [air, road, rail]',
+    hp.metric === 'total.daily_pax_avg' && hp.quality === 'verified' && Array.isArray(hp.sectors) && hp.sectors.join() === 'air,road,rail', JSON.stringify(hp).slice(0, 120));
+  check('HP3. metrics.total.daily_pax_avg — verified, нэгж «хүн», period «day», dataset gold.sector_daily_total',
+    mt.quality === 'verified' && mt.unit === 'хүн' && mt.period === 'day' && mt.dataset === 'gold.sector_daily_total');
+  check('HP3. «312K» хатуу тоо index.html-ээс алга', !/'312K'/.test(src));
+  const H = CJ.site.hero || {};
+  check('HP3. content.json site.hero.px_period / px_period_week / px_partial ({from}/{to}/{names})',
+    /\{from\}/.test(H.px_period || '') && /\{to\}/.test(H.px_period || '') && /\{from\}/.test(H.px_period_week || '') && /\{names\}/.test(H.px_partial || ''));
+  check('HP3. Glossary-ийн fallback = content.json (ганц эх текст)',
+    G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, GAPS, (k, fb) => H[k] || fb).note === gp.note);
+
+  /* HP4. Админы хугацааны шалгуур */
+  const kit = periodKit();
+  if (!kit) bad('HP4. periodKit олдсонгүй');
+  else {
+    const K = kit(RG, CJ);
+    check('HP4. total.daily_pax_avg → «ӨДӨР» (filter-т «долоо хоног» бичигдсэн ч period:"day")',
+      K.periodOfMetric('total.daily_pax_avg') === 'day' && /долоо хоног/.test(mt.filter || ''), K.periodOfMetric('total.daily_pax_avg'));
+    check('HP4. hero_px «ЗОРЧИГЧ / ӨДӨР» + total.daily_pax_avg — хугацааны анхааруулга АЛГА', K.periodMismatchWarn('hero_px') === '');
+    const RB = JSON.parse(JSON.stringify(RG)); RB.widgets.hero_px.metric = 'rail.weekly_pax';
+    check('HP4. 7 хоногийн нийлбэр метрик сонговол анхааруулга ГАРНА (Blocker хамгаалалт хэвээр)',
+      kit(RB, CJ).periodMismatchWarn('hero_px').indexOf('7 ХОНОГ') >= 0);
+    const RX = { metrics: { 'x.d': { name: 'x', filter: 'бүтэн 7 хоног', unit: 'хүн', quality: 'verified', period: 'nonsense' } }, widgets: {} };
+    check('HP4. Мэдэгдэхгүй period утга үл тоогдоно → filter-ээс (7 хоног)', kit(RX, CJ).periodOfMetric('x.d') === 'week');
+  }
+
+  /* HP5. Сайт ба админ НЭГ функцийг ИЖИЛ оролтоор */
+  const adm = adminScript();
+  check('HP5. Сайт: heroPxStat → EHGlossary.heroPax(нэгтгэл, бүртгэлийн метрик, sectors[], авто тээврийн цоорхой, site.hero)',
+    /heroPxStat\(\)\{[\s\S]*?EHGlossary\.heroPax\(this\.sectorTotalData\?this\.sectorTotalData\(\):null,w\.metric,\s*Array\.isArray\(w\.sectors\)\?w\.sectors:null,rg\?\{road:rg\}:null,\(k,fb\)=>H\[k\]\|\|fb\)/.test(src) &&
+    ['px_period', 'px_period_week', 'px_partial'].every((k) => src.includes("stxt('hero." + k + "',")));
+  check('HP5. Админ: pvHeroPax → EHGlossary.heroPax(ST.api, метрик, sectors[], ST.gaps, site.hero)',
+    /EHGlossary\.heroPax\(ST\.api,mk,Array\.isArray\(w\.sectors\)\?w\.sectors:null,ST\.gaps\|\|null,\s*function\(k,fb\)\{return pvSiteT\('hero',k,fb\)\}\)/.test(adm) &&
+    /if\(mk==='total\.daily_pax_avg'\)\{ var hp=pvHeroPax\('hero_px',mk\); return hp\?hp\.value:null; \}/.test(adm));
+  check('HP5. Админы ticker: тоо алга бол «—» (өмнө нь «0» — сайт «—»)',
+    /esc\(hp\?hp\.display:\(tv==null\?'—':nf\(tv\)\)\)/.test(adm) && !/\(tv==null\?'0':esc\(nf\(tv\)\)\)/.test(adm));
+  check('HP5. Админы ticker нэгтгэл + цоорхойг сайттай ижил эндпойнтоос (sectors/total + road history coverage.gaps)',
+    /ST\.gaps=\(h&&h\.coverage&&Array\.isArray\(h\.coverage\.gaps\)\)\?\{road:h\.coverage\.gaps\}:null/.test(adm) &&
+    /heroPxStat\(\)\{[^}]*?const rh=this\._roadPaxAll, rg=rh&&rh\.coverage&&Array\.isArray\(rh\.coverage\.gaps\)\?rh\.coverage\.gaps:null;[\s\S]{0,400}?return EHGlossary\.heroPax/.test(src));
+
+  /* HP6. Хөтөч — нүүр ба админ ИЖИЛ фикстураар (?fx=1) */
+  if (!CHROME) { skipped('HP6. Нүүр ↔ админы preview (DOM)', 'Chrome олдсонгүй'); return; }
+  const PROBE = `async function(d,w){
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    const norm=t=>String(t||'').replace(/[\\s\\u00a0]+/g,' ').trim();
+    const R={};
+    const api=await (await w.fetch('https://portal.mrt.gov.mn/api/sectors/total/history')).json();
+    const P=api&&api.weekly&&api.weekly.passengers, x=P&&P.weeks&&P.weeks[P.weeks.length-1];
+    R.exp=x?{sum:['air','road','rail'].reduce((t,k)=>t+(+((x.by_sector||{})[k]||{}).value||0),0),from:x.week_start,to:x.week_end,
+      days:['air','road','rail'].map(k=>((x.by_sector||{})[k]||{}).days)}:null;
+    const heroT=()=>{ const e=d.querySelector('[data-eh-card="hero_px"]'); return e?norm(e.parentElement.textContent):''; };
+    for(let i=0;i<80;i++){ if(/^[≥\\d]/.test(heroT())) break; await sleep(400); }
+    R.site=heroT();
+    /* w2p-ийн том тоо — runtime inline style-ийг хэвийн болгодог тул computed font-size-аар */
+    const big=el=>[].slice.call(el.querySelectorAll('div')).find(x=>w.getComputedStyle(x).fontSize==='40px');
+    const t=d.querySelector('[data-eh-card="w2p"][data-eh-field="title"]'); let box=t;
+    while(box&&box.parentElement&&!big(box)) box=box.parentElement;
+    R.w2p=box&&big(box)?norm(big(box).textContent):null;
+    const fr=w.frameElement; fr.src='/admin/index.html?fx=1';
+    let a=null;
+    for(let i=0;i<80;i++){ await sleep(250); try{ a=fr.contentDocument; }catch(e){ a=null; }
+      if(a&&a.body&&a.body.innerHTML.length>8000&&String(fr.contentWindow.location.href).indexOf('admin')>=0) break; }
+    await sleep(3500);
+    for(let i=0;i<60&&a.querySelector('.pvfeed');i++) await sleep(500);
+    const go=()=>{ let b,n=0; while((b=a.querySelector('[data-back]'))&&n++<6) b.click();
+      const s=a.querySelector('[data-section="hero"]'); if(!s) return false; s.click();
+      const c=a.querySelector('[data-widget="hero_px"]'); if(!c) return false; c.click(); return true; };
+    const pv=()=>{ const v=a.querySelector('#pvhost .pvticker .v'), n=a.querySelector('#pvhost .pvticker [data-hero-note]');
+      return {v:v?norm(v.textContent):null,note:n?norm(n.textContent):null}; };
+    if(!go()) return Object.assign(R,{__err:'админ hero_px нээгдсэнгүй'});
+    for(let i=0;i<40&&!/\\d/.test(pv().v||'');i++) await sleep(400);
+    R.admin=pv();
+    const sl=a.querySelector('[data-slot]'); R.slot=sl?sl.value:null;
+    if(sl){ const ov=sl.value;
+      sl.value=''; sl.dispatchEvent(new fr.contentWindow.Event('change',{bubbles:true}));
+      R.unbound=pv();
+      const s2=a.querySelector('[data-slot]'); s2.value=ov; s2.dispatchEvent(new fr.contentWindow.Event('change',{bubbles:true}));
+      R.back=pv(); }
+    R.dirty=(a.getElementById('dirtyMsg')||{}).textContent||'';
+    return R;
+  }`;
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html?fx=1#/';
+    const R = await runProbe(PROBE, 150000);
+    if (R.__err) { bad('HP6. Хөтчийн проб ажиллав', R.__err); return; }
+    const e = R.exp;
+    check('HP6. Фикстурын сүүлийн долоо хоног 3 салбар × 7 өдөр бүтэн', !!e && e.days.join() === '7,7,7', JSON.stringify(e));
+    if (!e) return;
+    const md = (s) => s.slice(5).replace('-', '.');
+    const expV = Math.round(e.sum / 7).toLocaleString('en-US');
+    const expN = (CJ.site.hero.px_period || '').replace('{from}', md(e.from)).replace('{to}', md(e.to));
+    const expTitle = CJ.widgets.hero_px.title;
+    check('HP6. Нүүрний ticker = (агаар + авто + төмөр зам) ÷ 7, гарчиг, хугацаа (гараар бодсон)',
+      R.site === expV + ' ' + expTitle + ' (' + expN + ')', 'сайт «' + R.site + '» · хүлээгдсэн «' + expV + ' ' + expTitle + ' (' + expN + ')»');
+    check('HP6. Админы preview = нүүрний ticker (тоо ба хугацааны шошго)',
+      !!R.admin && R.admin.v === expV && R.admin.note === '(' + expN + ')', JSON.stringify(R.admin));
+    check('HP6. Админы слот = бүртгэлийн метрик (total.daily_pax_avg)', R.slot === 'total.daily_pax_avg', String(R.slot));
+    check('HP6. 02-р хэсгийн w2p нийт = ижил долоо хоногийн нийлбэр (hero × 7)',
+      R.w2p === (e.sum / 1000).toFixed(1) + 'K', R.w2p + ' vs ' + (e.sum / 1000).toFixed(1) + 'K');
+    check('HP6. Холбоос салгахад preview «— · мэдээлэл алга» (сайтын тоо алга үеийн гэрээ), буцаахад эргэнэ',
+      !!R.unbound && R.unbound.v === '—' && /мэдээлэл алга/.test(R.unbound.note || '') && !!R.back && R.back.v === expV && /алга/.test(R.dirty),
+      JSON.stringify({ u: R.unbound, b: R.back, d: R.dirty }));
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -10787,11 +10998,12 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=RI')) { await groupRI(); }
   else if (process.argv.includes('--only=HM')) { await groupHM(); }
   else if (process.argv.includes('--only=HR')) { groupHR(); }
+  else if (process.argv.includes('--only=HP')) { await groupHP(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
