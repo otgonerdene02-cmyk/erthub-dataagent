@@ -516,6 +516,8 @@
   window.fetch = function (input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || '';
     var hit = route(url);
+    /* Тест тухайн хариуг өөрчилж болно (жиш. HE — авто тээврийн цоорхой тарих); бусад тестэд нөлөөгүй */
+    if (hit && hit !== 404 && typeof window.__fxPatch === 'function') hit = window.__fxPatch(url, hit) || hit;
     if (hit === 404) return Promise.resolve(new Response('', { status: 404 }));
     if (hit) return Promise.resolve(new Response(JSON.stringify(hit), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     return realFetch ? realFetch(input, init) : Promise.reject(new Error('fetch алга'));

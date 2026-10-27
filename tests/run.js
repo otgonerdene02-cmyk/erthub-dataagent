@@ -5717,11 +5717,19 @@ async function groupBE() {
   check('BE38. Мөр 0 (дельтатай) харьцуулалтаа ЯГ хэлнэ',
     ir[0][3] === '+7.3%' && /өмнөх бүртгэлтэй хоногтой харьцуулбал \(2026-09-20\)/.test(ir[0][5]),
     JSON.stringify(ir[0][5]));
-  check('BE38. "—" мөрүүд БАЙХГҮЙ харьцуулалтыг мэдэгдэхгүй',
-    ir[1][3] === '—' && ir[2][3] === '—' &&
-    !/харьцуулбал/.test(ir[1][5]) && !/харьцуулбал/.test(ir[2][5]) &&
-    /харьцуулах өгөгдөл алга/.test(ir[1][5]) && /харьцуулах өгөгдөл алга/.test(ir[2][5]),
-    JSON.stringify([ir[1][5], ir[2][5]]));
+  /* 2026-10-27 (HE2): by_day-д тэнцээгүйн тоо байвал ТЭНЦЭЭГҮЙ мөр ч өмнөх хоногтой
+     харьцуулна — (202 − 180) / 180 × 100 = 12.22 → "+12.2%" (ГАРААР). ТХ-ийн тоо by_day-д алга → "—". */
+  check('BE38. ТЭНЦЭЭГҮЙ: by_day-ийн failed-аас +12.2% ба харьцуулсан хоногоо хэлнэ',
+    ir[1][3] === '+12.2%' && ir[1][4] === 'up' && /өмнөх бүртгэлтэй хоногтой харьцуулбал \(2026-09-20\)/.test(ir[1][5]),
+    JSON.stringify([ir[1][3], ir[1][5]]));
+  check('BE38. "—" мөр (ТХ) БАЙХГҮЙ харьцуулалтыг мэдэгдэхгүй',
+    ir[2][3] === '—' && !/харьцуулбал/.test(ir[2][5]) && /харьцуулах өгөгдөл алга/.test(ir[2][5]),
+    JSON.stringify(ir[2][5]));
+  const irNoF = runInsp(toI(Object.assign({}, INSP_LIVE,
+    { by_day: INSP_LIVE.by_day.map((d) => ({ date: d.date, count: d.count })) }))).SEC.road.kpis;
+  check('BE38. by_day-д failed алга → ТЭНЦЭЭГҮЙ "—" + "харьцуулах өгөгдөл алга" (0 зохиохгүй)',
+    irNoF[1][3] === '—' && !/харьцуулбал/.test(irNoF[1][5]) && /харьцуулах өгөгдөл алга/.test(irNoF[1][5]),
+    JSON.stringify([irNoF[1][3], irNoF[1][5]]));
   check('BE38. Огноо ("Хоногийн мэдээ") мөр БҮРД хэвээр — 3 мөр гурвуулаа',
     ir.every((r) => String(r[5] || '').includes('Хоногийн мэдээ: 2026-09-21')),
     JSON.stringify(ir.map((r) => r[5])));
@@ -10513,19 +10521,37 @@ function groupWK() {
   const rN = L.weekSectorReport(PAXR, ['air', 'rail', 'road'], null);
   check('WK5b. Цоорхойгүй үед авто тээвэр нийлбэрт орно: 450 → 1100 (+144.4%), gapKeys хоосон',
     rN.weeks[0].value === 450 && rN.total === 1100 && Math.abs(rN.wow - (1100 / 450 - 1) * 100) < 1e-9 && rN.gapKeys.length === 0);
-  /* 2026-10-26 регресс: цоорхойтой долоо хоног «—» хоосон харагдаж байв → бусад салбарын нийлбэр «≥»
-       10.05–10.11  агаар 100 + төмөр зам 300 = 400 (авто цоорхой) → partial 400, keys [air, rail] */
-  check('WK5c. Цоорхойтой долоо хоног: value null хэвээр, partial = 100 + 300 = 400 (авто хасагдсан); бүтэн долоо хоногт partial алга',
-    rG.weeks[0].value === null && rG.weeks[0].partial === 400 && JSON.stringify(rG.weeks[0].partialKeys) === '["air","rail"]' &&
-    rG.weeks[1].partial === null && rN.weeks[0].partial === null, JSON.stringify(rG.weeks));
+  /* 2026-10-26 регресс: цоорхойтой долоо хоног «—» хоосон харагдаж байв → «≥» доод хязгаар.
+     2026-10-27 регресс: 09.14–09.20-нд авто тээврийн 7 хоногоос 5 нь бүтэн (21,298) байхад бүхэлд нь
+     хасаж «≥82.2K» гэж харуулж байв → бүртгэгдсэн бүх утга орно:
+       10.05–10.11  агаар 100 + төмөр зам 300 + авто 50 (10.07–10.09 цоорхой, 3 хоног) → partial 450,
+       бүтэн орсон салбар [air, rail], parts.road = {50, gap, 3 хоног} */
+  const pr = rG.weeks[0].parts.find((p) => p.key === 'road');
+  check('WK5c. Цоорхойтой долоо хоног: value null хэвээр, partial = 100 + 300 + 50 = 450 (авто тээврийн бүртгэгдсэн хэсэг ОРНО); бүтэн долоо хоногт partial алга',
+    rG.weeks[0].value === null && rG.weeks[0].partial === 450 && JSON.stringify(rG.weeks[0].partialKeys) === '["air","rail"]' &&
+    !!pr && pr.value === 50 && pr.gap === true && pr.gapDays === 3 &&
+    rG.weeks[1].partial === null && rN.weeks[0].partial === null && rG.weeks[1].parts.every((p) => !p.gap && p.gapDays === 0), JSON.stringify(rG.weeks));
+  /* Цоорхойн хоногийн тоо долоо хоногоор хязгаарлагдана: 08.22–09.15 цоорхой → 09.14–09.20 = 2 хоног, 09.07–09.13 = 7 */
+  const PXL = Object.assign({}, PAXR, { weeks: [wkR('2026-09-07', '2026-09-13', 100, 300, 128), wkR('2026-09-14', '2026-09-20', 100, 300, 21298)] });
+  const rL2 = L.weekSectorReport(PXL, ['air', 'rail', 'road'], { road: [{ from: '2026-08-22', to: '2026-09-15' }] });
+  check('WK5g. gapDays: 08.22–09.15 цоорхой → 09.07 долоо хоногт 7, 09.14 долоо хоногт 2; partial = 528 / 21,698',
+    rL2.weeks[0].parts[2].gapDays === 7 && rL2.weeks[1].parts[2].gapDays === 2 && rL2.weeks[0].partial === 528 && rL2.weeks[1].partial === 21698,
+    JSON.stringify(rL2.weeks.map((x) => [x.partial, x.parts])));
   /* 2026-10-26 регресс: max_date 10.25 ч төмөр зам 10.22 хүртэл → тайлан 10.18-нд зогссоныг ИЛ хэлнэ */
   const lg = L.weekLag('2026-10-18', '2026-10-25', ['air', 'road', 'rail'], { air: '2026-10-25', road: '2026-10-25', rail: '2026-10-22' });
   check('WK5d. weekLag: 10.19–10.25 долоо хоногийг зөвхөн төмөр зам (10.22) бүрдүүлээгүй; max_date = week_end бол null',
     lg && lg.from === '2026-10-19' && lg.to === '2026-10-25' && JSON.stringify(lg.sectors) === '[{"key":"rail","last":"2026-10-22"}]' &&
     L.weekLag('2026-10-18', '2026-10-18', ['air'], { air: '2026-10-18' }) === null &&
     L.weekLag('2026-10-18', '2026-10-25', ['air'], { air: '2026-10-25' }) === null, JSON.stringify(lg));
-  const rL = L.weekSectorReport(Object.assign({}, PAX, { max_date: '2026-10-21' }), ['air', 'rail'], null, { air: '2026-10-21', rail: '2026-10-20' });
-  check('WK5e. weekSectorReport.lag: агаар 10.21, төмөр зам 10.20 → хоёулаа 10.25-аас өмнө', !!rL.lag && rL.lag.sectors.length === 2, JSON.stringify(rL.lag));
+  const rL = L.weekSectorReport(Object.assign({}, PAX, { max_date: '2026-10-25' }), ['air', 'rail'], null, { air: '2026-10-25', rail: '2026-10-20' });
+  check('WK5e. weekSectorReport.lag: агаар 10.25 хүртэл (дараагийн долоо хоног бүрэн), төмөр зам 10.20 → зөвхөн төмөр зам',
+    !!rL.lag && JSON.stringify(rL.lag.sectors) === '[{"key":"rail","last":"2026-10-20"}]', JSON.stringify(rL.lag));
+  /* 2026-10-27 регресс: Да 10.26-нд «бүгд 10.25 хүртэл ирсэн тул 10.26–11.01 бүрдээгүй» — явагдаж буй
+     долоо хоногийг хоцрогдол гэж хэлж байв. Аль ч салбар дараагийн долоо хоногийг бүрэн хамраагүй бол null. */
+  const rIn = L.weekSectorReport(Object.assign({}, PAX, { max_date: '2026-10-21' }), ['air', 'rail'], null, { air: '2026-10-21', rail: '2026-10-20' });
+  check('WK5h. Явагдаж буй долоо хоног (max_date 10.21 < 10.25) → lag алга; амьд 10.26 тохиолдол ч null',
+    rIn.lag === null && L.weekLag('2026-10-25', '2026-10-26', ['air', 'road', 'rail'], { air: '2026-10-26', road: '2026-10-26', rail: '2026-10-25' }) === null,
+    JSON.stringify(rIn.lag));
   check('WK5f. planYearText: «{year} оны төлөвлөгөө» → «2026 оны төлөвлөгөө»; он заагаагүй текст хэвээр; хоосон → ""',
     L.planYearText('{year} оны төлөвлөгөө', 2026) === '2026 оны төлөвлөгөө' && L.planYearText('Төлөвлөгөө', 2026) === 'Төлөвлөгөө' &&
     L.planYearText(null, 2026) === '');
@@ -10601,13 +10627,58 @@ function groupWK() {
     months: [{}], weekly: { passengers: Object.assign(PXG, { max_date: '2026-10-25' }), freight_tonnes: CARGO } };
   const RQ3 = Object.assign({}, REGQ, { w2p: ['air', 'rail', 'road'], w2pb: ['air', 'rail', 'road'], w2px: ['air', 'rail', 'road'] });
   const PG = BW(APIG, RQ3, AIR)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
-  check('WK14a. Дутуу долоо хоног: «≥400» тасархай багана, tooltip нь орсон/дутуу салбарыг нэрлэнэ; дундаж = зөвхөн бүтэн (1,100); оргил = 10.12',
-    PG.bars[0].value === '≥400' && PG.bars[0].partial === true && /dashed/.test(PG.bars[0].barStyle) && parseFloat(PG.bars[0].heightPct) > 0 &&
+  /* 2026-10-27 регресс: тунгалаг тасархай «≥» багана ХООСОН мэт уншигдаж байв → салбараар давхарласан
+     бүтэн өнгөтэй хэсэг (агаар 25%, төмөр зам 75%) + оройд авто тээврийн зураастай хэсэг */
+  const sg0 = PG.bars[0].segs;
+  check('WK14a. Дутуу долоо хоног: «≥400» багана тунгалаг БИШ — агаар 25% + төмөр зам 75% бүтэн өнгө, авто зураастай (≥8px) оройд; tooltip нь орсон/дутуу салбарыг нэрлэнэ; дундаж = зөвхөн бүтэн (1,100); оргил = 10.12',
+    PG.bars[0].value === '≥400' && PG.bars[0].partial === true && PG.bars[0].barStyle === '' && parseFloat(PG.bars[0].heightPct) > 0 &&
+    sg0.length === 3 && sg0[0].h === '25.00%' && sg0[0].style === 'background:#1;' && sg0[1].h === '75.00%' && sg0[1].style === 'background:#3;' &&
+    sg0[2].dutuu && /repeating-linear-gradient/.test(sg0[2].style) && /min-height:8px/.test(sg0[2].style) &&
+    sg0[0].tip === '10.05–10.11 · Агаарын тээвэр — 100 хүн' && sg0[2].tip === '10.05–10.11 · Авто зам — мэдээлэл алга' &&
+    !/color:var\(--ink3\)/.test(PG.bars[0].valueStyle) &&
     /Агаарын тээвэр \+ Төмөр зам/.test(PG.bars[0].tip) && /Авто зам: мэдээ дутуу/.test(PG.bars[0].tip) &&
     /дундаж 1[,.]100/.test(PG.avgRef.label) && PG.bars[1].isPeak && !PG.bars[0].isPeak && PG.bars[1].barStyle === '',
     JSON.stringify(PG.bars) + ' ' + PG.avgRef.label);
   check('WK14b. Хоцрогдол: «Төмөр зам 10.22 хүртэл ирсэн тул 10.19–10.25 долоо хоног бүрдээгүй» тайлбарт',
     /Төмөр зам 10\.22 хүртэл ирсэн тул 10\.19–10\.25/.test(PG.airOnlyNote), PG.airOnlyNote);
+  check('WK14c. Легенд: салбарын өнгө (агаар · авто · төмөр зам) + дутуу хэсэг байвал «мэдээ дутуу» зураас; бүтэн долоо хоногийн багана segs-ийн нийлбэр 100%',
+    JSON.stringify(PG.legend.map((x) => x.label)) === '["Агаарын тээвэр","Авто зам","Төмөр зам","мэдээ дутуу (эх сурвалжийн цоорхой)"]' &&
+    /repeating-linear-gradient/.test(PG.legend[3].sw) && PG.bars[1].segs.length === 3 &&
+    Math.abs(PG.bars[1].segs.reduce((t, x) => t + parseFloat(x.h), 0) - 100) < 0.05 &&
+    !P.legend.some((x) => /дутуу/.test(x.label)) && JSON.stringify(P.legend.map((x) => x.label)) === '["Агаарын тээвэр","Төмөр зам"]' &&
+    O.legend.length === 0 && O.bars.every((b) => b.segs.length === 0), JSON.stringify([PG.legend, P.legend, O.legend]));
+  /* Авто тээврийн БҮРТГЭГДСЭН хэсэгтэй цоорхойтой долоо хоног (road history coverage.gaps) */
+  const ctxG = (api, regq) => Object.assign(ctx(api, regq), { _roadPaxAll: { coverage: { gaps: [{ from: '2026-10-07', to: '2026-10-09' }] } } });
+  const BWG = (api, regq) => mk(['x'], weekAxis, (p, x) => x, { accessor: () => (f) => f.pax }, G, SECTORS, GLYPH, NEON, SECTOR_DELTA, L.stPct, AIR, CPTWK, FSO).call(ctxG(api, regq));
+  const APIR = Object.assign({}, APIG, { weekly: { passengers: Object.assign({}, PAXR, { max_date: '2026-10-18' }), freight_tonnes: CARGO } });
+  const PR = BWG(APIR, RQ3)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
+  const rs = PR.bars[0].segs.find((x) => /Авто зам/.test(x.tip));
+  check('WK14d. Цоорхойтой ч бүртгэгдсэн авто тээвэр: «≥450», зураастай хэсэг «Авто зам — 50 хүн · 7-оос 3 хоногт мэдээ дутуу», хамгийн дээр',
+    PR.bars[0].value === '≥450' && !!rs && rs.dutuu && rs.tip === '10.05–10.11 · Авто зам — 50 хүн · 7-оос 3 хоногт мэдээ дутуу (эх сурвалжийн цоорхой)' &&
+    PR.bars[0].segs[PR.bars[0].segs.length - 1] === rs, JSON.stringify(PR.bars[0]));
+  /* 2026-10-27 регресс: «Тээвэрлэгч 0 · мэдээлэл алга» — агаарын датасэтэд компани бүхий мөр байхад */
+  let wfd = null;
+  const BWX = (extra) => mk(['x'], weekAxis, (p, x) => x, { accessor: () => (f) => f.pax }, G, SECTORS, GLYPH, NEON, SECTOR_DELTA, L.stPct, AIR, CPTWK, FSO)
+    .call(Object.assign(ctx(API, REGQ), extra));
+  const PX = BWX({ weekFlightsDistinct: (a, b, t) => { wfd = [a, b, t]; return 14; } })('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
+  const PX0 = BWX({ weekFlightsDistinct: () => null })('cargo', WD('Чиглэл'), 'w2c', 'w2cx');
+  check('WK22. Тээвэрлэгч = тайлангийн ЯГ ТЭР долоо хоногийн (10.12–10.18) агаарын компанийн тоо «14 · Агаарын тээвэр»',
+    PX.stats[3].v === '14' && PX.stats[3].mockTag === ' · Агаарын тээвэр' && JSON.stringify(wfd) === '["2026-10-12","2026-10-18","pax"]',
+    JSON.stringify([PX.stats[3], wfd]));
+  check('WK22. Нислэг алга → «—» · мэдээлэл алга («0» тэг мэт биш); харьцуулалтын холбогдоогүй мөр (авто) «—»',
+    PX0.stats[3].v === '—' && /мэдээлэл алга/.test(PX0.stats[3].mockTag) && P.stats[3].v === '—' && dl('road').value === '—' &&
+    !P.stats.some((x) => x.v === '0'), JSON.stringify([PX0.stats[3], P.stats[3], dl('road')]));
+  const mWF = src.match(/\n  weekFlightsDistinct\(from,to,wt\)\{([\s\S]*?)\n  \}\n/);
+  if (!mWF) bad('WK23. weekFlightsDistinct() олдсонгүй');
+  else {
+    const wf = new Function('from', 'to', 'wt', mWF[1]);
+    const FC = { _flightsCache: { 2026: [
+      { month: 10, day: 12, carr: 'MIAT', pax: 10, city: 'Сөүл', cargoKg: 5 }, { month: 10, day: 13, carr: 'MIAT', pax: 3, city: 'Токио', cargoKg: 0 },
+      { month: 10, day: 18, carr: 'Hunnu', pax: 0, city: 'Бээжин', cargoKg: 0, mailKg: 2 }, { month: 10, day: 19, carr: 'X', pax: 5, city: 'Y', cargoKg: 9 }] } };
+    check('WK23. weekFlightsDistinct: 10.12–10.18 — зорчигчтой компани 1 (MIAT; Hunnu 0 зорчигч, X цонхноос гадна), ачаа/шуудантай хот 2; жилийн cache алга → null',
+      wf.call(FC, '2026-10-12', '2026-10-18', 'pax') === 1 && wf.call(FC, '2026-10-12', '2026-10-18', 'cargo') === 2 &&
+      wf.call(FC, '2025-12-29', '2026-01-04', 'pax') === null && wf.call({}, '2026-10-12', '2026-10-18', 'pax') === null);
+  }
   check('WK15. Утгын тохиргоо (агаарын хэмжигдэхүүн) сонгосон бол нэгтгэлийн горим ИДЭВХГҮЙ (хуучин зам)',
     S.bars.length === 7 && !/долоо хоногийн эхний өдөр/.test(S.base));
 
@@ -10651,6 +10722,11 @@ function groupWK() {
     /\{from\}/.test(CJ.site.week.sectors_note || '') && /\{names\}/.test(CJ.site.week.sectors_note) && /\{names\}/.test(CJ.site.week.stale_note || '') &&
     !!CJ.site.week.axis_weeks && !!CJ.ui.preview.weekly);
   check('WK21. Темплейт: 7 хоногийн багана бүрт <title> tooltip (HV)', (idx.match(/barGrow \.6s var\(--ease\) both;(?:\{\{ wb\.barStyle \}\})?"><title>\{\{ wb\.tip \}\}<\/title>/g) || []).length === 2);
+  check('WK21. Темплейт: салбарын хэсэг бүр (wb.segs) өөрийн <title>-тэй, багана column-reverse; легенд хоёр графикт',
+    (idx.match(/<title>\{\{ wb\.tip \}\}<\/title><sc-for list="\{\{ wb\.segs \}\}" as="sg"[^>]*><div style="flex:0 1 \{\{ sg\.h \}\};min-height:0;\{\{ sg\.style \}\}"><title>\{\{ sg\.tip \}\}<\/title><\/div><\/sc-for>/g) || []).length === 2 &&
+    (idx.match(/overflow:hidden;display:flex;flex-direction:column-reverse;background:linear-gradient\(180deg,\{\{ wb\.color \}\}/g) || []).length === 2 &&
+    /<sc-for list="\{\{ weekPaxLegend \}\}"/.test(idx) && /<sc-for list="\{\{ weekCargoLegend \}\}"/.test(idx) &&
+    !!CJ.site.week.legend_gap && /\{n\}/.test(CJ.site.week.seg_gap || ''));
 }
 
 /* ── HR. Нүүр ↔ датасэтийн тулгалт (2026-10-26) ──────────────────────────
@@ -10748,6 +10824,145 @@ function groupHR() {
     /<sc-if value="\{\{ detail\.dqAnyDim \}\}">\s*<div class="eh-g4 eh-g-2c"[^>]*>\s*<sc-for list="\{\{ detail\.dims \}\}"/.test(tpl));
 }
 
+/* ── HE. Нүүр — мэдээ БАЙХАД хоосон харагдахгүй (2026-10-27) ─────────────────
+   Хэрэглэгч: «энэ хугацааны зорчигчийн мэдээ байхад яагаад нүүр хуудсанд хоосон харагдаж
+   байна … энгийн зөрчил давтагдаад бүрэн засагдахгүй байна». Шалтгаан: (1) авто тээврийн
+   цоорхойтой 7 хоногийн «≥» багана тунгалаг тасархай хүрээ — агаар/төмөр замын бүтэн мэдээ
+   ХООСОН мэт уншигдана; (2) «Тээвэрлэгч 0 · мэдээлэл алга» — агаарын датасэтэд компани бүхий
+   мөр байхад; (3) 04 «ТЭНЦЭЭГҮЙ» өмнөх хоногийн тоо by_day-д байхад «харьцуулах өгөгдөл алга»;
+   (4) 07-д шинэ датасэтүүд (авто зорчигч, ачаа) огт ороогүй, төмөр замын зорчигч «2026-09».
+   Энэ бүлэг нүүрийг ЖИНХЭНЭ хөтчөөр фикстурын өгөгдөлтэй (?fx=1) зурж, мэдээтэй салбар/
+   хугацаа хоосон харагдвал НЭРЛЭЖ унана — шинэ хэсэг, шинэ датасэт нэмэхэд ч хамгаална. */
+async function groupHE() {
+  group('HE. Нүүр — мэдээ байхад хоосон харагдахгүй (багана · статистик · 07 · 04)');
+  const src = dcScript();
+  /* HE1. recentRows — каталогийн бүх амьд эх датасэт 07-д АВТОМАТААР, нэгтгэл (derived) үгүй */
+  const mR = src.match(/\nfunction recentRows\(recent,datasets,sectors\)\{[\s\S]*?\n\}\n/);
+  if (!mR) bad('HE1. recentRows() олдсонгүй');
+  else {
+    const recentRows = new Function(mR[0] + '\nreturn recentRows;')();
+    const SEC = { air: {}, rail: {}, road: {} };
+    const RC = [{ title: 'Агаар', sector: 'air', source: 'flights' }, { title: 'Вагон', sector: 'rail', source: 'railWagon' }];
+    const DS = [{ sector: 'air', name: 'Агаар', source: 'flights' }, { sector: 'rail', name: 'Вагон', source: 'railWagon' },
+      { sector: 'road', name: 'Авто зорчигч', agency: 'АТҮТ', fmt: 'API', source: 'roadPax' },
+      { sector: 'rail', name: 'Ачаа нэгтгэл', source: 'railFreightAll', derived: true },
+      { sector: 'total', name: 'Салбарын нэгтгэл', source: 'sectorTotal', derived: true }, { sector: 'rail', name: 'Хоосон' }];
+    const rr = recentRows(RC, DS, SEC);
+    check('HE1. 07 = RECENT + каталогийн бусад амьд эх датасэт (авто зорчигч нэмэгдэнэ); нэгтгэл (derived), source-гүй, давхардал ОРОХГҮЙ',
+      rr.length === 3 && rr[2].source === 'roadPax' && rr[2].title === 'Авто зорчигч' && rr[2].agency === 'АТҮТ' && rr[2].src === 'API' &&
+      rr[2].dataset === 'Авто зорчигч' && rr[2].date === '' && rr[2].bind.date === 'feedUpdated', JSON.stringify(rr));
+    /* Бодит DATASETS: эх датасэт бүр 07-д орох эрхтэй, нэгтгэлүүд derived */
+    const dsBlock = (src.match(/\nconst DATASETS=\[([\s\S]*?)\n\];/) || [])[1] || '';
+    const recBlock = (src.match(/const RECENT = \[([\s\S]*?)\n\];/) || [])[1] || '';
+    const dsSrc = [...dsBlock.matchAll(/source:'(\w+)'/g)].map((m) => m[1]);
+    const derived = [...dsBlock.matchAll(/source:'(\w+)'[^\n]*derived:true/g)].map((m) => m[1]);
+    const recSrc = [...recBlock.matchAll(/source:'(\w+)'/g)].map((m) => m[1]);
+    check('HE1. Бодит каталог: railFreightAll ба sectorTotal нь derived; RECENT-ийн 4 мөр бүгд source-той (агаар flights)',
+      dsSrc.length >= 9 && JSON.stringify(derived.sort()) === '["railFreightAll","sectorTotal"]' &&
+      JSON.stringify(recSrc.slice().sort()) === '["flights","railPax","railWagon","roadInspect"]', JSON.stringify({ dsSrc, derived, recSrc }));
+    check('HE1. buildRecent: recentRows(RECENT,DATASETS,SECTORS), эрэмбийн дараа RECENT_MAX (6) мөр; railPax-ийн огноо нэгтгэлийн rail.passengers_last',
+      /return recentRows\(RECENT,DATASETS,SECTORS\)\.map\(/.test(src) && /\.sort\(\(a,b\)=>b\.sortKey\.localeCompare\(a\.sortKey\)\)\.slice\(0,RECENT_MAX\);/.test(src) &&
+      /const RECENT_MAX=6;/.test(src) && /DAY_OF=\{railPax:\['rail','passengers_last'\]\}/.test(src));
+  }
+  /* HE2. 04 «ТЭНЦЭЭГҮЙ» — by_day-д тэнцээгүйн тоо байвал өмнөх хоногтой харьцуулна */
+  check('HE2. ТЭНЦЭЭГҮЙ: by_day-ийн сүүлийн хоёр хоногийн failed-аас fDelta (null → NaN, 0 зохиохгүй)',
+    /const fNum=d=>\(d&&d\.failed!=null&&d\.failed!==''\)\?Number\(d\.failed\):NaN;/.test(src) &&
+    /rows\.push\(\[kl\('ТЭНЦЭЭГҮЙ',1\),fmtNum\(w\.failed\),sh,fDelta,fDir,fNote,/.test(src));
+  /* HE2b. EMP: эх сурвалжгүй салбарын эрэмбэд «0 → 0» (жинхэнэ тэг мэт) биш «—»; 7 хоногийн статистикийн сүүлийн fallback «—» */
+  check('HE2b. EMP: r06 эрэмбийн «эхлэл → төгсгөл» эх сурвалжгүй бол «—»; 7 хоногийн статистик холбогдоогүй үед «0» биш «—»',
+    /startEnd:liveI06\(r\.key\)\?r\.start\+' → '\+r\.end:'—',/.test(src) && !/isPct\?'—':'0'/.test(src));
+  /* HE3. Жинхэнэ хөтөч — нүүр ?fx=1. Фикстурт авто тээврийн цоорхой ТАРЬЖ (2 дахь долоо хоног бүтэн,
+     3 дахь нь 2 хоног) хэрэглэгчийн харсан ЯГ тэр төлөвийг зурна. */
+  const probe = async (d, w) => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const v = f(); if (v) return v; await sleep(250); } return null; };
+    const chartOf = (id) => { const t = d.querySelector('[data-eh-card="' + id + '"][data-eh-field="title"]'); let c = t; while (c && !c.querySelector('[style*="barGrow"]')) c = c.parentElement; return c; };
+    const ready = () => { const c = chartOf('w2p'); return c && !/\{\{/.test(c.innerText) && /≥/.test(c.innerText) &&
+      [...c.querySelectorAll('[style*="barGrow"]')].some((b) => b.querySelector('div[style*="flex: 0 1"]')); };
+    const ok = await until(ready, 60000);
+    await sleep(1500);
+    const out = { ready: !!ok, gap: w.__fxGap || null, charts: {} };
+    for (const id of ['w2p', 'w2c']) {
+      const c = chartOf(id);
+      if (!c) { out.charts[id] = null; continue; }
+      const cols = [...c.querySelectorAll('[style*="barGrow"]')];
+      const valRow = cols.length ? cols[0].closest('.eh-wk').previousElementSibling : null;
+      const vals = valRow ? [...valRow.querySelectorAll('.eh-wk-full')].map((x) => x.textContent.trim()) : [];
+      out.charts[id] = cols.map((b, i) => {
+        const cs = w.getComputedStyle(b);
+        const segs = [...b.children].filter((x) => x.tagName === 'DIV').map((sg) => { const st = w.getComputedStyle(sg);
+          return { h: Math.round(sg.getBoundingClientRect().height * 10) / 10, hatch: /repeating-linear-gradient/.test(st.backgroundImage),
+            solid: st.backgroundImage === 'none' && !/rgba\(0, 0, 0, 0\)|transparent/.test(st.backgroundColor),
+            tip: ((sg.querySelector('title') || {}).textContent || '').trim() }; });
+        return { v: vals[i] || '', h: Math.round(b.getBoundingClientRect().height), dashed: cs.borderTopStyle === 'dashed', segs };
+      });
+      out[id + 'Leg'] = [...c.querySelectorAll('.eh-wk-leg span')].map((x) => x.textContent.trim());
+    }
+    const sec = (n) => { const h = d.getElementById('sec-' + n); if (!h) return ''; let t = '', e = h.nextElementSibling, k = 0;
+      while (e && !/^sec-\d\d$/.test(e.id || '') && k++ < 60) { t += ' ' + (e.innerText || ''); e = e.nextElementSibling; } return t.replace(/\s+/g, ' '); };
+    out.sec02 = sec('02'); out.sec04 = sec('04'); out.sec07 = sec('07');
+    const body = (d.body.innerText || '').replace(/\s+/g, ' ');
+    out.zeroNoData = body.match(/(?:^|\s)0 · мэдээлэл алга.{0,30}/g) || [];
+    const h7 = d.getElementById('sec-07');
+    let g7 = h7; for (let k = 0; g7 && k < 4 && !(g7.querySelector && g7.querySelector('button')); k++) g7 = g7.nextElementSibling;
+    out.recent = g7 ? [...g7.querySelectorAll('button')].map((x) => x.innerText.replace(/\s+/g, ' ').trim()) : [];
+    out.noData = [];
+    ['01', '02', '04', '05', '06', '07'].forEach((n) => { const t = sec(n); for (let i = t.indexOf('мэдээлэл алга'); i >= 0; i = t.indexOf('мэдээлэл алга', i + 1)) out.noData.push(n + ': ' + t.slice(Math.max(0, i - 80), i + 13).trim()); });
+    return out;
+  };
+  const FX = read('tests/lib/feed-fixtures.js');
+  const PATCH = "window.__fxPatch=function(u,j){\n" +
+    "  if(u.indexOf('/api/sectors/road/passengers/history')>=0&&j&&j.weekly&&j.weekly.weeks&&j.weekly.weeks.length>3){\n" +
+    "    var ws=j.weekly.weeks, a=ws[1].week_start, b=new Date(Date.parse(ws[2].week_start)+864e5).toISOString().slice(0,10);\n" +
+    "    j.coverage={threshold:100,rule:'HE test',gaps:[{from:a,to:b,days:9,passengers:5}]}; window.__fxGap={from:a,to:b};\n" +
+    "  }\n  return j;\n};\n";
+  const srv = serve();
+  const prevSrc = PROBE_SRC, prevOv = SERVE_OVERRIDE;
+  PROBE_SRC = '/index.html?fx=1';
+  SERVE_OVERRIDE = Object.assign({}, prevOv || {}, { '/tests/lib/feed-fixtures.js': PATCH + FX });
+  let R;
+  try { R = await runProbe('async function(d,w){return (' + probe.toString() + ')(d,w);}', 120000); }
+  finally { PROBE_SRC = prevSrc; SERVE_OVERRIDE = prevOv; srv.close(); }
+  if (!R || R.__err) { bad('HE3. Нүүрний probe', JSON.stringify(R)); return; }
+  const P = R.charts.w2p || [], C = R.charts.w2c || [];
+  const num = (t) => { const m = String(t).match(/—\s*([\d,]+)\s/); return m ? +m[1].replace(/,/g, '') : null; };
+  const lbl = (v) => +String(v).replace(/[≥,]/g, '');
+  /* HE3a. Мэдээтэй долоо хоног бүр ХАРАГДАХ өнгөтэй хэсэгтэй — тунгалаг тасархай хүрээ биш */
+  const hollow = P.concat(C).filter((b) => b.v && b.v !== '—' && !(b.h > 0 && !b.dashed && b.segs.some((x) => x.solid && x.h >= 1)));
+  check('HE3a. 7 хоногийн тайлан: мэдээтэй багана бүр бүтэн өнгөтэй салбарын хэсэгтэй (хоосон/тунгалаг харагдахгүй) — зорчигч 8, ачаа 8',
+    R.ready && P.length === 8 && C.length === 8 && hollow.length === 0, JSON.stringify(hollow).slice(0, 600));
+  /* HE3b. Цоорхой тарьсан 2 долоо хоног: «≥», оройд зураастай авто тээвэр, tooltip «мэдээ дутуу»; ≥ дүн = хэсгүүдийн нийлбэр */
+  const part = P.filter((b) => /^≥/.test(b.v));
+  const partBad = part.filter((b) => { const top = b.segs[b.segs.length - 1];
+    return !(top && top.hatch && top.h >= 7.5 && /Авто тээвэр — [\d,]+ хүн · 7-оос \d хоногт мэдээ дутуу/.test(top.tip) &&
+      b.segs.reduce((t, x) => t + (num(x.tip) || 0), 0) === lbl(b.v)); });
+  check('HE3b. Цоорхойтой 7 хоног (тарьсан ' + (R.gap ? R.gap.from + '–' + R.gap.to : '?') + '): «≥» багана 2, оройд зураастай авто тээвэр «7-оос N хоногт мэдээ дутуу», «≥» = бүртгэгдсэн хэсгүүдийн нийлбэр',
+    part.length === 2 && partBad.length === 0, JSON.stringify(part).slice(0, 800));
+  /* HE3c. HV: бүтэн долоо хоногийн хэсгүүдийн нийлбэр = баганын шошго (зорчигч, ачаа) */
+  const sumBad = P.concat(C).filter((b) => /^[\d,]+$/.test(b.v) && b.segs.reduce((t, x) => t + (num(x.tip) || 0), 0) !== lbl(b.v));
+  check('HE3c. Бүтэн долоо хоногийн салбарын хэсгүүдийн нийлбэр = баганын дүн (tooltip ↔ шошго)', sumBad.length === 0, JSON.stringify(sumBad).slice(0, 600));
+  check('HE3d. Легенд: зорчигч — салбарууд + «мэдээ дутуу»; ачаа — цоорхойгүй тул «мэдээ дутуу» алга',
+    ['Агаарын тээвэр', 'Авто тээвэр', 'Төмөр зам', 'мэдээ дутуу (эх сурвалжийн цоорхой)'].every((x) => R.w2pLeg.includes(x)) &&
+    R.w2cLeg.includes('Төмөр зам') && !R.w2cLeg.some((x) => /дутуу/.test(x)), JSON.stringify([R.w2pLeg, R.w2cLeg]));
+  check('HE3e. «Тээвэрлэгч» / «Чиглэл» — тухайн 7 хоногийн агаарын нислэгээс тоо («0 · мэдээлэл алга» биш)',
+    /ТЭЭВЭРЛЭГЧ [1-9]\d* · Агаарын тээвэр/i.test(R.sec02) && /ЧИГЛЭЛ [1-9]\d* · Агаарын тээвэр/i.test(R.sec02),
+    (R.sec02.match(/(ТЭЭВЭРЛЭГЧ|ЧИГЛЭЛ).{0,40}/gi) || []).join(' | '));
+  check('HE3f. EMP: нүүрний аль ч хэсэгт «0 · мэдээлэл алга» (тэг мэт хоосон) алга', R.zeroNoData.length === 0, JSON.stringify(R.zeroNoData));
+  check('HE3g. 04 «ТЭНЦЭЭГҮЙ»: by_day-ийн өмнөх хоногтой харьцуулсан хувь («харьцуулах өгөгдөл алга» биш)',
+    /ТЭНЦЭЭГҮЙ 02 [\d,]+ [\d.]+% [▲▼•]? ?[+-]\d+\.\d% Хоногийн мэдээ: \S+ · өмнөх бүртгэлтэй хоногтой харьцуулбал/.test(R.sec04), (R.sec04.match(/ТЭНЦЭЭГҮЙ.{0,140}/) || [''])[0]);
+  const rp = R.recent.find((x) => /^Зорчигчийн галт тэрэгний мэдээ/.test(x)) || '';
+  check('HE3h. 07: ≤6 мөр, шинэ датасэт (авто зорчигч, УБТЗ ачаа) орсон, төмөр замын зорчигчийн огноо ӨДӨР хүртэл (2026-09 биш)',
+    R.recent.length > 0 && R.recent.length <= 6 && R.recent.some((x) => /^Авто тээврийн зорчигч тээврийн мэдээ/.test(x)) &&
+    R.recent.some((x) => /^Ачаа тээврийн мэдээ \(УБТЗ ХНН\)/.test(x)) && /\d{4}-\d{2}-\d{2}/.test(rp) &&
+    !R.recent.some((x) => /нэгтгэл/i.test(x)), JSON.stringify(R.recent));
+  /* HE3i. «мэдээлэл алга» зөвхөн эх сурвалж ҮНЭХЭЭР алга зүйлд: ус, далайн тээвэр · төлөвлөгөө · авто тээврийн ачаа.
+     Шинэ «мэдээлэл алга» гарвал (мэдээтэй салбар/карт хоосон) энд НЭРЛЭГДЭЖ унана. */
+  const ALLOW = /Ус, далайн|Усан зам|УСАН ЗАМ|төлөвлөгөө|АЧАА[^]*Авто тээвэр — — · $/i;
+  const extra = R.noData.filter((x) => !ALLOW.test(x.replace(/мэдээлэл алга$/, '')));
+  check('HE3i. Нүүрийн «мэдээлэл алга» зөвхөн эх сурвалжгүй зүйлд (ус/далай, төлөвлөгөө, авто ачаа) — ' + R.noData.length + ' газар',
+    R.noData.length > 0 && extra.length === 0, JSON.stringify(extra));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -10787,11 +11002,12 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=RI')) { await groupRI(); }
   else if (process.argv.includes('--only=HM')) { await groupHM(); }
   else if (process.argv.includes('--only=HR')) { groupHR(); }
+  else if (process.argv.includes('--only=HE')) { await groupHE(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHE(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
