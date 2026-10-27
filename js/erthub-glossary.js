@@ -408,10 +408,12 @@
        total.daily_pax_avg — keys салбарын (null бол weekly.sectors бүгд) нийлбэр ÷ 7; 02-р
          хэсгийн «Долоо хоногийн нийт зорчигч» (w2p)-тэй ИЖИЛ долоо хоног → sum = w2p-ийн нийт
        <салбар>.weekly_pax — тухайн салбарын долоо хоногийн нийлбэр (÷ 1)
-     Салбар бичлэггүй, эх сурвалжийн цоорхойтой (gaps {салбар:[{from,to}]} — w2p-тэй ижил
-     хасагдана) эсвэл 7-оос цөөн хоногтой бол нийлбэр нь ДООД хязгаар → lower, «≥», тэмдэглэлд
-     салбарыг нэрлэнэ. Долоо хоног бүхэлдээ бичлэггүй (missing), нэг ч салбар ороогүй, эсвэл
-     мэдэгдэхгүй метрик бол null — тоо ЗОХИОХГҮЙ («—»). T(түлхүүр, fallback) = site.hero. */
+     Салбар бичлэггүй (missing — 0 гэж тооцохгүй), эх сурвалжийн цоорхойтой (gaps
+     {салбар:[{from,to}]}) эсвэл 7-оос цөөн хоногтой (short) бол БҮРТГЭГДСЭН утгын нийлбэр нь
+     ДООД хязгаар → lower, «≥», тэмдэглэлд салбарыг нэрлэнэ — w2p-ийн «≥» баганатай (#106,
+     weekSectorReport.partial) ИЖИЛ дүрэм. Долоо хоног бүхэлдээ бичлэггүй (missing), нэг ч
+     салбар бүртгэлгүй, эсвэл мэдэгдэхгүй метрик бол null — тоо ЗОХИОХГҮЙ («—»).
+     T(түлхүүр, fallback) = site.hero. */
   function heroPax(apiRes, mk, keys, gaps, T) {
     var t = typeof T === 'function' ? T : function (k, fb) { return fb; };
     var W = apiRes && apiRes.status === 'ok' && apiRes.weekly && apiRes.weekly.passengers;
@@ -426,24 +428,28 @@
     var num = function (v) { return (v === null || v === undefined || v === '' || !isFinite(+v)) ? null : +v; };
     var gapIn = function (k) { return !!(gaps && Array.isArray(gaps[k]) && gaps[k].some(function (g) {
       return g && g.from <= x.week_end && g.to >= x.week_start; })); };
-    var used = [], miss = [], short = [], sum = 0;
+    /* used — бүтэн орсон (цоорхойгүй) салбар = w2p-ийн partialKeys; gap — цоорхойтой ч
+       бүртгэгдсэн хэсэг нь нийлбэрт орсон; short — цоорхойгүй ч 7-оос цөөн хоногтой */
+    var used = [], miss = [], gap = [], short = [], sum = 0;
     ks.forEach(function (k) {
-      var b = x.by_sector && x.by_sector[k], v = (b && !gapIn(k)) ? num(b.value) : null;
+      var b = x.by_sector && x.by_sector[k], v = b ? num(b.value) : null;
       if (v === null) { miss.push(k); return; }
-      sum += v; used.push(k);
+      sum += v;
+      if (gapIn(k)) { gap.push(k); return; }
+      used.push(k);
       if (b.days != null && +b.days < 7) short.push(k);
     });
-    if (!used.length) return null;
+    if (!used.length && !gap.length) return null;
     var names = {};
     (apiRes.sectors || []).forEach(function (s) { if (s && s.sector) names[s.sector] = s.name || s.sector; });
-    var off = miss.concat(short), value = Math.round(sum / per);
+    var off = ks.filter(function (k) { return used.indexOf(k) < 0 || short.indexOf(k) >= 0; }), value = Math.round(sum / per);
     var md = function (s) { return String(s || '').slice(5).replace('-', '.'); };
     var note = (per === 7 ? t('px_period', '{from}–{to} · 7 хоногийн дундаж') : t('px_period_week', '{from}–{to}'))
       .replace('{from}', md(x.week_start)).replace('{to}', md(x.week_end));
     if (off.length) note += ' · ' + t('px_partial', '{names} — мэдээлэл дутуу')
       .replace('{names}', off.map(function (k) { return names[k] || k; }).join(', '));
     return { value: value, sum: sum, per: per, lower: off.length > 0, display: (off.length ? '≥ ' : '') + value.toLocaleString('en-US'),
-      note: note, from: x.week_start, to: x.week_end, keys: ks, used: used, missing: miss, short: short };
+      note: note, from: x.week_start, to: x.week_end, keys: ks, used: used, missing: miss, gap: gap, short: short };
   }
 
   /* (5д) Авто тээврийн зорчигчийн САРЫН цуваа (/api/sectors/road/passengers/history) →

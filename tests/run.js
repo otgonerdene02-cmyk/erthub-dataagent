@@ -10870,12 +10870,14 @@ async function groupHP() {
   const odd2 = JSON.parse(JSON.stringify(DAYS)); odd2.air[0] = 1004;
   check('HP1. Бүхэл тоонд бөөрөнхийлнө (14,703 → 2,100 · 14,704 → 2,101)',
     G.heroPax(mkApi(odd), 'total.daily_pax_avg', KEYS, null).value === 2100 && G.heroPax(mkApi(odd2), 'total.daily_pax_avg', KEYS, null).value === 2101);
-  /* Авто тээврийн эх сурвалжийн цоорхой долоо хоногтой давхцвал — нийлбэрт ОРОХГҮЙ (w2p-тэй ижил), «≥» */
+  /* Авто тээврийн эх сурвалжийн цоорхой долоо хоногтой давхцвал — БҮРТГЭГДСЭН 5,600 нь доод
+     хязгаарт ОРНО (w2p-ийн «≥» багана, #106-тэй ижил), гэхдээ «≥» ба авто тээврийг нэрлэнэ */
   const GAPS = { road: [{ from: '2026-10-22', to: '2026-10-30' }] };
   const gp = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, GAPS);
-  check('HP1. Цоорхойтой авто тээвэр → (7,000 + 2,100) ÷ 7 = ≥ 1,300, авто тээврийг нэрлэнэ',
-    !!gp && gp.sum === 9100 && gp.value === 1300 && gp.lower === true && gp.display === '≥ 1,300' &&
-    gp.missing.join() === 'road' && gp.note === '10.19–10.25 · 7 хоногийн дундаж · Авто тээвэр — мэдээлэл дутуу', JSON.stringify(gp));
+  check('HP1. Цоорхойтой авто тээвэр → (7,000 + 5,600 + 2,100) ÷ 7 = ≥ 2,100, авто тээврийг нэрлэнэ',
+    !!gp && gp.sum === 14700 && gp.value === 2100 && gp.lower === true && gp.display === '≥ 2,100' &&
+    gp.gap.join() === 'road' && gp.used.join() === 'air,rail' && gp.missing.length === 0 &&
+    gp.note === '10.19–10.25 · 7 хоногийн дундаж · Авто тээвэр — мэдээлэл дутуу', JSON.stringify(gp));
   const gpOut = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, { road: [{ from: '2026-10-26', to: '2026-10-30' }] });
   check('HP1. Долоо хоногоос ГАДУУРХ цоорхой нөлөөлөхгүй', !!gpOut && gpOut.value === 2100 && gpOut.lower === false, JSON.stringify(gpOut));
   /* Төмөр зам 1 өдөр дутуу (6 хоног): 7,000 + 5,600 + 1,800 = 14,400 ÷ 7 = 2,057.1 → ≥ 2,057 */
@@ -10897,14 +10899,20 @@ async function groupHP() {
   check('HP1. road.weekly_pax → авто тээврийн 7 хоногийн нийлбэр 5,600 (÷ 1), шошго «10.19–10.25»',
     !!rw && rw.value === 5600 && rw.per === 1 && rw.note === '10.19–10.25' && rw.keys.join() === 'road', JSON.stringify(rw));
   const missW = mkApi(DAYS); missW.weekly.passengers.weeks[1].missing = true;
-  const allGap = { air: [{ from: '2026-10-01', to: '2026-10-31' }], road: [{ from: '2026-10-01', to: '2026-10-31' }], rail: [{ from: '2026-10-01', to: '2026-10-31' }] };
-  check('HP1. Тоо ЗОХИОХГҮЙ: долоо хоног missing / нэгтгэл алга / weekly алга / мэдэгдэхгүй метрик / бүх салбар цоорхой → null',
+  const noRec = mkApi(DAYS); noRec.weekly.passengers.weeks[1].by_sector = {};
+  check('HP1. Тоо ЗОХИОХГҮЙ: долоо хоног missing / нэгтгэл алга / weekly алга / мэдэгдэхгүй метрик / нэг ч салбар бүртгэлгүй → null',
     G.heroPax(missW, 'total.daily_pax_avg', KEYS, null) === null && G.heroPax(null, 'total.daily_pax_avg', KEYS, null) === null &&
     G.heroPax({ status: 'no_data' }, 'total.daily_pax_avg', KEYS, null) === null &&
     G.heroPax({ status: 'ok', months: [], weekly: null }, 'total.daily_pax_avg', KEYS, null) === null &&
     G.heroPax(mkApi(DAYS), 'air.flight_count_last_month', KEYS, null) === null && G.heroPax(mkApi(DAYS), null, KEYS, null) === null &&
     G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', ['water'], null) === null &&
-    G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, allGap) === null);
+    G.heroPax(noRec, 'total.daily_pax_avg', KEYS, null) === null);
+  /* Бүх салбар цоорхойтой ч бүртгэгдсэн утгатай → доод хязгаар (w2p-ийн «≥» багана ч 14,700) */
+  const allGap = { air: [{ from: '2026-10-01', to: '2026-10-31' }], road: [{ from: '2026-10-01', to: '2026-10-31' }], rail: [{ from: '2026-10-01', to: '2026-10-31' }] };
+  const ag = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, allGap);
+  check('HP1. Бүх салбар цоорхойтой → ≥ 2,100, гурвууланг нэрлэнэ, бүтэн орсон салбаргүй',
+    !!ag && ag.display === '≥ 2,100' && ag.used.length === 0 && ag.gap.join() === 'air,road,rail' &&
+    /Агаарын тээвэр, Авто тээвэр, Төмөр зам — мэдээлэл дутуу$/.test(ag.note), JSON.stringify(ag));
   const T = (k, fb) => ({ px_period: 'ZZ{from}/{to}ZZ', px_partial: 'YY{names}YY' })[k] || fb;
   const tt = G.heroPax(mkApi(DAYS), 'total.daily_pax_avg', KEYS, GAPS, T);
   check('HP1. Шошгын үг content.json site.hero.px_*-ээс (T)', !!tt && tt.note === 'ZZ10.19/10.25ZZ · YYАвто тээвэрYY', tt && tt.note);
@@ -10920,8 +10928,11 @@ async function groupHP() {
       w2.total === full.sum && w2.weekStart === full.from && w2.weekEnd === full.to, w2.total + ' vs ' + full.sum);
     const w2g = L.weekSectorReport(mkApi(DAYS).weekly.passengers, KEYS, GAPS);
     const lw = w2g.weeks[w2g.weeks.length - 1];
-    check('HP2. Цоорхойтой: w2p нийт null, «≥» багана (9,100) = hero-ийн нийлбэр, ижил салбар',
+    check('HP2. Цоорхойтой: w2p нийт null, «≥» багана (14,700) = hero-ийн нийлбэр, бүтэн орсон салбар ижил',
       w2g.total === null && lw.partial === gp.sum && lw.partialKeys.join() === gp.used.join(), JSON.stringify(lw));
+    const w2a = L.weekSectorReport(mkApi(DAYS).weekly.passengers, KEYS, allGap), la = w2a.weeks[w2a.weeks.length - 1];
+    check('HP2. Бүх салбар цоорхой: w2p «≥» багана = hero-ийн нийлбэр (14,700), бүтэн орсон салбаргүй',
+      w2a.total === null && la.partial === ag.sum && la.partialKeys.length === 0 && ag.used.length === 0, JSON.stringify(la));
   }
 
   /* HP3. Registry + content */
