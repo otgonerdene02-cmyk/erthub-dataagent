@@ -800,6 +800,7 @@
       </div>
       <div class="eh-ls-grid" style="display:grid;grid-template-columns:repeat({{ lsCols }},minmax(0,1fr));gap:0;">
         <sc-for list="{{ livestrip }}" as="ls" hint-placeholder-count="5">
+          <div class="eh-ls-cell" style="display:flex;flex-direction:column;min-width:0;">
           <button data-sector-tab="{{ ls.key }}" sc-camel-on-click="{{ ls.select }}" style="{{ ls.cellStyle }}">
             <div style="{{ ls.railStyle }}"></div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
@@ -819,6 +820,10 @@
             </div>
             <div class="eh-ls-foot" style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ink3);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px;" title="{{ ls.footText }}"><span data-eh-card="ls" data-eh-field="foot" style="{{ ls.footBaseStyle }}">{{ lsFoot }}</span><span style="{{ ls.footNoteStyle }}">{{ ls.footNote }}</span></div>
           </button>
+          <sc-if value="{{ ls.srcHas }}">
+            <a data-ls-src="{{ ls.key }}" href="{{ ls.srcHref }}" title="{{ ls.srcTitle }}" sc-camel-on-click="{{ ls.openSrc }}" style="display:block;margin:2px 10px 4px 13px;font-size:11px;font-weight:600;color:var(--accent,#3F6FD8);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ ls.srcLabel }}</a>
+          </sc-if>
+          </div>
         </sc-for>
       </div>
     </div>
@@ -1978,7 +1983,7 @@
     </div>
     <div class="eh-g-1c" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
       <sc-for list="{{ datasets }}" as="ds" hint-placeholder-count="6">
-        <button sc-camel-on-click="{{ ds.open }}" style="text-align:left;font-family:inherit;cursor:pointer;width:100%;background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.74));box-shadow:var(--shadow);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);backdrop-filter:blur(18px) saturate(1.3);border-left:3px solid {{ ds.color }};border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;transition:.16s var(--ease);" style-hover="border-color:{{ ds.color }};box-shadow:var(--shadow-lg);transform:translateY(-2px);">
+        <button sc-camel-on-click="{{ ds.open }}" style="{{ ds.spanStyle }}text-align:left;font-family:inherit;cursor:pointer;width:100%;background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.74));box-shadow:var(--shadow);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);backdrop-filter:blur(18px) saturate(1.3);border-left:3px solid {{ ds.color }};border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;transition:.16s var(--ease);" style-hover="border-color:{{ ds.color }};box-shadow:var(--shadow-lg);transform:translateY(-2px);">
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:32px;height:32px;border-radius:10px;background:{{ ds.color }}1c;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">{{ ds.glyph }}</div>
             <div style="font-size:15.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em;line-height:1.3;min-width:0;text-wrap:pretty;">{{ ds.name }}</div>
@@ -2013,9 +2018,9 @@
     </sc-if>
     <sc-if value="{{ dsListShowPager }}">
       <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:20px;">
-        <button sc-camel-on-click="{{ dsListPrev }}" style="cursor:pointer;font-family:inherit;font-size:12px;color:var(--ink2);border:1px solid var(--line2);background:var(--surface);border-radius:9px;padding:8px 16px;white-space:nowrap;">← Өмнөх</button>
+        <button sc-camel-on-click="{{ dsListPrev }}" aria-disabled="{{ dsListPrevOff }}" style="{{ dsListPrevStyle }}">← Өмнөх</button>
         <div style="font-size:12px;color:var(--ink2);font-family:'JetBrains Mono',monospace;white-space:nowrap;">{{ dsListPageLabel }}</div>
-        <button sc-camel-on-click="{{ dsListNext }}" style="cursor:pointer;font-family:inherit;font-size:12px;color:var(--ink2);border:1px solid var(--line2);background:var(--surface);border-radius:9px;padding:8px 16px;white-space:nowrap;">Дараах →</button>
+        <button sc-camel-on-click="{{ dsListNext }}" aria-disabled="{{ dsListNextOff }}" style="{{ dsListNextStyle }}">Дараах →</button>
       </div>
     </sc-if>
     </sc-if>
@@ -4872,6 +4877,8 @@
             <span style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;">{{ detail.dqFreqLabel }}</span>
           </div>
         </div>
+        <!-- Үнэлгээгүй датасэт: 4 хэмжүүр бүгд «Тодорхойгүй» давтагдаж иргэнд юу ч хэлдэггүй (EMP, UX аудит) — дээрх нэг мөр тайлбар хангалттай -->
+        <sc-if value="{{ detail.dqAnyDim }}">
         <div class="eh-g4 eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;">
           <sc-for list="{{ detail.dims }}" as="dm" hint-placeholder-count="4">
             <div>
@@ -4901,6 +4908,7 @@
             </div>
           </sc-for>
         </div>
+        </sc-if>
         <div data-ds-profile="1" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
           <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
             <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);font-weight:600;">{{ detail.t.profile_head }}</div>
@@ -6378,7 +6386,9 @@ function homeMapRailIntl(json){
     const o=cities[pl.name]||(cities[pl.name]={place:pl,pax:0,trips:0,out:0,in:0});
     o.pax+=v; o.trips+=Number(r.trips)||0; o[fi===1?'out':'in']+=v; known+=v;
   });
-  const ty=(json.by_type||[]).find(t=>t&&t.type==='ОУ');
+  /* ОУ ангиллыг толиор (DG: шууд 'ОУ' харьцуулахгүй — "Олон улс", INTL г.м. бичигдэж болно) */
+  const isIntl=t=>t&&(typeof EHGlossary!=='undefined'&&EHGlossary.airFlightKind?EHGlossary.airFlightKind(t.type)==='intl':t.type==='ОУ');
+  const ty=(json.by_type||[]).find(isIntl);
   const intl=ty?Number(ty.passengers)||0:null;
   return {cities,known,intl,unplaced:intl!=null?Math.max(0,intl-known):0};
 }
@@ -8158,6 +8168,13 @@ function roadInspectionsToValue(json){
 function fillTpl(s,v){
   return String(s==null?'':s).replace(/\{(\w+)\}/g,(m,k)=>v[k]!=null?String(v[k]):m);
 }
+/* Харагдах текстийн хугацааны орлуулга — {year} (өгсөн он эсвэл УБ-ийн одоогийн он),
+   {q} (УБ-ийн одоогийн улирал, ром тоогоор). ЦЭВЭР: now-г өгч болно (tests/run.js PT). */
+function periodTokens(year,now){
+  const d=ubStamp(new Date(now==null?Date.now():now).toISOString()).date;
+  const y=+d.slice(0,4), m=+d.slice(5,7);
+  return {year:year||y||'', q:m?['I','II','III','IV'][Math.floor((m-1)/3)]:''};
+}
 function roadInspectAnalysis(w,T,fmt,age,staleAfter){
   if(!w||w.count==null) return null;
   T=T||{};
@@ -8377,9 +8394,10 @@ function weekAxis(vals){
   const step=Math.pow(10,Math.floor(Math.log10(span/2)))||1;
   let base=Math.floor((mn-span*0.6)/step)*step;
   const top=Math.ceil((mx+span*0.15)/step)*step;
-  /* Хүн, тонн зэрэг СӨРӨГ БАЙЖ ЧАДАХГҮЙ хэмжигдэхүүнд 0-ээс доош
-     тэнхлэг утгагүй — шалыг 0-д барина. */
-  if(mn>=0&&base<0) base=0;
+  /* Хүн, тонн зэрэг СӨРӨГ БАЙЖ ЧАДАХГҮЙ хэмжигдэхүүнд тэнхлэг 0-ээс (DG):
+     5,000-аас эхэлсэн тэнхлэг 7 хоног хоорондын ялгааг хэтрүүлж, датасэтийн
+     ижил графикаас (buildSectorStackChart, 0-ээс) өөр хэлбэр зурдаг байв. */
+  if(mn>=0) base=0;
   return {base,top,step};
 }
 
@@ -8448,7 +8466,7 @@ function buildTrendChart(data,off,partial,noForecast,pday){
      гар/скрин ридерт ч уншигдана). Өмнө нь график дээр тоо ОГТ харагддаггүй
      байсан тул "энэ цэг хэдийг заасан бэ" гэдгийг мэдэх аргагүй байв. */
   const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),r:'2.6',dash:'none',
-    tip:(MONTHS[i+off]?MONTHS[i+off]+': ':'')+Math.round(data[i]).toLocaleString('en-US')}));
+    tip:(MONTHS[i+off]?MONTHS[i+off]+' — ':'')+Math.round(data[i]).toLocaleString('en-US')}));
 
   // peak annotation
   const pi=data.indexOf(Math.max.apply(null,data));
@@ -9115,6 +9133,15 @@ function freightTotalModel(all,year,mr){
       weekOrgs:slices(last.by_org),ytdOrgs:slices(ytd&&ytd.by_org)};
   }
   return {hasOrgs:true,orgs,split,splitTotal,weekly};
+}
+/* Сүүлийн бичлэг нь `since`-ээс ӨМНӨ дууссан тээвэрлэгч (МТЗ 2026-02-оос) — нүүрийн
+   ачааны «Өмнөх оны мөн үе» нь энэ тээвэрлэгчийг өмнөх онд БҮТЭН, энэ онд дутуу
+   оруулдаг тул ИЛ нэрлэнэ (тулгалт 2026-10-26: нүүр +2.0%, УБТЗ дангаараа +23.3%).
+   ЦЭВЭР (tests/run.js HR9). Буцаах: [{name,lastDate}]. */
+function freightStaleOrgs(all,since){
+  if(!since||!(all&&Array.isArray(all.by_org))) return [];
+  return all.by_org.filter(o=>o&&o.last_date&&String(o.last_date).slice(0,10)<since)
+    .map(o=>({name:String(o.name||o.org),lastDate:String(o.last_date).slice(0,10)}));
 }
 /* 7 хоногоор: чиглэл бүрийн ачаа — бүлэглэсэн багана (зурган тайлангийн загвар).
    Y 0-ээс; бичлэггүй долоо хоног — бүдэг тууз + "мэдээлэл алга" (0 багана биш).
@@ -11559,7 +11586,11 @@ class Component extends DCLogic {
        сар хасагдсан) — хоногийн огноо ЗОХИОХГҮЙ. */
     if(cfg.source){
       const mLbl=s.year+'-'+String(s.lastMonth).padStart(2,'0');
-      const lastRec=s.partial?(mLbl+' · '+s.partial+' '+stxt('feed.partial_tag','дутуу')):mLbl;
+      /* "2026-09 · 2026-10 дутуу" нь хоёр сар хөөсөн мэт уншигдаж байв (UX аудит) — хамгийн
+         сүүлийн мэдээ (дутуу сар, хүрсэн өдөр мэдэгдвэл 1–N) ЭХЭНД, бүтэн сар нь ард нэрээрээ. */
+      const lastRec=s.partial
+        ?(s.partial+(s.partialDay>0?' (1–'+s.partialDay+')':'')+' '+stxt('feed.partial_tag','дутуу')+' · '+stxt('feed.full_month_tag','бүтэн сар:')+' '+mLbl)
+        :mLbl;
       this.setSourceMeta(cfg.source,{updatedAt:mLbl,updatedAtFull:mLbl,lastRecord:lastRec});
     }
     /* Датасэтийн дэлгэрэнгүй хуудасны ХҮСНЭГТ — вагон/үзлэгтэй ижил
@@ -11633,6 +11664,21 @@ class Component extends DCLogic {
   // үг БИШ. Эх сурвалж унасан үед статик демо тоо (11,979 нислэг,
   // 1,815 км) амьд мэт харагдаж байсан тул KPI мөрийг уншдаг виджет
   // (ls / k04 / d05) бүрт "дата нь үнэхээр ирсэн үү" гэдгийг ДАВХАР шална.
+  /* 01-р хэсгийн KPI карт → ТЭР тооны эх датасэт ("энэ тоо хаанаас гарав").
+     kpis[0]-ийн эх сурвалж нь амьд датагаас хамаарна: вагон/үзлэг ирсэн бол
+     тэр нь толгой мөр, үгүй бол зорчигчийн сарын мөр (applyRailWagonData /
+     applyRoadInspectionData-тай ИЖИЛ дүрэм). Холбогдоогүй бол холбоос гаргахгүй. */
+  lsSourceLink(k,verified){
+    const has=o=>!!(o&&o.count!=null);
+    const src=!verified?null:k==='air'?'flights'
+      :k==='rail'?(has(this._railWagonLoading)?'railWagon':'railPax')
+      :k==='road'?(has(this._roadInspections)?'roadInspect':'roadPax'):null;
+    const d=src&&DATASETS.find(x=>x.source===src);
+    if(!d) return {srcHas:false,srcHref:'',srcLabel:'',srcTitle:'',openSrc:()=>{}};
+    return {srcHas:true,srcHref:'#/browse/'+encodeURIComponent(datasetSlug(d)),
+      srcLabel:stxt('ls_src.label','Эх датасэт')+': '+d.name,srcTitle:d.name,
+      openSrc:e=>{ if(e&&e.preventDefault) e.preventDefault(); this.openDataset(d,{prev:'home'}); }};
+  }
   kpiVerified(widgetId,sectorKey){
     if(this.sectorQuality(widgetId,sectorKey).quality!=='verified') return false;
     return !!(SECTORS[sectorKey]&&SECTORS[sectorKey]._liveKpis);
@@ -12350,7 +12396,10 @@ class Component extends DCLogic {
     const exclRow=(name,i)=>[kl(name,i),'—','','','flat',exclLabel];
     const noIntl=filters.type==='domestic', noDom=filters.type==='intl';
     SECTORS.air.kpis=[
-      [kl('НИЙТ НИСЛЭГ',0),fmtCount(flCount),'',flDelta.s,flDelta.dir,flCompareLabel],
+      /* Энэ карт сүүлийн БҮТЭН САРЫН нислэг (hero-той ижил), хажуугийн 7 карт шүүлтийн
+         цонхоор — сарыг НЭРЭНД нь бичнэ: эс тэгвэл «ОУ НИСЛЭГ 13,241» нь «НИЙТ НИСЛЭГ
+         1,966»-аас их харагдаж хэсэг нь бүхлээсээ давдаг байв (тулгалт 2026-10-26). */
+      [kl('НИЙТ НИСЛЭГ',0)+(flWin&&flWin.monthLabel?' · '+flWin.monthLabel:''),fmtCount(flCount),'',flDelta.s,flDelta.dir,flCompareLabel],
       [kl('НИЙТ ЗОРЧИГЧ',1),fmtBig(cur.totalPax),'',pctDelta(cur.totalPax,prev.totalPax).s,pctDelta(cur.totalPax,prev.totalPax).dir,compareLabel],
       noIntl?exclRow('ОУ НИСЛЭГ',2):[kl('ОУ НИСЛЭГ',2),fmtCount(cur.intlFlights),intlPct.toFixed(1)+'%',pctDelta(cur.intlFlights,prev.intlFlights).s,pctDelta(cur.intlFlights,prev.intlFlights).dir,compareLabel],
       noIntl?exclRow('ОУ ЗОРЧИГЧ',3):[kl('ОУ ЗОРЧИГЧ',3),fmtBig(cur.intlPax),intlPaxPct.toFixed(1)+'%',pctDelta(cur.intlPax,prev.intlPax).s,pctDelta(cur.intlPax,prev.intlPax).dir,compareLabel],
@@ -14626,7 +14675,7 @@ class Component extends DCLogic {
       // (статик "мянган хүн") бичигддэг тул нэг картан дотор хоёр өөр нэгж
       // харагдаж байв.
       const wbase=stxt('week.axis_prefix','Шугам тус бүр дээрх тоо = 7 хоногийн нийт')+' '+unit+' '+
-        stxt('week.axis_mid','· тэнхлэг')+' '+base.toLocaleString()+stxt('week.axis_suffix','-с эхэлнэ')+
+        (base!==0?stxt('week.axis_mid','· тэнхлэг')+' '+base.toLocaleString()+stxt('week.axis_suffix','-с эхэлнэ'):'')+
         (stW?' '+stxt('week.axis_weeks','· огноо = долоо хоногийн эхний өдөр (Да)'):'');
       /* Нэгтгэлийн горимд салбар бүрийн 7 хоногийн тоо — донут (w2pb/w2cb) ба харьцуулалтын
          мөр (w2px/w2cx) тус бүр ӨӨРИЙН бүртгэлээр салбараа сонгоно (админаас салгаж болно). */
@@ -14690,9 +14739,12 @@ class Component extends DCLogic {
             (stW.ytdGapKeys.length?' · '+stxt('week.ytd_gap','{names} цоорхойтой').replace('{names}',stNames({keys:stW.ytdGapKeys})):'')};
         if(stW&&i===1&&stW.wow!==null)
           return {l:s[0],v:pctTxt(stW.wow),color:pctCol(stW.wow),mockTag:''};
-        if(stW&&i===2&&stW.yoy!==null)
+        if(stW&&i===2&&stW.yoy!==null){
+          const so=(wt==='cargo'&&stW.yoyKeys.indexOf('rail')>=0)?freightStaleOrgs(this._homeFreightAll,stW.weekStart):[];
           return {l:s[0],v:pctTxt(stW.yoy),color:pctCol(stW.yoy),
-            mockTag:stW.yoyKeys.length<stW.keys.length?' · '+stNames({keys:stW.yoyKeys}):''};
+            mockTag:(stW.yoyKeys.length<stW.keys.length?' · '+stNames({keys:stW.yoyKeys}):'')+
+              (so.length?' · '+stxt('week.org_stale','{orgs}: сүүлийн бичлэг {date} — энэ онд дутуу орсон').replace('{orgs}',so.map(o=>o.name).join(', ')).replace('{date}',so[0].lastDate):'')};
+        }
         if(stW&&i<3)
           return {l:s[0],v:'—',color:'#828EA8',mockTag:' · '+stxt('status.no_data','мэдээлэл алга')};
         if(i===1&&realDeltaPct!=null){
@@ -15079,10 +15131,15 @@ class Component extends DCLogic {
       badgeList:d.badges.map(b=>({label:b,live:b==='Шууд',premium:b==='Premium'})),
       open:()=>this.openDataset(d)
     }));
-    const DSPER=6;
+    /* 12 карт = каталог (9–12 датасэт) НЭГ хуудсанд; 6 үед 6+3 болж хоёр дахь
+       хуудсанд байгаа датасэт олдохгүй мэт санагддаг байв (UX аудит). */
+    const DSPER=12;
     const dsPages=Math.max(1,Math.ceil(datasetsAll.length/DSPER));
     const dsListPg=Math.min(this.state.dsListPage||0,dsPages-1);
-    const datasets=datasetsAll.slice(dsListPg*DSPER,(dsListPg+1)*DSPER);
+    /* 2 баганын торд сондгой тоо үлдвэл сүүлийн карт бүтэн өргөнөөр (VIS grid-orphan —
+       баруун талд хагас мөр хоосон үлдэхгүй) */
+    const datasets=datasetsAll.slice(dsListPg*DSPER,(dsListPg+1)*DSPER)
+      .map((d,i,a)=>({...d,spanStyle:(a.length%2===1&&i===a.length-1)?'grid-column:1/-1;':''}));
     const dsListShowPager=datasetsAll.length>DSPER;
     const dsListPageLabel=(dsListPg+1)+' / '+dsPages;
     /* Хайлт 0 үр дүн өгөхөд ХООСОН хуудас гарч, хайлтаа засах ч, цуцлах ч
@@ -15094,6 +15151,11 @@ class Component extends DCLogic {
     const dsListClear=()=>this.setState({dsListQ:'',dsListPage:0});
     const dsListPrev=()=>this.setState({dsListPage:Math.max(0,dsListPg-1)});
     const dsListNext=()=>this.setState({dsListPage:Math.min(dsPages-1,dsListPg+1)});
+    /* Эхний/сүүлийн хуудсанд харгалзах товч идэвхгүй харагдана (GOV.UK pagination). */
+    const pagerBtn=off=>'font-family:inherit;font-size:12px;color:var(--ink2);border:1px solid var(--line2);background:var(--surface);border-radius:9px;padding:8px 16px;white-space:nowrap;'
+      +(off?'cursor:default;opacity:.4;pointer-events:none;':'cursor:pointer;');
+    const dsListPrevStyle=pagerBtn(dsListPg<=0), dsListNextStyle=pagerBtn(dsListPg>=dsPages-1);
+    const dsListPrevOff=String(dsListPg<=0), dsListNextOff=String(dsListPg>=dsPages-1);
     /* Нүүрийн хайлтын санал: идэвхтэй мөр (сонгоогүй бол эхнийх) → Enter ба
        "Хайх" товч тэр датасэт рүү шууд үсэрнэ. Тохирох нь байхгүй бол
        каталог руу очиж хоосон төлөвийн зөвлөгөөг үзүүлнэ. */
@@ -15590,6 +15652,9 @@ class Component extends DCLogic {
       color:NEON[dsel.sector],tint:NEON[dsel.sector]+'1f',glyph:GLYPH[dsel.sector],sectorLabel:SECTORS[dsel.sector].label,
       badgeList:dsel.badges.map(b=>({label:b})),wp,
       dqKnown:dq.known,dqUnknown:!dq.known,dqTotal:dq.known?String(dq.total):'Тодорхойгүй',
+      /* Хэмжүүрийн тор: аль нэг нь мэдэгдэж байвал харуулна (агаар — шинэлэг байдал алга ч
+         хандалт/тодорхойлолт мэдэгдэнэ); БҮГД тодорхойгүй бол нууна (4× «Тодорхойгүй», EMP) */
+      dqAnyDim:(dq.dims||[]).some(d=>d&&d.score!=null),
       dqTier:dqTier.l,dqColor:dqTier.c,
       dqFreqLabel:dq.freqLabel||'Бүртгэгдээгүй',
       // Од нь бүрэн онооноос л гарна — дутуу нотолгоон дээр од өгөхгүй.
@@ -15950,7 +16015,7 @@ class Component extends DCLogic {
       isHistory:page==='history',isNews:page==='news',isTimeline:histTab==='timeline',isPeople:histTab==='people',histEras,
       histYFrom:yFrom||'',histYTo:yTo||'',onHistYFrom,onHistYTo,histYearInputStyle,histManualActive,
       histShowPager,histPageLabel,histPrev,histNext,
-      datasetCount:datasetsAll.length+' өгөгдөл',dsListShowPager,dsListPageLabel,dsListPrev,dsListNext,
+      datasetCount:datasetsAll.length+' өгөгдөл',dsListShowPager,dsListPageLabel,dsListPrev,dsListNext,dsListPrevStyle,dsListNextStyle,dsListPrevOff,dsListNextOff,
       docCount:docs.length+' баримт'};
   }
   /* DG-P: нүүрний салбарын карт (d05)-ын хугацаа — салбарын KPI/цувааны эх
@@ -16234,6 +16299,7 @@ class Component extends DCLogic {
     ]).then(([r,p,rp,fr])=>{
       if(this._homeMapReq!==win.key) return;
       const road=homeMapRoadData(p,win.fromKey,win.toKey);
+      this._homeFreightAll=fr||null;
       this._homeMapData={key:win.key,rail:homeMapRailSum(r.map(homeMapRailTotals)),road,
         roadIntl:road?homeMapIntlRoad(road.routes):null,railIntl:homeMapRailIntl(rp),freightIntl:homeMapFreightIntl(fr,win.fromKey,win.toKey)};
       this.setState(s=>({homeMapVer:(s.homeMapVer||0)+1}));
@@ -16729,7 +16795,9 @@ class Component extends DCLogic {
       gates.push({name:INTL_RAIL_GATE[g].name,gate:true,xy,v:gi.rail+gi.road,
         parts:[gi.rail?GL.rail+' '+T('rail_pax_intl','ОУ галт тэрэг')+' '+nf(gi.rail)+' '+PAX:'',
           gi.road?GL.road+' '+T('road_bus','автобус')+' '+nf(gi.road)+' '+PAX:'',
-          tr?GL.rail+' '+T('transit_title','Транзит')+' '+nf(tr)+' '+WAG:''].filter(Boolean)});
+          /* Транзит нь ХОЁР боомтоор дамждаг коридорын НИЙТ — боомт тус бүрийн дүн мэт
+             уншигдвал хоёр tooltip-ийг нэмж 2 дахин тоолно (тулгалт 2026-10-26) */
+          tr?GL.rail+' '+T('transit_title','Транзит')+' '+nf(tr)+' '+WAG+' ('+T('transit_corridor_total','коридорын нийт — хоёр боомтоор дамжина')+')':''].filter(Boolean)});
     });
     Object.keys(towns).forEach(n=>{ if(gates.some(g=>g.name===n)) return;
       gates.push({name:n,aimag:towns[n].aimag,xy:towns[n].xy,v:towns[n].v,parts:[GL.road+' '+T('road_bus','автобус')+' '+towns[n].to.join(', ')]}); });
@@ -17537,8 +17605,11 @@ class Component extends DCLogic {
       const ownSeries=(verified&&Array.isArray(sk.kpis[0][6])&&sk.kpis[0][6].length>1)
         ?sk.kpis[0][6]:null;
       return {key:k,label:sk.label,
-        value:vs?vs.value:(verified?sk.kpis[0][1]:'0'),
-        unit:vs?(vs.unit||sk.kpis[0][2]):sk.kpis[0][2],color:verified?NEON[k]:'#828EA8',on,
+        /* Холбогдоогүй салбарт "0 км" бичвэл ЖИНХЭНЭ тэг мэт уншигдана (EMP) — "—" ба
+           нэгжгүй; доорх мөрөнд "мэдээлэл алга" гэж ил хэлнэ. */
+        value:vs?vs.value:(verified?sk.kpis[0][1]:'—'),
+        unit:vs?(vs.unit||sk.kpis[0][2]):(verified?sk.kpis[0][2]:''),
+        ...this.lsSourceLink(k,verified),color:verified?NEON[k]:'#828EA8',on,
         select:()=>this.setState({activeSector:k}),
         glyph:GLYPH[k],
         // Тохиргоотой бол шошго ба өөрчлөлтийн хувь ХОЁУЛАА сонгосон
@@ -17642,7 +17713,7 @@ class Component extends DCLogic {
          болно (өмнөх алдаа). */
       heroFlTitle:this.txt('hero_fl','title','НИСЛЭГ / САР'),
       // H3: тоон утга нь val()-аар metric_registry.json-той холбогддог.
-      // Fallback үед ("11,979") аль сар болохыг мэдэхгүй тул сарын
+      // Fallback үед ("—", тоо ЗОХИОХГҮЙ) аль сар болохыг мэдэхгүй тул сарын
       // тэмдэглэгээг ердөө хоосон үлдээнэ — амьд үед л "(N-р сар)" гарна.
       ...(()=>{
         /* Утгын тохиргоо (widgets.hero_fl.value) байвал түүнийг ДАВУУ
@@ -17650,11 +17721,11 @@ class Component extends DCLogic {
            хоосон (тохируулсан утга бүтэн хугацааны нийлбэр). */
         const vs=this.valueFromSpec('hero_fl');
         if(vs) return {heroFlValue:vs.value,heroFlFallback:'false',heroFlMonthSuffix:''};
-        const hv=this.val('hero_fl','11,979');
+        const hv=this.val('hero_fl','—');
         return {
           heroFlValue:hv.value,
           heroFlFallback:hv.isFallback?'true':'false',
-          heroFlMonthSuffix:hv.isFallback?'':' ('+hv.monthLabel+')'
+          heroFlMonthSuffix:hv.isFallback?' · '+this.stxt('status.no_data','мэдээлэл алга'):' ('+hv.monthLabel+')'
         };
       })(),
       // "ЗОРЧИГЧ / ӨДӖР" (U+04D6) нь эх кодын үсгийн бодит алдаа байсан —
@@ -17675,7 +17746,9 @@ class Component extends DCLogic {
       heroPxNote:this.isWidgetMock('hero_px')
         ?' · '+stxt('status.no_data','мэдээлэл алга'):'',
       ukTitle:this.txt('uk','title','Порталын нийт үзүүлэлт'),
-      ukSub:this.txt('uk','sub','2026 · III улирал'),
+      /* Хугацааны шошго ТООЦООЛОГДОНО ({year}/{q} — УБ огноогоор): өмнө нь "2026 · III
+         улирал" гэж хатуу бичигдсэн тул IV улиралд ч хуучнаараа үлдэж байв. */
+      ukSub:fillTpl(this.txt('uk','sub','{year} · {q} улирал'),periodTokens()),
       // uk-ийн эх сурвалж (KPI_UNIFIED) 02-р хэсгийн WEEK_DATA-с ӨӨР тул
       // section02MockNote-той хамт нэгтгэхгүй, өөрийн тэмдэг+тайлбартай.
       ukMark:this.isWidgetMock('uk')?' *':'',
@@ -17684,12 +17757,12 @@ class Component extends DCLogic {
       lsTitle:this.txt('ls','title','ҮНДСЭН ҮЗҮҮЛЭЛТҮҮД'),
       lsFoot:this.txt('ls','foot','өмнөх сартай харьцуулбал · 12 сарын график'),
       w2pTitle:this.txt('w2p','title','Долоо хоногийн нийт зорчигч тээвэр'),
-      w2pFoot:this.txt('w2p','foot','2025 төлөвлөгөө'),
+      w2pFoot:fillTpl(this.txt('w2p','foot','{year} оны төлөвлөгөө'),periodTokens()),
       w2pbTitle:this.txt('w2pb','title','Төрлийн хуваарь · 7 хоног'),
       w2pxTitle:this.txt('w2px','title','Салбар хоорондын харьцуулалт — зорчигч'),
       w2pxFoot:this.txt('w2px','foot','өмнөх долоо хоногтой харьцуулбал'),
       w2cTitle:this.txt('w2c','title','Долоо хоногийн нийт ачаа тээвэр'),
-      w2cFoot:this.txt('w2c','foot','2025 төлөвлөгөө'),
+      w2cFoot:fillTpl(this.txt('w2c','foot','{year} оны төлөвлөгөө'),periodTokens()),
       w2cbTitle:this.txt('w2cb','title','Төрлийн хуваарь · 7 хоног'),
       w2cxTitle:this.txt('w2cx','title','Салбар хоорондын харьцуулалт — ачаа'),
       w2cxFoot:this.txt('w2cx','foot','өмнөх долоо хоногтой харьцуулбал'),
@@ -17726,7 +17799,8 @@ class Component extends DCLogic {
       // i06Foot: content.json-ий статик тайлбарын ард харьцуулах цонхыг
       // (жиш нь "2026 оны 1–7 сар") ДИНАМИКААР залгана — тоог энд хатуу
       // бичихгүй, buildExtras()-ийн compareWindowNote-оос авна.
-      i06Foot:this.txt('i06','foot','Индекс 2026 оны 1-р сарыг 100 гэж авсан харьцангуй үзүүлэлт. Салбарын нэр дээр дарж шугамыг нуух, харуулах боломжтой.')+this.compareWindowNote()+this.compareRoadNote(),
+      i06Foot:fillTpl(this.txt('i06','foot','Индекс {year} оны 1-р сарыг 100 гэж авсан харьцангуй үзүүлэлт. Салбарын нэр дээр дарж шугамыг нуух, харуулах боломжтой.'),
+        periodTokens(this.compareWindow().year))+this.compareWindowNote()+this.compareRoadNote(),
       // r06 — мөн 2 тусдаа элемент: foot (1232 "Тэргүүлэгч"),
       // foot2 (1237 "Хоцрогдож байгаа").
       r06Title:this.txt('r06','title','Сарын өсөлтийн эрэмбэ'),
