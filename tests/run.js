@@ -226,6 +226,9 @@ function groupB() {
       /* `home_map` — нүүрийн салбарын газрын зураг, T('title') туслахаар (stxt('home_map.'+k));
          түлхүүр бүрийг HM14 баталгаажуулна. */
       'home_map',
+      /* `home_range` — нүүрний нэгдсэн огнооны муж (01 зурвас, 05 донут), T('cmp_yoy') туслахаар
+         (stxt('home_range.'+k)) ба EHGlossary.periodCell/bucketWord-оор; түлхүүр бүрийг HK3 баталгаажуулна. */
+      'home_range',
       'portal_kpi', 'week', 'updates', 'community_data', 'ai'];
     const grp = p.split('.')[0];
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
@@ -1428,17 +1431,22 @@ const PROBE_I = `async function(d,w){
   const wgt=d.querySelector('[data-widget="ls"]')||d.querySelector('[data-goedit^="ls|"]');
   if(!wgt) return {__err:'ls виджет олдсонгүй'};
   wgt.click(); await sleep(1000);
-  const val=()=>{const e=d.querySelector('#pvhost .pvsc .v'); return e?e.textContent.trim():null};
-  const spark=()=>{const p=d.querySelector('#pvhost .pvsc .sp path,#pvhost .pvsc .sp line');
+  const norm=t=>String(t||'').replace(/[\s\u00a0]+/g,' ').trim();
+  const val=()=>{const e=d.querySelector('#pvhost .pvsc[data-pvk="air"]'); return e?norm(e.innerText):null};
+  const spark=()=>{const p=d.querySelector('#pvhost .pvsc[data-pvk="air"] .sp path');
     return p?(p.getAttribute('d')||'flat'):null};
-  R.hasFieldGroup=!!d.querySelector('[data-slot^="ls|"] optgroup');
+  const sel=()=>d.querySelector('[data-slot^="ls|sectors,air"]');
+  R.hasFieldGroup=!!d.querySelector('[data-slot^="ls|"] option[value^="field:"]');
   R.before=val(); R.sparkBefore=spark();
-  const pick=(v)=>{const el=d.querySelector('[data-slot^="ls|sectors,air"]');
-    if(!el) return false; el.value=v; el.dispatchEvent(new w.Event('change',{bubbles:true})); return true};
-  pick('field:Зорчигч|SUM'); await sleep(1200);
+  const s0=sel(); if(!s0) return {__err:'ls air слот олдсонгүй'};
+  R.orig=s0.value;
+  const alt=[].slice.call(s0.options).filter(o=>!o.disabled&&o.value&&o.value!==R.orig&&o.value.indexOf('field:')!==0)[0];
+  R.alt=alt?alt.value:null;
+  const pick=(v)=>{const el=sel(); if(!el) return false; el.value=v; el.dispatchEvent(new w.Event('change',{bubbles:true})); return true};
+  if(R.alt){ pick(R.alt); await sleep(1200); }
   R.after=val(); R.sparkAfter=spark();
   R.dirtyAfter=(d.getElementById('dirtyMsg')||{}).textContent||'';
-  pick('air.flight_count_last_month'); await sleep(1200);
+  pick(R.orig); await sleep(1200);
   R.reverted=val();
   R.dirtyReverted=(d.getElementById('dirtyMsg')||{}).textContent||'';
   return R;
@@ -1612,14 +1620,17 @@ async function groupI2() {
   try {
     const R = await runProbe(PROBE_I, 90000);
     if (R.__err) { bad('I5. Админ preview шалгалт ажиллав', R.__err); return; }
-    check('I5. Слотын сонголтод "датаны талбараас" бүлэг гарна', R.hasFieldGroup === true);
-    check('I5. Хэмжигдэхүүн сольсон ДАРУЙД preview-ийн ТОО өөрчлөгдөнө',
-      !!R.before && !!R.after && R.before !== R.after,
-      JSON.stringify({ before: R.before, after: R.after }));
-    check('I5. Spark line ч сонгосон хэмжигдэхүүнээ дагана',
-      !!R.sparkAfter && R.sparkBefore !== R.sparkAfter, 'муруй өөрчлөгдсөнгүй');
+    /* 2026-10-27: 01-р зурвас (ls) салбар бүр НЭГ хугацаа/хэмжүүрээр (periodStrip) — агаарын
+       мөр түвшний «датаны талбар» сайтад нөлөөлөхгүй тул ls-д сонголт болж гарахгүй (үхмэл
+       сонголт). Утга солих урсгалыг (талбар → preview) VALUE_TARGETS-ийн 12 виджет дээр I6, тоон
+       паритетийг k04 дээр J4 шалгана. */
+    check('I5. ls-д «датаны талбараас» сонголт ГАРАХГҮЙ (нэгдсэн хугацаанд нөлөөгүй)', R.hasFieldGroup === false);
+    check('I5. Хугацааны бус метрик сонгоход preview ДАРУЙ өөрчлөгдөж шалтгааныг хэлнэ',
+      !!R.alt && !!R.before && !!R.after && R.before !== R.after && /огнооны мужаар тооцогдохгүй/.test(R.after),
+      JSON.stringify({ alt: R.alt, before: R.before, after: R.after }));
+    check('I5. Хугацааны бус метрикт spark ЗУРАХГҮЙ (өөр логикийн шугам холихгүй)', R.sparkAfter === null, String(R.sparkAfter));
     check('I5. Тохиргоо dirty болж экспортод орно', /өөрчлөлт/.test(R.dirtyAfter), R.dirtyAfter.trim());
-    check('I5. Бүртгэлтэй метрик рүү буцаавал анхны утга сэргэнэ',
+    check('I5. Анхны метрик рүү буцаавал анхны preview сэргэнэ',
       R.reverted === R.before && /алга/.test(R.dirtyReverted),
       JSON.stringify({ reverted: R.reverted, before: R.before, dirty: R.dirtyReverted.trim() }));
   } finally { srv.close(); }
@@ -1916,13 +1927,14 @@ async function groupJ() {
   /* Тохиргоог СЕРВЕРИЙН санах ойд өгнө — репогийн файл руу бичихгүй.
      2026-10-16: өмнө нь файл руу бичээд finally-д сэргээдэг байв; процесс
      дундаа зогсоход (сешн зогссон) ls.value файлд үлдэж, O6 "2 виджетэд",
-     I5/I6 хуурамчаар унав (+ commit-д орох эрсдэл). J4b үүнийг барина. */
+     I5/I6 хуурамчаар унав (+ commit-д орох эрсдэл). J4b үүнийг барина.
+     2026-10-27: ls нь нэгдсэн огнооны мужаар (утгын тохиргоогүй) — k04 (air слот эхэнд). */
   const regPath = path.join(ROOT, 'metric_registry.json');
   const orig = fs.readFileSync(regPath, 'utf8');
   try {
     const reg = JSON.parse(orig);
-    reg.widgets.ls = reg.widgets.ls || {};
-    reg.widgets.ls.value = { dataset: 'air_flights', measure: 'Зорчигч', agg: 'SUM' };
+    reg.widgets.k04 = reg.widgets.k04 || {};
+    reg.widgets.k04.value = { dataset: 'air_flights', measure: 'Зорчигч', agg: 'SUM' };
     SERVE_OVERRIDE = { '/metric_registry.json': JSON.stringify(reg, null, 2) + '\n' };
 
     const srv = serve();
@@ -1931,9 +1943,9 @@ async function groupJ() {
       const a = await runProbe(`async function(d,w){
         const sleep=ms=>new Promise(r=>setTimeout(r,ms));
         await sleep(4500);
-        d.querySelector('[data-section="sec-01"]').click(); await sleep(600);
-        d.querySelector('[data-widget="ls"]').click(); await sleep(1200);
-        const e=d.querySelector('#pvhost .pvsc .v');
+        d.querySelector('[data-section="sec-04"]').click(); await sleep(600);
+        d.querySelector('[data-widget="k04"]').click(); await sleep(1200);
+        const e=d.querySelector('#pvhost .pvgc .v');
         return {n:e?e.textContent.trim():null};
       }`, 90000);
 
@@ -4027,8 +4039,10 @@ async function groupBE() {
   check('BE8. mtd багана нийлбэрт ОРОХГҮЙ гэдэг registry-д тэмдэглэгдсэн',
     /mtd/.test(reg2.metrics['rail.wagon_loading'].column) &&
     /ХУРИМТЛАЛ/.test(reg2.metrics['rail.wagon_loading'].column));
-  check('BE8. rail.wagon_loading виджетэд ХОЛБОГДСОН (2026-09-18)',
-    Object.values(reg2.widgets).some(w => JSON.stringify(w).includes('rail.wagon_loading')));
+  /* 2026-10-27: 01-р зурвас салбар бүр НЭГ хэмжүүрээр (зорчигч/ачаа, periodStrip) — хоногийн вагон
+     ачилт тэндээс гарсан; вагоны мэдээ k04-д (rail.wagon_kpi_set) ба вагоны датасэтэд хэвээр. */
+  check('BE8. Вагоны мэдээ k04-д холбогдсон хэвээр, 01-р зурваст БИШ (нэгдсэн хугацаа)',
+    reg2.widgets.k04.sectors.rail.metric === 'rail.wagon_kpi_set' && !JSON.stringify(reg2.widgets.ls).includes('rail.wagon_loading'));
 
   /* ── BE9. Backend-ийн ХАРИУ → val()-ийн хүлээх хэлбэр ──
      Backend нь {sector,status,data:[{month,total_volume}]} буцаадаг атлаа
@@ -4083,8 +4097,8 @@ async function groupBE() {
      Хоёр файлын утга зөрөх нь энэ төсөлд ойр ойрхон гардаг алдаа тул
      хамтад нь шалгана. */
   const sl = (id, key) => ((reg2.widgets[id] || {}).sectors || {})[key] || {};
-  check('BE11. ls.rail → rail.wagon_loading (verified)',
-    sl('ls', 'rail').metric === 'rail.wagon_loading' && sl('ls', 'rail').quality === 'verified',
+  check('BE11. ls.rail → rail.period_pax (verified, 2026-10-27 нэгдсэн хугацаа)',
+    sl('ls', 'rail').metric === 'rail.period_pax' && sl('ls', 'rail').quality === 'verified',
     JSON.stringify(sl('ls', 'rail')));
   check('BE11. k04.rail → rail.wagon_kpi_set (verified)',
     sl('k04', 'rail').metric === 'rail.wagon_kpi_set' && sl('k04', 'rail').quality === 'verified',
@@ -4109,8 +4123,8 @@ async function groupBE() {
   const fuBlock = (adm.match(/var FIXED_UNIT=\{([\s\S]*?)\n\};/) || [])[1] || '';
   const fixed = {};
   for (const fm of fuBlock.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)) fixed[fm[1]] = fm[2];
-  check('BE11. ls.rail шаардах нэгж = метрикийн нэгж ("вагон", "км" БИШ)',
-    fixed['ls.rail'] === reg2.metrics['rail.wagon_loading'].unit, fixed['ls.rail']);
+  check('BE11. ls.rail шаардах нэгж = метрикийн нэгж ("хүн", "км" БИШ)',
+    fixed['ls.rail'] === reg2.metrics['rail.period_pax'].unit, fixed['ls.rail']);
   check('BE11. k04.rail шаардах нэгж = "mixed" (3 мөр өөр нэгжтэй)',
     fixed['k04.rail'] === reg2.metrics['rail.wagon_kpi_set'].unit, fixed['k04.rail']);
   check('BE11. u07 салбар бүрийн шаардах нэгж "огноо"',
@@ -5982,7 +5996,7 @@ async function groupBE() {
   const md35 = adm.match(/function metricDate\(mk\)\{([\s\S]*?)\n\}/);
   if (!mv35 || !md35) { bad('BE35. metricValue/metricDate олдсонгүй'); return; }
   /* 7 хоногийн нэгтгэл (ST_METRIC/stWeek) энэ тестэд хамааралгүй — хоосон орчин. */
-  const mkMV = new Function('FEED', 'RAIL', 'INSP', 'var ST_METRIC={},stWeek=function(){return null},stWeekVal=stWeek;return function(mk){' + mv35[1] + '}');
+  const mkMV = new Function('FEED', 'RAIL', 'INSP', 'var ST_METRIC={},PERIOD_METRIC={},pvHomeStrip=function(){return null},stWeek=function(){return null},stWeekVal=stWeek;return function(mk){' + mv35[1] + '}');
   const mkMD = new Function('FEED', 'RAIL', 'INSP', 'return function(mk){' + md35[1] + '}');
   const FEED35 = { state: 'off' }, RAIL35 = { state: 'off' };
   const INSP_R = { state: 'ready', date: '2026-09-21', count: 2790, failed: 202, vehicles: 2692 };
@@ -6135,8 +6149,9 @@ async function groupBE() {
   }
   check('BE38. Блоклогдсон слотууд датасэтээ ЗААНА',
     /* 2026-10-21: w2p/w2pb/w2px.road авто тээврийн зорчигчоор холбогдсон тул 5 слот үлдэв;
-       2026-10-23: t05.road сарын зорчигчийн цуваагаар холбогдсон (RT) → 4 */
-    blocked38.length >= 4 && !blocked38.some((b) => b[0] === 't05' && b[1] === 'road'),
+       2026-10-23: t05.road сарын зорчигчийн цуваагаар холбогдсон (RT) → 4;
+       2026-10-27: d05.road нэгдсэн огнооны мужаар (road.period_pax, HK) холбогдсон → 3 (w2c* ачаа) */
+    blocked38.length >= 3 && !blocked38.some((b) => (b[0] === 't05' || b[0] === 'd05') && b[1] === 'road'),
     blocked38.length + ' слот');
   check('BE38. blocked_by бүр БОДИТ датасэтийг заана (бичгийн алдаагүй)',
     blocked38.every((b) => !!ds38[b[2]]),
@@ -6250,8 +6265,9 @@ async function groupBE() {
   /* ── BE32. Registry / админ / content — ГЭРЭЭ (хоёр талыг ХАМТ) ── */
   const reg32 = readJson('metric_registry.json');
   const sl32 = (id, k) => ((reg32.widgets[id] || {}).sectors || {})[k] || {};
-  check('BE32. ls.road → road.inspection_count (verified)',
-    sl32('ls', 'road').metric === 'road.inspection_count' && sl32('ls', 'road').quality === 'verified',
+  /* 2026-10-27: 01-р зурвас салбар бүр НЭГ хэмжүүрээр (зорчигч/ачаа) — хоногийн үзлэг k04/u07-д хэвээр (HK) */
+  check('BE32. ls.road → road.period_pax (verified, нэгдсэн хугацаа)',
+    sl32('ls', 'road').metric === 'road.period_pax' && sl32('ls', 'road').quality === 'verified',
     JSON.stringify(sl32('ls', 'road')));
   check('BE32. k04.road → road.inspection_kpi_set (verified)',
     sl32('k04', 'road').metric === 'road.inspection_kpi_set' && sl32('k04', 'road').quality === 'verified');
@@ -6272,8 +6288,8 @@ async function groupBE() {
     dcScript().includes("'road.inspection_kpi_set':()=>this._roadInspections"));
   const fu32 = (read('admin/index.html').match(/var FIXED_UNIT=\{([\s\S]*?)\n\};/) || [])[1] || '';
   const fx32 = {}; for (const fm of fu32.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)) fx32[fm[1]] = fm[2];
-  check('BE32. FIXED_UNIT ls.road = "үзлэг" (хуучин "км" бол why() холбоосыг САЛГАНА)',
-    fx32['ls.road'] === reg32.metrics['road.inspection_count'].unit, fx32['ls.road']);
+  check('BE32. FIXED_UNIT ls.road = метрикийн нэгж "хүн" (зөрвөл why() холбоосыг САЛГАНА)',
+    fx32['ls.road'] === reg32.metrics['road.period_pax'].unit, fx32['ls.road']);
   check('BE32. FIXED_UNIT k04.road = "mixed"',
     fx32['k04.road'] === reg32.metrics['road.inspection_kpi_set'].unit, fx32['k04.road']);
   check('BE32. Админы required_unit-д "үзлэг" бүртгэлтэй',
@@ -8067,6 +8083,8 @@ async function groupDGA() {
   const DT = (now) => { class FD extends Date { constructor(...a) { if (a.length) super(...a); else super(now); } static now() { return now; } } return FD; };
   const mkKit = (env) => new Function('CON', 'REG', 'FEED', 'ST', 'SERIES', 'SERIES_METRIC', 'RAIL', 'INSP', 'ST_METRIC', 'MONTHS', 'Date',
     'valueSpecOf', 'slotsOf', 'slotVal', 'qualityOf', 'sectorParts', 'widgetValueRes', 'headMetric', 'esc', 'EHGlossary',
+    /* Нэгдсэн огнооны мужийн метрик (PERIOD_METRIC → pvHomeStrip) энэ тестэд хамааралгүй — хоосон */
+    'var PERIOD_METRIC={},pvHomeStrip=function(){return null};' +
     parts.join('') + 'return {computeSeries:computeSeries,pvPeriodText:pvPeriodText,pvWeekModel:pvWeekModel,pvD05Share:pvD05Share,' +
     'setMeas:function(m){PV_D05_MEAS=m}};')(
     env.CON || { site: { chart: {} } }, { metrics: {} }, env.FEED, env.ST || { state: 'off' }, env.SERIES || {},
@@ -8137,8 +8155,9 @@ async function groupDGA() {
   const K0 = mkKit({ FEED: { state: 'error' }, sectorParts: () => [] });
   const none = ['w2p', 't05', 'i06', 'd05'].map((id) => K0.pvPeriodText(id));
   check('DG-P24. Дата алга → «Хугацаа: мэдээлэл алга» (хугацаа ЗОХИОХГҮЙ)', none.every((t) => t === 'Хугацаа: мэдээлэл алга'), none.join(' | '));
-  const nolines = ['hero_fl', 'hero_px', 'ls', 'k04', 'uk', 'u07'].filter((id) => K.pvPeriodText(id) !== '');
-  check('DG-P24. Сайт дээр хугацааны мөргүй виджет (hero/ls/k04/uk/u07) preview-д ч мөргүй', nolines.length === 0, nolines.join(','));
+  /* ls нь 2026-10-27-оос нэгдсэн огнооны мужтай (мөртэй) — DG-P25 браузераар сайттай тулгана */
+  const nolines = ['hero_fl', 'hero_px', 'k04', 'uk', 'u07'].filter((id) => K.pvPeriodText(id) !== '');
+  check('DG-P24. Сайт дээр хугацааны мөргүй виджет (hero/k04/uk/u07) preview-д ч мөргүй', nolines.length === 0, nolines.join(','));
   const KW = mkKit({ FEED, CON: { site: { chart: { period_prefix: 'ZZП', scope_months: 'ZZС', period_dropped: 'ZZХ' } } } });
   check('DG-P24. Үг нь content.json site.chart.period_*-ээс (засварлахад preview дагана)',
     KW.pvPeriodText('t05') === 'ZZП: 2026-01 — 2026-09 · 9 ZZС · ZZХ', KW.pvPeriodText('t05'));
@@ -8205,7 +8224,7 @@ async function groupDGA() {
   if (!CHROME) { skipped('DG-P25 (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
   const PROBE = `async function(d,w){
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-    const SRC={w2p:'w2p',w2pb:'w2p',w2px:'w2p',w2c:'w2c',w2cb:'w2c',w2cx:'w2c',t05:'t05',d05:'d05',i06:'i06',r06:'r06'};
+    const SRC={ls:'ls',w2p:'w2p',w2pb:'w2p',w2px:'w2p',w2c:'w2c',w2cb:'w2c',w2cx:'w2c',t05:'t05',d05:'d05',i06:'i06',r06:'r06'};
     await sleep(4000);
     const tab=d.querySelector('[data-sector-tab="air"]'); if(tab){ tab.click(); await sleep(1500); }
     const site={};
@@ -8254,9 +8273,10 @@ async function groupDGA() {
     if (R.__err) { bad('DG-P25. Хөтчийн проб ажиллав', R.__err); return; }
     const S = R.site || {}, A = R.admin || {};
     /* d05: сайт ба админ хоёулаа салбарын нэгтгэлийн «оны эхнээс» хувийг (EHGlossary.sectorShare) зурна */
-    const same = ['w2p', 'w2pb', 'w2px', 'w2c', 'w2cb', 'w2cx', 't05', 'd05', 'i06', 'r06'];
+    /* 2026-10-27: ls (01 «Үндсэн үзүүлэлт») нэгдсэн огнооны мужтай — мөртэй виджетэд нэмэгдэв (HK) */
+    const same = ['ls', 'w2p', 'w2pb', 'w2px', 'w2c', 'w2cb', 'w2cx', 't05', 'd05', 'i06', 'r06'];
     const diff = same.filter((id) => !S[id] || S[id] !== A[id]).map((id) => id + ': сайт «' + S[id] + '» · админ «' + A[id] + '»');
-    check('DG-P25. Админы preview-ийн мөр = нүүрний картын мөр (10 виджет, ?fx=1)', diff.length === 0, diff.join(' | '));
+    check('DG-P25. Админы preview-ийн мөр = нүүрний картын мөр (11 виджет, ?fx=1)', diff.length === 0, diff.join(' | '));
     check('DG-P25. d05 preview-д нэгтгэлийн оны эхнээс муж («Хугацаа: YYYY-01-01 — YYYY-MM-DD · N хоног»)',
       /^Хугацаа: (\d{4})-01-01 — \1-\d{2}-\d{2} · \d+ хоног$/.test(A.d05 || ''), A.d05);
     /* Донутын хувь ба тэмдэглэл — сайтын картын легенд = админы preview-ийн мөр (ИЖИЛ фикстур) */
@@ -8264,7 +8284,7 @@ async function groupDGA() {
     check('DG-P25. d05 донутын хувь, тэмдэглэл: админ = сайт (?fx=1)',
       !!d5.site && d5.site.length > 1 && JSON.stringify(d5.site) === JSON.stringify(d5.admin) && !!d5.note && d5.note === d5.anote,
       JSON.stringify(d5));
-    const extra = ['hero_fl', 'hero_px', 'ls', 'k04', 'uk', 'u07'].filter((id) => A[id] !== '');
+    const extra = ['hero_fl', 'hero_px', 'k04', 'uk', 'u07'].filter((id) => A[id] !== '');
     check('DG-P25. Хугацааны мөргүй виджет preview-д мөр гаргахгүй (сайттай ижил)', extra.length === 0, extra.map((id) => id + ':' + A[id]).join(' | '));
     const ed = R.ed || {};
     check('DG-P25. «Хугацаа» үг засварлагдана, бичих даруйд preview шинэчлэгдэж буцаахад эргэнэ',
@@ -9043,8 +9063,9 @@ function groupDG() {
      + нүүр 6 (w2p, w2c, t05, d05, i06, r06)
      + салбарын нэгтгэл 5 (7 хоногийн карт, 8 долоо хоног, сараар — хэмжүүр бүрт sc-for; эзлэх хувь, өмнөх оны мөн үе).
      + авто тээврийн зорчигч 10 (7 хоногийн тайлан, төрлийн донут, төрлийн карт (sc-for), сарын график,
-     харьцаа, чиглэл, тээвэрлэгч, суваг, ангилал, ТХ). Бүрдлийг DG-P16 браузераар тулгана. */
-  check('DG-P8. Хугацааны мөр: 22 + үзлэг 6 + ачааны нэгтгэл 6 + нүүр 6 + салбарын нэгтгэл 5 + авто зорчигч 10 + нүүрийн газрын зураг 1 = 56 карт', nPer === 56, 'n=' + nPer);
+     харьцаа, чиглэл, тээвэрлэгч, суваг, ангилал, ТХ). Бүрдлийг DG-P16 браузераар тулгана.
+     2026-10-27: нүүр 7 — 01 «Үндсэн үзүүлэлт» зурвас нэгдсэн огнооны мужтай (HK). */
+  check('DG-P8. Хугацааны мөр: 22 + үзлэг 6 + ачааны нэгтгэл 6 + нүүр 7 + салбарын нэгтгэл 5 + авто зорчигч 10 + нүүрийн газрын зураг 1 = 57 карт', nPer === 57, 'n=' + nPer);
   check('DG-P8. Тус бүр өгөгдлөөс уншина (chartPeriod / airPeriod биндинг)',
     /chartPeriod:chartPeriodText\(m,T\)/.test(idxP) && /airPeriod:chartPeriodText\(/.test(idxP) &&
     /{{ detail.chartPeriod }}/.test(idxP) && /{{ detail.airPeriod }}/.test(idxP));
@@ -9226,9 +9247,10 @@ function groupDG() {
       road: { label: 'Авто зам', kpis: [['x', '9']] }
     };
     const NEON = { air: '#1', rail: '#2', road: '#3' };
-    const mkD = new Function('SECTORS', 'NEON', 'stxt', 'EHGlossary',
-      'return function(activeKey){' + mD[1] + '}')(SEC, NEON, (p, x) => x, G);
+    const mkD = new Function('SECTORS', 'NEON', 'stxt', 'EHGlossary', 'HOME_PERIOD_METRIC',
+      'return function(activeKey){' + mD[1] + '}')(SEC, NEON, (p, x) => x, G, {});
     const ctx = (live) => ({
+      state: { metricRegistry: null },
       visibleSectorKeys: () => ['air', 'rail', 'road'],
       valueFromSpec: () => null,
       homeSectorPeriod: (k) => 'Хугацаа: ' + (k || 'мэдээлэл алга'),
@@ -9879,8 +9901,10 @@ async function groupAF() {
   const blk = idx.slice(a, idx.indexOf('<div class="eh-g4 eh-g-2c"', a));
   const hard = (blk.match(/>([^<>{}]*[А-Яа-яӨөҮүЁё][^<>{}]*)</g) || []).map(x => x.slice(1, -1).trim()).filter(Boolean);
   check('AF2. Шүүлтийн блокт хатуу монгол текст алга', hard.length === 0, hard.join(' | '));
-  check('AF2. Толгой = sections.sec-01 (шинэ давхар түлхүүр нэмээгүй)',
-    blk.includes('{{ sSec01 }}') && /sSec01:this\.stxt\('sections\.sec-01'/.test(idx) &&
+  /* 2026-10-27: sections.sec-01 нь нүүрний «Нэгдсэн шүүлт — огноо ба хэмжүүр» болсон (HK) — агаарын
+     хуудасны шүүлт «доорх бүх үзүүлэлтэд» хамаарах тул ӨӨРИЙН ганц түлхүүртэй (detail.air_f_head) */
+  check('AF2. Толгой = detail.air_f_head (нүүрний sec-01-ээс тусдаа, давхар түлхүүргүй)',
+    blk.includes('{{ sAirFHead }}') && /sAirFHead:this\.stxt\('detail\.air_f_head'/.test(idx) &&
     !/"nav_filter_head"|air_filter_head/.test(JSON.stringify(con)));
 
   /* AF3. Unit: buildAirFilters() — content-ийн утга солигдоход чип/дүгнэлт солигдоно */
@@ -9913,7 +9937,7 @@ async function groupAF() {
   if (!air) { skipped('AF4', 'агаарын датасэт алга'); return; }
   const mod = JSON.parse(JSON.stringify(con));
   Object.assign(mod.site.detail, { all: 'AF-ALL', loading: 'AF-LOAD', air_dir_dep: 'AF-DEP', air_dir_arr: 'AF-ARR', air_type_dom: 'AF-DOM' });
-  mod.site.sections['sec-01'] = 'AF-HEAD';
+  mod.site.detail.air_f_head = 'AF-HEAD';
   const srv = serve();
   SERVE_OVERRIDE = { '/content.json': JSON.stringify(mod) };
   try {
@@ -10255,7 +10279,9 @@ function groupST() {
   for (const mm of body.matchAll(/(?:\bT\(|stxt\('sector_total\.)'([a-z_0-9.]+)'/g)) {
     /* динамик зам ('table_head.'+i) — массив, 7 багана */
     if (mm[1].endsWith('.')) { const arr = get(TC, mm[1].slice(0, -1)); if (!Array.isArray(arr) || arr.length !== 7) missing.push(mm[1] + '[7]'); continue; }
-    if (get(TC, mm[1]) == null) missing.push(mm[1]);
+    /* 2026-10-27: нүүрний нэгдсэн огнооны мужийн туслахууд (homeStrip, lsStripCell …) энэ хэсэгт —
+       тэдний T( нь site.home_range (HK3 түлхүүр бүрийг шалгана) */
+    if (get(TC, mm[1]) == null && !(body.includes("stxt('home_range.'+") && get((C.site || {}).home_range || {}, mm[1]) != null)) missing.push(mm[1]);
   }
   check('ST21. Салбарын нэгтгэлийн бүх текст content.json → site.sector_total-д', ma > 0 && mb > ma && missing.length === 0, missing.join(', '));
   check('ST22. content.json: site.datasets-д нэгтгэлийн мөр (sector:"total"), pv_scope.note_sector_total',
@@ -10800,14 +10826,15 @@ function groupHR() {
     /this\.val\('hero_fl','—'\)/.test(src) && !/this\.val\('hero_fl','11,979'\)/.test(src) &&
     /heroFlMonthSuffix:hv\.isFallback\?' · '\+this\.stxt\('status\.no_data'/.test(src));
   /* HR4. lsSourceLink — kpis[0]-ийн бодит эх сурвалжийн датасэт */
-  const ls = src.match(/\n  lsSourceLink\(k,verified\)\{([\s\S]*?)\n  \}\n/);
+  /* srcOver (2026-10-27) — нэгдсэн огнооны мужийн нүд: сонгосон ХЭМЖҮҮРИЙН эх датасэт (HK) */
+  const ls = src.match(/\n  lsSourceLink\(k,verified,srcOver\)\{([\s\S]*?)\n  \}\n/);
   if (!ls) bad('HR4. lsSourceLink() олдсонгүй');
   else {
     const DS = [{ sector: 'air', name: 'Агаар', source: 'flights' }, { sector: 'rail', name: 'Вагон', source: 'railWagon' },
       { sector: 'rail', name: 'Зорчигч', source: 'railPax' }, { sector: 'road', name: 'Үзлэг', source: 'roadInspect' },
       { sector: 'road', name: 'Авто зорчигч', source: 'roadPax' }];
-    const fn = new Function('DATASETS', 'datasetSlug', 'stxt', 'k', 'verified', ls[1]);
-    const run = (ctx, k, v) => fn.call(Object.assign({ openDataset: () => {} }, ctx), DS, (d) => d.sector + '__' + d.source, (p, fb) => fb, k, v);
+    const fn = new Function('DATASETS', 'datasetSlug', 'stxt', 'k', 'verified', 'srcOver', ls[1]);
+    const run = (ctx, k, v, so) => fn.call(Object.assign({ openDataset: () => {} }, ctx), DS, (d) => d.sector + '__' + d.source, (p, fb) => fb, k, v, so);
     const air = run({}, 'air', true);
     check('HR4. Агаар → flights датасэт, href #/browse/<slug>', air.srcHas && air.srcHref === '#/browse/air__flights' && air.srcTitle === 'Агаар', JSON.stringify(air));
     check('HR4. Төмөр зам: вагон ирсэн → railWagon, ирээгүй → railPax (kpis[0]-тэй ИЖИЛ дүрэм)',
@@ -10816,9 +10843,12 @@ function groupHR() {
       run({ _roadInspections: { count: 0 } }, 'road', true).srcTitle === 'Үзлэг' && run({}, 'road', true).srcTitle === 'Авто зорчигч');
     check('HR4. Холбогдоогүй (verified=false) ба усан зам → холбоосгүй',
       run({}, 'air', false).srcHas === false && run({}, 'water', true).srcHas === false);
+    check('HR4. Нэгдсэн мужийн нүд: хэмжүүрийн эх датасэт (srcOver) давуу — вагон ирсэн ч зорчигчийн датасэт; null → холбоосгүй',
+      run({ _railWagonLoading: { count: 5 } }, 'rail', true, 'railPax').srcTitle === 'Зорчигч' && run({}, 'road', true, null).srcHas === false);
   }
   /* HR5. Темплейт — холбоос <button> ДОТОР БИШ (хүчингүй HTML), livestrip-ийн мөрөнд */
-  const lsBlock = (tpl.match(/<sc-for list="\{\{ livestrip \}\}"[\s\S]*?<\/sc-for>/) || [''])[0];
+  /* Нүдний дотор spark-ийн hover мужийн sc-for (ls.hits) бий — livestrip-ийн блокийг доод мөр (lsHasRange) хүртэл */
+  const lsA = tpl.indexOf('<sc-for list="{{ livestrip }}"'), lsBlock = lsA < 0 ? '' : tpl.slice(lsA, tpl.indexOf('{{ lsHasRange }}', lsA));
   check('HR5. KPI карт бүрийн доор data-ls-src холбоос (button-ийн ГАДНА, sc-if srcHas)',
     /<\/button>\s*<sc-if value="\{\{ ls\.srcHas \}\}">\s*<a data-ls-src=/.test(lsBlock) && /sc-camel-on-click="\{\{ ls\.openSrc \}\}"/.test(lsBlock));
   check('HR5. content.json: site.ls_src.label', !!(CJ.site.ls_src && CJ.site.ls_src.label));
@@ -10870,6 +10900,307 @@ function groupHR() {
      HP6  Хөтөч (?fx=1): нүүрний ticker = админы preview = фикстураас гараар бодсон;
           w2p-ийн нийт ижил долоо хоног; холбоос салгахад хоёулаа «— · мэдээлэл алга»
    ══════════════════════════════════════════════════════════════════ */
+/* ── HK. Нүүрний 01 «Үндсэн үзүүлэлт» + 05 «Салбарын харьцаа» — НЭГ хугацаа, НЭГ логик (2026-10-27) ──
+   Хэрэглэгч: «нэг карт нь цаг хугацааны шугамтай, нөгөө нь шугамгүй — салбар бүр нэг логик нэг цаг
+   хугацааны дата харуул»; «агаарын ачаа 0 — огт тээвэр хийгээгүй мэт»; «виджет 1-ийн шүүлт дээр огноо
+   өгч шүүх». Эх: салбарын нэгтгэлийн ӨДРИЙН мөр → EHGlossary.periodStrip (сайт ба админ НЭГ функц). */
+async function groupHK() {
+  group('HK. 01 зурвас + 05 донут — нэгдсэн огнооны муж, нэг хэмжүүр, нэг харьцуулалт');
+  const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+  const CJ = readJson('content.json'), RG = readJson('metric_registry.json');
+  const need = ['homeRange', 'rangeCompare', 'periodStrip', 'sparkPaths', 'periodCell', 'bucketWord', 'shareText', 'shareArcs',
+    'stDailyRows', 'stDailyIndex', 'isoAdd', 'isoDiff'];
+  const miss = need.filter((k) => typeof G[k] !== 'function');
+  check('HK1. EHGlossary экспорт (' + need.length + ')', miss.length === 0, miss.join(', '));
+  if (miss.length) return;
+  const T = (k, fb) => fb;
+
+  /* HK1. Огнооны муж ба харьцуулалт — гараар */
+  const hr = (p) => { const r = G.homeRange(p, '2026-10-25'); return r && r.from + '…' + r.to + '|' + r.preset; };
+  check('HK1. Бэлэн муж: 7d/30d/90d/mtd/ytd/12m (anchor 2026-10-25)',
+    hr('7d') === '2026-10-19…2026-10-25|7d' && hr('30d') === '2026-09-26…2026-10-25|30d' && hr('90d') === '2026-07-28…2026-10-25|90d' &&
+    hr('mtd') === '2026-10-01…2026-10-25|mtd' && hr('ytd') === '2026-01-01…2026-10-25|ytd' && hr('12m') === '2025-10-26…2026-10-25|12m',
+    ['7d', '30d', '90d', 'mtd', 'ytd', '12m'].map(hr).join(' '));
+  check('HK1. Буруу anchor → null, мэдэгдэхгүй муж → оны эхнээс',
+    G.homeRange('7d', null) === null && G.homeRange('7d', '2026-13') === null && hr('zz') === '2026-01-01…2026-10-25|ytd');
+  const rc = (a, b) => { const c = G.rangeCompare(a, b); return c.mode + ':' + c.from + '…' + c.to + ':' + c.n; };
+  check('HK1. ≤92 хоног → өмнөх ижил урттай хугацаа; 93+ → өмнөх оны мөн үе',
+    rc('2026-10-19', '2026-10-25') === 'prev:2026-10-12…2026-10-18:7' &&
+    rc('2026-07-26', '2026-10-25') === 'prev:2026-04-25…2026-07-25:92' &&
+    rc('2026-07-25', '2026-10-25') === 'yoy:2025-07-25…2025-10-25:93' &&
+    rc('2026-01-01', '2026-10-25') === 'yoy:2025-01-01…2025-10-25:298',
+    [rc('2026-10-19', '2026-10-25'), rc('2026-07-26', '2026-10-25'), rc('2026-07-25', '2026-10-25'), rc('2026-01-01', '2026-10-25')].join(' '));
+  check('HK1. Өндөр жил: 2024-02-29 → өмнөх оны 2023-02-28', rc('2023-06-01', '2024-02-29') === 'yoy:2022-06-01…2023-02-28:273',
+    rc('2023-06-01', '2024-02-29'));
+
+  /* HK1. periodStrip — 2026-10-12…25 (14 өдөр), гараар:
+       агаар — өмнөх 7 × 100 = 700, одоо 7 × 110 = 770 → +10.0% (нийлбэрээр)
+       төмөр зам — одоо 6 өдөр × 50 = 300 (10-25 мэдээгүй) → ≥300, 6/7 < 90% → харьцуулахгүй (short)
+       авто — одоо 7 × 200 = 1,400; өмнөх 10-12…14 цоорхой (мөргүй), 4 × 180 = 720 → prev_short
+       ус — мөргүй → value null (0 ЗОХИОХГҮЙ) */
+  const rows = [];
+  const day = (i) => G.isoAdd('2026-10-12', i);
+  for (let i = 0; i < 14; i++) {
+    const d = day(i), cur = i >= 7;
+    rows.push({ date: d, sector: 'air', passengers: cur ? 110 : 100, freight_tonnes: cur ? 2 : 1 });
+    if (!(cur && d === '2026-10-25')) rows.push({ date: d, sector: 'rail', passengers: 50, freight_tonnes: 1000 });
+    if (i >= 3) rows.push({ date: d, sector: 'road', passengers: cur ? 200 : 180, freight_tonnes: null });
+  }
+  const idx = G.stDailyIndex(rows);
+  const GAPS = { road: [{ from: '2026-10-12', to: '2026-10-14' }] };
+  const KEYS = ['air', 'road', 'rail', 'water'];
+  const m7 = G.periodStrip(idx, { from: '2026-10-19', to: '2026-10-25', measure: 'passengers', keys: KEYS, gaps: GAPS });
+  const s = m7 && m7.sectors;
+  check('HK1. Агаар: 770 vs 700 → +10.0%, нийлбэрээр, «≥»-гүй',
+    !!s && s.air.value === 770 && s.air.prev === 700 && Math.abs(s.air.pct - 10) < 1e-9 && s.air.basis === 'sum' && s.air.lower === false,
+    JSON.stringify(s && s.air));
+  check('HK1. Төмөр зам: 6/7 өдөр → ≥300, харьцуулахгүй (short), хувь null',
+    !!s && s.rail.value === 300 && s.rail.lower === true && s.rail.days === 6 && s.rail.reason === 'short' && s.rail.pct === null,
+    JSON.stringify(s && s.rail));
+  check('HK1. Авто: өмнөх 7 хоногийн 3 өдөр цоорхой → prev 720 (4/7), prev_short, хувь null',
+    !!s && s.road.value === 1400 && s.road.prev === 720 && s.road.prevDays === 4 && s.road.reason === 'prev_short' && s.road.pct === null,
+    JSON.stringify(s && s.road));
+  check('HK1. Ус: мөргүй → value null (0 биш), reason none, шугамгүй',
+    !!s && s.water.value === null && s.water.reason === 'none' && s.water.series.length === 0);
+  check('HK1. Нийт = мэдээтэй салбарын нийлбэр (770 + 1,400 + 300 = 2,470), хувиар = өдөр, 7 цэг',
+    !!m7 && m7.total === 2470 && m7.bucket === 1 && s.air.series.length === 7 && s.air.prevSeries.length === 7 && m7.cmp.mode === 'prev');
+  check('HK1. Мэдээгүй өдрийн цэг null (дутуу нийлбэрийг бүтэн мэт зурахгүй), rec-д бүртгэгдсэн',
+    !!s && s.rail.series[6].v === null && s.rail.series[6].rec === null && s.rail.series[0].v === 50 && s.road.prevSeries[0].v === null);
+  const mf = G.periodStrip(idx, { from: '2026-10-19', to: '2026-10-25', measure: 'freight_tonnes', keys: KEYS, gaps: GAPS });
+  check('HK1. Хэмжүүр солиход ижил муж: агаарын ачаа 14 тн vs 7 тн (+100%), авто ачаагүй → null',
+    !!mf && mf.sectors.air.value === 14 && Math.abs(mf.sectors.air.pct - 100) < 1e-9 && mf.sectors.road.value === null && mf.measure === 'freight_tonnes');
+  /* Өдрийн дунджаар: 10 хоног (10-16…25), одоо 9 өдөр × 10 = 90, өмнөх 10 × 8 = 80 → (10 / 8 − 1) = +25.0% */
+  const ar = [];
+  for (let i = 0; i < 20; i++) { const d = G.isoAdd('2026-10-06', i); if (d !== '2026-10-20') ar.push({ date: d, sector: 'air', passengers: i >= 10 ? 10 : 8, freight_tonnes: null }); }
+  const ma = G.periodStrip(G.stDailyIndex(ar), { from: '2026-10-16', to: '2026-10-25', measure: 'passengers', keys: ['air'] });
+  check('HK1. Хоёр тал ≥90% мэдээтэй → өдрийн дунджаар: 90/9 ÷ 80/10 − 1 = +25.0% (basis avg, «≥»)',
+    !!ma && ma.sectors.air.value === 90 && ma.sectors.air.basis === 'avg' && Math.abs(ma.sectors.air.pct - 25) < 1e-9 && ma.sectors.air.lower === true,
+    JSON.stringify(ma && ma.sectors.air));
+  /* Мужийн талаас бага өдөр мэдээтэй (30 хоногт төмөр зам 13 өдөр) → тоо харуулахгүй (thin), rec-д үлдэнэ */
+  const m30 = G.periodStrip(idx, { from: '2026-09-26', to: '2026-10-25', measure: 'passengers', keys: KEYS, gaps: GAPS });
+  check('HK1. 13/30 өдөр → value null, reason thin, бүртгэгдсэн 650 rec-д (авто 2023-05: «≥21» худал сэтгэгдэл)',
+    !!m30 && m30.sectors.rail.value === null && m30.sectors.rail.reason === 'thin' && m30.sectors.rail.rec === 650 && m30.sectors.rail.days === 13,
+    JSON.stringify(m30 && m30.sectors.rail).slice(0, 160));
+  check('HK1. Буруу оролт → null', G.periodStrip(null, { from: '2026-10-19', to: '2026-10-25' }) === null &&
+    G.periodStrip(idx, { from: '2026-10-25', to: '2026-10-19' }) === null && G.periodStrip(idx, { from: 'x', to: '2026-10-19' }) === null);
+  const big = G.periodStrip(idx, { from: '2026-01-01', to: '2026-10-25', measure: 'passengers', keys: ['air'] });
+  const big2 = G.periodStrip(idx, { from: '2024-01-01', to: '2026-10-25', measure: 'passengers', keys: ['air'] });
+  check('HK1. Spark-ийн хувиар: ≤92 өдөр → 1, ≤731 → 7, түүнээс урт → 30; сүүлийн цэг сонгосон өдрөөр дуусна',
+    m7.bucket === 1 && big.bucket === 7 && big2.bucket === 30 && m7.sectors.air.series.slice(-1)[0].to === '2026-10-25');
+
+  /* HK1. Нүдний текст — сайт ба админ НЭГ функц */
+  const c = (k) => G.periodCell(m7, k, T, { noData: 'мэдээлэл алга' });
+  check('HK1. periodCell: агаар «770» «+10.0%» «Өмнөх 7 хоног: 700»',
+    c('air').value === '770' && c('air').delta === '+10.0%' && c('air').dir === 'up' && c('air').note === 'Өмнөх 7 хоног: 700', JSON.stringify(c('air')));
+  check('HK1. periodCell: төмөр зам «≥300» «—» «мэдээтэй 6/7 хоног — харьцуулахгүй»',
+    c('rail').value === '≥300' && c('rail').delta === '—' && c('rail').note === 'мэдээтэй 6/7 хоног — харьцуулахгүй', JSON.stringify(c('rail')));
+  check('HK1. periodCell: авто «Өмнөх 7 хоног: мэдээ дутуу (4/7 хоног) — харьцуулахгүй»; ус «—» «мэдээлэл алга»',
+    c('road').note === 'Өмнөх 7 хоног: мэдээ дутуу (4/7 хоног) — харьцуулахгүй' && c('water').value === '—' && c('water').note === 'мэдээлэл алга' && !c('water').live);
+  const ca = G.periodCell(ma, 'air', T, {});
+  check('HK1. periodCell: дунджаар — «9/10 хоног мэдээтэй · Өмнөх 10 хоног: 80 · өдрийн дунджаар», «−» тэмдэг (U+2212)',
+    ca.value === '≥90' && ca.delta === '+25.0%' && ca.note === '9/10 хоног мэдээтэй · Өмнөх 10 хоног: 80 · өдрийн дунджаар' &&
+    G.periodCell({ cmp: { mode: 'prev', n: 7 }, sectors: { x: { value: 90, prev: 100, pct: -10, reason: null, basis: 'sum', lower: false } } }, 'x', T, {}).delta === '−10.0%',
+    JSON.stringify(ca));
+  check('HK1. periodCell: thin → «мэдээ дутуу — 13/30 хоног»', G.periodCell(m30, 'rail', T, {}).note === 'мэдээ дутуу — 13/30 хоног');
+  check('HK1. bucketWord: 1 → «1 өдөр», 7 → «7 хоног», 30 → «30 хоног», бусад → «1 сар»',
+    G.bucketWord(1, T) === '1 өдөр' && G.bucketWord(7, T) === '7 хоног' && G.bucketWord(30, T) === '30 хоног' && G.bucketWord(null, T) === '1 сар');
+
+  /* HK1. Spark зам — нэг масштаб, null тасална */
+  const sp = G.sparkPaths([{ v: 1 }, { v: null }, { v: 3 }], [{ v: 2 }, { v: 2 }, { v: 2 }], { w: 100, h: 20, pad: 0 });
+  check('HK1. sparkPaths: null цэг шугамыг тасална, харьцуулах шугам ижил масштабаар, hover муж 3',
+    sp.line === 'M0.0,20.0 M100.0,0.0' && sp.prevLine === 'M0.0,10.0 L50.0,10.0 L100.0,10.0' && sp.hits.length === 3 &&
+    sp.hits[1].x === '25.0' && sp.hits[1].w === '50.0' && sp.dot.cx === '100.0' && sp.dot.cy === '0.0', JSON.stringify(sp));
+  check('HK1. sparkPaths: утгагүй/1 цэг → хоосон (EMP — хавтгай шугам зурахгүй)',
+    G.sparkPaths([], [], {}).line === '' && G.sparkPaths([{ v: 5 }], [], {}).line === '' && G.sparkPaths([{ v: null }, { v: null }], [], {}).hits.length === 0);
+
+  /* HK1. Хувийн текст ба нумын харагдах хэмжээ (d05) */
+  check('HK1. shareText: 0.03% → «<0.1%», 99.97% → «>99.9%», 45.04 → «45%»/«45.0%», 0 → «0%», null → «—»',
+    G.shareText(0.0315, 1) === '<0.1%' && G.shareText(99.97, 1) === '>99.9%' && G.shareText(99.97, 0) === '>99.9%' &&
+    G.shareText(45.04, 0) === '45%' && G.shareText(45.04, 1) === '45.0%' && G.shareText(0, 1) === '0%' && G.shareText(null) === '—' &&
+    G.shareText(99.6, 0) === '99.6%' && G.shareText(0.3, 0) === '0.3%' && G.shareText(100, 0) === '100%');
+  const vis = G.shareArcs([27055546, 8521, 0]);
+  check('HK1. shareArcs: агаарын ачаа 0.03% → нум 1.5%, төмөр зам 98.5%, мэдээгүй 0, нийлбэр 100',
+    Math.abs(vis[0] - 98.5) < 1e-9 && Math.abs(vis[1] - 1.5) < 1e-9 && vis[2] === 0 && Math.abs(vis.reduce((a, b) => a + b, 0) - 100) < 1e-9, JSON.stringify(vis));
+  check('HK1. shareArcs: бүгд том → өөрчлөлтгүй; бүгд 0 → 0',
+    JSON.stringify(G.shareArcs([50, 50])) === '[50,50]' && JSON.stringify(G.shareArcs([0, 0])) === '[0,0]');
+
+  /* HK1. 02-р картын баганын шошго (гар утас): ≥10K бүхэл мянга — «≥86.4K» хөрштэйгээ давхцдаг байв */
+  const wbS = G.weekBars({ vals: [86431, 8640, 571206, 1234567, 950], labels: ['a', 'b', 'c', 'd', 'e'] }).bars.map((b) => b.valueShort);
+  check('HK1. weekBars.valueShort: 86,431 → «86K», 8,640 → «8.6K», 571,206 → «571K», 1,234,567 → «1.2M», 950 → «950»',
+    JSON.stringify(wbS) === '["86K","8.6K","571K","1.2M","950"]', JSON.stringify(wbS));
+
+  /* HK1. /rows хариу → өдрийн мөр */
+  const res = { status: 'ok', columns: [{ key: 'sector_name' }, { key: 'record_date' }, { key: 'sector_code' }, { key: 'freight_tonnes' }, { key: 'passengers' }],
+    rows: [['Агаар', '2026-10-25T00:00:00Z', 'air', '1.5', '5'], ['Авто', '2026-10-25', 'road', null, ''], ['x', '2026-10-24', 'air', 1, 2], ['x', '2026-10-24', 'air', 3, 4]] };
+  const dr = G.stDailyRows(res), di = dr && G.stDailyIndex(dr);
+  check('HK1. stDailyRows: багана НЭРЭЭР (дараалал хамаагүй), хоосон → null (0 биш); давхардал НЭМЭГДЭХГҮЙ (сүүлийнх)',
+    !!dr && dr[0].date === '2026-10-25' && dr[0].passengers === 5 && dr[0].freight_tonnes === 1.5 && dr[1].passengers === null &&
+    di.by['2026-10-24'].air.passengers === 4 && di.first === '2026-10-24' && di.last === '2026-10-25' &&
+    G.stDailyRows({ status: 'no_data' }) === null && G.stDailyRows({ status: 'ok', columns: [{ key: 'x' }], rows: [] }) === null);
+
+  /* HK2. 02-р хэсэгтэй тулгалт — ИЖИЛ өдрүүдээс бүтээсэн weekly дээр EHGlossary.weekReport */
+  const wk = (from, to) => { const by = {};
+    ['air', 'road', 'rail'].forEach((k) => { let s0 = 0, n = 0; for (let d = from; d <= to; d = G.isoAdd(d, 1)) { const x = idx.by[d] && idx.by[d][k];
+      if (x && x.passengers != null) { s0 += x.passengers; n++; } } if (n) by[k] = { value: s0, days: n }; });
+    return { week_start: from, week_end: to, missing: false, by_sector: by }; };
+  const W = { sectors: ['air', 'road', 'rail'], week_end: '2026-10-25', weeks: [wk('2026-10-12', '2026-10-18'), wk('2026-10-19', '2026-10-25')] };
+  const wr = G.weekReport(W, ['air', 'road', 'rail'], GAPS);
+  check('HK2. «7 хоног» зурвас = 02-р хэсгийн сүүлийн долоо хоног (салбар бүр ба нийт ИЖИЛ)',
+    !!wr && ['air', 'road', 'rail'].every((k) => wr.bySector[k].value === s[k].value) && wr.total === m7.total,
+    JSON.stringify({ wr: wr && wr.bySector, total: wr && wr.total, strip: m7.total }));
+  const GAPS2 = { road: [{ from: '2026-10-24', to: '2026-10-25' }] };
+  const wr2 = G.weekReport(W, ['air', 'road', 'rail'], GAPS2), lw2 = wr2 && wr2.weeks[wr2.weeks.length - 1];
+  const m7g = G.periodStrip(idx, { from: '2026-10-19', to: '2026-10-25', measure: 'passengers', keys: KEYS, gaps: GAPS2 });
+  check('HK2. Авто тээврийн цоорхой (10-24…25): 02-р хэсэг нийтгүй, «≥» (partial) = зурвасын нийт; авто «≥» (5/7)',
+    !!lw2 && wr2.total === null && lw2.partial === m7g.total && m7g.sectors.road.lower === true && m7g.sectors.road.days === 5,
+    JSON.stringify({ total: wr2 && wr2.total, partial: lw2 && lw2.partial, strip: m7g && m7g.total }));
+
+  /* HK3. Бүртгэл, текст, нэг эх код */
+  const src = dcScript(), adm = adminScript();
+  const mapOf = (txt, name) => { const m = txt.match(new RegExp(name + '=\\{([^}]*)\\}')); return m ? m[1].replace(/\s+/g, '') : null; };
+  const siteMap = mapOf(src, 'const HOME_PERIOD_METRIC'), admMap = mapOf(adm, 'var PERIOD_METRIC');
+  check('HK3. Сайтын HOME_PERIOD_METRIC = админы PERIOD_METRIC (ижил толь)', !!siteMap && siteMap === admMap, siteMap + ' | ' + admMap);
+  const lsS = (RG.widgets.ls || {}).sectors || {}, d5S = (RG.widgets.d05 || {}).sectors || {};
+  const per = ['air', 'road', 'rail'];
+  check('HK3. ls ба d05 бүртгэл: агаар/авто/төмөр зам = *.period_pax (verified), ус mock/none',
+    per.every((k) => lsS[k] && lsS[k].metric === k + '.period_pax' && lsS[k].quality === 'verified') &&
+    per.every((k) => d5S[k] && d5S[k].metric === k + '.period_pax' && d5S[k].quality === 'verified') && !lsS.water.metric && !d5S.water.metric,
+    JSON.stringify(lsS).slice(0, 200));
+  const pm = ['air.period_pax', 'rail.period_pax', 'road.period_pax', 'air.period_cargo', 'rail.period_cargo'].map((k) => RG.metrics[k]);
+  check('HK3. metrics.*.period_* — verified, dataset gold.sector_daily_total, нэгж хүн/тонн, additive',
+    pm.every((m) => m && m.quality === 'verified' && m.dataset === 'gold.sector_daily_total' && m.additive === true) &&
+    pm.slice(0, 3).every((m) => m.unit === 'хүн') && pm.slice(3).every((m) => m.unit === 'тонн'));
+  const H = CJ.site.home_range || {};
+  const hk = ['chip_7d', 'chip_30d', 'chip_90d', 'chip_mtd', 'chip_ytd', 'chip_12m', 'preset_7d', 'preset_30d', 'preset_90d', 'preset_mtd',
+    'preset_ytd', 'preset_12m', 'custom', 'from', 'to', 'days_word', 'm_pax', 'm_freight', 'not_period', 'cmp_note', 'cmp_yoy', 'cmp_prev',
+    'cmp_yoy_short', 'cmp_prev_short', 'prev_short', 'short', 'thin', 'basis_avg', 'days', 'partial', 'total', 'scope', 'bucket_day', 'bucket_week', 'bucket_30', 'bucket_month'];
+  const hMiss = hk.filter((k) => typeof H[k] !== 'string' || !H[k]);
+  check('HK3. content.json site.home_range (' + hk.length + ' текст)', hMiss.length === 0, hMiss.join(', '));
+  check('HK3. widgets.ls.foot «{bucket}»-тэй (сайт lsFootText, админ footBlock — ХОЁУЛАА орлуулна)',
+    /\{bucket\}/.test(CJ.widgets.ls.foot || '') && /lsFootText\(hs\)\{[\s\S]{0,300}?EHGlossary\.bucketWord/.test(src) && /split\('\{bucket\}'\)\.join\(pvBucketWord\(\)\)/.test(adm));
+  check('HK3. Сайт ба админ нүдний текстийг EHGlossary.periodCell-ээс (давхар логикгүй)',
+    /G\.periodCell\(hs,k,T,\{noData\}\)/.test(src) && /EHGlossary\.periodCell\(hsl,p\.k,pvT_home,\{noData:ndL\}\)/.test(adm));
+  check('HK3. Донут: сайт ба админ EHGlossary.shareArcs (нум) + shareText (шошго)',
+    /G\.shareArcs\(raw\.map\(r=>r\.v\)\)/.test(src) && /G\.shareText\(p,d\)/.test(src) &&
+    /EHGlossary\.shareArcs\(sh5\.raw\.map/.test(adm) && /EHGlossary\.shareText\(r\.pct,1\)/.test(adm));
+  check('HK3. Админы ls preview утгын тохиргоог (widgets.ls.value) уншдаггүй — VALUE_TARGETS-д ls алга',
+    !/\bls:'air_flights'/.test(adm.slice(adm.indexOf('var VALUE_TARGETS='), adm.indexOf('function valueSpecOf('))));
+  check('HK3. Шүүлтийн хамрах хүрээ ИЛ (data-home-scope) ба харьцуулалт (data-home-cmp); «доорх бүх үзүүлэлтэд» гэсэн худал гарчиг алга',
+    read('index.html').includes('data-home-scope="1"') && read('index.html').includes('data-home-cmp="1"') && !/sections\.sec-01','Нэгдсэн шүүлт — доорх бүх/.test(src) &&
+    !/доорх бүх/.test(CJ.site.sections['sec-01']));
+
+  /* HK4. Хөтөч — нүүр ба админ ИЖИЛ фикстураар (?fx=1) */
+  if (!CHROME) { skipped('HK4. Нүүр ↔ админ (DOM)', 'Chrome олдсонгүй'); return; }
+  const PROBE = `async function(d,w){
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    const norm=t=>String(t||'').replace(/[\\s\\u00a0]+/g,' ').trim();
+    const num=t=>{ const m=String(t||'').replace(/,/g,'').match(/-?\\d+(\\.\\d+)?/); return m?+m[0]:null; };
+    const cells=()=>[].slice.call(d.querySelectorAll('[data-ls-spark]')).map(svg=>{ const b=svg.closest('button')||svg.parentElement, box=b.parentElement;
+      const ps=[].slice.call(svg.querySelectorAll('path')).map(p=>p.getAttribute('d')||'');
+      return {t:norm(b.textContent),src:!!box.querySelector('[data-ls-src]'),line:!!ps[1],prev:!!ps[0],
+        hits:svg.querySelectorAll('rect').length,tip:(svg.querySelector('rect title')||{}).textContent||''}; });
+    const per=()=>norm((d.querySelector('[data-ls-period]')||{}).textContent);
+    const donut=()=>{ const c=d.querySelector('[data-eh-card="d05"]'); const card=c&&c.parentElement.parentElement;
+      return card?{per:norm((card.querySelector('[data-chart-period]')||{}).textContent),
+        arcs:[].slice.call(card.querySelectorAll('circle[stroke-dasharray]')).map(x=>({dash:x.getAttribute('stroke-dasharray'),tip:norm((x.querySelector('title')||{}).textContent)})),
+        rows:norm(card.textContent)}:null; };
+    /* Хуучин нүдний хөл бичиг («Нэг цэг = 1 сар») ч цифртэй — нийт гарахыг хүлээнэ */
+    const totT=()=>norm((d.querySelector('[data-ls-total]')||{}).textContent);
+    for(let i=0;i<100;i++){ if(/\\d/.test(totT())&&cells().filter(c=>/зорчигч/.test(c.t)).length>=3) break; await sleep(400); }
+    const R={ytd:{per:per(),cells:cells(),donut:donut(),legend:norm((d.querySelector('[data-ls-legend]')||{}).textContent)}};
+    /* Шүүлтийн самбар */
+    if(!d.querySelector('[data-home-preset]')){ const fb=[].slice.call(d.querySelectorAll('button')).find(b=>/Шүүлт/.test(b.textContent)); if(fb) fb.click(); await sleep(500); }
+    const pick=k=>{ const b=d.querySelector('[data-home-preset="'+k+'"]'); if(b) b.click(); return !!b; };
+    R.hasPresets=pick('7d'); await sleep(900);
+    R.d7={per:per(),cells:cells(),donut:donut(),cmp:norm((d.querySelector('[data-home-cmp]')||{}).textContent),
+      from:(d.querySelector('[data-home-from]')||{}).value,to:(d.querySelector('[data-home-to]')||{}).value};
+    /* Гараар огноо — өмнөх 7 хоног (харьцуулах хугацаа) → зурвасын дүн = 7d-ийн «Өмнөх 7 хоног: N» */
+    const setD=(sel,v)=>{ const e=d.querySelector(sel); const st=Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype,'value').set;
+      st.call(e,v); e.dispatchEvent(new w.Event('input',{bubbles:true})); e.dispatchEvent(new w.Event('change',{bubbles:true})); };
+    const add=(s,n)=>{ const x=new Date(s+'T00:00:00Z'); x.setUTCDate(x.getUTCDate()+n); return x.toISOString().slice(0,10); };
+    if(R.d7.from){ setD('[data-home-from]',add(R.d7.from,-7)); await sleep(300); setD('[data-home-to]',add(R.d7.to,-7)); }
+    for(let i=0;i<20;i++){ await sleep(300); if(per().indexOf(add(R.d7.to||'2000-01-01',-7))>=0) break; }
+    R.cust={per:per(),cells:cells(),donut:donut(),presetOn:[].slice.call(d.querySelectorAll('[data-home-preset]')).map(b=>b.style.background).join('|')};
+    pick('ytd'); await sleep(700);
+    const mb=[].slice.call(d.querySelectorAll('[data-ls-meas]')).find(b=>/Ачаа/.test(b.textContent)); if(mb) mb.click(); await sleep(900);
+    R.fr={per:per(),cells:cells(),donut:donut()};
+    if(mb){ const pb=[].slice.call(d.querySelectorAll('[data-ls-meas]')).find(b=>/Зорчигч/.test(b.textContent)); if(pb) pb.click(); await sleep(600); }
+    /* Админы preview — сайтын ӨГӨГДМӨЛ (оны эхнээс) харагдацтай ижил */
+    const fr=w.frameElement; fr.src='/admin/index.html?fx=1';
+    let a=null;
+    for(let i=0;i<80;i++){ await sleep(250); try{ a=fr.contentDocument; }catch(e){ a=null; }
+      if(a&&a.body&&a.body.innerHTML.length>8000&&String(fr.contentWindow.location.href).indexOf('admin')>=0) break; }
+    await sleep(3500);
+    for(let i=0;i<60&&a.querySelector('.pvfeed');i++) await sleep(500);
+    const open=(sec,id)=>{ let b,n=0; while((b=a.querySelector('[data-back]'))&&n++<6) b.click();
+      const s=a.querySelector('[data-section="'+sec+'"]'); if(!s) return false; s.click();
+      const c=a.querySelector('[data-widget="'+id+'"]'); if(!c) return false; c.click(); return true; };
+    if(!open('sec-01','ls')) return Object.assign(R,{__err:'админ ls нээгдсэнгүй'});
+    for(let i=0;i<40&&!/\\d/.test(norm((a.querySelector('#pvhost .pvsc .v')||{}).textContent));i++) await sleep(400);
+    R.adm={per:norm((a.querySelector('#pvhost [data-chart-period]')||{}).textContent),
+      cells:[].slice.call(a.querySelectorAll('#pvhost .pvsc')).map(x=>({k:x.getAttribute('data-pvk'),v:norm((x.querySelector('.v')||{}).textContent),
+        dl:norm((x.querySelector('[data-pvls="delta"]')||{}).textContent),note:norm((x.querySelector('[data-pvls="note"]')||{}).textContent),line:!!x.querySelector('svg path')})),
+      foot:norm((a.querySelector('#pvhost .sp-foot')||{}).textContent)};
+    if(!open('sec-05','d05')) return Object.assign(R,{__err:'админ d05 нээгдсэнгүй'});
+    await sleep(900);
+    R.admD=norm((a.querySelector('#pvhost')||{}).textContent);
+    const fb2=a.querySelector('#pvhost [data-pvmeas="freight_tonnes"]'); if(fb2){ fb2.click(); await sleep(800); }
+    R.admDf=norm((a.querySelector('#pvhost')||{}).textContent);
+    return R;
+  }`;
+  const srv = serve();
+  try {
+    PROBE_SRC = '/index.html?fx=1#/';
+    const R = await runProbe(PROBE, 180000);
+    if (R.__err) { bad('HK4. Хөтчийн проб ажиллав', R.__err); return; }
+    /* Хөл бичиг «Нэг цэг = 7 хоног» ч цифртэй — мэдээтэй нүд = «N зорчигч» */
+    const Y = R.ytd, live = (Y.cells || []).filter((x) => /\d зорчигч/.test(x.t));
+    check('HK4. Анхдагч (оны эхнээс): 4 нүд, мэдээтэй 3 салбар бүгд шугам + харьцуулах тасархай + hover (HV)',
+      (Y.cells || []).length === 4 && live.length === 3 && live.every((x) => x.line && x.prev && x.hits > 5 && / — \d/.test(x.tip)),
+      JSON.stringify((Y.cells || []).map((x) => ({ k: x.t.slice(0, 18), line: x.line, prev: x.prev, hits: x.hits, tip: x.tip.slice(0, 50) }))));
+    check('HK4. Нүд бүр ИЖИЛ хэмжүүр/хугацааны шошго («Зорчигч · оны эхнээс»), мэдээгүй ус «—» шугамгүй',
+      live.every((x) => /Зорчигч · оны эхнээс/.test(x.t)) && (Y.cells || []).some((x) => /Усан зам/.test(x.t) && !x.line && /—/.test(x.t)));
+    check('HK4. Зурвас ба донут ИЖИЛ хугацаа (DG-P мөр)', !!Y.donut && /^Хугацаа: \d{4}-01-01 — /.test(Y.per) && Y.donut.per === Y.per, Y.per + ' | ' + (Y.donut && Y.donut.per));
+    const num = (t) => { const m = String(t || '').replace(/,/g, '').match(/-?\d+(\.\d+)?/); return m ? +m[0] : null; };
+    const val = (c) => num((c.t.match(/≥?[\d,]+ (зорчигч|тонн)/) || [''])[0]);
+    const sumCells = live.reduce((t, x) => t + (val(x) || 0), 0);
+    check('HK4. «Нийт» = нүдний дүнгийн нийлбэр', new RegExp('Нийт: ≥?' + sumCells.toLocaleString('en-US') + ' ').test(Y.legend), Y.legend + ' vs ' + sumCells);
+    const tipVal = (lbl) => { const a = (Y.donut.arcs || []).find((x) => x.tip.indexOf(lbl) === 0); return a ? num(a.tip.split(' — ')[1]) : null; };
+    check('HK4. Донутын дүн = зурвасын дүн (агаар, авто, төмөр зам)',
+      ['Агаар', 'Авто', 'Төмөр'].every((p) => { const c = live.find((x) => x.t.indexOf(p) >= 0); return c && tipVal(p) === val(c); }),
+      JSON.stringify(Y.donut.arcs.map((a) => a.tip)));
+    check('HK4. Бэлэн муж «7 хоног» → зурвас 7 хоног, харьцуулалт «өмнөх 7 хоног», донут ч дагана',
+      R.hasPresets && /· 7 хоног$/.test(R.d7.per) && R.d7.donut.per === R.d7.per && /өмнөх 7 хоног/.test(R.d7.cmp) &&
+      (R.d7.cells || []).filter((x) => /Өмнөх 7 хоног: [\d,]+/.test(x.t)).length >= 2, JSON.stringify([R.d7.per, R.d7.cmp]));
+    const prevOf = (p) => { const c = (R.d7.cells || []).find((x) => x.t.indexOf(p) >= 0); const m = c && c.t.match(/Өмнөх 7 хоног: ([\d,]+)/); return m ? num(m[1]) : null; };
+    const curOf = (p) => { const c = (R.cust.cells || []).find((x) => x.t.indexOf(p) >= 0); return c ? val(c) : null; };
+    check('HK4. Гараар огноо (өмнөх 7 хоног) → дүн = «7 хоног»-ийн «Өмнөх 7 хоног: N» (агаар, төмөр зам), бэлэн муж идэвхгүй',
+      prevOf('Агаар') !== null && prevOf('Агаар') === curOf('Агаар') && prevOf('Төмөр') === curOf('Төмөр') && R.cust.donut.per === R.cust.per &&
+      !/var\(--ink\)/.test(R.cust.presetOn), JSON.stringify({ p: [prevOf('Агаар'), prevOf('Төмөр')], c: [curOf('Агаар'), curOf('Төмөр')], per: R.cust.per }));
+    const airF = (R.fr.donut.arcs || []).find((x) => /^Агаар/.test(x.tip));
+    const circ = 2 * Math.PI * 46;
+    check('HK4. «Ачаа»: агаар «<0.1%» + бодит тонн, нум ХАРАГДАНА (≥1.5%), «0.0%» алга',
+      !!airF && /тонн · <0\.1%$/.test(airF.tip) && parseFloat(airF.dash) >= circ * 0.015 - 0.05 && !/(^|[^\d.])0\.0%/.test(R.fr.donut.rows),
+      JSON.stringify(airF) + ' ' + R.fr.donut.rows.slice(0, 200));
+    check('HK4. «Ачаа»: зурвас ч ачаагаар, авто тээвэр «—»', (R.fr.cells || []).every((x) => /Ачаа · /.test(x.t)) &&
+      (R.fr.cells || []).some((x) => /Авто/.test(x.t) && /—/.test(x.t)));
+    const A = R.adm || {};
+    const siteV = (p) => { const c = live.find((x) => x.t.indexOf(p) >= 0); return c ? (c.t.match(/(≥?[\d,]+) зорчигч/) || [])[1] : null; };
+    const admV = (k) => { const c = (A.cells || []).find((x) => x.k === k); return c ? (c.v.match(/≥?[\d,]+/) || [])[0] : null; };
+    check('HK4. Админы ls preview = нүүрний анхдагч зурвас (тоо, хугацаа)',
+      admV('air') === siteV('Агаар') && admV('rail') === siteV('Төмөр') && admV('road') === siteV('Авто') && A.per === Y.per,
+      JSON.stringify({ a: [admV('air'), admV('rail'), admV('road'), A.per], s: [siteV('Агаар'), siteV('Төмөр'), siteV('Авто'), Y.per] }));
+    check('HK4. Админы ls: өөрчлөлтийн хувь, тайлбар, шугам, хөл бичиг «Нэг цэг = 7 хоног»',
+      (A.cells || []).filter((x) => x.line).length === 3 && (A.cells || []).some((x) => /^[+−]\d+\.\d%$/.test(x.dl)) &&
+      (A.cells || []).some((x) => /Өмнөх оны мөн үе/.test(x.note)) && A.foot === 'Нэг цэг = 7 хоног', JSON.stringify(A).slice(0, 400));
+    check('HK4. Админы d05 preview: ижил хугацаа, ачаагаар агаар «<0.1%», «0.0%» алга',
+      R.admD.indexOf(Y.per) >= 0 && /тонн · <0\.1%/.test(R.admDf) && !/(^|[^\d.])0\.0%/.test(R.admDf), R.admDf.slice(0, 300));
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 async function groupHP() {
   group('HP. Hero «ЗОРЧИГЧ / ӨДӨР» — нэгтгэлийн сүүлийн бүтэн 7 хоногийн өдрийн дундаж');
   const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
@@ -11310,12 +11641,13 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=HM')) { await groupHM(); }
   else if (process.argv.includes('--only=HR')) { groupHR(); }
   else if (process.argv.includes('--only=HP')) { await groupHP(); }
+  else if (process.argv.includes('--only=HK')) { await groupHK(); }
   else if (process.argv.includes('--only=HE')) { await groupHE(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHE(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
