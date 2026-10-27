@@ -919,6 +919,9 @@
             <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:inherit;font-size:{{ homeMap.ubFs }}px;line-height:1.2;font-weight:700;white-space:nowrap;color:#EAF3FF;text-shadow:0 0 4px #071022,0 0 3px #071022;">{{ homeMap.hubLabel }}</div>
           </foreignObject>
         </svg>
+        <sc-if value="{{ homeMap.wheelHint }}">
+          <div data-hm-wheel-hint="1" data-audit-ignore="түр сануулга — Ctrl-гүй дугуй" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:rgba(4,10,24,.38);border-radius:12px;"><div style="padding:10px 16px;border-radius:12px;background:rgba(7,16,34,.88);border:1px solid rgba(130,190,255,.3);font-size:13px;font-weight:600;color:#EAF3FF;">{{ homeMap.wheelHintText }}</div></div>
+        </sc-if>
         <sc-if value="{{ homeMap.empty }}">
           <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;"><div style="padding:10px 16px;border-radius:12px;background:rgba(7,16,34,.82);border:1px solid rgba(130,190,255,.25);font-size:13px;color:#C8D6EE;">{{ homeMap.emptyText }}</div></div>
         </sc-if>
@@ -997,7 +1000,7 @@
             </div>
             <sc-for list="{{ weekPaxBars }}" as="wb" hint-placeholder-count="6">
               <div style="flex:1;min-width:0;position:relative;">
-                <div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,{{ wb.color }},{{ wb.color }}88);height:{{ wb.heightPct }};min-height:4px;transform-origin:bottom;animation:barGrow .6s var(--ease) both;"><title>{{ wb.tip }}</title></div>
+                <div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,{{ wb.color }},{{ wb.color }}88);height:{{ wb.heightPct }};min-height:4px;transform-origin:bottom;animation:barGrow .6s var(--ease) both;{{ wb.barStyle }}"><title>{{ wb.tip }}</title></div>
               </div>
             </sc-for>
           </div>
@@ -1092,7 +1095,7 @@
             </div>
             <sc-for list="{{ weekCargoBars }}" as="wb" hint-placeholder-count="6">
               <div style="flex:1;min-width:0;position:relative;">
-                <div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,{{ wb.color }},{{ wb.color }}88);height:{{ wb.heightPct }};min-height:4px;transform-origin:bottom;animation:barGrow .6s var(--ease) both;"><title>{{ wb.tip }}</title></div>
+                <div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,{{ wb.color }},{{ wb.color }}88);height:{{ wb.heightPct }};min-height:4px;transform-origin:bottom;animation:barGrow .6s var(--ease) both;{{ wb.barStyle }}"><title>{{ wb.tip }}</title></div>
               </div>
             </sc-for>
           </div>
@@ -9443,7 +9446,7 @@ function roadPaxMonthSeries(h,year,months){
      хожуу орсон цөөн билетийг бүтэн долоо хоног мэт нийлүүлэхгүй (DG: дутуу ≠ бүтэн).
      ytdGapKeys — оны эхнээс хүрээнд цоорхойтой салбар (дуудагч ИЛ нэрлэнэ).
    null бол дуудагч агаарын хуучин замаар (weeklyAirStats). */
-function weekSectorReport(w,keys,gaps){
+function weekSectorReport(w,keys,gaps,lastBy){
   if(!(w&&Array.isArray(w.weeks)&&w.weeks.length)) return null;
   const avail=w.sectors||[];
   const ks=(keys||[]).filter(k=>avail.indexOf(k)>=0);
@@ -9455,8 +9458,14 @@ function weekSectorReport(w,keys,gaps){
   const sumK=(b,list)=>{ let t=0; for(const k of list){ const v=val(b,k); if(v===null) return null; t+=v; } return t; };
   const sumW=x=>{ let t=0; for(const k of ks){ const v=valW(x,k); if(v===null) return null; t+=v; } return t; };
   const pct=(a,b)=>(a!==null&&b!==null&&b>0)?(a/b-1)*100:null;
-  const weeks=w.weeks.map(x=>({start:x.week_start,end:x.week_end,value:x.missing?null:sumW(x),
-    gap:ks.filter(k=>gapIn(k,x.week_start,x.week_end))}));
+  /* partial — нийт бүрдээгүй (цоорхой/бичлэггүй салбартай) долоо хоногт БУСАД салбаруудын
+     нийлбэр (доод хязгаар «≥», бүтэн нийт БИШ); partialKeys — аль салбарууд орсон. */
+  const part=x=>{ if(x.missing) return null; const have=ks.filter(k=>valW(x,k)!==null);
+    return (have.length&&have.length<ks.length)?{value:have.reduce((t,k)=>t+valW(x,k),0),keys:have}:null; };
+  const weeks=w.weeks.map(x=>{ const v=x.missing?null:sumW(x), p=v===null?part(x):null;
+    return {start:x.week_start,end:x.week_end,value:v,
+      gap:ks.filter(k=>gapIn(k,x.week_start,x.week_end)),
+      partial:p?p.value:null,partialKeys:p?p.keys:[]}; });
   const last=w.weeks[w.weeks.length-1], prev=w.weeks.length>1?w.weeks[w.weeks.length-2]:null;
   const bySector={};
   ks.forEach(k=>{
@@ -9472,7 +9481,23 @@ function weekSectorReport(w,keys,gaps){
     yoy:pct(yCur,yPrev),yoyKeys:cmp,weekStart:last.week_start,weekEnd:last.week_end,
     stale:(w.stale||[]).filter(k=>ks.indexOf(k)>=0),
     gapKeys:ks.filter(k=>weeks.some(x=>x.gap.indexOf(k)>=0)),
-    ytdGapKeys:w.ytd?ks.filter(k=>gapIn(k,w.ytd.from,w.ytd.to)):[]};
+    ytdGapKeys:w.ytd?ks.filter(k=>gapIn(k,w.ytd.from,w.ytd.to)):[],
+    lag:typeof weekLag==='function'?weekLag(w.week_end,w.max_date,ks,lastBy):null};
+}
+/* Дараагийн долоо хоног яагаад тайланд ороогүйг тайлбарлана: хамгийн сүүлийн огноо
+   (max_date) тайлангийн долоо хоногоос хойш байхад тэр долоо хоногийг (Да–Ня) бүрэн
+   хамраагүй салбарууд. lastBy {салбар:'YYYY-MM-DD'} (sectors[].passengers_last). ЦЭВЭР. */
+/* Төлөвлөгөөний мөрийн «{year}» — тухайн (УБ-ийн) оны төлөвлөгөө; хуучин «2025 төлөвлөгөө»
+   мэт хатуу он бичихгүй. ЦЭВЭР (year өгвөл). */
+function planYearText(s,year){
+  return String(s==null?'':s).split('{year}').join(String(year||ubStamp(new Date().toISOString()).date.slice(0,4)));
+}
+function weekLag(weekEnd,maxDate,keys,lastBy){
+  if(!weekEnd||!maxDate||!(maxDate>weekEnd)||!lastBy) return null;
+  const add=(iso,n)=>{ const d=new Date(iso+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
+  const from=add(weekEnd,1), to=add(weekEnd,7);
+  const behind=(keys||[]).filter(k=>lastBy[k]&&lastBy[k]<to).map(k=>({key:k,last:lastBy[k]}));
+  return behind.length?{from,to,maxDate,sectors:behind}:null;
 }
 
 /* Салбараар давхарласан багана (сар эсвэл 7 хоног). Y 0-ээс (DG); дутуу хугацаа —
@@ -9848,7 +9873,7 @@ class Component extends DCLogic {
     /* Ачаа тээвэр: датасэт (source) тус бүрийн шүүлт — хоёр датасэт өөр он хамардаг */
     freightSel:{}, freightHistVer:0, freightStationsExpanded:false, freightCargoExpanded:false,
     /* Авто тээврийн зорчигч: шүүлт (он + сар) ба эрэмбийн дэлгэлт */
-    roadPaxSel:{}, roadPaxHistVer:0, homeMapOff:{}, homeMapScope:'intl', homeMapVer:0, homeGlobeRot:null, homeGlobeZoom:null, homeGlobeDragging:false, roadPaxRoutesExpanded:false, roadPaxCompaniesExpanded:false,
+    roadPaxSel:{}, roadPaxHistVer:0, homeMapOff:{}, homeMapScope:'intl', homeMapVer:0, homeGlobeRot:null, homeGlobeZoom:null, homeGlobeDragging:false, homeWheelHint:false, roadPaxRoutesExpanded:false, roadPaxCompaniesExpanded:false,
     /* Салбарын нэгтгэл — шүүлт (он/сар), хувилбар; нүүрний d05-ийн хэмжүүр (зорчигч/ачаа) */
     sectorTotalSel:{}, sectorTotalVer:0, d05Measure:'passengers',
     /* Салбарын нэгтгэлийн таб (Өгөгдөл | Тооцооллын арга) ба аргын урсгалын хэмжүүр */
@@ -10080,6 +10105,35 @@ class Component extends DCLogic {
     };
     window.addEventListener('mousemove',this._onGlobeMove);
     window.addEventListener('mouseup',this._onGlobeUp);
+    /* Ctrl + хулганы дугуй (ба trackpad-ийн чимхэлт — ctrlKey=true) бөмбөрцгийг
+       томруулна, +/− товчтой ижил төлөв. Ctrl-гүй дугуй хуудсыг ердийнхөөрөө
+       гүйлгэнэ (Google Maps-ийн "cooperative gestures") — нүүрийн зураг дээр
+       богино сануулга гарна. Дугуйн алхмыг rAF-д нэгтгэж кадрт нэг render. */
+    this._onMapWheel=(e)=>{
+      const t=e.target;
+      if(!t||!t.closest) return;
+      const home=t.closest('.eh-hm-svg');
+      const air=!home&&t.closest('.eh-fmap');
+      if(!home&&!air) return;
+      if(home&&this.state.homeMapScope==='dom') return;
+      if(!e.ctrlKey){
+        if(home) this.flashMapWheelHint();
+        return;
+      }
+      e.preventDefault();
+      const dy=e.deltaY*(e.deltaMode===1?33:e.deltaMode===2?400:1);
+      this._wheelF=(this._wheelF||1)*Math.exp(-Math.max(-120,Math.min(120,dy))*0.0025);
+      this._wheelKey=home?'home':'air';
+      if(this._wheelRaf) return;
+      this._wheelRaf=requestAnimationFrame(()=>{
+        this._wheelRaf=null;
+        const f=this._wheelF||1; this._wheelF=1;
+        if(this._wheelKey==='home') this.setState(s=>({homeWheelHint:false,
+          homeGlobeZoom:Math.max(0.8,Math.min(6,(s.homeGlobeZoom||HM_GLOBE_PRESET[s.homeMapZoom==='region'?'region':'world'].zoom)*f))}));
+        else this.setState(s=>({globeZoom:Math.max(0.7,Math.min(2.6,(s.globeZoom||1)*f))}));
+      });
+    };
+    window.addEventListener('wheel',this._onMapWheel,{passive:false});
     if(window.auth){
       this._unsubAuth=window.auth.onAuthStateChanged(user=>{
         this.setState({authed:!!user,authReady:true,
@@ -10112,6 +10166,13 @@ class Component extends DCLogic {
   }
   componentWillUnmount(){ if(this._esc) window.removeEventListener('keydown',this._esc); }
   escClose(){ this.setState({projOpen:-1,subStep:0,reqOpen:false}); }
+  /* Ctrl-гүй дугуй нүүрийн зураг дээр — "Ctrl + дугуйгаар томруулна" сануулгыг
+     ~1.4 сек харуулна. Гүйлгэх бүрд setState хийхгүй (аль хэдийн харагдаж байвал зөвхөн хугацааг сунгана). */
+  flashMapWheelHint(){
+    clearTimeout(this._wheelHintT);
+    this._wheelHintT=setTimeout(()=>this.setState({homeWheelHint:false}),1400);
+    if(!this.state.homeWheelHint) this.setState({homeWheelHint:true});
+  }
   componentDidUpdate(){ this.syncMonths(); }
   syncMonths(){
     const a=this.state.mFrom||1, b=this.state.mTo||12;
@@ -10586,7 +10647,9 @@ class Component extends DCLogic {
     const keys=((w&&w.sectors)||[]).filter(k=>k==='air'||this.sectorQuality(widgetId,k).quality==='verified');
     /* Авто тээвэр — эх сурвалж цонхоор ачаалагдсан: цоорхойг road history-ийн coverage.gaps-аас */
     const rh=this._roadPaxAll, rg=rh&&rh.coverage&&Array.isArray(rh.coverage.gaps)?rh.coverage.gaps:null;
-    return weekSectorReport(w,keys,rg?{road:rg}:null);
+    const lastKey=wt==='cargo'?'freight_last':'passengers_last', lastBy={};
+    (api.sectors||[]).forEach(s=>{ if(s&&s[lastKey]) lastBy[s.sector]=s[lastKey]; });
+    return weekSectorReport(w,keys,rg?{road:rg}:null,lastBy);
   }
   sectorShareFromTotal(keys){
     const api=this.sectorTotalData?this.sectorTotalData():null;
@@ -14636,7 +14699,11 @@ class Component extends DCLogic {
       const okVals=barVals.filter(v=>v!==null&&v!==undefined);
       const hasBars=okVals.length>0;
       const bmax=hasBars?Math.max.apply(null,okVals):0;
-      const wax=weekAxis(okVals);
+      /* Нийт бүрдээгүй долоо хоног (жиш. авто тээврийн цоорхой) «—» хоосон үлдэхгүй —
+         бусад салбарын нийлбэрийг «≥» тасархай баганаар (DG: дутуу ≠ бүтэн). Тэнхлэгт
+         багтана, дундаж/оргилд ОРОХГҮЙ. */
+      const partVals=stW?stW.weeks.map(x=>x.partial):barVals.map(()=>null);
+      const wax=weekAxis(okVals.concat(partVals.filter(v=>v!==null)));
       const base=wax.base, top=wax.top;
       // Огнооны шошго (WEEK_LABELS: "11.17" гэх мэт) жил заагаагүй, өдөр
       // бүр статик тул mock үед харагдацаараа сааруулж "жишиг" гэдгийг
@@ -14647,10 +14714,15 @@ class Component extends DCLogic {
          багтахгүй давхцдаг тул style.css нь товчилсон хэлбэрийг (571K) харуулна;
          бүтэн тоо ширээний дэлгэц ба tooltip-д хэвээр. */
       const shortVal=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e5?Math.round(v/1e3)+'K':v>=1e3?(v/1e3).toFixed(1)+'K':String(Math.round(v));
+      const hPct=v=>(top===base?50:(v-base)/(top-base)*100).toFixed(1)+'%';
       const bars=barVals.map((v,i)=>(v===null||v===undefined)
-        ?{label:barLabels[i],value:'—',valueShort:'—',dateLabelStyle,heightPct:'0%',color:'var(--line2)'}
+        ?(partVals[i]!==null
+          ?{label:barLabels[i],value:'≥'+Math.round(partVals[i]).toLocaleString(),valueShort:'≥'+shortVal(partVals[i]),dateLabelStyle,
+            heightPct:hPct(partVals[i]),color:wd.color,partial:true,
+            barStyle:'background:'+wd.color+'22;border:1.5px dashed '+wd.color+';box-sizing:border-box;'}
+          :{label:barLabels[i],value:'—',valueShort:'—',dateLabelStyle,heightPct:'0%',color:'var(--line2)',barStyle:''})
         :{label:barLabels[i],value:(stW?Math.round(v):v).toLocaleString(),valueShort:shortVal(v),dateLabelStyle,
-          heightPct:(top===base?50:(v-base)/(top-base)*100).toFixed(1)+'%',color:wd.color});
+          heightPct:hPct(v),color:wd.color,barStyle:''});
       const yTicks=[0,0.5,1].map(fr=>({pct:(fr*100).toFixed(1)+'%',label:Math.round(base+fr*(top-base)).toLocaleString()}));
       const avgVal=hasBars?okVals.reduce((a,v)=>a+v,0)/okVals.length:0;
       const avgRef={pct:(top===base?50:(avgVal-base)/(top-base)*100).toFixed(1)+'%',
@@ -14659,7 +14731,7 @@ class Component extends DCLogic {
       const bestI=barVals.indexOf(bmax);
       const barsMarked=bars.map((b,i)=>Object.assign({},b,{isPeak:i===bestI,
         valueStyle:'font-family:\'JetBrains Mono\',monospace;font-size:10.5px;white-space:nowrap;flex-shrink:0;position:relative;z-index:1;'
-          +(i===bestI?'color:var(--ink);font-weight:700;':'color:var(--ink2);')}));
+          +(b.partial?'color:var(--ink3);':i===bestI?'color:var(--ink);font-weight:700;':'color:var(--ink2);')}));
       // fmtWeekVal нь K/M-ийг ӨӨРТӨӨ шингээж форматлодог (жиш. "18.4K") тул
       // "мянган ..." шошгыг хамт үзүүлбэл масштаб ХОЁР ДАХИН тооцогдох мэт
       // ойлгогдоно — иймд бодит утгын үед энгийн нэгж (хүн/тонн) ашиглана,
@@ -14810,7 +14882,11 @@ class Component extends DCLogic {
             .replace('{from}',md(stW.weekStart)).replace('{to}',md(stW.weekEnd)).replace('{names}',stNames(stW))
           :stxt('status.air_only','Зөвхөн агаарын тээврийн эх сурвалж холбогдсон. Бусад салбар холбогдох бүрд нийт дүнд нэмэгдэнэ.'))+
         (stW.stale.length?' '+stxt('week.stale_note','{names} — сүүлийн 7 хоногийн мэдээ дутуу.').replace('{names}',stNames({keys:stW.stale})):'')+
-        (stW.gapKeys.length?' '+stxt('week.gap_note','{names} — эх сурвалжийн цоорхойтой 7 хоног «—» (бүтэн мэт нийлүүлэхгүй).').replace('{names}',stNames({keys:stW.gapKeys})):''));
+        (stW.gapKeys.length?' '+stxt('week.gap_note','{names} — эх сурвалжийн цоорхойтой 7 хоногт тасархай «≥» багана = бусад салбарын нийлбэр (бүтэн нийт биш).').replace('{names}',stNames({keys:stW.gapKeys})):'')+
+        (stW.lag?' '+stxt('week.lag_note','{names} {last} хүртэл ирсэн тул {from}–{to} долоо хоног бүрдээгүй — сүүлийн БҮТЭН долоо хоногийг харуулав.')
+          .replace('{names}',stNames({keys:stW.lag.sectors.map(s=>s.key)}))
+          .replace('{last}',stW.lag.sectors.map(s=>md(s.last)).sort()[0])
+          .replace('{from}',md(stW.lag.from)).replace('{to}',md(stW.lag.to)):''));
       const airOnlyNote=stW?stNote:((realVal!=null&&otherSectorsNone)
         ?stxt('status.air_only','Зөвхөн агаарын тээврийн эх сурвалж холбогдсон. Бусад салбар холбогдох бүрд нийт дүнд нэмэгдэнэ.')
         :'');
@@ -14818,6 +14894,12 @@ class Component extends DCLogic {
       barsMarked.forEach((b,i)=>{
         const rng=stW?md(stW.weeks[i].start)+'–'+md(stW.weeks[i].end):b.label;
         const gk=stW?stW.weeks[i].gap:[];
+        if(b.partial){
+          const miss=stW.keys.filter(k=>stW.weeks[i].partialKeys.indexOf(k)<0);
+          b.tip=rng+' — '+b.value+' '+unit+' · '+stNames({keys:stW.weeks[i].partialKeys})+' · '+
+            stxt('week.partial_tip','{names}: мэдээ дутуу (эх сурвалжийн цоорхой) — нийт бүрэн биш').replace('{names}',stNames({keys:miss}));
+          return;
+        }
         b.tip=rng+' — '+(b.value==='—'
           ?(gk.length?stxt('week.gap_tip','{names}: эх сурвалжийн цоорхой — дутуу').replace('{names}',stNames({keys:gk})):stxt('status.no_data','мэдээлэл алга'))
           :b.value+' '+unit);
@@ -15538,7 +15620,7 @@ class Component extends DCLogic {
     // {{ detail.c1 }}) бүхэлдээ dsel.name/sector-оос тооцоологддог динамик
     // утга, статик орлуулах "үүр" алга (тайланг үз).
     const dwpTitle=this.txt('dwp','title','7 хоногийн гүйцэтгэл');
-    const dwpFoot=this.txt('dwp','foot','2025 оны төлөвлөгөө');
+    const dwpFoot=planYearText(this.txt('dwp','foot','{year} оны төлөвлөгөө'));
     const dtbFoot=this.txt('dtb','foot','Багана дээр дарж эрэмбэлнэ; хайлтын талбараар мөрийг агуулгаар нь шүүнэ');
     // dstr карт нь 5 салбарт хуваалцдаг ерөнхий "Салбарын бүтэц" гэсэн
     // нэртэй ч, air дээр энэ нь бодит утгаараа тээвэрлэгчдийн зах зээлийн
@@ -16326,7 +16408,10 @@ class Component extends DCLogic {
     const memoKey=[scope,win.key,!!this.mongoliaAimags,!!this.worldCountries,data?1:0,this.state.homeMapVer||0,flights?flights.length:0,
       off.air?1:0,off.rail?1:0,off.road?1:0,this.state.homeMapZoom||'',Math.round(vw/40),
       String(this.state.homeGlobeRot||''),this.state.homeGlobeZoom||'',this.state.homeGlobeDragging?1:0].join('|');
-    if(this._homeMapMemo&&this._homeMapMemo.key===memoKey) return this._homeMapMemo.val;
+    /* Дугуйн сануулга memo-д ОРОХГҮЙ — түр төлөвөөс болж бөмбөрцгийг дахин барихгүй */
+    if(this._homeMapMemo&&this._homeMapMemo.key===memoKey){
+      const v=this._homeMapMemo.val; v.wheelHint=!!(v.hasZoom&&this.state.homeWheelHint); return v;
+    }
     const val=scope==='intl'?this._buildHomeMapWorld(win,data,flights,off,vw,T):this._buildHomeMap(win,data,flights,off,vw,T);
     /* «Олон улсын | Дотоод» — агаарын хуудасны газрын зургийн сонголттой ижил загвар.
        Анхдагч нь олон улсын (2026-10-26 хэрэглэгч: нүүрэнд олон улсыг дэлхийн зургаар) */
@@ -16906,10 +16991,11 @@ class Component extends DCLogic {
         this._globeDrag={x:e.clientX,y:e.clientY,rot:rot.slice(),zoom,rotKey:'homeGlobeRot',dragKey:'homeGlobeDragging'};
         this.setState({homeGlobeDragging:true});
       },
-      zoomIn:setZoom(1.3),zoomOut:setZoom(1/1.3),zoomInTitle:T('zoom_in','Томруулах'),zoomOutTitle:T('zoom_out','Жижигрүүлэх'),
+      zoomIn:setZoom(1.3),zoomOut:setZoom(1/1.3),zoomInTitle:T('zoom_in','Томруулах')+' (Ctrl + '+T('wheel_word','дугуй')+')',zoomOutTitle:T('zoom_out','Жижигрүүлэх')+' (Ctrl + '+T('wheel_word','дугуй')+')',
       ubX:ub?ub[0].toFixed(1):'-99',ubY:ub?ub[1].toFixed(1):'-99',ubR:px(5).toFixed(2),ubTitle:hub+' — '+T('hub_sub_intl','олон улсын урсгалын эх цэг'),
       ubLx:ub?(ub[0]+px(9)).toFixed(1):'-99',ubLy:ub?(ub[1]+px(4)).toFixed(1):'-99',ubLw:px(110).toFixed(1),ubLh:px(15).toFixed(1),ubFs:px(11).toFixed(2),
       hubLabel:ub?hub:'',chips,chipAll,legend,notes:notes.map(text=>({text})),period,title,sub,hasZoom:true,
+      wheelHint:!!this.state.homeWheelHint,wheelHintText:T('wheel_hint','Томруулах: Ctrl + хулганы дугуй'),
       tops,hasTops:tops.length>0,topTitle:T('top_title','Хүрэх хотууд — зорчигчоор'),
       zoomTabs:[['world',T('zoom_world','Дэлхий')],['region',T('zoom_region','Ойрын бүс')]].map(o=>{
         const on=zk===o[0];
@@ -17757,12 +17843,12 @@ class Component extends DCLogic {
       lsTitle:this.txt('ls','title','ҮНДСЭН ҮЗҮҮЛЭЛТҮҮД'),
       lsFoot:this.txt('ls','foot','өмнөх сартай харьцуулбал · 12 сарын график'),
       w2pTitle:this.txt('w2p','title','Долоо хоногийн нийт зорчигч тээвэр'),
-      w2pFoot:fillTpl(this.txt('w2p','foot','{year} оны төлөвлөгөө'),periodTokens()),
+      w2pFoot:planYearText(this.txt('w2p','foot','{year} оны төлөвлөгөө')),
       w2pbTitle:this.txt('w2pb','title','Төрлийн хуваарь · 7 хоног'),
       w2pxTitle:this.txt('w2px','title','Салбар хоорондын харьцуулалт — зорчигч'),
       w2pxFoot:this.txt('w2px','foot','өмнөх долоо хоногтой харьцуулбал'),
       w2cTitle:this.txt('w2c','title','Долоо хоногийн нийт ачаа тээвэр'),
-      w2cFoot:fillTpl(this.txt('w2c','foot','{year} оны төлөвлөгөө'),periodTokens()),
+      w2cFoot:planYearText(this.txt('w2c','foot','{year} оны төлөвлөгөө')),
       w2cbTitle:this.txt('w2cb','title','Төрлийн хуваарь · 7 хоног'),
       w2cxTitle:this.txt('w2cx','title','Салбар хоорондын харьцуулалт — ачаа'),
       w2cxFoot:this.txt('w2cx','foot','өмнөх долоо хоногтой харьцуулбал'),
