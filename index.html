@@ -17,7 +17,7 @@
 <script src="js/erthub-publish.js?v=ffe215f9"></script>
 <script src="js/erthub-backend.js?v=a96de8ab"></script>
 <script src="js/erthub-chart.js?v=422174bf"></script>
-<script src="js/erthub-glossary.js?v=327f42d5"></script>
+<script src="js/erthub-glossary.js?v=b5f2bd05"></script>
 <script src="js/erthub-tip.js?v=ba005e59"></script>
 <script src="js/vendor/dc-runtime.js?v=8fe7df74"></script>
 </head>
@@ -8397,30 +8397,6 @@ function datasetRank(sec,ds){
   if(!sec||!ds||!Array.isArray(sec.rank)) return [];
   return (sec._rankSource&&sec._rankSource===ds.source)?sec.rank:[];
 }
-/* 7 хоногийн баганын Y тэнхлэгийн хүрээ — ЦЭВЭР функц (tests/run.js
-   гараар бодсон фикстураар шалгана).
-   ЯАГААД ТУСДАА: алхам нь урьд `/50` гэж ХАТУУ бичигдсэн байв. Зорчигчийн
-   мянгад тохирно ч ачааны тонн (13–44) дээр хэтэрхий бүдүүн: тэнхлэг
-   -50…50 болж бүх багана дээд гуравны нэгд шахагдаж, хөл бичигт
-   "тэнхлэг -50-с эхэлнэ" гэж СӨРӨГ тонн зарладаг байв (browser, 02-р
-   хэсэг). Одоо алхам нь УТГЫН МАСШТАБААС гарна — buildTrendChart-ийн
-   niceStep-тэй ижил зарчим. */
-function weekAxis(vals){
-  if(!vals||!vals.length) return {base:0,top:0,step:1};
-  const mx=Math.max.apply(null,vals), mn=Math.min.apply(null,vals);
-  /* Бүх утга тэнцүү бол хүрээг утгын ӨӨРИЙНХ нь хэмжээнээс гаргана
-     (0 бол 1) — эс тэгвэл span=0 болж алхам тодорхойгүй болно. */
-  const span=(mx-mn)||Math.abs(mx)||1;
-  const step=Math.pow(10,Math.floor(Math.log10(span/2)))||1;
-  let base=Math.floor((mn-span*0.6)/step)*step;
-  const top=Math.ceil((mx+span*0.15)/step)*step;
-  /* Хүн, тонн зэрэг СӨРӨГ БАЙЖ ЧАДАХГҮЙ хэмжигдэхүүнд тэнхлэг 0-ээс (DG):
-     5,000-аас эхэлсэн тэнхлэг 7 хоног хоорондын ялгааг хэтрүүлж, датасэтийн
-     ижил графикаас (buildSectorStackChart, 0-ээс) өөр хэлбэр зурдаг байв. */
-  if(mn>=0) base=0;
-  return {base,top,step};
-}
-
 /* k04-ийн grid баганын тоо — ЦЭВЭР (tests/run.js KC). ≤4 карт = нэг мөр бүтэн; олон бол
    мөр бүр дүүрэх хуваагч (8 → 4, 6 → 3), үгүй бол 4. */
 function kpiGridCols(n){
@@ -9452,83 +9428,12 @@ function roadPaxMonthSeries(h,year,months){
   return out.some(x=>x.v!=null)?out:null;
 }
 
-/* Нүүрний 02-р хэсэг «7 хоногийн тайлан» — нэгтгэлийн weekly[measure]-ээс ЗӨВХӨН `keys`
-   салбараар (бүртгэлд холбогдсон, backend-д бий). ЦЭВЭР — tests/run.js WK бүлэг.
-   - weeks[].value: долоо хоногийн нийлбэр; аль нэг салбар бичлэггүй бол null (дутуу
-     нийлбэрийг бүтэн мэт харуулахгүй, 0 зохиохгүй)
-   - wow: сүүлийн хоёр долоо хоног хоёулаа бүтэн үед л; салбар бүрд ч мөн адил
-   - ytd: оны эхнээс keys-ийн нийлбэр; yoy: зөвхөн comparable ∩ keys салбараар
-   - gaps {салбар:[{from,to}]} — эх сурвалжийн цоорхой (авто тээвэр: road history
-     coverage.gaps). Цоорхойтой давхцсан салбар-долоо хоног бичлэггүйтэй адил (null) —
-     хожуу орсон цөөн билетийг бүтэн долоо хоног мэт нийлүүлэхгүй (DG: дутуу ≠ бүтэн).
-     ytdGapKeys — оны эхнээс хүрээнд цоорхойтой салбар (дуудагч ИЛ нэрлэнэ).
-   null бол дуудагч агаарын хуучин замаар (weeklyAirStats). */
-function weekSectorReport(w,keys,gaps,lastBy){
-  if(!(w&&Array.isArray(w.weeks)&&w.weeks.length)) return null;
-  const avail=w.sectors||[];
-  const ks=(keys||[]).filter(k=>avail.indexOf(k)>=0);
-  if(!ks.length) return null;
-  const num=v=>(v===null||v===undefined||v===''||!isFinite(+v))?null:+v;
-  const gapIn=(k,from,to)=>!!(gaps&&Array.isArray(gaps[k])&&from&&to&&gaps[k].some(g=>g&&g.from<=to&&g.to>=from));
-  const val=(b,k)=>(b&&b[k])?num(b[k].value):null;
-  const valW=(x,k)=>gapIn(k,x.week_start,x.week_end)?null:val(x.by_sector,k);
-  const sumK=(b,list)=>{ let t=0; for(const k of list){ const v=val(b,k); if(v===null) return null; t+=v; } return t; };
-  const sumW=x=>{ let t=0; for(const k of ks){ const v=valW(x,k); if(v===null) return null; t+=v; } return t; };
-  const pct=(a,b)=>(a!==null&&b!==null&&b>0)?(a/b-1)*100:null;
-  /* partial — нийт бүрдээгүй (цоорхой/бичлэггүй салбартай) долоо хоногт БҮРТГЭГДСЭН бүх
-     утгын нийлбэр (доод хязгаар «≥», бүтэн нийт БИШ) — цоорхойтой салбарын бүртгэгдсэн
-     хэсэг ч орно (2026-10-27: 09.14–09.20-нд авто тээврийн 7 хоногоос 5 нь бүтэн, 21,298
-     зорчигч байхад бүхэлд нь хасаж «≥82.2K» гэж харуулж байв); partialKeys — бүтэн орсон
-     салбарууд. parts — салбар бүрийн бүртгэгдсэн утга ба цоорхойтой хоног (давхарласан багана). */
-  const DAY=86400000, iso=s=>Date.parse(String(s).slice(0,10)+'T00:00:00Z');
-  const gapDays=(k,from,to)=>{ if(!(gaps&&Array.isArray(gaps[k])&&from&&to)) return 0; let n=0;
-    gaps[k].forEach(g=>{ if(!g||!(g.from<=to&&g.to>=from)) return;
-      n+=Math.round((Math.min(iso(g.to),iso(to))-Math.max(iso(g.from),iso(from)))/DAY)+1; });
-    return Math.min(7,n); };
-  const parts=x=>ks.map(k=>({key:k,value:x.missing?null:val(x.by_sector,k),gap:gapIn(k,x.week_start,x.week_end),
-    gapDays:gapDays(k,x.week_start,x.week_end)}));
-  const part=(x,ps)=>{ if(x.missing) return null; const rec=ps.filter(p=>p.value!==null);
-    return rec.length?{value:rec.reduce((t,p)=>t+p.value,0),keys:ps.filter(p=>p.value!==null&&!p.gap).map(p=>p.key)}:null; };
-  const weeks=w.weeks.map(x=>{ const v=x.missing?null:sumW(x), ps=parts(x), p=v===null?part(x,ps):null;
-    return {start:x.week_start,end:x.week_end,value:v,
-      gap:ks.filter(k=>gapIn(k,x.week_start,x.week_end)),
-      partial:p?p.value:null,partialKeys:p?p.keys:[],parts:ps}; });
-  const last=w.weeks[w.weeks.length-1], prev=w.weeks.length>1?w.weeks[w.weeks.length-2]:null;
-  const bySector={};
-  ks.forEach(k=>{
-    const v=last.missing?null:valW(last,k), p=(prev&&!prev.missing)?valW(prev,k):null;
-    bySector[k]={value:v,prev:p,wow:pct(v,p)};
-  });
-  const total=weeks[weeks.length-1].value, prevTotal=weeks.length>1?weeks[weeks.length-2].value:null;
-  const cmp=ks.filter(k=>(w.comparable||[]).indexOf(k)>=0);
-  const yCur=(cmp.length&&w.ytd)?sumK(w.ytd.by_sector,cmp):null;
-  const yPrev=(cmp.length&&w.prev_ytd)?sumK(w.prev_ytd.by_sector,cmp):null;
-  return {keys:ks,weeks,total,prevTotal,wow:pct(total,prevTotal),bySector,
-    ytd:w.ytd?sumK(w.ytd.by_sector,ks):null,ytdYear:w.ytd?w.ytd.year:null,
-    yoy:pct(yCur,yPrev),yoyKeys:cmp,weekStart:last.week_start,weekEnd:last.week_end,
-    stale:(w.stale||[]).filter(k=>ks.indexOf(k)>=0),
-    gapKeys:ks.filter(k=>weeks.some(x=>x.gap.indexOf(k)>=0)),
-    ytdGapKeys:w.ytd?ks.filter(k=>gapIn(k,w.ytd.from,w.ytd.to)):[],
-    lag:typeof weekLag==='function'?weekLag(w.week_end,w.max_date,ks,lastBy):null};
-}
-/* Дараагийн долоо хоног яагаад тайланд ороогүйг тайлбарлана: хамгийн сүүлийн огноо
-   (max_date) тайлангийн долоо хоногоос хойш байхад тэр долоо хоногийг (Да–Ня) бүрэн
-   хамраагүй салбарууд. lastBy {салбар:'YYYY-MM-DD'} (sectors[].passengers_last). ЦЭВЭР. */
+/* Нүүрний 02-р хэсэг «7 хоногийн тайлан» — weekReport/weekLag/weekAxis/weekBars нь
+   js/erthub-glossary.js-д (EHGlossary): админы w2p/w2c preview-тэй НЭГ функц (2026-10-27). */
 /* Төлөвлөгөөний мөрийн «{year}» — тухайн (УБ-ийн) оны төлөвлөгөө; хуучин «2025 төлөвлөгөө»
    мэт хатуу он бичихгүй. ЦЭВЭР (year өгвөл). */
 function planYearText(s,year){
   return String(s==null?'':s).split('{year}').join(String(year||ubStamp(new Date().toISOString()).date.slice(0,4)));
-}
-function weekLag(weekEnd,maxDate,keys,lastBy){
-  if(!weekEnd||!maxDate||!(maxDate>weekEnd)||!lastBy) return null;
-  const add=(iso,n)=>{ const d=new Date(iso+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
-  const from=add(weekEnd,1), to=add(weekEnd,7);
-  /* Дараагийн долоо хоногийг ядаж нэг салбар БҮРЭН хамарсан үед л хоцрогдол — эс бөгөөс тэр
-     долоо хоног өөрөө дуусаагүй (2026-10-27: Да 10.26-нд «бүгд 10.25 хүртэл ирсэн тул
-     10.26–11.01 бүрдээгүй» гэж явагдаж буй долоо хоногийг хоцрогдол мэт хэлж байв). */
-  if(maxDate<to) return null;
-  const behind=(keys||[]).filter(k=>lastBy[k]&&lastBy[k]<to).map(k=>({key:k,last:lastBy[k]}));
-  return behind.length?{from,to,maxDate,sectors:behind}:null;
 }
 
 /* Салбараар давхарласан багана (сар эсвэл 7 хоног). Y 0-ээс (DG); дутуу хугацаа —
@@ -10680,7 +10585,7 @@ class Component extends DCLogic {
     const rh=this._roadPaxAll, rg=rh&&rh.coverage&&Array.isArray(rh.coverage.gaps)?rh.coverage.gaps:null;
     const lastKey=wt==='cargo'?'freight_last':'passengers_last', lastBy={};
     (api.sectors||[]).forEach(s=>{ if(s&&s[lastKey]) lastBy[s.sector]=s[lastKey]; });
-    return weekSectorReport(w,keys,rg?{road:rg}:null,lastBy);
+    return EHGlossary.weekReport(w,keys,rg?{road:rg}:null,lastBy);
   }
   sectorShareFromTotal(keys){
     const api=this.sectorTotalData?this.sectorTotalData():null;
@@ -14758,44 +14663,11 @@ class Component extends DCLogic {
       const md=s=>String(s||'').slice(5).replace('-','.');
       const barVals=stW?stW.weeks.map(x=>x.value):(realDaily||wd.bar);
       const barLabels=stW?stW.weeks.map(x=>md(x.start)):(realDaily?weeklyAir.dailyLabels:WEEK_LABELS);
-      /* barVals ХООСОН байж болно (feed ирээгүй): WEEK_DATA-д зохиомол
-         багана байхаа больсон тул Math.max([]) = -Infinity-ээс хамгаална.
-         Нэгтгэлийн долоо хоног бичлэггүй (null) бол тэнхлэг/дундажид орохгүй. */
-      const okVals=barVals.filter(v=>v!==null&&v!==undefined);
-      const hasBars=okVals.length>0;
-      const bmax=hasBars?Math.max.apply(null,okVals):0;
-      /* Нийт бүрдээгүй долоо хоног (жиш. авто тээврийн цоорхой) «—» хоосон үлдэхгүй —
-         бүртгэгдсэн дүнг «≥» давхарласан баганаар, дутуу салбар зураастай (DG: дутуу ≠ бүтэн).
-         Тэнхлэгт багтана, дундаж/оргилд ОРОХГҮЙ. */
-      const partVals=stW?stW.weeks.map(x=>x.partial):barVals.map(()=>null);
-      const wax=weekAxis(okVals.concat(partVals.filter(v=>v!==null)));
-      const base=wax.base, top=wax.top;
       // Огнооны шошго (WEEK_LABELS: "11.17" гэх мэт) жил заагаагүй, өдөр
       // бүр статик тул mock үед харагдацаараа сааруулж "жишиг" гэдгийг
       // үзэгдэл дээрээ илэрхийлнэ (тайлбар мөрөнд текстээр ч давхар
       // тэмдэглэнэ). Бодит өдрийн багана холбогдсон үед энгийн стиль.
       const dateLabelStyle=(realDaily||stW)?'':'color:var(--ink3);opacity:.55;font-style:italic;';
-      /* Гар утас (≤640px): 8 баганын 6 оронтой утга (571,206 ≈ 44px) ~33px баганад
-         багтахгүй давхцдаг тул style.css нь товчилсон хэлбэрийг (571K) харуулна;
-         бүтэн тоо ширээний дэлгэц ба tooltip-д хэвээр. */
-      const shortVal=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e5?Math.round(v/1e3)+'K':v>=1e3?(v/1e3).toFixed(1)+'K':String(Math.round(v));
-      const hPct=v=>(top===base?50:(v-base)/(top-base)*100).toFixed(1)+'%';
-      const bars=barVals.map((v,i)=>(v===null||v===undefined)
-        ?(partVals[i]!==null
-          ?{label:barLabels[i],value:'≥'+Math.round(partVals[i]).toLocaleString(),valueShort:'≥'+shortVal(partVals[i]),dateLabelStyle,
-            heightPct:hPct(partVals[i]),color:wd.color,partial:true,barStyle:''}
-          :{label:barLabels[i],value:'—',valueShort:'—',dateLabelStyle,heightPct:'0%',color:'var(--line2)',barStyle:''})
-        :{label:barLabels[i],value:(stW?Math.round(v):v).toLocaleString(),valueShort:shortVal(v),dateLabelStyle,
-          heightPct:hPct(v),color:wd.color,barStyle:''});
-      const yTicks=[0,0.5,1].map(fr=>({pct:(fr*100).toFixed(1)+'%',label:Math.round(base+fr*(top-base)).toLocaleString()}));
-      const avgVal=hasBars?okVals.reduce((a,v)=>a+v,0)/okVals.length:0;
-      const avgRef={pct:(top===base?50:(avgVal-base)/(top-base)*100).toFixed(1)+'%',
-        label:hasBars?(stxt('range.average','дундаж')+' '+Math.round(avgVal).toLocaleString())
-                     :stxt('status.no_data','мэдээлэл алга')};
-      const bestI=barVals.indexOf(bmax);
-      const barsMarked=bars.map((b,i)=>Object.assign({},b,{isPeak:i===bestI,
-        valueStyle:'font-family:\'JetBrains Mono\',monospace;font-size:10.5px;white-space:nowrap;flex-shrink:0;position:relative;z-index:1;'
-          +(i===bestI?'color:var(--ink);font-weight:700;':'color:var(--ink2);')}));
       // fmtWeekVal нь K/M-ийг ӨӨРТӨӨ шингээж форматлодог (жиш. "18.4K") тул
       // "мянган ..." шошгыг хамт үзүүлбэл масштаб ХОЁР ДАХИН тооцогдох мэт
       // ойлгогдоно — иймд бодит утгын үед энгийн нэгж (хүн/тонн) ашиглана,
@@ -14807,6 +14679,19 @@ class Component extends DCLogic {
       const unitTxt=this.txt(widgetId,'unit','');
       const unit=unitTxt||((realVal!=null||stW)
         ?(wt==='cargo'?stxt('unit.ton','тонн'):stxt('unit.person','хүн')):wd.unit);
+      /* Багана (утга, өндөр, тэнхлэг 0-ээс, дундаж, оргил), салбараар давхарласан хэсэг, tooltip,
+         легенд — EHGlossary.weekBars: админы w2p/w2c preview-тэй НЭГ функц, НЭГ өгөгдөл (stW =
+         EHGlossary.weekReport). Цоорхойтой 7 хоног «≥» + дутуу салбар зураастай; бичлэггүй (null)
+         долоо хоног тэнхлэг/дундажид орохгүй; barVals хоосон (feed ирээгүй) бол багана алга.
+         Салбарын өнгө — хажуугийн «Төрлийн хуваарь» донутынх. Гар утас (≤640px): style.css нь
+         товчилсон valueShort-ыг (571K) харуулна; бүтэн тоо ширээний дэлгэц ба tooltip-д. */
+      const SEG_KEYS=['air','road','rail'];
+      const wb=EHGlossary.weekBars({vals:barVals,labels:barLabels,rep:stW,unit,T:stxt,
+        name:k=>SECTORS[k]?SECTORS[k].label:k,color:k=>wd.donut.colors[SEG_KEYS.indexOf(k)]||NEON[k]||wd.color});
+      const base=wb.base, yTicks=wb.yTicks, avgRef=wb.avg, legend=wb.legend;
+      const barsMarked=wb.bars.map(b=>Object.assign(b,{dateLabelStyle,color:b.empty?'var(--line2)':wd.color,barStyle:'',
+        valueStyle:'font-family:\'JetBrains Mono\',monospace;font-size:10.5px;white-space:nowrap;flex-shrink:0;position:relative;z-index:1;'
+          +(b.isPeak?'color:var(--ink);font-weight:700;':'color:var(--ink2);')}));
       // Тэнхлэгийн тайлбар нь ЯГ ЭНЭ нэгжийг давтана — өмнө нь энд wd.unit
       // (статик "мянган хүн") бичигддэг тул нэг картан дотор хоёр өөр нэгж
       // харагдаж байв.
@@ -14957,44 +14842,6 @@ class Component extends DCLogic {
       const airOnlyNote=stW?stNote:((realVal!=null&&otherSectorsNone)
         ?stxt('status.air_only','Зөвхөн агаарын тээврийн эх сурвалж холбогдсон. Бусад салбар холбогдох бүрд нийт дүнд нэмэгдэнэ.')
         :'');
-      /* Салбараар давхарласан багана (2026-10-27 регресс: цоорхойтой 7 хоногийн «≥» багана
-         тунгалаг тасархай хүрээ байсан тул агаар, төмөр замын бүтэн мэдээтэй байхад ХООСОН мэт
-         уншигдаж байв). Салбар бүр өөрийн өнгөөр (хажуугийн «Төрлийн хуваарь»-тай ижил), дутуу
-         салбар — оройд зураасан хэсэг (≥8px: мэдээ бага/алга ч харагдана). Нэгтгэлгүй (агаарын
-         өдрийн багана) үед segs хоосон — нэг өнгийн хуучин багана. */
-      const SEG_KEYS=['air','road','rail'];
-      const segCol=k=>wd.donut.colors[SEG_KEYS.indexOf(k)]||NEON[k]||wd.color;
-      const hatch=c=>'background:repeating-linear-gradient(135deg,'+c+' 0 3px,'+c+'2e 3px 6px);min-height:8px;';
-      const secName=k=>SECTORS[k]?SECTORS[k].label:k;
-      const segsOf=(i,rng)=>{
-        const ps=stW.weeks[i].parts.filter(p=>p.gap||p.value===null||p.value>0)
-          .sort((a,c)=>((a.gap||a.value===null)-(c.gap||c.value===null))||(SEG_KEYS.indexOf(a.key)-SEG_KEYS.indexOf(c.key)));
-        const tot=ps.reduce((t,p)=>t+(p.value||0),0)||1;
-        return ps.map(p=>{ const c=segCol(p.key), dutuu=p.gap||p.value===null;
-          return {h:((p.value||0)/tot*100).toFixed(2)+'%',style:dutuu?hatch(c):'background:'+c+';',dutuu,
-            tip:rng+' · '+secName(p.key)+' — '+(p.value===null?stxt('status.no_data','мэдээлэл алга')
-              :Math.round(p.value).toLocaleString()+' '+unit)+
-              (p.gap?' · '+stxt('week.seg_gap','7-оос {n} хоногт мэдээ дутуу (эх сурвалжийн цоорхой)').replace('{n}',p.gapDays):'')}; });
-      };
-      /* HV: багана бүрт «хугацаа — утга нэгж» (нэгтгэлд долоо хоногийн бүтэн хүрээ). */
-      barsMarked.forEach((b,i)=>{
-        const rng=stW?md(stW.weeks[i].start)+'–'+md(stW.weeks[i].end):b.label;
-        const gk=stW?stW.weeks[i].gap:[];
-        b.segs=(stW&&b.value!=='—')?segsOf(i,rng):[];
-        if(b.partial){
-          const full=stW.weeks[i].partialKeys, miss=stW.keys.filter(k=>full.indexOf(k)<0);
-          b.tip=rng+' — '+b.value+' '+unit+(full.length?' · '+stNames({keys:full}):'')+' · '+
-            stxt('week.partial_tip','{names}: мэдээ дутуу (эх сурвалжийн цоорхой) — нийт бүрэн биш').replace('{names}',stNames({keys:miss}));
-          return;
-        }
-        b.tip=rng+' — '+(b.value==='—'
-          ?(gk.length?stxt('week.gap_tip','{names}: эх сурвалжийн цоорхой — дутуу').replace('{names}',stNames({keys:gk})):stxt('status.no_data','мэдээлэл алга'))
-          :b.value+' '+unit);
-      });
-      /* Давхаргын тайлбар (legend): салбарын өнгө + дутуу хэсэг байвал зураас. Нэгтгэлгүй үед хоосон. */
-      const legend=!stW?[]:SEG_KEYS.filter(k=>stW.keys.indexOf(k)>=0).map(k=>({label:secName(k),sw:'background:'+segCol(k)+';'}))
-        .concat(barsMarked.some(b=>b.segs.some(s=>s.dutuu))
-          ?[{label:stxt('week.legend_gap','мэдээ дутуу (эх сурвалжийн цоорхой)'),sw:hatch('#828EA8')}]:[]);
       /* DG-P: нэгтгэлийн горимд баганууд = долоо хоногууд (эхнийхийн эхлэл — сүүлийнхийн төгсгөл);
          эс бөгөөс 7 хоногийн ЯГ ТЭР цонх (lastFullWeekWindow(0)) — өдрийн багана
          ирээгүй бол хугацаа зохиохгүй («мэдээлэл алга»). */
