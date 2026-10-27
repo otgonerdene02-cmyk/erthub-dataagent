@@ -5141,11 +5141,12 @@ async function groupBE() {
   check('BE47. Ачааны тонн — тэнхлэг 0…50, алхам 10 (СӨРӨГ тонн БАЙХГҮЙ)',
     wcargo.base === 0 && wcargo.top === 50 && wcargo.step === 10, JSON.stringify(wcargo));
   /* Зорчигч: mx 8239, mn 6242 → span 1997, span/2 = 998.5 → алхам 100.
-     Шал floor((6242−1198.2)/100)×100 = 5000, тааз ceil(8538.55/100)×100 = 8600.
-     ХУУЧИН кодтой (алхам 50) шал ИЖИЛ 5000 — энэ график эвдрээгүй. */
+     Тааз ceil(8538.55/100)×100 = 8600. Шал: DG — сөрөг байж чадахгүй
+     хэмжигдэхүүний тэнхлэг 0-ээс (өмнө нь 5,000-аас эхэлж 7 хоногийн ялгааг
+     хэтрүүлж, датасэтийн 0-ээс эхэлдэг графиктай өөр хэлбэр зурдаг байв). */
   const wpax = weekAxis([6931, 7663, 8239, 7752, 6242, 7224, 8166]);
-  check('BE47. Зорчигчийн график эвдрээгүй — шал 5,000 хэвээр',
-    wpax.base === 5000 && wpax.top === 8600 && wpax.step === 100, JSON.stringify(wpax));
+  check('BE47. Зорчигчийн график — тэнхлэг 0…8,600 (DG: 0-ээс)',
+    wpax.base === 0 && wpax.top === 8600 && wpax.step === 100, JSON.stringify(wpax));
   /* Сөрөг утгатай цуваа бол шалыг 0-д БАРИХГҮЙ — тэр нь жинхэнэ утга. */
   const wneg = weekAxis([-20, -5, 10]);
   check('BE47. Үнэхээр сөрөг утгатай бол шал 0-д баригдахгүй',
@@ -10539,8 +10540,11 @@ function groupWK() {
   const GLYPH = { air: 'a', road: 'd', rail: 'r', water: 'w', public: 'p' };
   const SECTOR_DELTA = { pax: ['road', 'rail', 'air', 'water'].map(k => [k, '—', '', 0]), cargo: ['road', 'rail', 'air', 'water'].map(k => [k, '—', '', 0]) };
   const weekAxis = new Function(mA[0] + '\nreturn weekAxis;')();
+  /* Ачааны YoY-ийн зогссон тээвэрлэгчийн тэмдэглэл (HR9) — сайтын цэвэр функц */
+  const fsoM = dcScript().match(/\nfunction freightStaleOrgs\(all,since\)\{([\s\S]*?)\n\}/);
+  const FSO = fsoM ? new Function('all', 'since', fsoM[1]) : () => [];
   const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
-  const mk = new Function('WEEK_LABELS', 'weekAxis', 'stxt', 'EHChart', 'EHGlossary', 'SECTORS', 'GLYPH', 'NEON', 'SECTOR_DELTA', 'stPct', 'weeklyAir', 'chartPeriodText',
+  const mk = new Function('WEEK_LABELS', 'weekAxis', 'stxt', 'EHChart', 'EHGlossary', 'SECTORS', 'GLYPH', 'NEON', 'SECTOR_DELTA', 'stPct', 'weeklyAir', 'chartPeriodText', 'freightStaleOrgs',
     'return function(){' + mB[0].replace(/\n    const wPax=buildWeek\($/, '') + '\nreturn buildWeek;}');
   const wst = new Function('weekSectorReport', 'return function(wt,widgetId){' + mT[1] + '}')(L.weekSectorReport);
   const REGQ = { w2p: ['air', 'rail'], w2pb: ['air', 'rail'], w2px: ['air', 'rail'], w2c: ['air', 'rail'], w2cb: ['air', 'rail'], w2cx: ['air', 'rail'] };
@@ -10554,7 +10558,7 @@ function groupWK() {
   /* DG-P: сайтын chartPeriodText (нэгтгэлд долоо хоногийн цуваа → «N долоо хоног») */
   const cptWK = read('index.html').match(/\nfunction chartPeriodText\(m,T\)\{([\s\S]*?)\n\}/);
   const CPTWK = (m, T) => new Function('EHGlossary', 'm', 'T', cptWK[1])(G, m, T);
-  const BW = (api, regq, air, spec) => mk(['x'], weekAxis, (p, x) => x, { accessor: () => (f) => f.pax }, G, SECTORS, GLYPH, NEON, SECTOR_DELTA, L.stPct, air, CPTWK)
+  const BW = (api, regq, air, spec) => mk(['x'], weekAxis, (p, x) => x, { accessor: () => (f) => f.pax }, G, SECTORS, GLYPH, NEON, SECTOR_DELTA, L.stPct, air, CPTWK, FSO)
     .call(ctx(api, regq, spec));
   const P = BW(API, REGQ, AIR)('pax', WD('Тээвэрлэгч'), 'w2p', 'w2px');
   const sh = k => P.share.find(x => x.label === k), dl = k => P.delta.find(x => x.label === SECTORS[k].label);
@@ -10649,6 +10653,101 @@ function groupWK() {
   check('WK21. Темплейт: 7 хоногийн багана бүрт <title> tooltip (HV)', (idx.match(/barGrow \.6s var\(--ease\) both;(?:\{\{ wb\.barStyle \}\})?"><title>\{\{ wb\.tip \}\}<\/title>/g) || []).length === 2);
 }
 
+/* ── HR. Нүүр ↔ датасэтийн тулгалт (2026-10-26) ──────────────────────────
+   Subagent-ийн аудитаар илэрсэн: (1) KPI картаас эх датасэт рүү зам алга,
+   (2) холбогдоогүй картад "0 км" (жинхэнэ тэг мэт), (3) ticker-т зохиомол
+   11,979, (4) "2026 · III улирал" / "2025 төлөвлөгөө" / "Индекс 2026" хатуу он,
+   (5) 7 хоногийн тэнхлэг 0-ээс биш (BE47-д), (6) каталогийн сүүлийн хуудсанд
+   «Дараах» идэвхтэй, (7) газрын зургийн ОУ ангилал толь ашиглаагүй. */
+function groupHR() {
+  group('HR. Нүүр ↔ датасэт: эх датасэтийн холбоос, хоосон төлөв, динамик он');
+  const src = dcScript(), tpl = indexTemplate(), CJ = readJson('content.json');
+  /* HR1. periodTokens — УБ огноогоор он/улирал (цагийн бүсийн хил гараар бодсон) */
+  const ub = src.match(/\nfunction ubStamp\(iso\)\{([\s\S]*?)\n\}/);
+  const pt = src.match(/\nfunction periodTokens\(year,now\)\{([\s\S]*?)\n\}/);
+  if (!ub || !pt) { bad('HR1. ubStamp/periodTokens олдсонгүй'); }
+  else {
+    const periodTokens = new Function('UB_TZ', 'function ubStamp(iso){' + ub[1] + '}\nreturn function(year,now){' + pt[1] + '}')('Asia/Ulaanbaatar');
+    /* 2026-10-25 20:00 UTC = УБ 10-26 04:00 → IV улирал */
+    const a = periodTokens(undefined, Date.UTC(2026, 9, 25, 20, 0));
+    check('HR1. 2026-10-26 (УБ) → {year:2026, q:IV}', a.year === 2026 && a.q === 'IV', JSON.stringify(a));
+    /* 2026-03-31 17:00 UTC = УБ 04-01 01:00 → II улирал (UTC-ээр бол I болж алдана) */
+    const b = periodTokens(undefined, Date.UTC(2026, 2, 31, 17, 0));
+    check('HR1. Улирлын хил УБ цагаар (03-31 17:00 UTC → II)', b.q === 'II', JSON.stringify(b));
+    const c = periodTokens(2025, Date.UTC(2026, 9, 25));
+    check('HR1. Өгсөн он давуу (i06-ийн харьцуулах он)', c.year === 2025, JSON.stringify(c));
+  }
+  /* HR2. Хатуу он/улирал үлдээгүй — content ба fallback хоёулаа загвар */
+  check('HR2. content.json: uk.sub / w2p,w2c.foot / i06.foot нь {year}/{q} загвар',
+    /\{year\}/.test(CJ.widgets.uk.sub) && /\{q\}/.test(CJ.widgets.uk.sub) &&
+    /\{year\}/.test(CJ.widgets.w2p.foot) && /\{year\}/.test(CJ.widgets.w2c.foot) && /Индекс \{year\}/.test(CJ.widgets.i06.foot));
+  check('HR2. index.html-д "III улирал" / "2025 төлөвлөгөө" / "Индекс 2026" fallback алга',
+    !/'2026 · III улирал'|'2025 төлөвлөгөө'|'Индекс 2026 оны/.test(src) &&
+    /fillTpl\(this\.txt\('uk','sub'/.test(src) && /fillTpl\(this\.txt\('i06','foot'/.test(src));
+  /* HR3. Ticker-ийн fallback зохиомол тоо биш */
+  check('HR3. hero_fl fallback "—" + "мэдээлэл алга" (11,979 ЗОХИОХГҮЙ)',
+    /this\.val\('hero_fl','—'\)/.test(src) && !/this\.val\('hero_fl','11,979'\)/.test(src) &&
+    /heroFlMonthSuffix:hv\.isFallback\?' · '\+this\.stxt\('status\.no_data'/.test(src));
+  /* HR4. lsSourceLink — kpis[0]-ийн бодит эх сурвалжийн датасэт */
+  const ls = src.match(/\n  lsSourceLink\(k,verified\)\{([\s\S]*?)\n  \}\n/);
+  if (!ls) bad('HR4. lsSourceLink() олдсонгүй');
+  else {
+    const DS = [{ sector: 'air', name: 'Агаар', source: 'flights' }, { sector: 'rail', name: 'Вагон', source: 'railWagon' },
+      { sector: 'rail', name: 'Зорчигч', source: 'railPax' }, { sector: 'road', name: 'Үзлэг', source: 'roadInspect' },
+      { sector: 'road', name: 'Авто зорчигч', source: 'roadPax' }];
+    const fn = new Function('DATASETS', 'datasetSlug', 'stxt', 'k', 'verified', ls[1]);
+    const run = (ctx, k, v) => fn.call(Object.assign({ openDataset: () => {} }, ctx), DS, (d) => d.sector + '__' + d.source, (p, fb) => fb, k, v);
+    const air = run({}, 'air', true);
+    check('HR4. Агаар → flights датасэт, href #/browse/<slug>', air.srcHas && air.srcHref === '#/browse/air__flights' && air.srcTitle === 'Агаар', JSON.stringify(air));
+    check('HR4. Төмөр зам: вагон ирсэн → railWagon, ирээгүй → railPax (kpis[0]-тэй ИЖИЛ дүрэм)',
+      run({ _railWagonLoading: { count: 5 } }, 'rail', true).srcTitle === 'Вагон' && run({}, 'rail', true).srcTitle === 'Зорчигч');
+    check('HR4. Авто: үзлэг ирсэн → roadInspect, ирээгүй → roadPax',
+      run({ _roadInspections: { count: 0 } }, 'road', true).srcTitle === 'Үзлэг' && run({}, 'road', true).srcTitle === 'Авто зорчигч');
+    check('HR4. Холбогдоогүй (verified=false) ба усан зам → холбоосгүй',
+      run({}, 'air', false).srcHas === false && run({}, 'water', true).srcHas === false);
+  }
+  /* HR5. Темплейт — холбоос <button> ДОТОР БИШ (хүчингүй HTML), livestrip-ийн мөрөнд */
+  const lsBlock = (tpl.match(/<sc-for list="\{\{ livestrip \}\}"[\s\S]*?<\/sc-for>/) || [''])[0];
+  check('HR5. KPI карт бүрийн доор data-ls-src холбоос (button-ийн ГАДНА, sc-if srcHas)',
+    /<\/button>\s*<sc-if value="\{\{ ls\.srcHas \}\}">\s*<a data-ls-src=/.test(lsBlock) && /sc-camel-on-click="\{\{ ls\.openSrc \}\}"/.test(lsBlock));
+  check('HR5. content.json: site.ls_src.label', !!(CJ.site.ls_src && CJ.site.ls_src.label));
+  /* HR6. Холбогдоогүй картад "0" ба нэгж харуулахгүй (EMP) */
+  check('HR6. livestrip: verified биш бол утга "—", нэгж хоосон',
+    /value:vs\?vs\.value:\(verified\?sk\.kpis\[0\]\[1\]:'—'\)/.test(src) &&
+    /unit:vs\?\(vs\.unit\|\|sk\.kpis\[0\]\[2\]\):\(verified\?sk\.kpis\[0\]\[2\]:''\)/.test(src));
+  /* HR7. Каталог: 12 карт/хуудас, захын хуудсанд товч идэвхгүй */
+  check('HR7. Каталог DSPER=12, «Өмнөх/Дараах» aria-disabled + идэвхгүй стиль',
+    /const DSPER=12;/.test(src) && /aria-disabled="\{\{ dsListNextOff \}\}" style="\{\{ dsListNextStyle \}\}"/.test(tpl) &&
+    /dsListNextStyle=pagerBtn\(dsListPg>=dsPages-1\)/.test(src));
+  /* HR8. Газрын зургийн төмөр замын ОУ — толиор (DG) */
+  check('HR8. homeMap төмөр замын ОУ ангилал EHGlossary.airFlightKind-аар',
+    /EHGlossary\.airFlightKind\(t\.type\)==='intl'/.test(src));
+  /* HR9. Зогссон тээвэрлэгч — нүүрийн ачааны YoY-д нэрлэгдэнэ (гараар: МТЗ 02-01 < 10-12) */
+  const fso = src.match(/\nfunction freightStaleOrgs\(all,since\)\{([\s\S]*?)\n\}/);
+  if (!fso) bad('HR9. freightStaleOrgs() олдсонгүй');
+  else {
+    const f = new Function('all', 'since', fso[1]);
+    const all = { by_org: [{ org: 'ubtz', name: 'УБТЗ', last_date: '2026-10-25' }, { org: 'mtz', name: 'МТЗ', last_date: '2026-02-01T00:00:00Z' }] };
+    const r = f(all, '2026-10-12');
+    check('HR9. МТЗ (02-01) зогссон, УБТЗ (10-25) үгүй', r.length === 1 && r[0].name === 'МТЗ' && r[0].lastDate === '2026-02-01', JSON.stringify(r));
+    check('HR9. Өгөгдөлгүй / since алга → []', f(null, '2026-10-12').length === 0 && f(all, null).length === 0);
+  }
+  check('HR9. Ачааны «Өмнөх оны мөн үе»-д site.week.org_stale тэмдэглэл',
+    /freightStaleOrgs\(this\._homeFreightAll,stW\.weekStart\)/.test(src) && /\{orgs\}/.test(CJ.site.week.org_stale || ''));
+  /* HR10. Агаарын «НИЙТ НИСЛЭГ» карт (сүүлийн бүтэн сар) сараа НЭРЭНДЭЭ — хажуугийн YTD картаас ялгарна */
+  check('HR10. Агаарын kpis[0] нэр + " · " + сар (ОУ НИСЛЭГ > НИЙТ НИСЛЭГ мэт харагдахгүй)',
+    /\[kl\('НИЙТ НИСЛЭГ',0\)\+\(flWin&&flWin\.monthLabel\?' · '\+flWin\.monthLabel:''\)/.test(src));
+  /* HR11. Боомтын tooltip — транзит нь коридорын НИЙТ гэж нэрлэгдэнэ (хоёр боомтыг нэмж 2× тоолохгүй) */
+  check('HR11. Боомтын транзит «коридорын нийт» тэмдэглэлтэй',
+    /T\('transit_corridor_total'/.test(src) && !!CJ.site.home_map.transit_corridor_total);
+  /* HR12. «Сүүлийн бичлэг» — дутуу сар (1–N) эхэнд, бүтэн сар нэрээрээ ("2026-09 · 2026-10 дутуу" биш) */
+  check('HR12. Сарын цувааны lastRecord: partial (1–N) дутуу · бүтэн сар: YYYY-MM',
+    /s\.partial\+\(s\.partialDay>0\?' \(1–'\+s\.partialDay\+'\)':''\)\+' '\+stxt\('feed\.partial_tag'/.test(src) && !!CJ.site.feed.full_month_tag);
+  /* HR13. Чанарын үнэлгээгүй датасэт — 4 хэмжүүрийн «Тодорхойгүй» тор нуугдана */
+  check('HR13. detail.dims тор sc-if detail.dqAnyDim дотор (бүх хэмжүүр тодорхойгүй бол нуугдана)',
+    /<sc-if value="\{\{ detail\.dqAnyDim \}\}">\s*<div class="eh-g4 eh-g-2c"[^>]*>\s*<sc-for list="\{\{ detail\.dims \}\}"/.test(tpl));
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -10687,11 +10786,12 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=RT')) { await groupRT(); }
   else if (process.argv.includes('--only=RI')) { await groupRI(); }
   else if (process.argv.includes('--only=HM')) { await groupHM(); }
+  else if (process.argv.includes('--only=HR')) { groupHR(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
