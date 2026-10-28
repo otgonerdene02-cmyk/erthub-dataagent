@@ -8120,6 +8120,12 @@ function groupUI() {
   check('UI7. layout-audit өгөгдөлтэй төлөв (+fx) ба тээврийн хэрэгслийн 4 табыг шалгадаг',
     /route: r \+ '\+fx'/.test(read('tests/layout-audit.js')) && read('tests/layout-audit.js').indexOf("'vehreg/plate'") > 0 &&
     fs.existsSync(path.join(ROOT, 'tests', 'lib', 'feed-fixtures.js')));
+  /* Регресс (CI 2026-10-28, /home→air @390): KPI картын «өмнөх оны мөн үетэй харьцуулахад» delta pill-ийн
+     хажуугийн 64px-д Inter-гүй фонтоор (Linux/Android) 3px хальж байв — локал Windows дээр илэрдэггүй */
+  const cssUI = read('style.css');
+  const mob = cssUI.slice(cssUI.indexOf('.eh-k4-p { padding: 16px 14px 0'), cssUI.indexOf('.eh-k4-v > :first-child'));
+  check('UI8. Гар утас: KPI-ийн харьцуулалтын бичиг багтахгүй бол pill-ийн доор ороно (flex-wrap + overflow-wrap)',
+    mob.includes('div:has(> .eh-k4-c) { flex-wrap: wrap;') && /\.eh-k4-c \{ flex: 1 1 \d+px; overflow-wrap: anywhere; \}/.test(mob), mob);
 
   /* RAW — датасэтийн хүснэгт = эх сервисийн ТҮҮХИЙ мөр, БҮХ багана (2026-10-18:
      вагоны хүснэгтэд огноо харагддаггүй байв — зөвхөн станцын нэгтгэл). */

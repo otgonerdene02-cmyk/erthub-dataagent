@@ -202,6 +202,10 @@ body{margin:0;}
   .eh-k4-p { padding: 16px 14px 0 !important; }
   .eh-k4-v { flex-wrap: wrap; }
   .eh-k4-c { white-space: normal !important; overflow: visible !important; }
+  /* Delta pill + «өмнөх оны мөн үетэй харьцуулахад»: 64px үлдэгдэлд «харьцуулахад» Inter-гүй
+     фонтоор (Linux/Android) 3px хальж байв (CI, 2026-10-28) — багтахгүй бол pill-ийн доор бүтэн өргөнөөр */
+  div:has(> .eh-k4-c) { flex-wrap: wrap; row-gap: 4px; }
+  .eh-k4-c { flex: 1 1 96px; overflow-wrap: anywhere; }
   .eh-k4-v > :first-child { font-size: 30px !important; }
 }
 @keyframes driftA{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(6%,8%,0) scale(1.15);}}
