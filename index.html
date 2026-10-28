@@ -32,7 +32,7 @@
   <script src="js/vendor/d3.v7.min.js?v=f2094bbf"></script>
   <script src="js/vendor/topojson-client.min.js?v=25cd02ae"></script>
   <script src="js/vendor/xlsx.full.min.js?v=c9506197"></script>
-  <link rel="stylesheet" href="style.css?v=08035d82">
+  <link rel="stylesheet" href="style.css?v=24ef5494">
 </helmet>
 
 <div class="eh-app" data-theme="{{ themeAttr }}" style="{{ rootStyle }}">
@@ -1224,7 +1224,7 @@
               <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.035em;font-variant-numeric:tabular-nums;line-height:.95;">{{ k.value }}</div>
               <div style="font-size:12.5px;color:var(--ink3);font-weight:500;">{{ k.unit }}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+            <div class="eh-k4-d" style="display:flex;align-items:center;gap:8px;margin-top:14px;">
               <div style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ k.deltaColor }};background:{{ k.deltaColor }}18;border-radius:999px;padding:4px 11px;">
                 <span style="font-size:9px;">{{ k.deltaGlyph }}</span>{{ k.delta }}
               </div>
