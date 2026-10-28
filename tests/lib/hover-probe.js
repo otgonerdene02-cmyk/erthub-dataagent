@@ -115,6 +115,11 @@ module.exports.inventory = async function inventory(d, w) {
   [...d.querySelectorAll('svg')].filter((s) => !s.ownerSVGElement).forEach((s) => {
     const shapes = [...s.querySelectorAll('rect,circle,path,polyline')].filter((e) => !e.closest('defs'));
     const tips = shapes.filter((e) => [...e.children].some((c) => c.localName === 'title') || e.hasAttribute('data-tip'));
+    /* Чартын стандарт (CH): шугамын цэг нь svg-ийн ХАЖУУД HTML давхарга (.eh-ch-dot[data-tip]) —
+       svg нь харьцаагаар сунадаг тул дугуй цэг зууван болохгүйн тулд. Тэдгээрийг ч тоолно. */
+    if (s.classList.contains('eh-ch-svg') && s.parentElement) {
+      s.parentElement.querySelectorAll(':scope > [data-tip]').forEach((e) => tips.push(e));
+    }
     const r = s.getBoundingClientRect();
     let p = s;
     for (let k = 0; k < 7 && p; k++) { p = p.parentElement; if (p && p.innerText && p.innerText.length > 25) break; }

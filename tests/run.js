@@ -4699,8 +4699,9 @@ async function groupBE() {
       chart.yTicksLeft && chart.yTicksLeft[0].label === '0' && chart.yTicksRight[0].label === '0');
     const d3 = chart.barRects ? chart.barRects.filter(b => b.tip.startsWith('d')) : [];
     const hTot = d3.reduce((t, b) => t + parseFloat(b.h), 0);
-    check('PA11. Хамгийн өндөр багана (d=120) нийт өндөр = 120/200 × plotH(182) ≈ 109.2',
-      Math.abs(hTot - 109.2) < 0.3, String(hTot));
+    /* CH: тэнхлэгийн дээд = «гоё» алхам — 120/4 = 30 → алхам 50 → дээд 150 (өмнө 200) */
+    check('PA11. Хамгийн өндөр багана (d=120) нийт өндөр = 120/150 × plotH(182) ≈ 145.6 (тэнхлэг 0·50·100·150)',
+      Math.abs(hTot - 145.6) < 0.3 && chart.yTicksLeft.map((t) => t.v).join(',') === '0,50,100,150', String(hTot) + ' ' + JSON.stringify(chart.yTicksLeft.map((t) => t.v)));
     check('PA11. Тэмдэг бүрт "нэр — утга" tooltip (ОН/ОУ/нийт), шугамд аяллын тоо',
       /ОН: 100 · ОУ: 20 · нийт: 120/.test(d3[0].tip) &&
       chart.dotPts.every(p => /аялал: /.test(p.tip)));
@@ -5791,7 +5792,7 @@ async function groupBE() {
   check('BE39. Хоосон төлөв — тэнхлэггүй тайлбар мөр',
     /<sc-if value="\{\{ trend\.noData \}\}">[\s\S]{0,400}\{\{ trend\.noDataNote \}\}/.test(read('index.html')));
   check('BE39. SVG нь sc-if trend.hasData ДОТОР (тэнхлэг ОГТ зурагдахгүй)',
-    /<sc-if value="\{\{ trend\.hasData \}\}">\s*<svg sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;/
+    /<sc-if value="\{\{ trend\.hasData \}\}">\s*<svg (?:data-ch-ok="[^"]*" )?sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;/
       .test(read('index.html')));
   check('BE39. Хоосон төлөвийн текст content.json-д бүртгэлтэй',
     readJson('content.json').site.status.no_series === 'чиг хандлагын цуваа алга');
@@ -7863,6 +7864,216 @@ function groupAS() {
   check('AS3. CI checks job: check-asset-stamps', /node scripts\/check-asset-stamps\.js/.test(read('.github/workflows/tests.yml')));
 }
 
+/* CS. ЧАРТЫН СТАНДАРТ (CH) — 2026-10-28 хэрэглэгчийн гомдол: «ганц чартыг харуулах гэж
+   бүтэн дэлгэж эзэлсэн» (үзлэгийн 10 сарын багана 1240×430px, шошго 16.5px). Шалтгаан:
+   svg `width:100%;height:auto` нь картын өргөнөөр харьцаагаар томордог. Шийдэл —
+   js/erthub-chartkit.js frame (тогтмол өндөр, HTML шошго), гоё алхамтай тэнхлэг, богино
+   цуваа хос мөрөнд. (а) цэвэр функцийг ГАРААР БОДОХ фикстур дээр, (б) шалгагчийг эвдсэн
+   хуулбар дээр, (в) датасэт бүрийг жинхэнэ хөтчөөр 1400 ба 390px өргөнөөр. */
+async function groupCS() {
+  group('CS. Чартын стандарт — frame · тэнхлэг · шошго · байрлал');
+  const K = require(path.join(ROOT, 'js', 'erthub-chartkit.js'));
+  const J = (x) => JSON.stringify(x);
+
+  /* CS1. Алхам 1·2·2.5·5 × 10^k */
+  const ns = [1.2, 3, 2.3, 7, 0.03, 12500].map(K.niceStep);
+  check('CS1. niceStep: 1.2→2 · 3→5 · 2.3→2.5 · 7→10 · 0.03→0.05 · 12500→20000', J(ns) === '[2,5,2.5,10,0.05,20000]', J(ns));
+  const mant = (s) => +(s / Math.pow(10, Math.floor(Math.log10(s) + 1e-9))).toFixed(6);
+  let axBad = [];
+  for (let i = 1; i <= 300; i++) {
+    const hi = Math.round(Math.pow(1.07, i) * 3.3 * 100) / 100;
+    const a = K.axis(0, hi);
+    if ([1, 2, 2.5, 5].indexOf(mant(a.step)) < 0 || a.ticks[0] !== 0 || a.ticks[a.ticks.length - 1] < hi ||
+      a.ticks.length < 3 || a.ticks.length > 5) axBad.push(hi + '→' + J(a.ticks));
+  }
+  check('CS1. axis(0,hi) 300 муж: алхам 1·2·2.5·5×10^k, 0-ээс, дээд tick ≥ hi, 3–5 tick', axBad.length === 0, axBad.slice(0, 3).join(' | '));
+
+  /* CS2. Гараар бодсон тэнхлэг */
+  const a37 = K.axis(0, 37000), a49 = K.axis(0, 4.9e6), a11 = K.axis(0, 1.1e6), a62 = K.axis(0, 620000);
+  check('CS2. axis(0,37000) = 0…40,000 алхам 10,000 (өмнө «15,710 · 31,420» = max/2)',
+    a37.step === 10000 && J(a37.ticks) === '[0,10000,20000,30000,40000]', J(a37));
+  check('CS2. axis(0,4.9M) алхам 2M — «1.25M» алхам (→ худал «1.3M» шошго) ГАРАХГҮЙ',
+    a49.step === 2e6 && J(a49.ticks) === '[0,2000000,4000000,6000000]', J(a49));
+
+  /* CS3. Шошго — НЭГ дүрэм */
+  const L = (ax, o) => ax.ticks.map((v) => K.tickLabel(v, ax, o)).join(' ');
+  check('CS3. <100,000 → бүтэн тоо таслалтай: «0 10,000 20,000 30,000 40,000»', L(a37) === '0 10,000 20,000 30,000 40,000', L(a37));
+  check('CS3. ≥1M → M, аравтын орон алхмаас: «0 0.5M 1M 1.5M»', L(a11) === '0 0.5M 1M 1.5M', L(a11));
+  check('CS3. 100K–1M → K: «0 200K 400K 600K 800K»', L(a62) === '0 200K 400K 600K 800K', L(a62));
+  check('CS3. Хувь: алхам 0.25 → «0.25%» (тойруулж «0.3%» болгохгүй)', K.tickLabel(0.25, K.axis(0, 1), { pct: true }) === '0.25%',
+    K.tickLabel(0.25, K.axis(0, 1), { pct: true }));
+  check('CS3. Тэмдэгтэй хувь: «+5%», «-5%»', K.tickLabel(5, K.axis(-10, 10), { pct: true, signed: true }) === '+5%' &&
+    K.tickLabel(-5, K.axis(-10, 10), { pct: true, signed: true }) === '-5%');
+
+  /* CS4. relabel — моделийн түүхий утгаар (v) дахин шошголно */
+  const r1 = K.relabel([{ y: 100, label: '0%', v: 0 }, { y: 50, label: '+0.3%', v: 0.25 }, { y: 0, label: '+0.5%', v: 0.5 }]);
+  check('CS4. «+0.3%» (жинхэнэ 0.25) → «+0.25%», y хадгалагдана', r1.map((t) => t.label).join(' ') === '0.00% +0.25% +0.50%' && r1[1].y === 50,
+    J(r1));
+  const r2 = K.relabel([{ y: 3, label: '0' }, { y: 2, label: '500,000' }, { y: 1, label: '1,000,000' }]);
+  check('CS4. v-гүй бол шошгоос уншина: «500,000 · 1,000,000» → «0.5M · 1M»', r2.map((t) => t.label).join(' ') === '0 0.5M 1M', J(r2));
+  const txt = [{ y: 1, label: 'А' }, { y: 2, label: 'Б' }];
+  check('CS4. Тоон бус шошго хэвээр', K.relabel(txt) === txt);
+
+  /* CS5. X шошгын сийрүүлэлт — өргөн бүрд давхцахгүй, эхний/сүүлийнх үргэлж */
+  const lw = (s) => String(s).length * 6.3 + 8;
+  const visAt = (gx, T) => gx.filter((t) => { const m = /eh-ch-xw(\d+)/.exec(t.cls); return !m || +m[1] <= T; });
+  const thinCase = (labels) => K.thinX(labels.map((l, i) => ({ pos: (i + 0.5) / labels.length * 100, label: l })));
+  const months = Array.from({ length: 12 }, (_, i) => '26-' + String(i + 1).padStart(2, '0'));
+  const g12 = thinCase(months);
+  const hid12 = g12.filter((t) => /eh-ch-xw480/.test(t.cls)).map((t) => t.label);
+  check('CS5. 12 сар: <480px-д 6 шошго нуугдана (сондгой + сүүлийн өмнөх), 1-р/12-р сар үлдэнэ',
+    J(hid12) === J(['26-02', '26-04', '26-06', '26-08', '26-10', '26-11']) && g12[0].cls === 'eh-ch-xl' && g12[11].cls === 'eh-ch-xl', J(g12.map((t) => t.cls)));
+  const TIERS = (read('js/erthub-chartkit.js').match(/var TIERS = \[([^\]]+)\]/) || [, ''])[1].split(',').map(Number).filter(Boolean);
+  const cases = [months, Array.from({ length: 30 }, (_, i) => '10-' + String(i + 1).padStart(2, '0')),
+    Array.from({ length: 24 }, (_, i) => (24 + Math.floor(i / 12)) + '-' + String(i % 12 + 1).padStart(2, '0') + (i === 23 ? '*' : ''))];
+  const ovl = [];
+  cases.forEach((labs) => {
+    const gx = thinCase(labs);
+    TIERS.forEach((T) => {
+      const v = visAt(gx, T);
+      for (let i = 1; i < v.length; i++) {
+        const gap = (parseFloat(v[i].left) - parseFloat(v[i - 1].left)) / 100 * T;
+        if (gap + 0.01 < lw(v[i].label)) ovl.push(labs.length + ' шошго @' + T + 'px: ' + v[i - 1].label + '/' + v[i].label + ' ' + gap.toFixed(1) + 'px');
+      }
+      if (v[0].label !== labs[0] || v[v.length - 1].label !== labs[labs.length - 1]) ovl.push(labs.length + ' @' + T + ': эхний/сүүлийн алга');
+    });
+  });
+  check('CS5. 12/24/30 шошго × ' + TIERS.length + ' өргөн: харагдах шошго ДАВХЦАХГҮЙ, эхний/сүүлийн (дутуу «*») үлдэнэ', TIERS.length >= 6 && ovl.length === 0, ovl.slice(0, 3).join(' | '));
+  const css = read('style.css');
+  const missQ = TIERS.slice(0, -1).filter((T) => css.indexOf('@container (max-width: ' + (T - 0.02).toFixed(2) + 'px) { .eh-ch-xw' + T + ' { display: none; } }') < 0);
+  check('CS5. style.css: plot нь container (inline-size) ба tier бүрийн @container дүрэм', /\.eh-ch-plot \{[^}]*container-type: inline-size/.test(css) && missQ.length === 0,
+    'дутуу: ' + missQ.join(','));
+
+  /* CS6. frame — байрлал, анги */
+  const F = K.frame({ box: [46, 16, 554, 138], y: [{ y: 138, label: '0' }, { y: 77, label: '5' }], x: [{ x: 96.8, label: 'А' }, { x: 503.2, label: 'Б' }],
+    dots: [{ x: 503.2, y: 40, tip: 'Б — 8', color: '#f00', hollow: true }, { x: 96.8, y: 100, tip: 'А — 3' }],
+    vals: [{ x: 503.2, y: 40, label: '8' }, { x: 300, y: 60, label: '5' }], legend: [{ label: 'Шугам', color: '#f00', kind: 'line' }, { label: '' }] });
+  check('CS6. viewBox = зөвхөн plot тэгш өнцөгт («46 16 508 122»)', F.vb === '46 16 508 122', F.vb);
+  check('CS6. Y: 0-ийн шугам доод ирмэг (100%, eh-ch-base), 5 → 50%', F.gy[0].top === '100%' && /eh-ch-base/.test(F.gy[0].cls) && F.gy[1].top === '50%', J(F.gy));
+  check('CS6. X шошго хувиар (10% / 90%)', F.gx.map((t) => t.left).join(' ') === '10% 90%', J(F.gx));
+  check('CS6. Дутуу цэг hollow (surface дэвсгэр, өнгөт хүрээ), бүтэн цэг дүүрэн',
+    F.dots[0].cls === 'eh-ch-dot eh-ch-dot-o' && F.dots[0].bg === 'var(--surface)' && F.dots[0].bd === '#f00' && F.dots[1].cls === 'eh-ch-dot', J(F.dots));
+  check('CS6. Баруун ирмэгийн утга дотогш зэрэгцэнэ (eh-ch-vl-e), дунд нь төвд', F.vals[0].cls === 'eh-ch-vl eh-ch-vl-e' && F.vals[1].cls === 'eh-ch-vl', J(F.vals));
+  check('CS6. Хоосон легенд хасагдана, дээж нь тэмдгийн хэв (line)', F.legend.length === 1 && F.legend[0].sw === 'eh-ch-sw eh-ch-sw-line' && F.hasLegend);
+  check('CS6. Анги: m анхдагч · l · y2 · Y-гүй (noy) · n = ангиллын тоо',
+    F.cls === 'eh-ch eh-ch-m' && F.n === '2' && K.frame({ size: 'l', y: [{ y: 0, label: '0' }] }).cls === 'eh-ch eh-ch-l' &&
+    K.frame({ y: [{ y: 0, label: '0' }], y2: [{ y: 0, label: '0' }] }).cls === 'eh-ch eh-ch-m eh-ch-y2' && K.frame({}).cls === 'eh-ch eh-ch-m eh-ch-noy',
+    F.cls + ' / ' + F.n);
+
+  /* CS7. fromModel — хуучин модель үүсгэгчийн гаралт */
+  const M = { w: 600, h: 170, padL: 46, padR: 12, padT: 16, padB: 32,
+    yTicks: [{ y: 138, label: '0', v: 0 }, { y: 77, label: '500,000', v: 500000 }, { y: 16, label: '1,000,000', v: 1000000 }],
+    xTicks: [{ x: 100, label: '26-09' }, { x: 300, label: '26-10*' }],
+    dotPts: [{ cx: 100, cy: 50, tip: '2026-09 — 6' }, { cx: 300, cy: 60, tip: '2026-10 (дутуу сар) — 5' }], line: 'M100,50 L300,60' };
+  const FM = K.fromModel(M, { dotColor: '#09f', line: { stroke: '#09f', sw: 2.2 } });
+  check('CS7. fromModel: box = pad-аас (46 16 542 122), шошго НЭГ дүрмээр («0 0.5M 1M»)',
+    FM.vb === '46 16 542 122' && FM.gy.map((t) => t.label).join(' ') === '0 0.5M 1M', FM.vb + ' ' + J(FM.gy.map((t) => t.label)));
+  check('CS7. fromModel: tooltip-д «(дутуу» бол hollow, бусад дүүрэн; шугам 1 path; n = 2',
+    !FM.dots[0].cls.includes('-o') && FM.dots[1].cls.includes('eh-ch-dot-o') && FM.paths.length === 1 && FM.paths[0].stroke === '#09f' && FM.n === '2', J(FM.dots));
+
+  /* CS8. index.html-ийн холболт */
+  const html = read('index.html');
+  const kitAt = html.indexOf('<script src="js/erthub-chartkit.js'), dcAt = html.indexOf('<script type="text/x-dc"');
+  check('CS8. erthub-chartkit.js dc скриптээс ӨМНӨ ачаалагдана (кэш тасалгаатай ?v=)', kitAt > 0 && kitAt < dcAt && /erthub-chartkit\.js\?v=[0-9a-f]{8}/.test(html));
+  check('CS8. chFrame нь EHChartKit-гүй үед null (модель үүсгэгчид EHChartKit-ээс хамаарахгүй)',
+    /function chFrame\(m,opt\)\{\s*return \(typeof EHChartKit!=='undefined'&&m\)\?EHChartKit\.fromModel\(m,opt\):null;\s*\}/.test(html));
+  const nFr = (html.match(/data-eh-chart="\{\{ [^}]+ \}\}"/g) || []).length;
+  check('CS8. Датасэтийн график frame-ээр (data-eh-chart ≥ 16, одоо ' + nFr + ')', nFr >= 16);
+  const probeSrc = read('tests/lib/layout-audit-probe.js'), fixSrc = read('tests/lib/layout-audit-fixtures.js');
+  check('CS8. layout-audit: chart-lonely дүрэм + алдаатай/зөв фикстур', /rule: 'chart-lonely'/.test(probeSrc) &&
+    /'chart-lonely': \{ expect: \['chart-lonely'\]/.test(fixSrc) && /'chart-pair-is-fine': \{ expect: \[\]/.test(fixSrc));
+  check('CS8. hover inventory: frame-ийн HTML цэгийг (data-tip) тоолно', /eh-ch-svg/.test(read('tests/lib/hover-probe.js')));
+  /* Регресс (2026-10-28, layout-audit card-empty): өгөгдөлгүй үед frame нь хоосон plot болж карт 70% хоосон байв */
+  check('CS8. Үзлэгийн 30 хоног/гариг: өгөгдөлгүй бол frame зурахгүй, plot-ын өндөртэй «мэдээлэл алга» (EMP)',
+    ['daily', 'week'].every((k) => html.includes('<sc-if value="{{ detail.ri.' + k + '.fr.cls }}">') &&
+      html.includes('<sc-if value="{{ detail.ri.' + k + '.noData }}"><div class="eh-ch-empty">{{ detail.ri.noData }}</div></sc-if>')) &&
+    html.includes('daily:{yTicks:[],bars:[],xTicks:[],noData:true},week:{bars:[],noData:true}') &&
+    /\.eh-ch-empty \{[^}]*height: 196px/.test(css));
+  check('CS8. Treemap: 64px-ээс нарийн хайрцагт шошго нуугдана (tooltip-оор), тоо ellipsis-тэй',
+    css.includes('.eh-tm-box { container-type: inline-size; }') &&
+    css.includes('@container (max-width: 63.98px) { .eh-tm-box > b, .eh-tm-box > span { display: none; } }') &&
+    /\.eh-tm-box span \{[^}]*text-overflow: ellipsis/.test(css));
+
+  /* CS9. Шалгагч эвдэрсэн хуулбар дээр УНАНА */
+  const { spawnSync } = require('child_process');
+  const tmp = path.join(os.tmpdir(), 'eh-cs-' + process.pid + '.html');
+  const mut = (name, from, to, rule) => {
+    if (html.indexOf(from) < 0) { bad('CS9. ' + name + ' — эвдэх мөр олдсонгүй'); return; }
+    fs.writeFileSync(tmp, html.replace(from, to));
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'check-ui-standard.js')],
+      { env: Object.assign({}, process.env, { EH_UI_FILE: tmp }), encoding: 'utf8' });
+    check('CS9. Шалгагч ' + name + '-ийг БАРИНА [' + rule + ']', r.status === 1 && r.stdout.indexOf('[' + rule + ']') >= 0, r.stdout);
+  };
+  mut('харьцаагаар сунадаг svg', '<svg data-ch-ok="аймгийн газрын зураг — харьцаа нь газар зүй" viewBox', '<svg viewBox', 'CH1');
+  mut('data-eh-chart-гүй frame', 'data-eh-chart="{{ detail.ri.period.monthly.fr.n }}"', '', 'CH2');
+  mut('бутархай тэнхлэг', 'function chFrame(m,opt){', 'const BADT=[0,.25,.5,.75,1];\nfunction chFrame(m,opt){', 'CH3');
+  try { fs.unlinkSync(tmp); } catch (e) { /* алгасна */ }
+
+  /* CS10–CS12. Хөтөч — датасэт бүр, 1400 ба 390px */
+  if (!CHROME) { skipped('CS10–CS12 (хөтөч)', 'Chrome олдсонгүй'); return; }
+  const probe = require(path.join(ROOT, 'tests', 'lib', 'chart-probe.js'));
+  const conP = readJson('content.json');
+  const slugP = (d) => d.sector + '__' + String(d.name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  const base = '/index.html?fx=1#/';
+  const routes = (conP.site.datasets || []).map((d) => base + 'browse/' + encodeURIComponent(slugP(d)));
+  const srv = serve();
+  try {
+    PROBE_SRC = base;
+    const R = await runProbe('async function(d,w){return (' + probe.toString() + ')(d,w,' + J(routes) + ',[1400,390])}',
+      60000 + routes.length * 2 * 15000);
+    if (R.__err) { bad('CS10. Чартын проб ажиллав', R.__err); return; }
+    const errs = Object.keys(R).filter((k) => R[k].__err).map((k) => k + ': ' + R[k].__err);
+    check('CS10. Датасэтийн бүх хуудас ачаалагдав (' + routes.length + ' × 2 өргөн)', errs.length === 0, errs.join(' | '));
+    const pages = Object.keys(R).filter((k) => !R[k].__err).map((k) => ({ key: decodeURIComponent(k).replace(base + 'browse/', ''), ...R[k] }));
+    const fr = [].concat(...pages.map((p) => p.frames.map((f) => ({ ...f, page: p.key, vw: p.vw }))));
+    const desk = fr.filter((f) => f.vw > 1000);
+    check('CS10. Frame график хангалттай олон зурагдав (1400px: ' + desk.length + ' ≥ 16)', desk.length >= 16, 'n=' + desk.length);
+    const tag = (f) => f.page + ' «' + f.title + '»';
+    const hBad = fr.filter((f) => Math.abs(f.plotH - f.expH) > 1).map((f) => tag(f) + ' ' + f.size + ' ' + f.plotH + '≠' + f.expH);
+    check('CS10. Plot-ын өндөр ТОГТМОЛ (s/m/l), картын өргөнөөс үл хамаарна', hBad.length === 0, hBad.slice(0, 4).join(' | '));
+    const fBad = fr.filter((f) => f.nLabels && (f.fsMax > 11.01 || f.fsMin < 9.5)).map((f) => tag(f) + ' ' + f.fsMin + '–' + f.fsMax + 'px');
+    check('CS10. Шошгын үсэг 9.5–11px (томрохгүй, жижгэрэхгүй)', fBad.length === 0, fBad.slice(0, 4).join(' | '));
+    const oBad = fr.filter((f) => f.overlap > 0).map((f) => f.vw + 'px ' + tag(f) + ' ' + f.overlap + ' давхцал');
+    check('CS10. Харагдах X шошго давхцахгүй (1400 ба 390px)', oBad.length === 0, oBad.slice(0, 4).join(' | '));
+    const rBad = fr.filter((f) => f.raw).map(tag);
+    check('CS10. Frame дотор NaN/undefined/{{ алга', rBad.length === 0, rBad.join(' | '));
+    const tBad = fr.filter((f) => f.tips === 0).map(tag);
+    check('CS10. Frame бүр hover-тэй тэмдэгтэй (HV)', tBad.length === 0, tBad.join(' | '));
+    const sc = [].concat(...pages.filter((p) => p.vw > 1000).map((p) => p.scaled.map((s) => p.key + ' «' + s.title + '» ' + s.px + ' ×' + s.ratio)));
+    check('CS11. Харьцаагаар томорсон svg график АЛГА (data-ch-ok-оос бусад)', sc.length === 0, sc.slice(0, 4).join(' | '));
+    const lone = desk.filter((f) => f.n > 0 && f.n < 15 && f.w > f.vw * 0.62).map((f) => tag(f) + ' n=' + f.n + ' ' + f.w + 'px');
+    check('CS11. Богино цуваа (<15) бүтэн өргөнийг ганцаараа эзлэхгүй (1400px)', lone.length === 0, lone.join(' | '));
+
+    /* CS12. Үзлэгийн «Тэнцээгүй хувь»: цэг бүр = тэнцээгүй / үзлэг, дутуу сар hollow */
+    const ip = pages.find((p) => p.vw > 1000 && p.insp);
+    if (!ip) { bad('CS12. Үзлэгийн «Тэнцээгүй хувь» график зурагдсан', 'олдсонгүй'); return; }
+    const I = ip.insp;
+    const num = (s) => +String(s).replace(/,/g, '');
+    const dBad = I.dots.map((dt) => {
+      const m = /^(\S+?)(\*?) — тэнцээгүй ([\d.]+)% \(([\d,]+) \/ ([\d,]+) үзлэг\)$/.exec(dt.tip);
+      if (!m) return 'tooltip хэлбэр: ' + dt.tip;
+      const exp = num(m[4]) / num(m[5]) * 100;
+      if (Math.abs(+m[3] - exp) > 0.051) return m[1] + ' ' + m[3] + '% ≠ ' + exp.toFixed(2) + '%';
+      if (!!m[2] !== dt.hollow) return m[1] + ' дутуу=' + !!m[2] + ' hollow=' + dt.hollow;
+      return null;
+    }).filter(Boolean);
+    check('CS12. Тэнцээгүй хувь: ' + I.dots.length + ' цэг, хувь = тэнцээгүй/үзлэг, дутуу сар (*) hollow',
+      I.dots.length >= 2 && dBad.length === 0, dBad.slice(0, 3).join(' | '));
+    const sumF = I.monthTips.reduce((o, t) => {
+      const m = /^(\S+?)\*? — ([\d,]+) үзлэг · тэнцээгүй ([\d,]+)/.exec(t);
+      if (m && !o.seen[m[1]]) { o.seen[m[1]] = 1; o.c += num(m[2]); o.f += num(m[3]); }
+      return o;
+    }, { seen: {}, c: 0, f: 0 });
+    const avg = I.legend.map((l) => /([\d.]+)%$/.exec(l)).filter(Boolean).map((m) => +m[1])[0];
+    check('CS12. Дундаж шугам = Σтэнцээгүй / Σүзлэг (сарын баганын tooltip-оос)',
+      sumF.c > 0 && avg != null && Math.abs(avg - sumF.f / sumF.c * 100) <= 0.051, avg + ' vs ' + (sumF.f / sumF.c * 100).toFixed(2));
+    check('CS12. Y тэнхлэг хувиар, 0%-иас', I.yLabels.length >= 3 && I.yLabels.every((l) => /%$/.test(l)) && /^0%$/.test(I.yLabels[0]), J(I.yLabels));
+  } finally {
+    PROBE_SRC = '/admin/index.html';
+    srv.close();
+  }
+}
+
 function groupUI() {
   group('UI. Нэгдсэн UI стандарт — хүснэгт · мөр · дараалал');
   const src = dcScript();
@@ -9065,7 +9276,8 @@ function groupDG() {
      + авто тээврийн зорчигч 10 (7 хоногийн тайлан, төрлийн донут, төрлийн карт (sc-for), сарын график,
      харьцаа, чиглэл, тээвэрлэгч, суваг, ангилал, ТХ). Бүрдлийг DG-P16 браузераар тулгана.
      2026-10-27: нүүр 7 — 01 «Үндсэн үзүүлэлт» зурвас нэгдсэн огнооны мужтай (HK). */
-  check('DG-P8. Хугацааны мөр: 22 + үзлэг 6 + ачааны нэгтгэл 6 + нүүр 7 + салбарын нэгтгэл 5 + авто зорчигч 10 + нүүрийн газрын зураг 1 = 57 карт', nPer === 57, 'n=' + nPer);
+  /* CH (2026-10-28): үзлэгийн «Сарын үзлэг» нэгтгэлийн картаас салж, «Тэнцээгүй хувь — сараар»-тай хос мөрөнд (+2) */
+  check('DG-P8. Хугацааны мөр: 22 + үзлэг 8 + ачааны нэгтгэл 6 + нүүр 7 + салбарын нэгтгэл 5 + авто зорчигч 10 + нүүрийн газрын зураг 1 = 59 карт', nPer === 59, 'n=' + nPer);
   check('DG-P8. Тус бүр өгөгдлөөс уншина (chartPeriod / airPeriod биндинг)',
     /chartPeriod:chartPeriodText\(m,T\)/.test(idxP) && /airPeriod:chartPeriodText\(/.test(idxP) &&
     /{{ detail.chartPeriod }}/.test(idxP) && /{{ detail.airPeriod }}/.test(idxP));
@@ -11629,6 +11841,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=FL')) { await groupFL(); }
   else if (process.argv.includes('--only=AF')) { await groupAF(); }
   else if (process.argv.includes('--only=UI')) { groupUI(); }
+  else if (process.argv.includes('--only=CS')) { await groupCS(); }
   else if (process.argv.includes('--only=AS')) { groupAS(); }
   else if (process.argv.includes('--only=FR')) { groupFR(); }
   else if (process.argv.includes('--only=ST')) { groupST(); }
@@ -11647,7 +11860,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
