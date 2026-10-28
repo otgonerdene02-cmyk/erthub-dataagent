@@ -4250,6 +4250,69 @@ async function groupBE() {
     /const WAGON_STALE_DAYS=2;/.test(dcScript()) &&
     con12.site.status.rail_wagon_stale.indexOf('2') === -1);
 
+  /* ── LD. "Сүүлийн бичлэг" ногоон цэг — хуучирсан мэдээ ШАР болно ──
+     Регресс: хуучирсан (2 сарын өмнөх) датаны цэг ч ногоон харагдаж байв,
+     учир нь bindCard() утга байгаа бүрд live:true → ногоон. Одоо датасэтийн
+     staleDays босгоос хэтэрвэл dsDataLate() хоцролтыг тооцож цэгийг шар болгоно. */
+  const dlm = dcScript().match(/function dsDataLate\(value,staleDays,now\)\{([\s\S]*?)\n\}/);
+  if (!dlm) { bad('LD1. dsDataLate() олдсонгүй'); return; }
+  const dlAge = new Function('dateStr', 'now', dam[1]);
+  const dlFn = new Function('dataAgeDays', 'return function(value,staleDays,now){' + dlm[1] + '};')(dlAge);
+  const LT = new Date(2026, 9, 19); // 2026-10-19 (орон нутгийн)
+  check('LD1. Өдрийн огноо босгон дээр (3 хоног, staleDays=3) → хуучирсаагүй',
+    dlFn('2026-10-16', 3, LT).late === false && dlFn('2026-10-16', 3, LT).age === 3);
+  check('LD1. Босгоос хэтэрсэн (4 хоног) → хуучирсан',
+    dlFn('2026-10-15', 3, LT).late === true && dlFn('2026-10-15', 3, LT).age === 4);
+  check('LD1. Вагон (staleDays=2): 3 хоног → хуучирсан',
+    dlFn('2026-10-16', 2, LT).late === true);
+  check('LD1. Ирээдүйн огноо / өнөөдөр → хуучирсаагүй',
+    dlFn('2026-10-19', 3, LT).late === false && dlFn('2026-10-22', 3, LT).late === false);
+  check('LD1. Сарын утга ("2026-09 · дутуу") — сарын сүүлийн өдрөөс (19 хоног) хэвийн',
+    dlFn('2026-09 · дутуу', 45, LT).late === false && dlFn('2026-09 · дутуу', 45, LT).age === 19,
+    JSON.stringify(dlFn('2026-09 · дутуу', 45, LT)));
+  check('LD1. Сарын утга 2026-07 (80 хоног) → хуучирсан',
+    dlFn('2026-07', 45, LT).late === true && dlFn('2026-07', 45, LT).age === 80);
+  check('LD1. Огноогүй / буруу утга / босгогүй → null (ногоон ч, шар ч биш)',
+    dlFn('', 3, LT) === null && dlFn('тодорхойгүй', 3, LT) === null &&
+    dlFn('2026-10-01', null, LT) === null && dlFn(null, 3, LT) === null);
+
+  const ldSrc = dcScript();
+  const ldWagon = (ldSrc.match(/schema:'rail_wagon'[^\n]*staleDays:(\d+)/) || [])[1];
+  const ldInsp = (ldSrc.match(/schema:'road_inspect'[^\n]*staleDays:(\d+)/) || [])[1];
+  check('LD2. Вагоны босго = WAGON_STALE_DAYS (хоёр эх сурвалж зөрөхгөй)',
+    ldWagon === (ldSrc.match(/const WAGON_STALE_DAYS=(\d+);/) || [])[1] && !!ldWagon, String(ldWagon));
+  check('LD2. Үзлэгийн босго = INSPECT_STALE_DAYS',
+    ldInsp === (ldSrc.match(/const INSPECT_STALE_DAYS=(\d+);/) || [])[1] && !!ldInsp, String(ldInsp));
+  check('LD2. Бүх датасэтэд staleDays бий (air, вагон, үзлэг, зорчигч)',
+    /source:'flights'[\s\S]{0,200}staleDays:3/.test(ldSrc) && !!ldWagon && !!ldInsp &&
+    /schema:'rail_pax'[^\n]*staleDays:45/.test(ldSrc));
+  /* main-д дараа нь нэмэгдсэн датасэтүүд (ачаа, нэгтгэл, авто зорчигч) босгогүй үлдвэл цэг
+     үргэлж ногоон болно — DATASETS-ийн мөр БҮР staleDays-тай байх ёстой. */
+  const ldDs = (ldSrc.match(/\nconst DATASETS=\[([\s\S]*?)\n\];/) || [])[1] || '';
+  const ldItems = ldDs.split(/\n  \{sector:/).slice(1);
+  const ldMissing = ldItems.filter((x) => !/staleDays:\d+/.test(x)).map((x) => (x.match(/name:'([^']+)'/) || [])[1]);
+  check('LD2. DATASETS-ийн мөр бүр staleDays-тай (' + ldItems.length + ')', ldItems.length >= 9 && ldMissing.length === 0, ldMissing.join(', '));
+  /* Темплейт нь <script>-ийн гадна (HTML бие) байдаг тул бүтэн файлаар шалгана. */
+  const ldHtml = read('index.html');
+  check('LD3. Цэгийн өнгө темплейтэд ТОГТМОЛ ногоон биш — dotStyle-аас (3 газар)',
+    !/background:#0E8F63;flex-shrink:0;"><\/span>/.test(ldHtml) &&
+    /rc\.dotStyle/.test(ldHtml) && /detail\.freqCard\.dotStyle/.test(ldHtml) && /detail\.useCard\.dotStyle/.test(ldHtml));
+  check('LD3. bindCard() хоцролтыг шалгаж шар өнгө өгдөг',
+    /bindCard\(decl,field,fallbackLabel\)\{[\s\S]{0,1200}dsDataLate\([\s\S]{0,600}#D98A00/.test(ldSrc));
+  check('LD3. Хоцролтын тайлбарын текст content.json-д бүртгэгдсэн',
+    !!(con12.site.status.data_late_prefix && con12.site.status.data_late));
+
+  /* LD4. Толгойн цагийн badge — ИЖИЛ логик. Өмнө нь үргэлж ногоон "амьд" байв.
+     Feed-ийн сүүлийн бичлэгийн огноог air датасэтын staleDays-тай харьцуулна. */
+  const ldHead = ldSrc.match(/renderVals\(\)\{([\s\S]*?)\n  \}/);
+  check('LD4. Толгойн цаг feed-ийн lastRecord-ийг air staleDays-тай харьцуулна',
+    !!ldHead && /feedMeta\.lastRecord/.test(ldHead[1]) && /d\.source==='flights'/.test(ldHead[1]) &&
+    /dsDataLate\(/.test(ldHead[1]));
+  check('LD4. Хуучирсан үед толгойн цэг ШАР, амьд пульс үгүй',
+    /feedIsLate\?'background:#D98A00;'/.test(ldSrc));
+  check('LD4. Толгойн цагийн badge-д хоцролтын тайлбар (title) өгдөг',
+    /clockHint:feedIsLate/.test(ldSrc) && /title="\{\{ clockHint \}\}"/.test(ldHtml));
+
   /* ── BE13. kpiVerified() — registry "verified" ≠ дата ИРСЭН ──
      Регресс: backend/feed унасан үед статик демо тоо (1,815 км / 11,979)
      амьд утга мэт харагдаж байв. */

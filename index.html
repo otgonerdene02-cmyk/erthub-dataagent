@@ -63,7 +63,7 @@
         </div>
       </div>
       <div style="flex:1;"></div>
-      <div class="eh-clock" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;flex-shrink:0;">
+      <div class="eh-clock" title="{{ clockHint }}" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;flex-shrink:0;">
         <div style="{{ clockDotStyle }}"></div>
         {{ nowLabel }}
       </div>
@@ -1490,7 +1490,7 @@
         <button sc-camel-on-click="{{ rc.open }}" style="cursor:pointer;font-family:inherit;text-align:left;width:100%;background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.74));box-shadow:var(--shadow);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);backdrop-filter:blur(18px) saturate(1.3);border-left:3px solid {{ rc.color }};border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;backdrop-filter:blur(10px);transition:.16s var(--ease);" style-hover="transform:translateY(-2px);">
           <div style="min-width:0;">
             <div style="font-weight:600;font-size:13.5px;color:var(--ink);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rc.title }}</div>
-            <div style="font-size:11px;color:var(--ink3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:6px;min-width:0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rc.agency }} · {{ rc.src }} · {{ rc.date }}</span><sc-if value="{{ rc.live }}"><span title="{{ rc.hint }}" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+            <div style="font-size:11px;color:var(--ink3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:6px;min-width:0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rc.agency }} · {{ rc.src }} · {{ rc.date }}</span><sc-if value="{{ rc.live }}"><span title="{{ rc.hint }}" style="{{ rc.dotStyle }}"></span></sc-if></div>
           </div>
           <div style="font-size:10.5px;font-weight:600;padding:5px 12px;border-radius:999px;color:{{ rc.color }};background:{{ rc.color }}1c;flex-shrink:0;white-space:nowrap;">{{ rc.label }}</div>
         </button>
@@ -2310,12 +2310,12 @@
       <div class="eh-pg-stats" style="display:flex;gap:10px;flex-shrink:0;">
         <div style="min-width:118px;background:linear-gradient(155deg,#2E7CF61c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:15px;box-shadow:var(--shadow);padding:15px 17px;">
           <div style="font-size:16px;margin-bottom:8px;">🔄</div>
-          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.freqCard.label }}<sc-if value="{{ detail.freqCard.live }}"><span title="{{ detail.freqCard.hint }}" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.freqCard.label }}<sc-if value="{{ detail.freqCard.live }}"><span title="{{ detail.freqCard.hint }}" style="{{ detail.freqCard.dotStyle }}"></span></sc-if></div>
           <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.freqCard.value }}</div>
         </div>
         <div style="min-width:118px;background:linear-gradient(155deg,#7C5CF01c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:15px;box-shadow:var(--shadow);padding:15px 17px;">
           <div style="font-size:16px;margin-bottom:8px;">📈</div>
-          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.useCard.label }}<sc-if value="{{ detail.useCard.live }}"><span title="{{ detail.useCard.hint }}" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.useCard.label }}<sc-if value="{{ detail.useCard.live }}"><span title="{{ detail.useCard.hint }}" style="{{ detail.useCard.dotStyle }}"></span></sc-if></div>
           <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.useCard.value }}</div>
         </div>
       </div>
@@ -7193,6 +7193,9 @@ const METRICS={
 const DATASETS=[
   {sector:'air',name:'Агаарын тээврийн статистик',agency:'ИНЕГ',fmt:'Вэбсервис',badges:['Үнэгүй'],freq:'Өдөр бүр',use:'Нээлттэй feed',desc:'Олон улс, дотоодын нислэг, зорчигч, ачааны иж бүрэн статистик.',
    source:'flights',bind:{freq:'lastRecord'},
+   // staleDays — "сүүлийн бичлэг" хэдэн хоногоос хойш хуучирсанд тооцох босго.
+   // Өдөр бүрийн feed: 1 хоног хоцрох нь хэвийн, 3-аас хойш хуучирсан.
+   staleDays:3,
    // Одоогоор ЗӨВХӨН энэ датасэтэд бодит нотолгоо цугларсан. Бусад нь `dq`
    // блокгүй тул DQS-д "Тодорхойгүй" төлөвөөр гарна — тоо зохиохгүй.
    dq:{freqDays:1,
@@ -7205,11 +7208,13 @@ const DATASETS=[
   {sector:'rail',name:'Ачилт буулгалтын хоногийн мэдээ (вагон)',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Буудал тус бүрийн вагон ачилт, буулгалтын хоногийн бодит мэдээ. ETL хуваарийн дагуу өдөр бүр автоматаар шинэчлэгдэнэ.',
    /* schema — энэ датасэт салбарын схемийг БИШ өөрийн станцын задаргааг
       үзүүлнэ; source/bind — дэлгэрэнгүйн картууд амьд метаг уншина. */
-   schema:'rail_wagon',source:'railWagon',bind:{freq:'lastRecord'}},
+   // staleDays = WAGON_STALE_DAYS (тест BE12d нь тэнцүүлэлтийг шалгана).
+   schema:'rail_wagon',source:'railWagon',bind:{freq:'lastRecord'},staleDays:2},
   {sector:'road',name:'Техникийн хяналтын үзлэгийн мэдээ',agency:'ЗТХЕГ',fmt:'API',badges:['Үнэгүй'],freq:'7 хоног тутам',use:'Нээлттэй API',desc:'Тээврийн хэрэгслийн техникийн хяналтын үзлэгийн бүртгэл — салбар, аймаг, тэнцсэн эсэх, тэнцээгүй хэсгээр (ерөнхий, тоормос, жолооны механизм, гэрэл, утаа, дуу чимээ). Нэг мөр = нэг үзлэг: нэг тээврийн хэрэгсэл нэг өдөрт хоёр удаа үзлэгт орж болно.',
    /* schema — вагонтой ижил: салбарын схемийг БИШ өөрийн аймгийн задаргааг
       үзүүлнэ; source/bind — дэлгэрэнгүйн картууд амьд метаг уншина. */
-   schema:'road_inspect',source:'roadInspect',bind:{freq:'lastRecord'}},
+   // staleDays = INSPECT_STALE_DAYS (тест BE12d нь тэнцүүлэлтийг шалгана).
+   schema:'road_inspect',source:'roadInspect',bind:{freq:'lastRecord'},staleDays:8},
   /* Зорчигчийн сарын цуваа. SECTOR_SERIES.rail.dataset нь ЭНЭ нэрийг
      заадаг (dsHasTrend) — нэрийг өөрчилбөл амьд зорчигчийн муруй
      датасэтийн хуудсан дээр гарахаа болино.
@@ -7218,22 +7223,26 @@ const DATASETS=[
      хуваарийн ЗОХИОМОЛ мөрүүдийг өөрийн дата мэт үзүүлж, Excel татах
      товч түүнийг файлаар гаргаж байв. */
   {sector:'rail',name:'Зорчигчийн галт тэрэгний мэдээ',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Сар бүр',use:'Нээлттэй API',desc:'Зорчигчийн галт тэрэгний сарын зорчигчийн тоо. Дуусаагүй сар «дутуу сар» (*) гэж тэмдэглэгдэж, жилийн харьцуулалтад ордоггүй.',
-   schema:'rail_pax',source:'railPax',bind:{freq:'lastRecord'}},
-  /* Ачаа тээврийн мэдээ — Veritech-ийн баримтын 7–9-р мөр (2026-10-19). Хоёулаа
+   // Сар бүр нийтлэгдэнэ: сарын сүүлийн өдрөөс 45 хоног хүртэл хэвийн
+   // (нэг сарын хоцролт + нийтлэх хугацаа), түүнээс хойш хуучирсан.
+   schema:'rail_pax',source:'railPax',bind:{freq:'lastRecord'},staleDays:45},
+  /* staleDays (PR #69): өдөр бүрийн feed 3 (FREIGHT_STALE_DAYS, ROAD_PAX_STALE_DAYS), МТЗ гараар
+     бүртгэдэг тул 45 — тэгсэн ч 2026-02-01-ээс хойш шинэчлэгдээгүйг шар цэгээр ил хэлнэ.
+     Ачаа тээврийн мэдээ — Veritech-ийн баримтын 7–9-р мөр (2026-10-19). Хоёулаа
      нэг backend хүснэгт (silver.rail_freight), нэг анализын самбар (freightAnalysisModel).
      МТЗ нь баримтад «гараар бүртгэж» гэсэн ч ижил API-аар ирдэг. ТТЗ ХХК-ийн
      indicator (баримтад МТЗ-тэй ижил 15439650) мөр агуулдаггүй тул каталогт ОРООГҮЙ. */
   {sector:'rail',name:'Ачаа тээврийн мэдээ (УБТЗ ХНН)',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Улаанбаатар төмөр зам ХНН-ийн улсын сүлжээний өртөө, хилийн боомт тус бүрийн ачаа тээвэр — ачааны нэр төрөл, чиглэлээр (транзит, экспорт, импорт, дотоод) вагон ба тонноор. Нэг мөр = эх системийн нэг бичлэг (өртөө × ачаа × өдөр). 2022 оноос хойшхи түүхтэй.',
-   schema:'rail_freight_ubtz',source:'railFreightUbtz',bind:{freq:'lastRecord'}},
+   schema:'rail_freight_ubtz',source:'railFreightUbtz',bind:{freq:'lastRecord'},staleDays:3},
   {sector:'rail',name:'Ачаа тээврийн мэдээ (МТЗ ТӨХК)',agency:'МТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Тогтмол бус (гараар)',use:'Нээлттэй API',desc:'Монголын төмөр зам ТӨХК-ийн (Цогтцэций, Төмөртэй өртөө) ачаа тээвэр — ачааны нэр төрөл, дотоод ба экспортоор вагон ба тонноор. Эх системд гараар бүртгэгддэг.',
-   schema:'rail_freight_mtz',source:'railFreightMtz',bind:{freq:'lastRecord'}},
+   schema:'rail_freight_mtz',source:'railFreightMtz',bind:{freq:'lastRecord'},staleDays:45},
   /* НЭГТГЭЛ (2026-10-19, дата архитектур): УБТЗ ба МТЗ-ийн мэдээ талбар, нэгж, grain-ээрээ
      ЯГ ИЖИЛ тул backend-д хуулбар хүснэгт биш VIEW (gold.rail_freight_total = эх мөрийн UNION +
      тээвэрлэгчийн хэмжээс). Салбар тус бүрийн датасэт хэвээр; нэгтгэл нь салбарын нийт ба
      тээвэрлэгчийн задаргаа, 7 хоногийн тайланг харуулна. Шинэ тээвэрлэгч (ТТЗ) = backend-ийн
      толь (silver.rail_freight_orgs) ганц INSERT — энэ мөр өөрчлөгдөхгүй. */
   {sector:'rail',name:'Төмөр замын ачаа тээврийн нэгтгэл',agency:'УБТЗ · МТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Төмөр замын салбарын нийт ачаа тээвэр — УБТЗ ХНН ба МТЗ ТӨХК-ийн мэдээг нэгтгэсэн (эх бичлэг бүр тээвэрлэгчийн нэртэй). 7 хоногийн тайлан, оны эхнээс өссөн дүн, тээвэрлэгч, чиглэл (транзит, экспорт, импорт, дотоод), өртөө, ачааны төрлөөр.',
-   schema:'rail_freight_all',source:'railFreightAll',bind:{freq:'lastRecord'},derived:true},
+   schema:'rail_freight_all',source:'railFreightAll',bind:{freq:'lastRecord'},derived:true,staleDays:3},
   /* САЛБАРЫН НЭГТГЭЛ (2026-10-19, дата архитектур): салбар бүрийн KPI өөр нэгжтэй тул салбар
      хоорондын харьцаа НИЙТЛЭГ хоёр хэмжүүр (зорчигч, ачаа тонн) дээр. Backend-д хуулбар биш
      VIEW (gold.sector_daily_total = агаарын нислэг + зорчигчийн галт тэрэг + ачааны нэгтгэл,
@@ -7241,14 +7250,14 @@ const DATASETS=[
      sector:'total' — псевдо-салбар (SECTORS-д enumerable биш); alsoSectors — каталогийн
      салбарын шүүлтэд эдгээр салбарт ч харагдана. */
   {sector:'total',name:'Салбарын нэгтгэл — зорчигч, ачаа тээвэр',agency:'ИНЕГ · УБТЗ · МТЗ · АТҮТ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Зам, тээврийн салбарын нэгдсэн мэдээ — агаарын тээвэр, авто тээвэр ба төмөр замын зорчигч, ачаа тээврийг салбар тус бүрээр (мөр бүр салбарын нэртэй) нэгтгэсэн. 7 хоногийн тайлан, оны эхнээс өссөн дүн, өмнөх оны мөн үетэй харьцуулалт, салбарын эзлэх хувь, сарын чиг хандлага. Авто тээвэр — билеттэй (хот, улс хоорондын) зорчигч; хотын доторх автобус ороогүй.',
-   schema:'sector_total',source:'sectorTotal',bind:{freq:'lastRecord'},alsoSectors:['air','rail','road'],derived:true},
+   schema:'sector_total',source:'sectorTotal',bind:{freq:'lastRecord'},alsoSectors:['air','rail','road'],derived:true,staleDays:3},
   /* Авто тээврийн зорчигч тээврийн мэдээ — Veritech 15401437 (2026-10-20). ТӨГСГӨЛД нэмэв:
      content.json/нийтэлсэн overlay индексээр давхардана (BE36). Гарын авлагад
      ороогүй ч ижил API-аар ирдэг; нэг мөр = нэг билет, зорчигч = «Хэвийн» билет.
      Хамрах хүрээ: БИЛЕТТЭЙ (хот/улс/аймаг хоорондын, орон нутгийн) тээвэр — нийслэлийн
      нийтийн тээвэр (автобусны карт) энэ эх сурвалжид АЛГА (тайланд ил хэлнэ). */
   {sector:'road',name:'Авто тээврийн зорчигч тээврийн мэдээ',agency:'АТҮТ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Хот хоорондын, улс хоорондын, аймаг хоорондын болон орон нутгийн автобусны зорчигч — билет бүрээр (чиглэл, суух/буух буудал, тээвэрлэгч, тээврийн хэрэгсэл, зорчигчийн ангилал, борлуулалтын суваг, төлөв). Зорчигч = зорчсон (буцаагаагүй) билет. 7 хоногийн тайлан, оны эхнээс өссөн дүн, тээврийн төрлөөр. Хотын доторх автобус энэ мэдээнд ороогүй.',
-   schema:'road_pax',source:'roadPax',bind:{freq:'lastRecord'}}
+   schema:'road_pax',source:'roadPax',bind:{freq:'lastRecord'},staleDays:3}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
 // ЗОХИОХГҮЙ, DATASETS/SERVICES-ийн бодит уртаас тооцоолно (KPI_UNIFIED-ийн
@@ -8283,6 +8292,25 @@ function dataAgeDays(dateStr,now){
   const t=(now instanceof Date&&!isNaN(now))?now:new Date();
   return Math.round((Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())
                     -Date.UTC(+m[1],+m[2]-1,+m[3]))/86400000);
+}
+/* "Сүүлийн бичлэг" картын ногоон цэг — мэдээ ХУУЧИРСАН эсэхийг шийднэ.
+   value: 'YYYY-MM-DD' (өдөр) эсвэл 'YYYY-MM' (сар; жишээ нь '2026-09 · дутуу'
+   ч уншина — сарын СҮҮЛИЙН өдрөөр тооцно). staleDays — датасэтийн хуваарьт
+   тохирох хоцролтын босго (DATASETS-д). Босгоос ХЭТЭРВЭЛ л хуучирсан;
+   огноо буруу/байхгүй → null (ногоон ч, улаан ч биш — тооцоо үгүй). */
+function dsDataLate(value,staleDays,now){
+  if(staleDays==null) return null;
+  const s=String(value==null?'':value);
+  let date=s;
+  if(!/^\d{4}-\d{2}-\d{2}/.test(s)){
+    const m=/^(\d{4})-(\d{2})/.exec(s);
+    if(!m) return null;
+    const last=new Date(Date.UTC(+m[1],+m[2],0)).getUTCDate();  // сарын сүүлийн өдөр
+    date=m[1]+'-'+m[2]+'-'+String(last).padStart(2,'0');
+  }
+  const age=dataAgeDays(date,now);
+  if(age==null) return null;
+  return {age:age,late:age>staleDays};
 }
 /* Хоногийн мэдээ D+1, зарим үед D+2-т нийтлэгддэг тул 2 хоног хүртэл
    ХЭВИЙН. Түүнээс хойшхыг л "шинэчлэгдээгүй" гэж тэмдэглэнэ — эс тэгвэл
@@ -11933,8 +11961,17 @@ class Component extends DCLogic {
     const r=fn({decl,meta:src.meta,view:src.view,
       views:(window.datasetViews&&decl.name)?window.datasetViews.get(datasetSlug(decl)):null});
     if(!r||r.value==null||r.value==='') return fallback;
-    return {label:r.label||fallbackLabel,value:r.value,live:true,
-      hint:r.hint||this.sourceHint(decl.source)||'Бодит өгөгдлөөс тооцов'};
+    /* Ногоон цэг = "бодит утга байна" БИШ, "мэдээ шинэ" гэсэн дохио.
+       Огноотой утга датасэтийн хуваарийн босгоос хэтэрвэл цэг ШАР болж,
+       тайлбарт хэдэн хоног шинэчлэгдээгүйг бичнэ (dsDataLate). */
+    const late=dsDataLate(r.value,decl.staleDays,null);
+    const isLate=!!(late&&late.late);
+    const hint=r.hint||this.sourceHint(decl.source)||'Бодит өгөгдлөөс тооцов';
+    return {label:r.label||fallbackLabel,value:r.value,live:true,late:isLate,
+      dotStyle:'width:5px;height:5px;border-radius:50%;flex-shrink:0;background:'+(isLate?'#D98A00':'#0E8F63')+';',
+      hint:isLate
+        ? stxt('status.data_late_prefix','Хуучирсан:')+' '+late.age+' '+stxt('status.data_late','хоног шинэчлэгдээгүй')+' · '+hint
+        : hint};
   }
   // Ногоон цэгийн тайлбар. Мета нь эх сурвалж болгонд ижил бүтэцтэй тул
   // энэ текст нэмэгдэх feed бүрд шууд ажиллана.
@@ -17649,7 +17686,8 @@ class Component extends DCLogic {
       return (v&&/^\d{4}-\d{2}-\d{2}/.test(String(v)))?String(v).slice(0,10):null; };
     return recentRows(RECENT,DATASETS,SECTORS).map(r=>{
       const ds=r.dataset?DATASETS.find(d=>d.sector===r.sector&&d.name===r.dataset):null;
-      const decl={...r,name:ds?ds.name:r.title,source:r.source||(ds&&ds.source)};
+      const decl={...r,name:ds?ds.name:r.title,source:r.source||(ds&&ds.source),
+        staleDays:ds?ds.staleDays:undefined};
       const card=u07Bound(r.sector)
         ? this.bindCard(decl,'date','Шинэчлэгдсэн')
         : {label:'Шинэчлэгдсэн',value:r.date,live:false};
@@ -17669,6 +17707,8 @@ class Component extends DCLogic {
         sortKey:String(dayVal||card.value||''),
         date:card.live?(dayVal||card.value):stxt('status.no_data','мэдээлэл алга'),
         live:card.live,
+        late:!!card.late,
+        dotStyle:card.dotStyle||'',
         hint:card.hint||'',
         open:ds?()=>this.openDataset(ds):undefined,
         label:SECTORS[r.sector].label,color:NEON[r.sector]};
@@ -17743,7 +17783,14 @@ class Component extends DCLogic {
 
   renderVals(){
     /* Толгойн badge-ийн огноо — flights feed-ийн мета (ганц эх сурвалж). */
-    const feedStamp=((this.sourceData('flights')||{}).meta||{}).updatedAt||'';
+    const feedMeta=(this.sourceData('flights')||{}).meta||{};
+    const feedStamp=feedMeta.updatedAt||'';
+    /* Цэгийн өнгө = "Сүүлийн бичлэг" картын логик: feed-ийн СҮҮЛИЙН БИЧЛЭГИЙН
+       огноог air датасэтын staleDays-тай харьцуулна. Хуучирсан бол шар,
+       цаг үргэлж "амьд" гэж харуулахгүй. Огноо алга бол өмнөх шигээ. */
+    const airDs=DATASETS.find(d=>d.source==='flights');
+    const feedLate=dsDataLate(feedMeta.lastRecord||feedStamp,airDs&&airDs.staleDays,null);
+    const feedIsLate=!!(feedLate&&feedLate.late);
     const keys=homeSectorKeys();
     /* Нүүрнээс нуусан салбар (HOME_HIDDEN_SECTORS) идэвхтэй үлдсэн бол эхний салбар руу */
     const key=keys.indexOf(this.state.activeSector)>=0?this.state.activeSector:keys[0];
@@ -17940,8 +17987,12 @@ class Component extends DCLogic {
             ? this.stxt('feed.stamp_failed','дата ачаалагдаагүй')
             : this.stxt('feed.stamp_pending','дата ачаалж байна…')),
       clockDotStyle:'width:6px;height:6px;border-radius:50%;flex-shrink:0;'+
-        (feedStamp?'background:#3ee6a8;animation:pulseGlow 2.2s infinite;'
-                  :'background:var(--line2);'),
+        (!feedStamp?'background:var(--line2);'
+          :feedIsLate?'background:#D98A00;'
+          :'background:#3ee6a8;animation:pulseGlow 2.2s infinite;'),
+      clockHint:feedIsLate
+        ? stxt('status.data_late_prefix','Хуучирсан:')+' '+feedLate.age+' '+stxt('status.data_late','хоног шинэчлэгдээгүй')
+        : '',
       activeColor:color,
       // Hero-гийн 3 чипийн гарчиг content.json → site.hero.diagram.chips-ээс.
       // Тайлбар (body) мөн засварлагдана — site.hero.diagram.chip_bodies.
