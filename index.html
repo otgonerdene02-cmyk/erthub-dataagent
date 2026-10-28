@@ -17,7 +17,7 @@
 <script src="js/erthub-publish.js?v=ffe215f9"></script>
 <script src="js/erthub-backend.js?v=a96de8ab"></script>
 <script src="js/erthub-chart.js?v=422174bf"></script>
-<script src="js/erthub-glossary.js?v=30931668"></script>
+<script src="js/erthub-glossary.js?v=311d361e"></script>
 <script src="js/erthub-tip.js?v=ba005e59"></script>
 <script src="js/vendor/dc-runtime.js?v=8fe7df74"></script>
 </head>
@@ -32,7 +32,7 @@
   <script src="js/vendor/d3.v7.min.js?v=f2094bbf"></script>
   <script src="js/vendor/topojson-client.min.js?v=25cd02ae"></script>
   <script src="js/vendor/xlsx.full.min.js?v=c9506197"></script>
-  <link rel="stylesheet" href="style.css?v=08035d82">
+  <link rel="stylesheet" href="style.css?v=24ef5494">
 </helmet>
 
 <div class="eh-app" data-theme="{{ themeAttr }}" style="{{ rootStyle }}">
@@ -63,7 +63,7 @@
         </div>
       </div>
       <div style="flex:1;"></div>
-      <div class="eh-clock" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;flex-shrink:0;">
+      <div class="eh-clock" title="{{ clockHint }}" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;flex-shrink:0;">
         <div style="{{ clockDotStyle }}"></div>
         {{ nowLabel }}
       </div>
@@ -1224,7 +1224,7 @@
               <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:700;letter-spacing:-.035em;font-variant-numeric:tabular-nums;line-height:.95;">{{ k.value }}</div>
               <div style="font-size:12.5px;color:var(--ink3);font-weight:500;">{{ k.unit }}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+            <div class="eh-k4-d" style="display:flex;align-items:center;gap:8px;margin-top:14px;">
               <div style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace;color:{{ k.deltaColor }};background:{{ k.deltaColor }}18;border-radius:999px;padding:4px 11px;">
                 <span style="font-size:9px;">{{ k.deltaGlyph }}</span>{{ k.delta }}
               </div>
@@ -1490,7 +1490,7 @@
         <button sc-camel-on-click="{{ rc.open }}" style="cursor:pointer;font-family:inherit;text-align:left;width:100%;background:linear-gradient(180deg,rgba(var(--surface-rgb),.94),rgba(var(--surface-rgb),.74));box-shadow:var(--shadow);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);backdrop-filter:blur(18px) saturate(1.3);border-left:3px solid {{ rc.color }};border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;backdrop-filter:blur(10px);transition:.16s var(--ease);" style-hover="transform:translateY(-2px);">
           <div style="min-width:0;">
             <div style="font-weight:600;font-size:13.5px;color:var(--ink);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rc.title }}</div>
-            <div style="font-size:11px;color:var(--ink3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:6px;min-width:0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rc.agency }} · {{ rc.src }} · {{ rc.date }}</span><sc-if value="{{ rc.live }}"><span title="{{ rc.hint }}" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+            <div style="font-size:11px;color:var(--ink3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:6px;min-width:0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rc.agency }} · {{ rc.src }} · {{ rc.date }}</span><sc-if value="{{ rc.live }}"><span title="{{ rc.hint }}" style="{{ rc.dotStyle }}"></span></sc-if></div>
           </div>
           <div style="font-size:10.5px;font-weight:600;padding:5px 12px;border-radius:999px;color:{{ rc.color }};background:{{ rc.color }}1c;flex-shrink:0;white-space:nowrap;">{{ rc.label }}</div>
         </button>
@@ -2003,6 +2003,7 @@
             <span style="white-space:nowrap;">{{ ds.agency }}</span>
             <span style="white-space:nowrap;">{{ ds.fmt }}</span>
             <span style="white-space:nowrap;">{{ ds.freq }}</span>
+            <sc-if value="{{ ds.freshLive }}"><span data-ds-fresh="1" title="{{ ds.freshHint }}" style="{{ ds.freshStyle }}display:inline-flex;align-items:center;gap:5px;min-width:0;"><span style="{{ ds.freshDot }}"></span>{{ ds.freshText }}</span></sc-if>
           </div>
           <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;">
             <div style="font-size:11px;color:var(--ink3);white-space:nowrap;">{{ ds.use }}</div>
@@ -2310,12 +2311,12 @@
       <div class="eh-pg-stats" style="display:flex;gap:10px;flex-shrink:0;">
         <div style="min-width:118px;background:linear-gradient(155deg,#2E7CF61c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:15px;box-shadow:var(--shadow);padding:15px 17px;">
           <div style="font-size:16px;margin-bottom:8px;">🔄</div>
-          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.freqCard.label }}<sc-if value="{{ detail.freqCard.live }}"><span title="{{ detail.freqCard.hint }}" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.freqCard.label }}<sc-if value="{{ detail.freqCard.live }}"><span title="{{ detail.freqCard.hint }}" style="{{ detail.freqCard.dotStyle }}"></span></sc-if></div>
           <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.freqCard.value }}</div>
         </div>
         <div style="min-width:118px;background:linear-gradient(155deg,#7C5CF01c 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:15px;box-shadow:var(--shadow);padding:15px 17px;">
           <div style="font-size:16px;margin-bottom:8px;">📈</div>
-          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.useCard.label }}<sc-if value="{{ detail.useCard.live }}"><span title="{{ detail.useCard.hint }}" style="width:5px;height:5px;border-radius:50%;background:#0E8F63;flex-shrink:0;"></span></sc-if></div>
+          <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:5px;white-space:nowrap;display:flex;align-items:center;gap:5px;">{{ detail.useCard.label }}<sc-if value="{{ detail.useCard.live }}"><span title="{{ detail.useCard.hint }}" style="{{ detail.useCard.dotStyle }}"></span></sc-if></div>
           <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap;">{{ detail.useCard.value }}</div>
         </div>
       </div>
@@ -7193,6 +7194,9 @@ const METRICS={
 const DATASETS=[
   {sector:'air',name:'Агаарын тээврийн статистик',agency:'ИНЕГ',fmt:'Вэбсервис',badges:['Үнэгүй'],freq:'Өдөр бүр',use:'Нээлттэй feed',desc:'Олон улс, дотоодын нислэг, зорчигч, ачааны иж бүрэн статистик.',
    source:'flights',bind:{freq:'lastRecord'},
+   // staleDays — "сүүлийн бичлэг" хэдэн хоногоос хойш хуучирсанд тооцох босго.
+   // Өдөр бүрийн feed: 1 хоног хоцрох нь хэвийн, 3-аас хойш хуучирсан.
+   staleDays:3,
    // Одоогоор ЗӨВХӨН энэ датасэтэд бодит нотолгоо цугларсан. Бусад нь `dq`
    // блокгүй тул DQS-д "Тодорхойгүй" төлөвөөр гарна — тоо зохиохгүй.
    dq:{freqDays:1,
@@ -7205,11 +7209,13 @@ const DATASETS=[
   {sector:'rail',name:'Ачилт буулгалтын хоногийн мэдээ (вагон)',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Буудал тус бүрийн вагон ачилт, буулгалтын хоногийн бодит мэдээ. ETL хуваарийн дагуу өдөр бүр автоматаар шинэчлэгдэнэ.',
    /* schema — энэ датасэт салбарын схемийг БИШ өөрийн станцын задаргааг
       үзүүлнэ; source/bind — дэлгэрэнгүйн картууд амьд метаг уншина. */
-   schema:'rail_wagon',source:'railWagon',bind:{freq:'lastRecord'}},
+   // staleDays = WAGON_STALE_DAYS (тест BE12d нь тэнцүүлэлтийг шалгана).
+   schema:'rail_wagon',source:'railWagon',bind:{freq:'lastRecord'},staleDays:2},
   {sector:'road',name:'Техникийн хяналтын үзлэгийн мэдээ',agency:'ЗТХЕГ',fmt:'API',badges:['Үнэгүй'],freq:'7 хоног тутам',use:'Нээлттэй API',desc:'Тээврийн хэрэгслийн техникийн хяналтын үзлэгийн бүртгэл — салбар, аймаг, тэнцсэн эсэх, тэнцээгүй хэсгээр (ерөнхий, тоормос, жолооны механизм, гэрэл, утаа, дуу чимээ). Нэг мөр = нэг үзлэг: нэг тээврийн хэрэгсэл нэг өдөрт хоёр удаа үзлэгт орж болно.',
    /* schema — вагонтой ижил: салбарын схемийг БИШ өөрийн аймгийн задаргааг
       үзүүлнэ; source/bind — дэлгэрэнгүйн картууд амьд метаг уншина. */
-   schema:'road_inspect',source:'roadInspect',bind:{freq:'lastRecord'}},
+   // staleDays = INSPECT_STALE_DAYS (тест BE12d нь тэнцүүлэлтийг шалгана).
+   schema:'road_inspect',source:'roadInspect',bind:{freq:'lastRecord'},staleDays:8},
   /* Зорчигчийн сарын цуваа. SECTOR_SERIES.rail.dataset нь ЭНЭ нэрийг
      заадаг (dsHasTrend) — нэрийг өөрчилбөл амьд зорчигчийн муруй
      датасэтийн хуудсан дээр гарахаа болино.
@@ -7218,22 +7224,26 @@ const DATASETS=[
      хуваарийн ЗОХИОМОЛ мөрүүдийг өөрийн дата мэт үзүүлж, Excel татах
      товч түүнийг файлаар гаргаж байв. */
   {sector:'rail',name:'Зорчигчийн галт тэрэгний мэдээ',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Сар бүр',use:'Нээлттэй API',desc:'Зорчигчийн галт тэрэгний сарын зорчигчийн тоо. Дуусаагүй сар «дутуу сар» (*) гэж тэмдэглэгдэж, жилийн харьцуулалтад ордоггүй.',
-   schema:'rail_pax',source:'railPax',bind:{freq:'lastRecord'}},
-  /* Ачаа тээврийн мэдээ — Veritech-ийн баримтын 7–9-р мөр (2026-10-19). Хоёулаа
+   // Сар бүр нийтлэгдэнэ: сарын сүүлийн өдрөөс 45 хоног хүртэл хэвийн
+   // (нэг сарын хоцролт + нийтлэх хугацаа), түүнээс хойш хуучирсан.
+   schema:'rail_pax',source:'railPax',bind:{freq:'lastRecord'},staleDays:45},
+  /* staleDays (PR #69): өдөр бүрийн feed 3 (FREIGHT_STALE_DAYS, ROAD_PAX_STALE_DAYS), МТЗ гараар
+     бүртгэдэг тул 45 — тэгсэн ч 2026-02-01-ээс хойш шинэчлэгдээгүйг шар цэгээр ил хэлнэ.
+     Ачаа тээврийн мэдээ — Veritech-ийн баримтын 7–9-р мөр (2026-10-19). Хоёулаа
      нэг backend хүснэгт (silver.rail_freight), нэг анализын самбар (freightAnalysisModel).
      МТЗ нь баримтад «гараар бүртгэж» гэсэн ч ижил API-аар ирдэг. ТТЗ ХХК-ийн
      indicator (баримтад МТЗ-тэй ижил 15439650) мөр агуулдаггүй тул каталогт ОРООГҮЙ. */
   {sector:'rail',name:'Ачаа тээврийн мэдээ (УБТЗ ХНН)',agency:'УБТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Улаанбаатар төмөр зам ХНН-ийн улсын сүлжээний өртөө, хилийн боомт тус бүрийн ачаа тээвэр — ачааны нэр төрөл, чиглэлээр (транзит, экспорт, импорт, дотоод) вагон ба тонноор. Нэг мөр = эх системийн нэг бичлэг (өртөө × ачаа × өдөр). 2022 оноос хойшхи түүхтэй.',
-   schema:'rail_freight_ubtz',source:'railFreightUbtz',bind:{freq:'lastRecord'}},
+   schema:'rail_freight_ubtz',source:'railFreightUbtz',bind:{freq:'lastRecord'},staleDays:3},
   {sector:'rail',name:'Ачаа тээврийн мэдээ (МТЗ ТӨХК)',agency:'МТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Тогтмол бус (гараар)',use:'Нээлттэй API',desc:'Монголын төмөр зам ТӨХК-ийн (Цогтцэций, Төмөртэй өртөө) ачаа тээвэр — ачааны нэр төрөл, дотоод ба экспортоор вагон ба тонноор. Эх системд гараар бүртгэгддэг.',
-   schema:'rail_freight_mtz',source:'railFreightMtz',bind:{freq:'lastRecord'}},
+   schema:'rail_freight_mtz',source:'railFreightMtz',bind:{freq:'lastRecord'},staleDays:45},
   /* НЭГТГЭЛ (2026-10-19, дата архитектур): УБТЗ ба МТЗ-ийн мэдээ талбар, нэгж, grain-ээрээ
      ЯГ ИЖИЛ тул backend-д хуулбар хүснэгт биш VIEW (gold.rail_freight_total = эх мөрийн UNION +
      тээвэрлэгчийн хэмжээс). Салбар тус бүрийн датасэт хэвээр; нэгтгэл нь салбарын нийт ба
      тээвэрлэгчийн задаргаа, 7 хоногийн тайланг харуулна. Шинэ тээвэрлэгч (ТТЗ) = backend-ийн
      толь (silver.rail_freight_orgs) ганц INSERT — энэ мөр өөрчлөгдөхгүй. */
   {sector:'rail',name:'Төмөр замын ачаа тээврийн нэгтгэл',agency:'УБТЗ · МТЗ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Төмөр замын салбарын нийт ачаа тээвэр — УБТЗ ХНН ба МТЗ ТӨХК-ийн мэдээг нэгтгэсэн (эх бичлэг бүр тээвэрлэгчийн нэртэй). 7 хоногийн тайлан, оны эхнээс өссөн дүн, тээвэрлэгч, чиглэл (транзит, экспорт, импорт, дотоод), өртөө, ачааны төрлөөр.',
-   schema:'rail_freight_all',source:'railFreightAll',bind:{freq:'lastRecord'},derived:true},
+   schema:'rail_freight_all',source:'railFreightAll',bind:{freq:'lastRecord'},derived:true,staleDays:3},
   /* САЛБАРЫН НЭГТГЭЛ (2026-10-19, дата архитектур): салбар бүрийн KPI өөр нэгжтэй тул салбар
      хоорондын харьцаа НИЙТЛЭГ хоёр хэмжүүр (зорчигч, ачаа тонн) дээр. Backend-д хуулбар биш
      VIEW (gold.sector_daily_total = агаарын нислэг + зорчигчийн галт тэрэг + ачааны нэгтгэл,
@@ -7241,14 +7251,14 @@ const DATASETS=[
      sector:'total' — псевдо-салбар (SECTORS-д enumerable биш); alsoSectors — каталогийн
      салбарын шүүлтэд эдгээр салбарт ч харагдана. */
   {sector:'total',name:'Салбарын нэгтгэл — зорчигч, ачаа тээвэр',agency:'ИНЕГ · УБТЗ · МТЗ · АТҮТ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Зам, тээврийн салбарын нэгдсэн мэдээ — агаарын тээвэр, авто тээвэр ба төмөр замын зорчигч, ачаа тээврийг салбар тус бүрээр (мөр бүр салбарын нэртэй) нэгтгэсэн. 7 хоногийн тайлан, оны эхнээс өссөн дүн, өмнөх оны мөн үетэй харьцуулалт, салбарын эзлэх хувь, сарын чиг хандлага. Авто тээвэр — билеттэй (хот, улс хоорондын) зорчигч; хотын доторх автобус ороогүй.',
-   schema:'sector_total',source:'sectorTotal',bind:{freq:'lastRecord'},alsoSectors:['air','rail','road'],derived:true},
+   schema:'sector_total',source:'sectorTotal',bind:{freq:'lastRecord'},alsoSectors:['air','rail','road'],derived:true,staleDays:3},
   /* Авто тээврийн зорчигч тээврийн мэдээ — Veritech 15401437 (2026-10-20). ТӨГСГӨЛД нэмэв:
      content.json/нийтэлсэн overlay индексээр давхардана (BE36). Гарын авлагад
      ороогүй ч ижил API-аар ирдэг; нэг мөр = нэг билет, зорчигч = «Хэвийн» билет.
      Хамрах хүрээ: БИЛЕТТЭЙ (хот/улс/аймаг хоорондын, орон нутгийн) тээвэр — нийслэлийн
      нийтийн тээвэр (автобусны карт) энэ эх сурвалжид АЛГА (тайланд ил хэлнэ). */
   {sector:'road',name:'Авто тээврийн зорчигч тээврийн мэдээ',agency:'АТҮТ',fmt:'API',badges:['Үнэгүй'],freq:'Хоног тутам',use:'Нээлттэй API',desc:'Хот хоорондын, улс хоорондын, аймаг хоорондын болон орон нутгийн автобусны зорчигч — билет бүрээр (чиглэл, суух/буух буудал, тээвэрлэгч, тээврийн хэрэгсэл, зорчигчийн ангилал, борлуулалтын суваг, төлөв). Зорчигч = зорчсон (буцаагаагүй) билет. 7 хоногийн тайлан, оны эхнээс өссөн дүн, тээврийн төрлөөр. Хотын доторх автобус энэ мэдээнд ороогүй.',
-   schema:'road_pax',source:'roadPax',bind:{freq:'lastRecord'}}
+   schema:'road_pax',source:'roadPax',bind:{freq:'lastRecord'},staleDays:3}
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
 // ЗОХИОХГҮЙ, DATASETS/SERVICES-ийн бодит уртаас тооцоолно (KPI_UNIFIED-ийн
@@ -8284,6 +8294,25 @@ function dataAgeDays(dateStr,now){
   return Math.round((Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())
                     -Date.UTC(+m[1],+m[2]-1,+m[3]))/86400000);
 }
+/* "Сүүлийн бичлэг" картын ногоон цэг — мэдээ ХУУЧИРСАН эсэхийг шийднэ.
+   value: 'YYYY-MM-DD' (өдөр) эсвэл 'YYYY-MM' (сар; жишээ нь '2026-09 · дутуу'
+   ч уншина — сарын СҮҮЛИЙН өдрөөр тооцно). staleDays — датасэтийн хуваарьт
+   тохирох хоцролтын босго (DATASETS-д). Босгоос ХЭТЭРВЭЛ л хуучирсан;
+   огноо буруу/байхгүй → null (ногоон ч, улаан ч биш — тооцоо үгүй). */
+function dsDataLate(value,staleDays,now){
+  if(staleDays==null) return null;
+  const s=String(value==null?'':value);
+  let date=s;
+  if(!/^\d{4}-\d{2}-\d{2}/.test(s)){
+    const m=/^(\d{4})-(\d{2})/.exec(s);
+    if(!m) return null;
+    const last=new Date(Date.UTC(+m[1],+m[2],0)).getUTCDate();  // сарын сүүлийн өдөр
+    date=m[1]+'-'+m[2]+'-'+String(last).padStart(2,'0');
+  }
+  const age=dataAgeDays(date,now);
+  if(age==null) return null;
+  return {age:age,late:age>staleDays};
+}
 /* Хоногийн мэдээ D+1, зарим үед D+2-т нийтлэгддэг тул 2 хоног хүртэл
    ХЭВИЙН. Түүнээс хойшхыг л "шинэчлэгдээгүй" гэж тэмдэглэнэ — эс тэгвэл
    хэвийн хоцролт бүрд сэрэмжлүүлэг гарч утгаа алдана. */
@@ -9116,7 +9145,10 @@ function freightTotalModel(all,year,mr){
   if(W&&Array.isArray(W.weeks)&&W.weeks.length){
     const weeks=W.weeks, last=weeks[weeks.length-1], prev=weeks.length>1?weeks[weeks.length-2]:null;
     const pct=(a,b)=>b>0?(a/b-1)*100:null;
-    const wow=(!last.missing&&prev&&!prev.missing)?pct(n(last.tonnes),n(prev.tonnes)):null;
+    /* Мэдээтэй хоног (days) 7-оос цөөн = эх сурвалжийн цоорхой (2026-10-28: УБТЗ 10-23…10-25
+       бичлэггүй) — дүн нь доод хязгаар «≥», бүтэн 7 хоногтой ХАРЬЦУУЛАХГҮЙ (EHGlossary.weekReport-той ижил). */
+    const short=x=>!!x&&!x.missing&&x.days!=null&&isFinite(+x.days)&&+x.days<7;
+    const wow=(!last.missing&&prev&&!prev.missing&&!short(last)&&!short(prev))?pct(n(last.tonnes),n(prev.tonnes)):null;
     const ytd=W.ytd||null, py=W.prev_ytd||null;
     const yoy=(ytd&&py&&n(py.tonnes)>0)?pct(n(ytd.tonnes),n(py.tonnes)):null;
     const slices=b=>{const list=orgs.map(o=>({...o,tonnes:n(b&&b[o.code]&&b[o.code].tonnes),wagons:n(b&&b[o.code]&&b[o.code].wagons)}));
@@ -9124,6 +9156,7 @@ function freightTotalModel(all,year,mr){
       list.forEach(o=>{o.pct=t>0?o.tonnes/t*100:0;});
       return {list,total:t};};
     weekly={weekEnd:W.week_end,maxDate:W.max_date||null,weeks,last,prev,wow,ytd,prevYtd:py,yoy,
+      lastShort:short(last),lastDays:short(last)?+last.days:null,prevShort:short(prev),
       stale:orgs.filter(o=>!o.lastDate||o.lastDate<last.week_start),
       weekOrgs:slices(last.by_org),ytdOrgs:slices(ytd&&ytd.by_org)};
   }
@@ -9132,10 +9165,14 @@ function freightTotalModel(all,year,mr){
 /* Сүүлийн бичлэг нь `since`-ээс ӨМНӨ дууссан тээвэрлэгч (МТЗ 2026-02-оос) — нүүрийн
    ачааны «Өмнөх оны мөн үе» нь энэ тээвэрлэгчийг өмнөх онд БҮТЭН, энэ онд дутуу
    оруулдаг тул ИЛ нэрлэнэ (тулгалт 2026-10-26: нүүр +2.0%, УБТЗ дангаараа +23.3%).
+   asOf — хариу `to` цонхоор татагдсан бол түүний эцэс: by_org.last_date нь цонхоор ТАСЛАГДДАГ тул
+   цонхны эцэст хүрсэн тээвэрлэгч хуучирсан БИШ (2026-10-28: нүүр …-09-30 цонхоор УБТЗ-г «сүүлийн
+   бичлэг 2026-09-30» гэж буруу нэрлэж байв; бодит сүүлийн бичлэг 10-26). Босго = min(since, asOf).
    ЦЭВЭР (tests/run.js HR9). Буцаах: [{name,lastDate}]. */
-function freightStaleOrgs(all,since){
+function freightStaleOrgs(all,since,asOf){
   if(!since||!(all&&Array.isArray(all.by_org))) return [];
-  return all.by_org.filter(o=>o&&o.last_date&&String(o.last_date).slice(0,10)<since)
+  const cut=(asOf&&String(asOf).slice(0,10)<since)?String(asOf).slice(0,10):since;
+  return all.by_org.filter(o=>o&&o.last_date&&String(o.last_date).slice(0,10)<cut)
     .map(o=>({name:String(o.name||o.org),lastDate:String(o.last_date).slice(0,10)}));
 }
 /* 7 хоногоор: чиглэл бүрийн ачаа — бүлэглэсэн багана (зурган тайлангийн загвар).
@@ -9169,10 +9206,13 @@ function buildFreightWeekChart(weeks,dirs,words){
         fill:'rgba(130,142,168,0.14)',tip:lbl(i)+' — '+W.none});
       return;
     }
+    /* Цоорхойтой 7 хоног (days<7): бүдэг өнгө + tooltip-д мэдээтэй хоног (бүтэн мэт харагдахгүй) */
+    const sh=wk.days!=null&&isFinite(+wk.days)&&+wk.days<7;
     dirs.forEach((d,j)=>{
       const v=val(i,d), y=Y(v);
       bars.push({x:(padL+i*slot+(slot-group)/2+j*bw+0.5).toFixed(1),y:y.toFixed(1),w:Math.max(1,bw-1).toFixed(1),
-        h:Math.max(v>0?0.8:0,padT+plotH-y).toFixed(1),fill:d.color,tip:lbl(i)+' — '+d.label+': '+fmt(v)+' '+W.tonne});
+        h:Math.max(v>0?0.8:0,padT+plotH-y).toFixed(1),fill:sh?d.color+'66':d.color,
+        tip:lbl(i)+' — '+d.label+': '+(sh?'≥':'')+fmt(v)+' '+W.tonne+(sh?' · '+String(W.short||'7-оос {n} хоног мэдээтэй').replace('{n}',+wk.days):'')});
     });
   });
   const short=x=>x>=1e6?(+(x/1e6).toFixed(2))+'M':x>=1e3?(+(x/1e3).toFixed(1))+'K':fmt(x);
@@ -9357,8 +9397,18 @@ function sectorWeeklyView(w,sectors){
     const t=list.reduce((s,o)=>s+(o.value||0),0);
     list.forEach(o=>{o.pct=(o.value!==null&&t>0)?o.value/t*100:null;});
     return {list,total:t};};
-  return {weekEnd:w.week_end,maxDate:w.max_date||null,weeks,last,prev,
-    wow:(!last.missing&&prev&&!prev.missing)?pct(n(last.value),n(prev.value)):null,
+  /* Мэдээтэй хоног (by_sector[k].days) 7-оос цөөн салбар — нийт нь доод хязгаар «≥», харьцуулахгүй
+     (EHGlossary.weekReport-той ИЖИЛ дүрэм; 2026-10-28 УБТЗ-ийн ачаа 4/7 хоногтой −32% гэж гарав). */
+  const shortOf=x=>(x&&!x.missing&&x.by_sector)?Object.keys(x.by_sector).filter(k=>{const b=x.by_sector[k];
+    return b&&b.value!=null&&b.days!=null&&isFinite(+b.days)&&+b.days<7;}).map(k=>({key:k,name:meta(k).name,days:+x.by_sector[k].days})):[];
+  const lastShort=shortOf(last), prevShort=shortOf(prev);
+  /* Оны эхнээс: харьцуулах салбарын мэдээтэй хоног өмнөх оныхоос цөөн (УБТЗ ачаа 294 vs 298) —
+     өсөлт нь доод хязгаар (нүүрний yoyGapKeys-тэй ижил) */
+  const yb=(p,k)=>p&&p.by_sector&&p.by_sector[k]&&p.by_sector[k].days!=null?+p.by_sector[k].days:null;
+  const yoyShort=(w.comparable||[]).filter(k=>{const a=yb(w.ytd,k), b=yb(w.prev_ytd,k);return a!=null&&b!=null&&a<b;})
+    .map(k=>({key:k,name:meta(k).name,days:yb(w.ytd,k),prevDays:yb(w.prev_ytd,k)}));
+  return {weekEnd:w.week_end,maxDate:w.max_date||null,weeks,last,prev,lastShort,prevShort,yoyShort,
+    wow:(!last.missing&&prev&&!prev.missing&&!lastShort.length&&!prevShort.length)?pct(n(last.value),n(prev.value)):null,
     ytd:w.ytd||null,prevYtd:w.prev_ytd||null,
     yoy:(w.yoy_cur!=null&&n(w.yoy_prev)>0)?pct(n(w.yoy_cur),n(w.yoy_prev)):null,
     yoyCur:w.yoy_cur,yoyPrev:w.yoy_prev,comparable:w.comparable||[],stale:w.stale||[],
@@ -10979,15 +11029,21 @@ class Component extends DCLogic {
       weekCards.push({key:k,title:MN[k]+' — '+txt.weekTitle,range:range(v.last)+' '+String(v.last.week_end||'').slice(0,4),
         period:chartPeriodText(v.last?{dayFrom:v.last.week_start,dayTo:v.last.week_end}:{},TP),
         kpis:[
-          {label:T('wk_week','7 хоног'),value:v.last.missing?dash:fmt(v.last.value),sub:range(v.last)+' · '+unit,tone:'var(--ink)'},
+          {label:T('wk_week','7 хоног'),value:v.last.missing?dash:(v.lastShort.length?'≥':'')+fmt(v.last.value),
+            sub:range(v.last)+' · '+unit+(v.lastShort.length?' · '+v.lastShort.map(s=>T('wk_week_short','{name}: 7-оос {n} хоног мэдээтэй')
+              .replace('{name}',s.name).replace('{n}',s.days)).join(', '):''),tone:'var(--ink)'},
           {label:T('wk_ytd','Оны эхнээс өссөн дүн'),value:v.ytd&&v.ytd.value!=null?fmt(v.ytd.value):dash,
             sub:v.ytd?(md(v.ytd.from)+'–'+md(v.ytd.to)+' '+v.ytd.year+' · '+unit):'',tone:'var(--ink)'},
           {label:T('wk_wow','Өмнөх 7 хоногоос'),value:sg(v.wow),tone:tone(v.wow),
-            sub:v.wow==null?T('wk_wow_none','харьцуулах бүтэн 7 хоног алга'):(range(v.prev)+': '+fmt(v.prev.value)+' '+unit)},
-          {label:T('wk_yoy','Өмнөх оны мөн үеэс'),value:sg(v.yoy),tone:tone(v.yoy),
+            sub:v.wow!=null?(range(v.prev)+': '+fmt(v.prev.value)+' '+unit)
+              :(v.lastShort.length||v.prevShort.length)?T('wk_wow_short','7 хоног бүрэн биш — харьцуулахгүй')
+              :T('wk_wow_none','харьцуулах бүтэн 7 хоног алга')},
+          {label:T('wk_yoy','Өмнөх оны мөн үеэс'),value:(v.yoy!=null&&v.yoyShort.length?'≥':'')+sg(v.yoy),tone:tone(v.yoy),
             sub:v.yoy==null?T('wk_yoy_none','өмнөх оны мөн үеийн мэдээ алга')
               :(T('wk_yoy_sub','{year} оны мөн үе: {value}').replace('{year}',v.prevYtd?v.prevYtd.year:'').replace('{value}',fmt(v.yoyPrev))+' '+unit
-                +(notCmp.length?' · '+T('wk_yoy_only','{names} ороогүй').replace('{names}',notCmp.join(', ')):''))}],
+                +(notCmp.length?' · '+T('wk_yoy_only','{names} ороогүй').replace('{names}',notCmp.join(', ')):'')
+                +(v.yoyShort.length?' · '+v.yoyShort.map(s=>T('wk_yoy_short','{name}: энэ онд {n}/{m} хоног мэдээтэй — доод хязгаар')
+                  .replace('{name}',s.name).replace('{n}',s.days).replace('{m}',s.prevDays)).join(', '):''))}],
         donut:sectorDonutArcs(v.weekSlices.list,unit),
         legend:v.weekSlices.list.map(o=>{const y=v.ytdSlices.list.find(x=>x.key===o.key)||{};
           return {name:o.name,color:o.color,week:o.value==null?dash:fmt(o.value)+(o.pct!=null?' · '+stPct(o.pct):''),
@@ -11933,8 +11989,30 @@ class Component extends DCLogic {
     const r=fn({decl,meta:src.meta,view:src.view,
       views:(window.datasetViews&&decl.name)?window.datasetViews.get(datasetSlug(decl)):null});
     if(!r||r.value==null||r.value==='') return fallback;
-    return {label:r.label||fallbackLabel,value:r.value,live:true,
-      hint:r.hint||this.sourceHint(decl.source)||'Бодит өгөгдлөөс тооцов'};
+    /* Ногоон цэг = "бодит утга байна" БИШ, "мэдээ шинэ" гэсэн дохио.
+       Огноотой утга датасэтийн хуваарийн босгоос хэтэрвэл цэг ШАР болж,
+       тайлбарт хэдэн хоног шинэчлэгдээгүйг бичнэ (dsDataLate). */
+    const late=dsDataLate(r.value,decl.staleDays,null);
+    const isLate=!!(late&&late.late);
+    const hint=r.hint||this.sourceHint(decl.source)||'Бодит өгөгдлөөс тооцов';
+    return {label:r.label||fallbackLabel,value:r.value,live:true,late:isLate,
+      dotStyle:'width:5px;height:5px;border-radius:50%;flex-shrink:0;background:'+(isLate?'#D98A00':'#0E8F63')+';',
+      hint:isLate
+        ? stxt('status.data_late_prefix','Хуучирсан:')+' '+late.age+' '+stxt('status.data_late','хоног шинэчлэгдээгүй')+' · '+hint
+        : hint};
+  }
+  /* Каталогийн карт — «Сүүлийн бичлэг» (дэлгэрэнгүйн картын ИЖИЛ bindCard/staleDays). Каталогт огноо
+     алга байсан тул МТЗ 2026-02-01-ээс хойш шинэчлэгдээгүйг зөвхөн нээж байж мэддэг байв (CKAN,
+     data.gov.uk зэрэг каталог «Last updated»-ийг карт бүрт харуулдаг). Амьд утга алга бол юу ч
+     харуулахгүй (давтамж нь хажууд аль хэдийн бичигдсэн) — тоо/огноо зохиохгүй. */
+  catalogFreshness(d){
+    const c=this.bindCard(d,'freq','');
+    if(!c.live) return {freshLive:false,freshText:'',freshHint:'',freshDot:''};
+    const late=dsDataLate(c.value,d.staleDays,null);
+    return {freshLive:true,freshHint:c.hint||'',freshDot:c.dotStyle,
+      freshText:stxt('browse.last_record','Сүүлийн бичлэг')+' '+c.value+
+        (c.late&&late?' · '+late.age+' '+stxt('status.data_late','хоног шинэчлэгдээгүй'):''),
+      freshStyle:c.late?'color:#B87400;':''};
   }
   // Ногоон цэгийн тайлбар. Мета нь эх сурвалж болгонд ижил бүтэцтэй тул
   // энэ текст нэмэгдэх feed бүрд шууд ажиллана.
@@ -13966,23 +14044,32 @@ class Component extends DCLogic {
     const wk=tm.weekly;
     if(!wk) return out;
     const last=wk.last, prev=wk.prev;
+    const shortTxt=T('total_kpi_week_short','7-оос {n} хоног мэдээтэй (эх сурвалжийн цоорхой)');
     const kpis=[
-      {label:T('total_kpi_week','Сүүлийн 7 хоног'),value:last.missing?dash:fmt(last.tonnes),sub:range(last)+' · '+tUnit},
+      {label:T('total_kpi_week','Сүүлийн 7 хоног'),value:last.missing?dash:(wk.lastShort?'≥':'')+fmt(last.tonnes),
+        sub:range(last)+' · '+tUnit+(wk.lastShort?' · '+shortTxt.replace('{n}',wk.lastDays):'')},
       {label:T('total_kpi_ytd','Оны эхнээс өссөн дүн'),value:wk.ytd?fmt(wk.ytd.tonnes):dash,
         sub:wk.ytd?(md(wk.ytd.from)+'–'+md(wk.ytd.to)+' '+wk.ytd.year+' · '+tUnit):''},
       {label:T('total_kpi_wow','Өмнөх 7 хоногоос'),value:sg(wk.wow),
-        sub:wk.wow==null?T('total_kpi_wow_none','харьцуулах бүтэн 7 хоног алга'):(range(prev)+': '+fmt(prev.tonnes)+' '+tUnit)},
+        sub:wk.wow!=null?(range(prev)+': '+fmt(prev.tonnes)+' '+tUnit)
+          :(wk.lastShort||wk.prevShort)?T('total_kpi_wow_short','7 хоног бүрэн биш — харьцуулахгүй')
+          :T('total_kpi_wow_none','харьцуулах бүтэн 7 хоног алга')},
       {label:T('total_kpi_yoy','Өмнөх оны мөн үеэс'),value:sg(wk.yoy),
         sub:wk.yoy==null?T('total_kpi_yoy_none','өмнөх оны мөн үеийн мэдээ алга'):
           (T('total_kpi_yoy_sub','{year} оны мөн үе: {value} тонн').replace('{year}',wk.prevYtd.year).replace('{value}',fmt(wk.prevYtd.tonnes)))}
     ];
     kpis.forEach(k=>{k.tone=/^\+/.test(k.value)?'#0FA37F':/^-/.test(k.value)?'#E2574C':'var(--ink)';});
     /* Тээвэрлэгчийн хоцрогдол — 7 хоногт 0, он дамнасан харьцуулалт дутуу (тоо зохиохгүй, ил хэлнэ) */
-    const staleNote=wk.stale.length?T('total_stale_note','{orgs}: сүүлийн бичлэг {date} — 7 хоногийн дүн ба харьцуулалтад энэ хугацаанаас хойш ороогүй.')
+    let staleNote=wk.stale.length?T('total_stale_note','{orgs}: сүүлийн бичлэг {date} — 7 хоногийн дүн ба харьцуулалтад энэ хугацаанаас хойш ороогүй.')
       .replace('{orgs}',wk.stale.map(o=>o.code).join(', ')).replace('{date}',wk.stale.map(o=>o.lastDate||dash).join(', ')):'';
     const present=FREIGHT_DIRS.filter(d=>wk.weeks.some(x=>!x.missing&&(+x[d+'_tonnes']||0)>0));
     const dirs=present.map(d=>({key:d,label:dirName(d),color:FREIGHT_COLORS[d]}));
-    const chart=buildFreightWeekChart(wk.weeks,dirs,{tonne:T('unit_short','т'),none:T('chart_none','мэдээлэл алга')});
+    const chart=buildFreightWeekChart(wk.weeks,dirs,{tonne:T('unit_short','т'),none:T('chart_none','мэдээлэл алга'),
+      short:T('total_week_short_tip','7-оос {n} хоног мэдээтэй')});
+    /* Цоорхойтой сүүлийн 7 хоног — ЯАГААД «≥» ба харьцуулалтгүйг ил хэлнэ (бүдэг багана ч мөн) */
+    const gapNote=wk.lastShort?T('total_week_gap_note','{range}: 7-оос {n} хоногт л бичлэг ирсэн (эх сурвалжийн цоорхой) — «≥» нь бүртгэгдсэн дүн, өмнөх 7 хоногтой харьцуулаагүй; графикт бүдэг баганаар.')
+      .replace('{range}',range(last)).replace('{n}',wk.lastDays):'';
+    staleNote=[staleNote,gapNote].filter(Boolean).join(' ');
     const orgLegend=tm.orgs.map(o=>{const a=wk.weekOrgs.list.find(x=>x.code===o.code), b=wk.ytdOrgs.list.find(x=>x.code===o.code);
       return {code:o.code,name:o.name,color:o.color,
         week:fmt(a.tonnes)+(wk.weekOrgs.total>0?' · '+a.pct.toFixed(1)+'%':''),
@@ -14925,7 +15012,9 @@ class Component extends DCLogic {
       /* Нэгтгэлийн горимд сегмент бүр ӨӨРИЙН салбарын тоо (донутын шошгоны дараалал:
          агаар · авто · төмөр зам). Эх сурвалжгүй салбар 0 → «—» (зохиохгүй). */
       const DONUT_KEYS=['air','road','rail'];
-      const dVal=i=>{const b=dW&&dW.bySector[DONUT_KEYS[i]];return (b&&b.value>0)?b.value:0;};
+      /* Цоорхойтой салбар (partial, «≥») — бүртгэгдсэн дүнгээр; 0 гэж хасвал «зөвхөн агаар 100%» гэж
+         худал харьцаа гарна (2026-10-28 ачаа: төмөр зам 4/7 хоног). */
+      const dVal=i=>{const b=dW&&dW.bySector[DONUT_KEYS[i]];return (b&&b.value>0)?b.value:(b&&b.partial>0)?b.partial:0;};
       const donutValues=wd.donut.data.map((v,i)=>dW?dVal(i):(i===0?(realVal!=null?realVal:0):0));
       const dtot=donutValues.reduce((a,b)=>a+b,0)||1;
       const circ=2*Math.PI*44; let acc=0;
@@ -14968,10 +15057,19 @@ class Component extends DCLogic {
             (stW.ytdGapKeys.length?' · '+stxt('week.ytd_gap','{names} цоорхойтой').replace('{names}',stNames({keys:stW.ytdGapKeys})):'')};
         if(stW&&i===1&&stW.wow!==null)
           return {l:s[0],v:pctTxt(stW.wow),color:pctCol(stW.wow),mockTag:''};
+        /* Сүүлийн 7 хоног цоорхойтой (нийт «≥») — «мэдээлэл алга» биш, ЯАГААД харьцуулаагүйг хэлнэ */
+        const wkLast=stW&&stW.weeks.length?stW.weeks[stW.weeks.length-1]:null;
+        if(stW&&i===1&&wkLast&&wkLast.value===null&&wkLast.partial!==null)
+          return {l:s[0],v:'—',color:'#828EA8',mockTag:' · '+stxt('week.wow_gap','{names} — 7 хоног бүрэн биш, харьцуулахгүй')
+            .replace('{names}',stNames({keys:stW.keys.filter(k=>wkLast.partialKeys.indexOf(k)<0)}))};
         if(stW&&i===2&&stW.yoy!==null){
-          const so=(wt==='cargo'&&stW.yoyKeys.indexOf('rail')>=0)?freightStaleOrgs(this._homeFreightAll,stW.weekStart):[];
-          return {l:s[0],v:pctTxt(stW.yoy),color:pctCol(stW.yoy),
+          /* _homeFreightAll нь газрын зургийн цонхоор (…-09-30 хүртэл) татагддаг — by_org.last_date нь цонхны
+             эцсээр ТАСЛАГДСАН тул тэр огноонд хүрсэн тээвэрлэгчийг хуучирсан гэж ҮЗЭХГҮЙ (asOf). */
+          const so=(wt==='cargo'&&stW.yoyKeys.indexOf('rail')>=0)?freightStaleOrgs(this._homeFreightAll,stW.weekStart,this._homeFreightAllTo):[];
+          const yg=stW.yoyGapKeys||[];
+          return {l:s[0],v:(yg.length?'≥':'')+pctTxt(stW.yoy),color:pctCol(stW.yoy),
             mockTag:(stW.yoyKeys.length<stW.keys.length?' · '+stNames({keys:stW.yoyKeys}):'')+
+              (yg.length?' · '+stxt('week.yoy_gap','{names} энэ онд цоорхойтой — доод хязгаар').replace('{names}',stNames({keys:yg})):'')+
               (so.length?' · '+stxt('week.org_stale','{orgs}: сүүлийн бичлэг {date} — энэ онд дутуу орсон').replace('{orgs}',so.map(o=>o.name).join(', ')).replace('{date}',so[0].lastDate):'')};
         }
         if(stW&&i<3)
@@ -15011,11 +15109,16 @@ class Component extends DCLogic {
            хоногоос — дээд нийт дүнтэй нэг цонх, нийлбэр нь таарна. */
         const xs=xW&&xW.bySector[key];
         if(xs){
+          /* Цоорхойтой долоо хоног: бүртгэгдсэн дүн «≥» + мэдээтэй хоног, харьцуулалт «—»
+             (дутуу 7 хоногийг бүтэн мэт −32% уналт гэж харуулахгүй — EHGlossary.weekReport). */
+          const xp=xs.value===null&&xs.partial!=null;
           return {label:SECTORS[key].label,glyph:GLYPH[key],color:NEON[key],
-            value:xs.value!==null?fmtWeekVal(xs.value):'—',unit:'',
+            value:xs.value!==null?fmtWeekVal(xs.value):(xp?'≥'+fmtWeekVal(xs.partial):'—'),unit:'',
             delta:xs.wow!==null?((xs.wow>0?'+':'')+xs.wow.toFixed(1)+'%'):'—',
             deltaColor:xs.wow!==null?(xs.wow<0?'#D2564A':'#2FA37B'):'#828EA8',
-            rowStyle:'',mockTag:xs.value!==null?'':(' · '+stxt('status.no_data','мэдээлэл алга'))};
+            rowStyle:'',mockTag:xs.value!==null?'':(' · '+(xp
+              ?stxt('week.sector_partial','7-оос {n} хоног мэдээтэй — харьцуулахгүй').replace('{n}',xs.days)
+              :stxt('status.no_data','мэдээлэл алга')))};
         }
         if(key==='air'){
           const v=realVal!=null?fmtWeekVal(realVal):d[1];
@@ -15035,7 +15138,10 @@ class Component extends DCLogic {
       });
       // Нийт дүн: 4 mock салбарыг 0 гэж үзвэл нийлбэрт нэмэгдэхгүй тул
       // энд шууд air-ийн бодит дүнг тавина (0+0+0+0+air.real = air.real).
-      const total=stW?(stW.total!==null?fmtWeekVal(stW.total):'—'):(realVal!=null?fmtWeekVal(realVal):wd.total);
+      /* Цоорхойтой сүүлийн 7 хоног — «—» биш бүртгэгдсэн дүн «≥» (баганатай ИЖИЛ, EHGlossary.weekBars) */
+      const stLast=stW&&stW.weeks.length?stW.weeks[stW.weeks.length-1]:null;
+      const total=stW?(stW.total!==null?fmtWeekVal(stW.total):(stLast&&stLast.partial!==null?'≥'+fmtWeekVal(stLast.partial):'—'))
+        :(realVal!=null?fmtWeekVal(realVal):wd.total);
       // Бусад 4 салбар холбогдоогүй байхад л (delta-д "мэдээлэл алга"
       // тэмдэгтэй мөр байгаа эсэхээр илрүүлнэ) энэ тайлбарыг харуулна —
       // ирээдүйд бүх салбар холбогдвол автоматаар алга болно.
@@ -15363,6 +15469,7 @@ class Component extends DCLogic {
 (!dsListQ||((d.name||'')+' '+(d.agency||'')+' '+(d.desc||'')+' '+SECTORS[d.sector].label).toLowerCase().includes(dsListQ))).map(d=>({
       ...d,color:NEON[d.sector],sectorLabel:SECTORS[d.sector].label,glyph:GLYPH[d.sector],
       badgeList:d.badges.map(b=>({label:b,live:b==='Шууд',premium:b==='Premium'})),
+      ...this.catalogFreshness(d),
       open:()=>this.openDataset(d)
     }));
     /* 12 карт = каталог (9–12 датасэт) НЭГ хуудсанд; 6 үед 6+3 болж хоёр дахь
@@ -16545,6 +16652,7 @@ class Component extends DCLogic {
       if(this._homeMapReq!==win.key) return;
       const road=homeMapRoadData(p,win.fromKey,win.toKey);
       this._homeFreightAll=fr||null;
+      this._homeFreightAllTo=win.to;
       this._homeMapData={key:win.key,rail:homeMapRailSum(r.map(homeMapRailTotals)),road,
         roadIntl:road?homeMapIntlRoad(road.routes):null,railIntl:homeMapRailIntl(rp),freightIntl:homeMapFreightIntl(fr,win.fromKey,win.toKey)};
       this.setState(s=>({homeMapVer:(s.homeMapVer||0)+1}));
@@ -17649,7 +17757,8 @@ class Component extends DCLogic {
       return (v&&/^\d{4}-\d{2}-\d{2}/.test(String(v)))?String(v).slice(0,10):null; };
     return recentRows(RECENT,DATASETS,SECTORS).map(r=>{
       const ds=r.dataset?DATASETS.find(d=>d.sector===r.sector&&d.name===r.dataset):null;
-      const decl={...r,name:ds?ds.name:r.title,source:r.source||(ds&&ds.source)};
+      const decl={...r,name:ds?ds.name:r.title,source:r.source||(ds&&ds.source),
+        staleDays:ds?ds.staleDays:undefined};
       const card=u07Bound(r.sector)
         ? this.bindCard(decl,'date','Шинэчлэгдсэн')
         : {label:'Шинэчлэгдсэн',value:r.date,live:false};
@@ -17669,6 +17778,8 @@ class Component extends DCLogic {
         sortKey:String(dayVal||card.value||''),
         date:card.live?(dayVal||card.value):stxt('status.no_data','мэдээлэл алга'),
         live:card.live,
+        late:!!card.late,
+        dotStyle:card.dotStyle||'',
         hint:card.hint||'',
         open:ds?()=>this.openDataset(ds):undefined,
         label:SECTORS[r.sector].label,color:NEON[r.sector]};
@@ -17743,7 +17854,14 @@ class Component extends DCLogic {
 
   renderVals(){
     /* Толгойн badge-ийн огноо — flights feed-ийн мета (ганц эх сурвалж). */
-    const feedStamp=((this.sourceData('flights')||{}).meta||{}).updatedAt||'';
+    const feedMeta=(this.sourceData('flights')||{}).meta||{};
+    const feedStamp=feedMeta.updatedAt||'';
+    /* Цэгийн өнгө = "Сүүлийн бичлэг" картын логик: feed-ийн СҮҮЛИЙН БИЧЛЭГИЙН
+       огноог air датасэтын staleDays-тай харьцуулна. Хуучирсан бол шар,
+       цаг үргэлж "амьд" гэж харуулахгүй. Огноо алга бол өмнөх шигээ. */
+    const airDs=DATASETS.find(d=>d.source==='flights');
+    const feedLate=dsDataLate(feedMeta.lastRecord||feedStamp,airDs&&airDs.staleDays,null);
+    const feedIsLate=!!(feedLate&&feedLate.late);
     const keys=homeSectorKeys();
     /* Нүүрнээс нуусан салбар (HOME_HIDDEN_SECTORS) идэвхтэй үлдсэн бол эхний салбар руу */
     const key=keys.indexOf(this.state.activeSector)>=0?this.state.activeSector:keys[0];
@@ -17940,8 +18058,12 @@ class Component extends DCLogic {
             ? this.stxt('feed.stamp_failed','дата ачаалагдаагүй')
             : this.stxt('feed.stamp_pending','дата ачаалж байна…')),
       clockDotStyle:'width:6px;height:6px;border-radius:50%;flex-shrink:0;'+
-        (feedStamp?'background:#3ee6a8;animation:pulseGlow 2.2s infinite;'
-                  :'background:var(--line2);'),
+        (!feedStamp?'background:var(--line2);'
+          :feedIsLate?'background:#D98A00;'
+          :'background:#3ee6a8;animation:pulseGlow 2.2s infinite;'),
+      clockHint:feedIsLate
+        ? stxt('status.data_late_prefix','Хуучирсан:')+' '+feedLate.age+' '+stxt('status.data_late','хоног шинэчлэгдээгүй')
+        : '',
       activeColor:color,
       // Hero-гийн 3 чипийн гарчиг content.json → site.hero.diagram.chips-ээс.
       // Тайлбар (body) мөн засварлагдана — site.hero.diagram.chip_bodies.
