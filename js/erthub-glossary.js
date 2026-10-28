@@ -742,7 +742,14 @@
       return !!(gaps && Array.isArray(gaps[k]) && from && to && gaps[k].some(function (g) { return g && g.from <= to && g.to >= from; }));
     };
     var val = function (b, k) { return (b && b[k]) ? num(b[k].value) : null; };
-    var valW = function (x, k) { return gapIn(k, x.week_start, x.week_end) ? null : val(x.by_sector, k); };
+    /* Мэдээтэй хоног (backend by_sector[k].days) 7-оос цөөн = эх сурвалжийн цоорхой — авто тээврийн
+       coverage.gaps-тай ИЖИЛ дүрэм, САЛБАРААС ҮЛ ХАМААРНА (2026-10-28: УБТЗ-ийн ачаа 10-23…10-25
+       бичлэггүй байхад 4 хоногийн дүнг бүтэн 7 хоног мэт «−32.1%» гэж харуулж байв). days алга
+       (хуучин backend) бол урьдын шигээ. */
+    var daysOf = function (b, k) { return (b && b[k]) ? num(b[k].days) : null; };
+    var shortW = function (x, k) { var d = daysOf(x.by_sector, k); return d !== null && d < 7 && val(x.by_sector, k) !== null; };
+    var gapW = function (x, k) { return gapIn(k, x.week_start, x.week_end) || shortW(x, k); };
+    var valW = function (x, k) { return gapW(x, k) ? null : val(x.by_sector, k); };
     var sumK = function (b, list) { var t = 0; for (var i = 0; i < list.length; i++) { var v = val(b, list[i]); if (v === null) return null; t += v; } return t; };
     var sumW = function (x) { var t = 0; for (var i = 0; i < ks.length; i++) { var v = valW(x, ks[i]); if (v === null) return null; t += v; } return t; };
     var pct = function (a, b) { return (a !== null && b !== null && b > 0) ? (a / b - 1) * 100 : null; };
@@ -758,8 +765,8 @@
     };
     var parts = function (x) {
       return ks.map(function (k) {
-        return { key: k, value: x.missing ? null : val(x.by_sector, k), gap: gapIn(k, x.week_start, x.week_end),
-          gapDays: gapDays(k, x.week_start, x.week_end) };
+        return { key: k, value: x.missing ? null : val(x.by_sector, k), gap: gapW(x, k),
+          gapDays: Math.max(gapDays(k, x.week_start, x.week_end), shortW(x, k) ? 7 - daysOf(x.by_sector, k) : 0) };
       });
     };
     var part = function (x, ps) {
@@ -771,25 +778,35 @@
     var weeks = w.weeks.map(function (x) {
       var v = x.missing ? null : sumW(x), ps = parts(x), p = v === null ? part(x, ps) : null;
       return { start: x.week_start, end: x.week_end, value: v,
-        gap: ks.filter(function (k) { return gapIn(k, x.week_start, x.week_end); }),
+        gap: ks.filter(function (k) { return gapW(x, k); }),
         partial: p ? p.value : null, partialKeys: p ? p.keys : [], parts: ps };
     });
     var last = w.weeks[w.weeks.length - 1], prev = w.weeks.length > 1 ? w.weeks[w.weeks.length - 2] : null;
     var bySector = {};
     ks.forEach(function (k) {
       var v = last.missing ? null : valW(last, k), p = (prev && !prev.missing) ? valW(prev, k) : null;
-      bySector[k] = { value: v, prev: p, wow: pct(v, p) };
+      /* partial — цоорхойтой долоо хоногт БҮРТГЭГДСЭН утга (доод хязгаар «≥»), days — тэр долоо
+         хоногт мэдээтэй хоног. Карт «— мэдээлэл алга» биш «≥N · 4/7 хоног» гэж харуулна. */
+      var gp = (!last.missing && v === null && gapW(last, k)) ? val(last.by_sector, k) : null;
+      var ld = daysOf(last.by_sector, k);
+      bySector[k] = { value: v, prev: p, wow: pct(v, p), partial: gp,
+        days: gp === null ? null : (ld !== null && ld < 7 ? ld : 7 - gapDays(k, last.week_start, last.week_end)) };
     });
     var total = weeks[weeks.length - 1].value, prevTotal = weeks.length > 1 ? weeks[weeks.length - 2].value : null;
     var cmp = ks.filter(function (k) { return (w.comparable || []).indexOf(k) >= 0; });
     var yCur = (cmp.length && w.ytd) ? sumK(w.ytd.by_sector, cmp) : null;
     var yPrev = (cmp.length && w.prev_ytd) ? sumK(w.prev_ytd.by_sector, cmp) : null;
+    /* Оны эхнээс: мэдээтэй хоног хүрээний хоногоос цөөн салбар (УБТЗ-ийн ачаа 298-аас 294) —
+       дүн нь доод хязгаар, өмнөх онтой харьцуулалт бодитоос БАГА гарна → дуудагч ил нэрлэнэ. */
+    var span = function (p) { return (p && p.from && p.to) ? Math.round((iso(p.to) - iso(p.from)) / DAY) + 1 : null; };
+    var shortY = function (p, k) { var d = p ? daysOf(p.by_sector, k) : null, n = span(p); return d !== null && n !== null && d < n; };
     return { keys: ks, weeks: weeks, total: total, prevTotal: prevTotal, wow: pct(total, prevTotal), bySector: bySector,
       ytd: w.ytd ? sumK(w.ytd.by_sector, ks) : null, ytdYear: w.ytd ? w.ytd.year : null,
       yoy: pct(yCur, yPrev), yoyKeys: cmp, weekStart: last.week_start, weekEnd: last.week_end,
+      yoyGapKeys: (w.ytd && w.prev_ytd) ? cmp.filter(function (k) { return shortY(w.ytd, k) && !shortY(w.prev_ytd, k); }) : [],
       stale: (w.stale || []).filter(function (k) { return ks.indexOf(k) >= 0; }),
       gapKeys: ks.filter(function (k) { return weeks.some(function (x) { return x.gap.indexOf(k) >= 0; }); }),
-      ytdGapKeys: w.ytd ? ks.filter(function (k) { return gapIn(k, w.ytd.from, w.ytd.to); }) : [],
+      ytdGapKeys: w.ytd ? ks.filter(function (k) { return gapIn(k, w.ytd.from, w.ytd.to) || shortY(w.ytd, k); }) : [],
       lag: weekLag(w.week_end, w.max_date, ks, lastBy) };
   }
 
