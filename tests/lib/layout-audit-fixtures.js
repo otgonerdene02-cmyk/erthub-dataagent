@@ -6,6 +6,9 @@
 
    expect = тухайн фикстурт гарах ёстой дүрмүүдийн ЯГ жагсаалт ([] = цэвэр). */
 const CARD = 'border:1px solid #ccd;border-radius:16px;padding:16px;background:#fff;';
+/* CH frame-ийн plot: svg нь хайрцгаа preserveAspectRatio=none-оор дүүргэнэ */
+const PLOT = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">' +
+  '<rect x="5" y="30" width="8" height="70" fill="#09f"/><rect x="55" y="10" width="8" height="90" fill="#09f"/></svg>';
 const rows = (n) => Array.from({ length: n }, (_, i) =>
   '<div style="padding:6px 0">Мөр ' + (i + 1) + ' — нэр</div>').join('');
 
@@ -151,7 +154,19 @@ const FIXTURES = {
   'offscreen-control': { expect: ['offscreen-control'], html:
     /* header: лого + товчнууд өргөн нь viewport-оос давж ☰ баруун ирмэгээс гарсан (root нь overflow-x:hidden) */
     '<style>html,body{overflow-x:hidden}</style><div style="display:flex;gap:8px;align-items:center;width:1000px"><span>ЛОГО</span><button>Нэвтрэх</button><button style="margin-left:auto">☰</button></div>' },
-  'page-hscroll': { expect: ['page-hscroll'], html: '<div style="width:3000px;height:20px;background:#eef">өргөн</div>' }
+  'page-hscroll': { expect: ['page-hscroll'], html: '<div style="width:3000px;height:20px;background:#eef">өргөн</div>' },
+  /* Чартын стандарт (CH): 10 сарын багана бүтэн өргөнийг ганцаараа эзэлнэ — хориотой
+     (2026-10-28, үзлэгийн «Сарын үзлэг»). Фикстурын viewport = 1000px. */
+  'chart-lonely': { expect: ['chart-lonely'], html:
+    '<div style="' + CARD + 'width:940px"><div>САРЫН ҮЗЛЭГ</div>' +
+    '<div data-eh-chart="10" style="height:196px;position:relative">' + PLOT + '</div></div>' },
+  'chart-long-series-full-width-is-fine': { expect: [], html:
+    '<div style="' + CARD + 'width:940px"><div>ӨДРИЙН ҮЗЛЭГ</div>' +
+    '<div data-eh-chart="30" style="height:232px;position:relative">' + PLOT + '</div></div>' },
+  'chart-pair-is-fine': { expect: [], html:
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;width:960px;align-items:stretch">' +
+    '<div style="' + CARD + '"><div>САРЫН ҮЗЛЭГ</div><div data-eh-chart="10" style="height:196px;position:relative">' + PLOT + '</div></div>' +
+    '<div style="' + CARD + '"><div>ТЭНЦЭЭГҮЙ ХУВЬ</div><div data-eh-chart="10" style="height:196px;position:relative">' + PLOT + '</div></div></div>' }
 };
 
 module.exports = { FIXTURES };

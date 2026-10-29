@@ -19,6 +19,7 @@
      raw-leak       "NaN", "undefined", "[object", "{{" ил гарсан / svg атрибутад NaN
      chart-collapsed график svg нь нурсан (өндөр/өргөн ~0) эсвэл мөр нь хоосон
      grid-orphan    ижил хэмжээтэй карт/нүдийн grid-ийн сүүлийн мөрт ГАНЦ карт үлдсэн (4+1, 2+1)
+     chart-lonely   богино цуваатай (<15) график бүтэн өргөнийг ганцаараа эзэлсэн (CH стандарт)
      offscreen-control  товч/холбоос/талбар дэлгэцийн ирмэгээс гарсан (хуудас hscroll хийхгүй ч
                     хүрэх боломжгүй — жиш. 390px-д header-ийн ☰ цэс 395–433px дээр байсан)
 
@@ -510,6 +511,25 @@ function auditLayout(doc, win, opts) {
         detail: 'хүснэгт ' + Math.round(r.width) + 'px / карт ' + Math.round(box.width) + 'px — өргөнийг дүүргэхгүй байна (minmax(Npx,1fr) багана)' });
     }
   });
+
+  /* 11. chart-lonely — богино цуваатай график (<15 ангилал) БҮТЭН өргөнийг ганцаараа
+         эзэлсэн (Чартын стандарт CH, docs/chart-standard.md). 2026-10-28: үзлэгийн 10 сарын
+         багана бүтэн дэлгэцийг эзэлж «бүдүүлэг» харагдав. [data-eh-chart] = ангиллын тоо
+         (js/erthub-chartkit.js). Ширээний өргөнд (≥1000px) хос мөрөнд (eh-row 1fr 1fr)
+         тавина; 15+ цуваа (30 хоног) бүтэн өргөнтэй байж болно. */
+  if (vw >= 1000) {
+    doc.querySelectorAll('[data-eh-chart]').forEach((c) => {
+      if (ignored(c) || !visible(c)) return;
+      const n = parseInt(c.getAttribute('data-eh-chart'), 10);
+      if (!(n > 0) || n >= 15) return;
+      const r = rectOf(c);
+      if (r.width > vw * 0.62) {
+        out.push({ rule: 'chart-lonely', where: describe(c), text: cardTitle(c),
+          detail: n + ' ангилалтай график ' + Math.round(r.width) + 'px (дэлгэцийн ' + Math.round(r.width / vw * 100) +
+            '%) ганцаараа — хос мөрөнд тавь (class="eh-row", 1fr 1fr)' });
+      }
+    });
+  }
 
   return out;
 }

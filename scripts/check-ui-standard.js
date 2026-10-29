@@ -21,6 +21,14 @@
      ORD1  Датасэтийн хуудасны дараалал: KPI → «…-ийн жагсаалт» хүснэгт → график
            (вагон/зорчигчийн графикийн блок хүснэгтийн ДАРАА).
      ORD2  Чанарын үнэлгээ (data-ddq-block) хүснэгт ба бүх графикийн ДАРАА — хамгийн сүүлд.
+     CH1   Харьцаагаар сунадаг svg график (style="width:100%;height:auto") ХОРИОТОЙ —
+           өргөн картад 1.6–2× томорч, 10.5px шошго 20px болдог (2026-10-28 «бүдүүлэг» гомдол).
+           График бүр EHChartKit frame-ээр (тогтмол өндөр, HTML шошго). Газрын зураг/зураглал
+           зэрэг зориудын үл хамаарал: data-ch-ok="шалтгаан".
+     CH2   Frame-ээр зурагдах график бүр ({{ ….fr.cls }}) data-eh-chart (ангиллын тоо)-тай —
+           layout-audit chart-lonely үүгээр «ганцаараа бүтэн өргөн» графикийг барина.
+     CH3   Тэнхлэгийн шошгыг утгын бутархайгаар ([0,.25,.5,.75,1]) хуваахгүй — «1.25M» гэх мэт
+           тойм биш шошго гаргадаг; EHChartKit.axis / niceStep (1·2·2.5·5×10^k) ашигла.
 
    Ашиглалт: node scripts/check-ui-standard.js   (алдаатай бол exit 1) */
 const fs = require('fs');
@@ -102,8 +110,28 @@ else {
   });
 }
 
+/* CH1 — харьцаагаар сунадаг svg график */
+lines.forEach((l, i) => {
+  if (/<svg\b/.test(l) && /width:100%;height:auto/.test(l) && !/data-ch-ok=/.test(l)) {
+    bad('CH1', i + 1, 'svg график width:100%;height:auto — өргөн картад шошго 2 дахин томорно; EHChartKit frame (chFrame) ашигла, газрын зураг бол data-ch-ok="шалтгаан"');
+  }
+});
+/* CH2 — frame бүр data-eh-chart-тай */
+lines.forEach((l, i) => {
+  if (/class="\{\{ [^}]*\.fr\.cls \}\}"/.test(l) && !/data-eh-chart="\{\{ [^}]*\.fr\.n \}\}"/.test(l)) {
+    bad('CH2', i + 1, 'chart frame-д data-eh-chart="{{ ….fr.n }}" алга — layout-audit chart-lonely шалгаж чадахгүй');
+  }
+});
+if (!/data-eh-chart=/.test(html)) bad('CH2', 0, 'data-eh-chart тэмдэглэгээтэй график олдсонгүй');
+/* CH3 — бутархай хуваалттай тэнхлэг */
+lines.forEach((l, i) => {
+  if (/\[0,\s*0?\.25,\s*0?\.5,\s*0?\.75,\s*1\]/.test(l) && !/data-ch-ok|ch-ok:/.test(l)) {
+    bad('CH3', i + 1, 'тэнхлэгийг [0,.25,.5,.75,1] бутархайгаар хуваасан — тойм биш шошго (1.25M); niceStep / EHChartKit.axis ашигла');
+  }
+});
+
 if (!errs.length) {
-  console.log('UI стандарт: OK (TBL0–TBL3, ROW1, ORD1–ORD2)');
+  console.log('UI стандарт: OK (TBL0–TBL3, ROW1, ORD1–ORD2, CH1–CH3)');
   process.exit(0);
 }
 errs.forEach((e) => console.log('  ✗ [' + e.rule + '] index.html' + (e.line ? ':' + e.line : '') + ' — ' + e.msg));
