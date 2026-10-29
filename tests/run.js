@@ -155,6 +155,7 @@ function groupB() {
     deadVals.length === 0, deadVals.length ? 'темплейтэд алга: ' + deadVals.join(', ') : '');
 
   /* B3. site{} — бүртгэлтэй зам бүр stxt()-ээр уншигдаж байх ёстой */
+  const glossSrc = read('js/erthub-glossary.js');
   const sitePaths = [];
   (function walk(o, p) {
     Object.keys(o).forEach(k => {
@@ -234,7 +235,9 @@ function groupB() {
     if (dynGroups.includes(grp) && /function applySiteContent\(\)/.test(src)) {
       return !(src.includes('S.' + grp) || src.includes("stxt('" + grp + "."));
     }
-    return !src.includes("stxt('" + p + "'");
+    /* EHGlossary-ийн НЭГ функц (trendModel г.м.) сайт ба админд stxt/pvST-ийг T параметрээр авдаг —
+       зам нь тэнд T('chart.peak', …) хэлбэрээр уншигдана (2026-10-29, t05 админы preview = сайт). */
+    return !src.includes("stxt('" + p + "'") && !glossSrc.includes("T('" + p + "'");
   });
   check('site{} зам бүр stxt()-ээр уншигдана',
     siteUnused.length === 0, siteUnused.length ? 'ашиглагдаагүй: ' + siteUnused.join(', ') : '');
@@ -1585,7 +1588,8 @@ const PROBE_I7 = `async function(d,w){
   await sleep(300);
   d.querySelector('[data-section="sec-05"]').click(); await sleep(400);
   d.querySelector('[data-widget="t05"]').click(); await sleep(900);
-  R.adminChartTips=d.querySelectorAll('#pvhost svg title').length;
+  /* t05 нь 2026-10-29-өөс сайтын frame — цэг нь HTML <i data-tip> (erthub-tip.js) */
+  R.adminChartTips=d.querySelectorAll('#pvhost svg title, #pvhost [data-eh-chart] [data-tip]').length;
   return R;
 }`;
 async function groupI4() {
@@ -1877,8 +1881,10 @@ function groupI() {
   check('I8. Сайт агаарын индексийг 1-р сараар хэвийшүүлдэг (src[0] суурь)',
     /const b=src\[0\]\|\|1; return src\.slice\(0,months\)\.map\(v=>v\/b\*100\)/.test(idx),
     'хэвийшүүлэх мөр олдсонгүй');
+  /* 2026-10-29: i06 нь EHChartKit.compare frame — төгсгөлийн шошго тэнд */
   check('I8. Төгсгөлийн шошго Math.round-той (иймд шошгоор харьцуулж БОЛОХГҮЙ)',
-    idx.includes('endLabel:Math.round(t[li])'), 'endLabel мөр олдсонгүй');
+    read('js/erthub-chartkit.js').includes('label: String(Math.round(+l.vals[li]))') && idx.includes('EHChartKit.compare({'),
+    'төгсгөлийн шошгын мөр олдсонгүй');
 
   /* Регресс: W5 шалгуур дугуйруулсан шошго руу БУЦАЖ болохгүй. */
   const selfSrc = read('tests/run.js');
@@ -2976,8 +2982,9 @@ const PROBE_W = `async function(d,w){
   R.k04Unit=val&&val.nextElementSibling?val.nextElementSibling.textContent.trim():null;
   R.k04Label=lab?lab.textContent.trim():null;
   let i6=d.querySelector('[data-eh-card="i06"][data-eh-field="title"]');
-  while(i6&&!(i6.querySelector&&i6.querySelector('svg foreignObject'))) i6=i6.parentElement;
-  const airFO=i6?[...i6.querySelectorAll('foreignObject div')].filter(x=>cs(x).color==='rgb(47, 224, 196)'):[];
+  while(i6&&!(i6.querySelector&&i6.querySelector('[data-eh-chart]'))) i6=i6.parentElement;
+  /* CH frame (EHChartKit.compare): төгсгөлийн утга — баруун захын .eh-ch-end, шугамын өнгөөр */
+  const airFO=i6?[...i6.querySelectorAll('.eh-ch-end')].filter(x=>cs(x).color==='rgb(47, 224, 196)'):[];
   R.i06End=airFO.length?airFO[0].textContent.trim():null;
   /* Төгсгөлийн шошго нь Math.round-той тул МЕТРИК солигдсоныг найдвартай
      илрүүлэхгүй (114.4 ба 114.0 хоёулаа "114"). Шугамын ЗАМ нь индексийн
@@ -5066,8 +5073,9 @@ async function groupBE() {
   const btc42 = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast(?:,pday)?)?)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
   let btcOk = false, btcErr = '';
   try {
-    const f = new Function('data', 'off', 'partial', 'noForecast', 'MONTHS', 'stxt', 'pday', btc42[1]);
-    const r = f([], 0, undefined, false, MONTHS25, (p, x) => x);
+    /* Модель нь EHGlossary.trendModel (2026-10-29, админы t05 preview-тэй НЭГ) — eval-д дамжуулна */
+    const f = new Function('data', 'off', 'partial', 'noForecast', 'MONTHS', 'stxt', 'pday', 'EHGlossary', btc42[1]);
+    const r = f([], 0, undefined, false, MONTHS25, (p, x) => x, undefined, require(path.join(ROOT, 'js', 'erthub-glossary.js')));
     btcOk = !!r && /^M/.test(r.line) && !/NaN|Infinity/.test(r.line + r.peak.value);
   } catch (e) { btcErr = e.message; }
   check('BE42. buildTrendChart([]) нурахгүй, хавтгай шугам зурна', btcOk, btcErr);
@@ -5096,8 +5104,8 @@ async function groupBE() {
       JSON.stringify(s44 && { n: s44.counts.length, p: s44.partial, v: s44.partialValue }));
   }
   if (btc42) {
-    const mk44 = new Function('MONTHS', 'stxt',
-      'return function buildTrendChart(data,off,partial,noForecast,pday){' + btc42[1] + '}')(MONTHS25, (p, x) => x);
+    const mk44 = new Function('MONTHS', 'stxt', 'EHGlossary',
+      'return function buildTrendChart(data,off,partial,noForecast,pday){' + btc42[1] + '}')(MONTHS25, (p, x) => x, require(path.join(ROOT, 'js', 'erthub-glossary.js')));
     const d9 = v44.slice(0, 9);
     const a44 = mk44(d9, 0), b44 = mk44(d9, 0, 654);
     check('BE44. Дутуу сарын цэг график дээр гарна ("дутуу: 654")',
@@ -5842,10 +5850,10 @@ async function groupBE() {
      тэнхлэг "1-р сар … 11-р сар" гэж бичигдэж байв. */
   const btm = dcScript().match(/\nfunction buildTrendChart\(data,off(?:,partial(?:,noForecast(?:,pday)?)?)?\)\{([\s\S]*?)\r?\n\}\r?\n/);
   if (!btm) { bad('BE39. buildTrendChart() олдсонгүй'); return; }
-  const btc = new Function('MONTHS', 'stxt',
+  const btc = new Function('MONTHS', 'stxt', 'EHGlossary',
     'return function buildTrendChart(data,off,partial,noForecast,pday){' + btm[1] + '}')(
     ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар',
-      '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'], sx);
+      '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'], sx, require(path.join(ROOT, 'js', 'erthub-glossary.js')));
   const zeroCh = btc(new Array(12).fill(0), 0);
   /* ГАРААР: 12 тэг → налуу 0, resid = 0||0||1 = 1, прогнозын зурвас
      ±1.9·(1,2,3) = ±5.7 → niceStep 1 → тэнхлэг −6 … 6. Өөрөөр хэлбэл
@@ -5864,8 +5872,9 @@ async function groupBE() {
     /trend\.hasData=!!t05Verified;/.test(dcScript()) && /trend\.noData=!t05Verified;/.test(dcScript()));
   check('BE39. Хоосон төлөв — тэнхлэггүй тайлбар мөр',
     /<sc-if value="\{\{ trend\.noData \}\}">[\s\S]{0,400}\{\{ trend\.noDataNote \}\}/.test(read('index.html')));
-  check('BE39. SVG нь sc-if trend.hasData ДОТОР (тэнхлэг ОГТ зурагдахгүй)',
-    /<sc-if value="\{\{ trend\.hasData \}\}">\s*<svg (?:data-ch-ok="[^"]*" )?sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;/
+  /* 2026-10-29: t05 нь CH frame (EHChartKit.trendFrame) — frame нь sc-if trend.hasData дотор */
+  check('BE39. Frame нь sc-if trend.hasData ДОТОР (тэнхлэг ОГТ зурагдахгүй)',
+    /<sc-if value="\{\{ trend\.hasData \}\}">(?:(?!<\/sc-if>)[\s\S]){0,600}<div class="\{\{ trend\.fr\.cls \}\}" data-eh-chart="\{\{ trend\.fr\.n \}\}">/
       .test(read('index.html')));
   check('BE39. Хоосон төлөвийн текст content.json-д бүртгэлтэй',
     readJson('content.json').site.status.no_series === 'чиг хандлагын цуваа алга');
@@ -7143,7 +7152,8 @@ async function groupHV() {
   check('HV2. Улсын polygon нэр + дүн (title) агуулна',
     /<path d="\{\{ cp\.d \}\}"[^>]*><title>\{\{ cp\.title \}\}<\/title><\/path>/.test(tplFlow));
   check('HV2. Аймгийн polygon нэр + дүн (rg.title)', /<title>\{\{ rg\.title \}\}<\/title>/.test(tplFlow));
-  check('HV2. .eh-tip хэв маяг style.css-д', /\.eh-tip\s*\{[^}]*pointer-events:\s*none/.test(read('style.css')));
+  /* 2026-10-29: chart.css-д (админы preview ч ачаална) */
+  check('HV2. .eh-tip хэв маяг chart.css-д', /\.eh-tip\s*\{[^}]*pointer-events:\s*none/.test(read('chart.css')));
 
   if (!CHROME) { skipped('HV3–HV4 (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
   const conH = readJson('content.json');
@@ -8029,9 +8039,10 @@ async function groupCS() {
     });
   });
   check('CS5. 12/24/30 шошго × ' + TIERS.length + ' өргөн: харагдах шошго ДАВХЦАХГҮЙ, эхний/сүүлийн (дутуу «*») үлдэнэ', TIERS.length >= 6 && ovl.length === 0, ovl.slice(0, 3).join(' | '));
-  const css = read('style.css');
+  /* 2026-10-29: frame-ийн хэв маяг chart.css-д (сайт ба админы preview хоёулаа ачаална) */
+  const css = read('chart.css');
   const missQ = TIERS.slice(0, -1).filter((T) => css.indexOf('@container (max-width: ' + (T - 0.02).toFixed(2) + 'px) { .eh-ch-xw' + T + ' { display: none; } }') < 0);
-  check('CS5. style.css: plot нь container (inline-size) ба tier бүрийн @container дүрэм', /\.eh-ch-plot \{[^}]*container-type: inline-size/.test(css) && missQ.length === 0,
+  check('CS5. chart.css: plot нь container (inline-size) ба tier бүрийн @container дүрэм', /\.eh-ch-plot \{[^}]*container-type: inline-size/.test(css) && missQ.length === 0,
     'дутуу: ' + missQ.join(','));
 
   /* CS6. frame — байрлал, анги */
@@ -8083,6 +8094,112 @@ async function groupCS() {
     css.includes('.eh-tm-box { container-type: inline-size; }') &&
     css.includes('@container (max-width: 63.98px) { .eh-tm-box > b, .eh-tm-box > span { display: none; } }') &&
     /\.eh-tm-box span \{[^}]*text-overflow: ellipsis/.test(css));
+
+  /* CS20–CS23. Нүүрийн t05/i06 — сайт ба админы preview НЭГ frame (2026-10-29). Өмнө нь хоёулаа
+     харьцаагаар сунадаг svg (data-ch-ok үл хамаарал) байсан бөгөөд админы preview өөр «хялбар»
+     шугам зурж (тэнхлэг, таамаг, дутуу сар, легенд алга) сайттай огт өөр харагддаг байв. */
+  const adm = read('admin/index.html');
+  check('CS20. Сайт: t05 ба i06 нь FRAME темплейт (data-eh-chart), data-ch-ok үл хамаарал АЛГА',
+    html.includes('<div class="{{ trend.fr.cls }}" data-eh-chart="{{ trend.fr.n }}">') &&
+    html.includes('<div class="{{ compareFr.cls }}" data-eh-chart="{{ compareFr.n }}">') &&
+    !/data-ch-ok="нүүрийн (t05|i06)/.test(html) &&
+    /trend\.fr=\(t05Verified&&typeof EHChartKit!=='undefined'\)\?EHChartKit\.trendFrame\(trend,/.test(html) &&
+    /const compareFr=typeof EHChartKit==='undefined'\?null:EHChartKit\.compare\(\{/.test(html) &&
+    /dsTrend\.fr=EHChartKit\.trendFrame\(dsTrend,/.test(html));
+  check('CS20. Сайт: i06 шугамгүй бол frame-ийн оронд plot-ын өндөртэй «мэдээлэл алга» (EMP)',
+    html.includes('<sc-if value="{{ compareFr.cls }}">') && html.includes('<sc-if value="{{ compareEmpty }}"><div class="eh-ch-empty">{{ compareEmpty }}</div></sc-if>'));
+  const admKit = adm.indexOf('<script src="../js/erthub-chartkit.js?v='), admGl = adm.indexOf('<script src="../js/erthub-glossary.js?v=');
+  check('CS21. Админ: chartkit + tooltip + chart.css ачаална (кэш тасалгаатай), preview сайтын frame-ийг зурна',
+    admKit > admGl && admGl > 0 && /<script src="\.\.\/js\/erthub-tip\.js\?v=[0-9a-f]{8}"><\/script>/.test(adm) &&
+    /<link rel="stylesheet" href="\.\.\/chart\.css\?v=[0-9a-f]{8}">/.test(adm) &&
+    /EHGlossary\.trendModel\(data,0,partial,false,null,MONTHS,pvST\)/.test(adm) && /return EHChartKit\.trendFrame\(T,/.test(adm) &&
+    /return EHChartKit\.compare\(\{/.test(adm) && /body=EHChartKit\.html\(cfr,esc,/.test(adm) &&
+    /<link rel="stylesheet" href="chart\.css\?v=[0-9a-f]{8}">/.test(html));
+  /* CS22. trendFrame / compare / html — гараар бодох фикстур (сайт ба админ хоёулаа ЭНЭ функцийг дуудна) */
+  const GL = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+  const M12 = ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар', '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'];
+  const TT = GL.trendModel([10, 20, 30, 40], 0, 15, false, null, M12, (k, fb) => fb);
+  const TF = K.trendFrame(TT, { color: '#2FE0C4', peak: 'оргил', avg: true,
+    est: { partials: [null, { days: 10, dim: 28 }, null, null], off: 0, tip: '{d}/{m} хоног', label: 'Цоорхойтой сар' } });
+  const tfTips = TF.dots.map((x) => x.tip), tfHol = TF.dots.filter((x) => /eh-ch-dot-o/.test(x.cls)).length;
+  check('CS22. trendFrame: 4 сар + дутуу сар = 5 цэг; цоорхойтой 2-р сар hollow, tooltip «2-р сар — 20 (10/28 хоног)»',
+    TF.dots.length === 5 && tfTips[1] === '2-р сар — 20 (10/28 хоног)' && tfTips[0] === '1-р сар — 10' && tfHol === 2, J(tfTips));
+  check('CS22. trendFrame: оргил «оргил 40», дундаж шугамын шошго «дундаж 25» (Σ100/4), легендэд цоорхойтой сар',
+    TF.vals.some((v) => v.label === 'оргил 40') && TF.vals.some((v) => v.label === 'дундаж 25') &&
+    TF.legend.some((l) => l.label === 'Цоорхойтой сар' && /hollow/.test(l.sw)) && TF.n === '4', J(TF.vals) + J(TF.legend.map((l) => l.label)));
+  check('CS22. trendFrame: Y тэнхлэг 0-ээс (DG), «гоё» алхам; color нь шугам/талбайд', TF.gy[0].label === '0' && /eh-ch-base/.test(TF.gy[0].cls) &&
+    TF.paths.some((p) => p.stroke === '#2FE0C4' && p.sw === '2.4') && TF.paths.some((p) => p.fill === '#2FE0C4'), J(TF.gy.map((t) => t.label)));
+  const CF = K.compare({ labels: M12.slice(0, 3), unit: 'индекс', base: 100,
+    lines: [{ key: 'road', label: 'Авто', color: '#8CA9E8', vals: [100, 150, 160] }, { key: 'air', label: 'Агаар', color: '#2FE0C4', vals: [100, 120, 158] }] });
+  const endTops = CF.ends.map((e) => parseFloat(e.top));
+  check('CS22. compare: тэнхлэг 100…160 алхам 20 · төгсгөл «160», «158» баруун захад ≥7.5%-ийн зайтай · y2 гуттер',
+    CF.gy.map((t) => t.label).join(',') === '100,120,140,160' && CF.ends.map((e) => e.label).join(',') === '160,158' &&
+    endTops[1] - endTops[0] >= 7.5 - 1e-9 && /eh-ch-y2/.test(CF.cls) && !!CF.base && CF.base.top === '100%',
+    J(CF.gy.map((t) => t.label)) + J(CF.ends));
+  check('CS22. compare: дунд цэг hover-оор (eh-ch-dot-h), төгсгөл тод; tooltip «Авто — 2-р сар: 150 индекс»; шугамгүй бол null',
+    CF.dots.filter((x) => /eh-ch-dot-h/.test(x.cls)).length === 4 && CF.dots.some((x) => x.tip === 'Авто — 2-р сар: 150 индекс') &&
+    K.compare({ labels: M12.slice(0, 3), lines: [] }) === null && K.compare({ labels: [], lines: [{ vals: [1] }] }) === null);
+  const HT = K.html(TF), nTip = (HT.match(/ data-tip="/g) || []).length;
+  check('CS22. html(): сайтын FRAME темплейтийн бүтэц (.eh-ch-lg → .eh-ch-plot → svg.eh-ch-svg → цэг data-tip), escape-тэй',
+    HT.indexOf('<div class="eh-ch eh-ch-m" data-eh-chart="4"><div class="eh-ch-lg">') === 0 && HT.indexOf('<div class="eh-ch-plot">') > 0 &&
+    HT.indexOf('<svg class="eh-ch-svg" viewBox="') > 0 && HT.indexOf('preserveAspectRatio="none"') > 0 && nTip === TF.dots.length &&
+    K.html(K.frame({ x: [{ x: 500, label: '<b>&' }] })).includes('&lt;b&gt;&amp;') && K.html(null) === '', HT.slice(0, 160));
+
+  /* CS23. Хөтөч: ИЖИЛ фикстур (?fx=1) дээр сайтын t05 (агаарын таб) ба i06 = админы preview */
+  if (CHROME) {
+    const CSP = `async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      const rd=f=>f?{cls:f.className,n:f.getAttribute('data-eh-chart'),
+        lg:[].slice.call(f.querySelectorAll('.eh-ch-lg > span')).map(s=>s.textContent.trim()),
+        y:[].slice.call(f.querySelectorAll('.eh-ch-gl > span')).map(s=>s.textContent.trim()),
+        x:[].slice.call(f.querySelectorAll('.eh-ch-xl')).map(s=>s.textContent.trim()+'|'+s.className),
+        v:[].slice.call(f.querySelectorAll('.eh-ch-vl')).map(s=>s.textContent.trim()),
+        e:[].slice.call(f.querySelectorAll('.eh-ch-end')).map(s=>s.textContent.trim()+'|'+s.style.top),
+        t:[].slice.call(f.querySelectorAll('[data-tip]')).map(s=>s.getAttribute('data-tip')+'|'+s.className+'|'+
+          [s.style.left,s.style.top,s.style.background,s.style.borderColor].join(',')),
+        p:[].slice.call(f.querySelectorAll('svg path')).map(p=>[p.getAttribute('d'),p.getAttribute('stroke'),p.getAttribute('fill'),
+          p.getAttribute('stroke-dasharray')||''].join('|')),
+        h:Math.round(f.querySelector('.eh-ch-plot').getBoundingClientRect().height)}:null;
+      await sleep(4000);
+      const tab=d.querySelector('[data-sector-tab="air"]'); if(tab){ tab.click(); await sleep(1500); }
+      const s05=d.getElementById('sec-05'), s06=d.getElementById('sec-06');
+      const after=(h)=>{ let n=h; while(n&&!(n.querySelector&&n.querySelector('[data-eh-chart]'))) n=n.nextElementSibling; return n&&n.querySelector('[data-eh-chart]'); };
+      const site={t05:rd(after(s05)),i06:rd(after(s06))};
+      const fr=w.frameElement; fr.src='/admin/index.html?fx=1';
+      let a=null;
+      for(let i=0;i<80;i++){ await sleep(250); try{ a=fr.contentDocument; }catch(e){ a=null; }
+        if(a&&a.body&&a.body.innerHTML.length>8000&&String(fr.contentWindow.location.href).indexOf('admin')>=0) break; }
+      await sleep(3500);
+      for(let i=0;i<60&&a.querySelector('.pvfeed');i++) await sleep(500);
+      const go=(sec,id)=>{ let b,n=0; while((b=a.querySelector('[data-back]'))&&n++<6) b.click();
+        const s=a.querySelector('[data-section="'+sec+'"]'); if(!s) return false; s.click();
+        const c=a.querySelector('[data-widget="'+id+'"]'); if(!c) return false; c.click(); return true; };
+      const admin={};
+      if(go('sec-05','t05')){ await sleep(300); admin.t05=rd(a.querySelector('#pvhost [data-eh-chart]')); }
+      if(go('sec-06','i06')){ await sleep(300); admin.i06=rd(a.querySelector('#pvhost [data-eh-chart]'));
+        const sub=a.querySelector('#pvhost .eh-ch-lg [data-ed="sub"]'); admin.sub=sub?sub.textContent.trim():null; }
+      site.sub=(d.querySelector('.eh-ch-lg [data-eh-card="i06"][data-eh-field="sub"]')||{}).textContent||null;
+      return {site,admin};
+    }`;
+    const srvCS = serve();
+    const prevCS = PROBE_SRC;
+    let RC;
+    try { PROBE_SRC = '/index.html?fx=1#/'; RC = await runProbe(CSP, 120000); }
+    finally { PROBE_SRC = prevCS; srvCS.close(); }
+    if (!RC || RC.__err) bad('CS23. Сайт ↔ админ frame-ийн проб', J(RC));
+    else {
+      const S = RC.site || {}, A = RC.admin || {};
+      const cmp = (k) => ['cls', 'n', 'lg', 'y', 'x', 'v', 'e', 't', 'p', 'h'].filter((f) => !S[k] || !A[k] || J(S[k][f]) !== J(A[k][f]));
+      check('CS23. t05: сайт (агаарын таб) = админы preview — анги, тэнхлэг, X, легенд, оргил, tooltip, plot-ын өндөр',
+        !!S.t05 && S.t05.t.length >= 3 && cmp('t05').length === 0,
+        cmp('t05').map((f) => f + ': сайт ' + J(S.t05 && S.t05[f]).slice(0, 160) + ' · админ ' + J(A.t05 && A.t05[f]).slice(0, 160)).join(' | '));
+      check('CS23. i06: сайт = админы preview — шугам, тэнхлэг, төгсгөлийн утга, легенд, tooltip',
+        !!S.i06 && S.i06.e.length >= 2 && cmp('i06').length === 0,
+        cmp('i06').map((f) => f + ': сайт ' + J(S.i06 && S.i06[f]).slice(0, 160) + ' · админ ' + J(A.i06 && A.i06[f]).slice(0, 160)).join(' | '));
+      check('CS23. i06 дэд гарчиг («суурь индекс = 100») сайт дээрх шиг легендэд, админд засварлагдана (data-ed="sub")',
+        !!S.sub && S.sub.trim() === A.sub, J({ site: S.sub, admin: A.sub }));
+    }
+  } else skipped('CS23 сайт ↔ админ frame (хөтөч)', 'Chrome олдсонгүй');
 
   /* CS9. Шалгагч эвдэрсэн хуулбар дээр УНАНА */
   const { spawnSync } = require('child_process');
@@ -8201,8 +8318,10 @@ function groupUI() {
   try { fs.unlinkSync(tmp); } catch (e) { /* алгасна */ }
   check('UI4. Хоосон (бүх 0) цуваа хавтгай "0" шугам зурахгүй — "мэдээлэл алга"',
     /Array\.isArray\(dsSec\.c1d\)&&dsSec\.c1d\.some\(v=>\+v>0\)/.test(src));
+  /* Таамгийн модель нь EHGlossary.trendModel-д (сайт ба админы preview НЭГ функц, 2026-10-29) */
   check('UI4. Таамгийн доод хязгаар 0-оос доош орохгүй (Y тэнхлэг 0-ээс)',
-    /const lo=all\.map\(\(v,i\)=>Math\.max\(0,/.test(src));
+    /var lo = all\.map\(function \(v, i\) \{ return Math\.max\(0,/.test(read('js/erthub-glossary.js')) &&
+    /return EHGlossary\.trendModel\(data,off,partial,noForecast,pday,MONTHS,stxt\);/.test(src));
   check('UI5. Эх сурвалжгүй 7 хоногийн карт 4 "—" нүд зурахгүй (wp.hasData-д ороосон)',
     html.indexOf('<sc-if value="{{ detail.wp.hasData }}">') > 0 && /wpNoData:true,hasData:false/.test(src));
   check('UI6. «Салбарын бүтэц» хоосон бол хоосон карт биш, борлуулалтын суваг (зорчигч) тавигдана',
@@ -8627,7 +8746,11 @@ async function groupRI() {
   const fm = src.match(/\nfunction roadPaxMonthSeries\(h,year,months\)\{[\s\S]*?\n\}\n/);
   check('RI0. roadPaxMonthSeries тодорхойлогдсон', !!fm);
   if (!fm) return;
-  const F = new Function(fm[0] + '\nreturn roadPaxMonthSeries;')();
+  /* 2026-10-29-өөс функц EHGlossary-д (админы i06 preview-тэй НЭГ) — сайтын нь төлөөлөгч */
+  const GR = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+  check('RI0. Сайт ба админ НЭГ функц: index.html → EHGlossary.roadPaxMonthSeries',
+    /return EHGlossary\.roadPaxMonthSeries\(h,year,months\);/.test(fm[0]) && typeof GR.roadPaxMonthSeries === 'function');
+  const F = new Function('EHGlossary', fm[0] + '\nreturn roadPaxMonthSeries;')(GR);
   const H = { status: 'ok', months: [
     { month: '2026-01', days: 26, days_in_month: 31, passengers: 2700, passengers_covered: 2600 },
     { month: '2026-02', days: 28, days_in_month: 28, passengers: 2800, passengers_covered: 2800 },
@@ -8653,24 +8776,35 @@ async function groupRI() {
     reg.widgets.i06.sectors.includes('road') && reg.widgets.r06.sectors.includes('road'));
   check('RI8. road шугам үзлэгийн c1d-ийг БИШ roadPax түүхийг уншина; шугам/эрэмбэ хоёулаа trendI06',
     idxSrc.includes("roadPaxMonthSeries(this._roadPaxAll,cw.year,months)") &&
-    /const t=trendI06\(k\), li=lastOf\(t\);/.test(idxSrc) && /const t=trendI06\(k,airR06\)/.test(idxSrc));
-  check('RI9. Мэдээгүй сард шугам ТАСАРНА (M), утга нь min/max-д null-гүй',
-    idxSrc.includes("if(v==null){ pen=false; return; }") && idxSrc.includes('.filter(v=>v!=null):[60,130]'));
-  check('RI10. Дутуу сарын hollow цэг tooltip-тэй (HV)',
-    /<sc-for list="\{\{ comparePartialPts \}\}"[\s\S]{0,200}<title>\{\{ cp\.tip \}\}<\/title>/.test(idxSrc));
+    /lines:all\.map\(k=>\{ const t=trendI06\(k\)/.test(idxSrc) && /const t=trendI06\(k,airR06\)/.test(idxSrc));
+  /* 2026-10-29: i06 нь EHChartKit.compare frame — тасралт, hollow, tooltip нь chartkit-д (админтай НЭГ).
+     Гараар: [100, 90.3, null, 100] → хоёр хэсэгтэй зам (M ×2), 3 цэг; тэнхлэг 90.3…100 → алхам
+     niceStep(9.7/4)=2.5, 90…100 (CH: аравтын орон алхмаас — «92.5»). */
+  const KIT = require(path.join(ROOT, 'js', 'erthub-chartkit.js'));
+  const cf = KIT.compare({ labels: ['1-р сар', '2-р сар', '3-р сар', '4-р сар'], unit: 'индекс', base: 100, est: 'Цоорхой',
+    lines: [{ key: 'road', label: 'Авто тээвэр', color: '#8CA9E8', vals: [100, 90.3, null, 100], hollow: [true, false, false, false],
+      note: [' (26/31 хоног)', '', '', ''] }] });
+  const roadD = cf ? (cf.paths.find((x) => x.stroke === '#8CA9E8') || {}).d || '' : '';
+  check('RI9. Мэдээгүй сард шугам ТАСАРНА (M), 0 гэж зурахгүй; тэнхлэг null-гүй утгаас',
+    !!cf && (roadD.match(/M/g) || []).length === 2 && cf.dots.length === 3 && !/NaN/.test(roadD) &&
+    cf.gy.map((t) => t.label).join(',') === '90.0,92.5,95.0,97.5,100.0',
+    roadD + ' · ' + (cf ? cf.gy.map((t) => t.label).join(',') : 'null'));
+  check('RI10. Дутуу сарын hollow цэг tooltip-тэй (HV): «Авто тээвэр — 1-р сар: 100 индекс (26/31 хоног)»',
+    !!cf && cf.dots.some((x) => /eh-ch-dot-o/.test(x.cls) && x.tip === 'Авто тээвэр — 1-р сар: 100 индекс (26/31 хоног)') &&
+    cf.legend.some((l) => l.label === 'Цоорхой'), JSON.stringify(cf && cf.dots.map((x) => x.tip)));
 
   if (!CHROME) { skipped('RI11 сайт дээрх авто тээврийн шугам (хөтөч)', 'Chrome олдсонгүй'); return; }
   const probe = async function (d, w) {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const v = f(); if (v) return v; await sleep(200); } return null; };
-    const card = () => { const t = d.querySelector('[data-eh-card="i06"][data-eh-field="title"]'); let c = t; while (c && !c.querySelector('svg')) c = c.parentElement; return c; };
+    const card = () => { const t = d.querySelector('[data-eh-card="i06"][data-eh-field="title"]'); let c = t; while (c && !c.querySelector('[data-eh-chart]')) c = c.parentElement; return c; };
     const roadPath = () => { const c = card(); return c && [...c.querySelectorAll('path')].find((p) => (p.getAttribute('stroke') || '').toUpperCase() === '#8CA9E8'); };
     const flat = (p) => { const ys = (p.getAttribute('d').match(/,[\d.]+/g) || []).map((x) => +x.slice(1)); return ys.length < 2 || ys.every((y) => y === ys[0]); };
     await until(() => roadPath() && !flat(roadPath()), 30000);
     const p = roadPath();
     const c = card();
     const out = { has: !!p, d: p ? p.getAttribute('d') : null, flat: p ? flat(p) : null };
-    out.tips = c ? [...c.querySelectorAll('circle title')].map((t) => t.textContent) : [];
+    out.tips = c ? [...c.querySelectorAll('.eh-ch-dot[data-tip]')].map((t) => t.getAttribute('data-tip')) : [];
     const rk = d.querySelector('[data-eh-card="r06"][data-eh-field="title"]'), rc = rk && rk.parentElement;
     out.rank = rc ? [...rc.querySelectorAll('div')].filter((r) => r.children.length >= 4 && /^\d\d$/.test((r.children[0].textContent || '').trim()))
       .map((r) => r.innerText.replace(/\s+/g, ' ').trim()) : [];
@@ -9050,14 +9184,14 @@ async function groupRT() {
     const t05Card = () => { const sec = d.getElementById('sec-05'); let n = sec; while (n && !(n.classList && n.classList.contains('eh-g-1c'))) n = n.nextElementSibling; return n && n.children[0]; };
     await until(() => d.querySelector('[data-home-sector="road"]'), 20000);
     await pick('road');
-    await until(() => { const c = t05Card(); return c && getComputedStyle(c).display !== 'none' && c.querySelector('circle title'); }, 30000);
+    await until(() => { const c = t05Card(); return c && getComputedStyle(c).display !== 'none' && c.querySelector('.eh-ch-dot[data-tip]'); }, 30000);
     const out = {};
     out.chips = [...d.querySelectorAll('[data-home-sector]')].map((b) => b.innerText.replace(/\s+/g, ' ').trim());
     const g = kGrid();
     out.cards = g && !g.hasAttribute('data-empty-note') ? [...g.children].map((c) => ({ h: Math.round(c.getBoundingClientRect().height), t: c.innerText.replace(/\s+/g, ' ').slice(0, 60) })) : [];
     out.cols = g ? getComputedStyle(g).gridTemplateColumns.split(' ').length : 0;
     const c5 = t05Card();
-    out.t05 = c5 ? { shown: getComputedStyle(c5).display !== 'none', tips: [...c5.querySelectorAll('circle title')].map((t) => t.textContent), dashed: [...c5.querySelectorAll('circle')].filter((c) => c.getAttribute('stroke-dasharray') === '2 2').length } : null;
+    out.t05 = c5 ? { shown: getComputedStyle(c5).display !== 'none', tips: [...c5.querySelectorAll('.eh-ch-dot[data-tip]')].map((t) => t.getAttribute('data-tip')), dashed: c5.querySelectorAll('.eh-ch-dot-o').length } : null;
     /* 05-ын өөрийн табаар ус руу: товч алга болж, хуудас үсэрдэг байв (2026-10-26) */
     const vis5 = () => [...d.querySelectorAll('[data-t05-tabs]')].find((e) => e.getClientRects().length > 0);
     if (vis5()) {
@@ -9073,7 +9207,7 @@ async function groupRT() {
     await pick('water');
     out.water = { notes: [...d.querySelectorAll('[data-empty-note]')].map((e) => e.getAttribute('data-empty-note') + ':' + e.innerText.trim()),
       t05Shown: t05Card() ? getComputedStyle(t05Card()).display !== 'none' : null };
-    const i6 = d.querySelector('[data-eh-card="i06"][data-eh-field="title"]'); let ic = i6; while (ic && !ic.querySelector('svg')) ic = ic.parentElement;
+    const i6 = d.querySelector('[data-eh-card="i06"][data-eh-field="title"]'); let ic = i6; while (ic && !ic.querySelector('[data-eh-chart]')) ic = ic.parentElement;
     out.i06water = ic ? [...ic.querySelectorAll('path')].some((p) => (p.getAttribute('stroke') || '').toUpperCase() === '#4FA8FF') : null;
     out.i06strokes = ic ? [...new Set([...ic.querySelectorAll('path')].map((p) => p.getAttribute('stroke')))] : [];
     await pick('road');
@@ -9557,7 +9691,7 @@ function groupDG() {
   if (!mt) { bad('DG6. buildTrendChart() задарсангүй'); }
   else {
     const MONTHS = ['1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар', '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар'];
-    const mk = new Function('MONTHS', 'stxt', 'return function buildTrendChart(data,off,partial,noForecast,pday){' + mt[1] + '}')(MONTHS, (p, x) => x);
+    const mk = new Function('MONTHS', 'stxt', 'EHGlossary', 'return function buildTrendChart(data,off,partial,noForecast,pday){' + mt[1] + '}')(MONTHS, (p, x) => x, require(path.join(ROOT, 'js', 'erthub-glossary.js')));
     const d9 = [1343, 900, 1043, 1028, 1213, 1555, 1860, 1871, 1433];
     const withP = mk(d9, 0, 559), noP = mk(d9, 0);
     check('DG6. Y тэнхлэг 0-ээс эхэлнэ (дутуу сар 559 багтсан ч 500 биш)',

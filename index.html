@@ -17,9 +17,9 @@
 <script src="js/erthub-publish.js?v=ffe215f9"></script>
 <script src="js/erthub-backend.js?v=a96de8ab"></script>
 <script src="js/erthub-chart.js?v=422174bf"></script>
-<script src="js/erthub-glossary.js?v=311d361e"></script>
+<script src="js/erthub-glossary.js?v=452cb979"></script>
 <script src="js/erthub-tip.js?v=ba005e59"></script>
-<script src="js/erthub-chartkit.js?v=2732fcd8"></script>
+<script src="js/erthub-chartkit.js?v=2913aee9"></script>
 <script src="js/vendor/dc-runtime.js?v=8fe7df74"></script>
 </head>
 <body>
@@ -33,7 +33,8 @@
   <script src="js/vendor/d3.v7.min.js?v=f2094bbf"></script>
   <script src="js/vendor/topojson-client.min.js?v=25cd02ae"></script>
   <script src="js/vendor/xlsx.full.min.js?v=c9506197"></script>
-  <link rel="stylesheet" href="style.css?v=40b0c8cb">
+  <link rel="stylesheet" href="style.css?v=642d604a">
+  <link rel="stylesheet" href="chart.css?v=0970086f">
 </helmet>
 
 <div class="eh-app" data-theme="{{ themeAttr }}" style="{{ rootStyle }}">
@@ -1282,69 +1283,21 @@
         <div style="height:210px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;color:var(--ink3);font-size:12.5px;line-height:1.6;">{{ trend.noDataNote }}</div>
       </sc-if>
       <sc-if value="{{ trend.hasData }}">
-      <svg data-ch-ok="нүүрийн t05 — админы preview-тэй хамт шилжүүлнэ" sc-camel-view-box="0 0 600 170" style="width:100%;height:auto;display:block;margin:auto 0;">
-        <defs>
-          <linearGradient id="trendfill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="{{ activeColor }}" stop-opacity="0.34"></stop>
-            <stop offset="100%" stop-color="{{ activeColor }}" stop-opacity="0"></stop>
-          </linearGradient>
-          <linearGradient id="trendstroke" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="{{ activeColor }}" stop-opacity="0.55"></stop>
-            <stop offset="100%" stop-color="{{ activeColor }}" stop-opacity="1"></stop>
-          </linearGradient>
-          <filter id="trendglow" x="-20%" y="-40%" width="140%" height="200%">
-            <feGaussianBlur sc-camel-std-deviation="3.4" result="b"></feGaussianBlur>
-            <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
-          </filter>
-        </defs>
-        <sc-for list="{{ trend.yTicks }}" as="yt" hint-placeholder-count="5">
-          <line x1="{{ trend.axisX1 }}" y1="{{ yt.gy }}" x2="{{ trend.axisX2 }}" y2="{{ yt.gy }}" stroke="var(--line)" stroke-width="1"></line>
-          <foreignObject x="0" y="{{ yt.fy }}" width="42" height="14">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ yt.label }}</div>
-          </foreignObject>
-        </sc-for>
-        <line x1="{{ trend.axisX1 }}" y1="{{ trend.padT }}" x2="{{ trend.axisX1 }}" y2="{{ trend.axisY }}" stroke="var(--line2)" stroke-width="1"></line>
-        <line x1="{{ trend.axisX1 }}" y1="{{ trend.axisY }}" x2="{{ trend.axisX2 }}" y2="{{ trend.axisY }}" stroke="var(--line2)" stroke-width="1"></line>
-        <sc-if value="{{ f05.avgOn }}">
-          <line x1="{{ trend.axisX1 }}" y1="{{ trend.avgY }}" x2="{{ trend.axisX2 }}" y2="{{ trend.avgY }}" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="3 4"></line>
-          <foreignObject x="{{ trend.axisX1 }}" y="{{ trend.avgYLabel }}" width="140" height="16">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);">{{ trend.avgLabel }}</div>
-          </foreignObject>
-        </sc-if>
-        <sc-if value="{{ trend.showForecast }}">
-        <path d="{{ trend.band }}" fill="{{ activeColor }}" fill-opacity="0.13" stroke="none"></path>
-        </sc-if>
-        <path d="{{ trend.area }}" fill="url(#trendfill)" stroke="none"></path>
-        <sc-if value="{{ trend.showForecast }}">
-        <line x1="{{ trend.fcSplitX }}" y1="{{ trend.padT }}" x2="{{ trend.fcSplitX }}" y2="{{ trend.axisY }}" stroke="var(--line2)" stroke-width="1" stroke-dasharray="2 4"></line>
-        </sc-if>
-        <path d="{{ trend.line }}" fill="none" stroke="url(#trendstroke)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" filter="url(#trendglow)"></path>
-        <sc-if value="{{ trend.showForecast }}">
-        <path d="{{ trend.fline }}" fill="none" stroke="{{ activeColor }}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="6 5" style="animation:dashFlow 1.6s linear infinite;"></path>
-        </sc-if>
-        <sc-for list="{{ trend.dotPts }}" as="dp" hint-placeholder-count="12">
-          <circle cx="{{ dp.cx }}" cy="{{ dp.cy }}" r="{{ dp.r }}" fill="var(--surface)" stroke="{{ activeColor }}" stroke-width="1.6" stroke-dasharray="{{ dp.dash }}"><title>{{ dp.tip }}</title></circle>
-        </sc-for>
-        <sc-if value="{{ trend.hasPartial }}">
-        <circle cx="{{ trend.partialCx }}" cy="{{ trend.partialCy }}" r="3.6" fill="var(--surface)" stroke="{{ activeColor }}" stroke-width="1.6" stroke-dasharray="2 2"><title>{{ trend.partialLabel }}</title></circle>
-        <foreignObject x="{{ trend.partialFx }}" y="{{ trend.partialFy }}" width="180" height="11" style="overflow:visible;pointer-events:none;"><div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;font-size:9.5px;line-height:1;white-space:nowrap;color:var(--ink2);font-family:'JetBrains Mono',monospace;">{{ trend.partialShort }}</div></foreignObject>
-        </sc-if>
-        <sc-if value="{{ trend.showForecast }}">
-        <circle cx="{{ trend.peak.cx }}" cy="{{ trend.peak.cy }}" r="4.5" fill="{{ activeColor }}"></circle>
-        <foreignObject x="{{ trend.peak.lx }}" y="{{ trend.peak.ly }}" width="120" height="32">
-          <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;line-height:1.4;color:var(--ink2);background:var(--surface);border:1px solid var(--line2);border-radius:7px;padding:5px 8px;box-shadow:var(--shadow);display:inline-block;white-space:nowrap;">{{ trend.peak.label }}<br><span style="color:var(--ink);font-weight:600;">{{ trend.peak.value }}</span></div>
-        </foreignObject>
-        </sc-if>
-        <sc-for list="{{ trend.xTicks }}" as="xt" hint-placeholder-count="6">
-          <foreignObject x="{{ xt.fx }}" y="{{ xt.fy }}" width="40" height="14" style="overflow:visible;">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ xt.label }}</div>
-          </foreignObject>
-        </sc-for>
-      </svg>
-      <div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:11px;color:var(--ink3);">
-        <sc-for list="{{ trend.legend }}" as="lg" hint-placeholder-count="3">
-          <span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:16px;height:0;border-top:2px {{ lg.lineStyle }} {{ activeColor }};"></span>{{ lg.label }}</span>
-        </sc-for>
+      <!-- CH: EHChartKit.trendFrame frame — админы t05 preview нь ЯГ энэ бүтцийг EHChartKit.html()-ээр зурна.
+           margin:auto 0 — хажуугийн donut карт өндөр бол график картын дунд байрлана (ROW) -->
+      <div style="margin:auto 0;">
+      <div class="{{ trend.fr.cls }}" data-eh-chart="{{ trend.fr.n }}">
+        <sc-if value="{{ trend.fr.hasLegend }}"><div class="eh-ch-lg"><sc-for list="{{ trend.fr.legend }}" as="chl" hint-placeholder-count="3"><span><i class="{{ chl.sw }}" style="{{ chl.style }}"></i>{{ chl.label }}</span></sc-for></div></sc-if>
+        <div class="eh-ch-plot">
+          <sc-for list="{{ trend.fr.gy }}" as="chy" hint-placeholder-count="5"><div class="{{ chy.cls }}" style="top:{{ chy.top }};"><span>{{ chy.label }}</span></div></sc-for>
+          <svg class="eh-ch-svg" sc-camel-view-box="{{ trend.fr.vb }}" sc-camel-preserve-aspect-ratio="none">
+            <sc-for list="{{ trend.fr.paths }}" as="chp" hint-placeholder-count="4"><path d="{{ chp.d }}" fill="{{ chp.fill }}" fill-opacity="{{ chp.fop }}" stroke="{{ chp.stroke }}" stroke-width="{{ chp.sw }}" stroke-dasharray="{{ chp.dash }}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"></path></sc-for>
+          </svg>
+          <sc-for list="{{ trend.fr.dots }}" as="chd" hint-placeholder-count="12"><i class="{{ chd.cls }}" style="left:{{ chd.left }};top:{{ chd.top }};background:{{ chd.bg }};border-color:{{ chd.bd }};" data-tip="{{ chd.tip }}"></i></sc-for>
+          <sc-for list="{{ trend.fr.vals }}" as="chv" hint-placeholder-count="1"><div class="{{ chv.cls }}" style="left:{{ chv.left }};top:{{ chv.top }};">{{ chv.label }}</div></sc-for>
+          <sc-for list="{{ trend.fr.gx }}" as="chx" hint-placeholder-count="6"><div class="{{ chx.cls }}" style="left:{{ chx.left }};">{{ chx.label }}</div></sc-for>
+        </div>
+      </div>
       </div>
       </sc-if>
     </div>
@@ -1400,37 +1353,22 @@
         </sc-for>
       </div>
       </sc-if>
-      <svg data-ch-ok="нүүрийн i06 — админы preview-тэй хамт шилжүүлнэ" sc-camel-view-box="0 0 620 200" style="width:100%;height:auto;display:block;">
-        <sc-for list="{{ compareY }}" as="cy" hint-placeholder-count="3">
-          <line x1="{{ compareGeom.axisX1 }}" y1="{{ cy.y }}" x2="{{ compareGeom.axisX2 }}" y2="{{ cy.y }}" stroke="var(--line)" stroke-width="1"></line>
-          <foreignObject x="0" y="{{ cy.fy }}" width="36" height="14">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:10px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:right;padding-right:6px;">{{ cy.label }}</div>
-          </foreignObject>
-        </sc-for>
-        <line x1="{{ compareGeom.axisX1 }}" y1="{{ compareGeom.padT }}" x2="{{ compareGeom.axisX1 }}" y2="{{ compareGeom.axisY }}" stroke="var(--line2)" stroke-width="1"></line>
-        <line x1="{{ compareGeom.axisX1 }}" y1="{{ compareGeom.axisY }}" x2="{{ compareGeom.axisX2 }}" y2="{{ compareGeom.axisY }}" stroke="var(--line2)" stroke-width="1"></line>
-        <sc-if value="{{ compareBaseShow }}">
-          <line x1="{{ compareGeom.axisX1 }}" y1="{{ compareBaseY }}" x2="{{ compareGeom.axisX2 }}" y2="{{ compareBaseY }}" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="3 4"></line>
-          <foreignObject x="{{ compareGeom.axisX1 }}" y="{{ compareBaseYLabel }}" width="150" height="14">
-            <div xmlns="http://www.w3.org/1999/xhtml" data-eh-card="i06" data-eh-field="sub" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);white-space:nowrap;padding-left:6px;">{{ i06Sub }}</div>
-          </foreignObject>
-        </sc-if>
-        <sc-for list="{{ compareLines }}" as="cl" hint-placeholder-count="5">
-          <path d="{{ cl.d }}" fill="none" stroke="{{ cl.color }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="{{ cl.dash }}"></path>
-          <circle cx="{{ cl.ex }}" cy="{{ cl.ey }}" r="3.4" fill="{{ cl.eFill }}" stroke="{{ cl.eStroke }}" stroke-width="1.6"><title>{{ cl.tip }}</title></circle>
-          <foreignObject x="{{ cl.endLabelX }}" y="{{ cl.endLabelY }}" width="54" height="14">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;color:{{ cl.color }};white-space:nowrap;">{{ cl.endLabel }}</div>
-          </foreignObject>
-        </sc-for>
-        <sc-for list="{{ comparePartialPts }}" as="cp" hint-placeholder-count="0">
-          <circle cx="{{ cp.cx }}" cy="{{ cp.cy }}" r="3.4" fill="var(--surface)" stroke="{{ cp.color }}" stroke-width="1.6"><title>{{ cp.tip }}</title></circle>
-        </sc-for>
-        <sc-for list="{{ compareX }}" as="cx" hint-placeholder-count="5">
-          <foreignObject x="{{ cx.fx }}" y="{{ cx.fy }}" width="40" height="14" style="overflow:visible;">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:9.5px;color:var(--ink3);font-family:'JetBrains Mono',monospace;text-align:center;display:flex;justify-content:center;white-space:nowrap;">{{ cx.label }}</div>
-          </foreignObject>
-        </sc-for>
-      </svg>
+      <!-- CH: EHChartKit.compare frame — админы i06 preview нь ЯГ энэ бүтцийг EHChartKit.html()-ээр зурна -->
+      <sc-if value="{{ compareFr.cls }}">
+      <div class="{{ compareFr.cls }}" data-eh-chart="{{ compareFr.n }}">
+        <div class="eh-ch-lg"><sc-for list="{{ compareFr.legend }}" as="chl" hint-placeholder-count="3"><span><i class="{{ chl.sw }}" style="{{ chl.style }}"></i>{{ chl.label }}</span></sc-for><sc-if value="{{ compareFr.base }}"><span class="eh-ch-base-note"><i class="eh-ch-sw eh-ch-sw-dash" style="border-top-color:var(--ink3);"></i><span data-eh-card="i06" data-eh-field="sub">{{ i06Sub }}</span></span></sc-if></div>
+        <div class="eh-ch-plot">
+          <sc-for list="{{ compareFr.gy }}" as="chy" hint-placeholder-count="5"><div class="{{ chy.cls }}" style="top:{{ chy.top }};"><span>{{ chy.label }}</span></div></sc-for>
+          <sc-for list="{{ compareFr.ends }}" as="che" hint-placeholder-count="3"><div class="eh-ch-yr eh-ch-end" style="top:{{ che.top }};color:{{ che.color }};">{{ che.label }}</div></sc-for>
+          <svg class="eh-ch-svg" sc-camel-view-box="{{ compareFr.vb }}" sc-camel-preserve-aspect-ratio="none">
+            <sc-for list="{{ compareFr.paths }}" as="chp" hint-placeholder-count="4"><path d="{{ chp.d }}" fill="{{ chp.fill }}" fill-opacity="{{ chp.fop }}" stroke="{{ chp.stroke }}" stroke-width="{{ chp.sw }}" stroke-dasharray="{{ chp.dash }}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"></path></sc-for>
+          </svg>
+          <sc-for list="{{ compareFr.dots }}" as="chd" hint-placeholder-count="12"><i class="{{ chd.cls }}" style="left:{{ chd.left }};top:{{ chd.top }};background:{{ chd.bg }};border-color:{{ chd.bd }};" data-tip="{{ chd.tip }}"></i></sc-for>
+          <sc-for list="{{ compareFr.gx }}" as="chx" hint-placeholder-count="6"><div class="{{ chx.cls }}" style="left:{{ chx.left }};">{{ chx.label }}</div></sc-for>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ compareEmpty }}"><div class="eh-ch-empty">{{ compareEmpty }}</div></sc-if>
       <div style="margin-top:auto;padding-top:18px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);">
         <div data-eh-card="i06" data-eh-field="foot" style="font-size:12.5px;color:var(--ink2);line-height:1.6;max-width:52ch;min-width:0;text-wrap:pretty;">{{ i06Foot }}</div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);border:1px solid var(--line2);border-radius:999px;padding:5px 12px;white-space:nowrap;flex-shrink:0;">
@@ -1439,10 +1377,10 @@
       </div>
     </div>
 
-    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;display:flex;flex-direction:column;">
+    <div style="background:linear-gradient(155deg,{{ activeTint }} 0%,rgba(var(--surface-rgb),.92) 34%,rgba(var(--surface-rgb),.72) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.94);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.3);padding:24px 26px;display:flex;flex-direction:column;" class="eh-fit-card">
       <div data-eh-card="r06" data-eh-field="title" style="font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">{{ r06Title }}</div>
       <div data-chart-period="1" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin:-10px 0 12px;">{{ comparePeriod }}</div>
-      <div style="display:flex;flex-direction:column;">
+      <div class="eh-fit-body" style="display:flex;flex-direction:column;">
         <sc-for list="{{ compareRank }}" as="cr" hint-placeholder-count="5">
           <div style="{{ cr.rowStyle }}">
             <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);">{{ cr.rank }}</div>
@@ -8300,108 +8238,10 @@ function kpiGridCols(n){
 }
 
 function buildTrendChart(data,off,partial,noForecast,pday){
-  /* Цуваа ХООСОН байж болно: SECTORS[k].c1d нь одоо зохиомол демо утгагүй,
-     хоосон массиваар эхэлж амьд эх сурвалжаас Л дүүрдэг. Хамгаалалтгүй бол
-     Math.max.apply(null,[]) = -Infinity, data[-1] = undefined болж график
-     нурна. Хавтгай 0 цуваагаар орлуулна — "мэдээлэл алга" гэдгийг дуудагч
-     тал (t05 / салбарын хуудас) ӨӨРИЙН шошгоор ил хэлнэ. */
-  if(!Array.isArray(data)||!data.length) data=new Array(12).fill(0);
-  off=off||0;
-  const w=600,h=170,padL=46,padR=12,padT=14,padB=26;
-  const FC=3; // forecast steps
-  const n=data.length;
-  // linear regression on last 6 points -> forecast
-  const tail=data.slice(-6), tn=tail.length;
-  let sx=0,sy=0,sxy=0,sxx=0;
-  tail.forEach((v,i)=>{sx+=i;sy+=v;sxy+=i*v;sxx+=i*i;});
-  const slope=(tn*sxy-sx*sy)/(tn*sxx-sx*sx||1), intercept=(sy-slope*sx)/tn;
-  const fcast=Array.from({length:FC},(_,i)=>intercept+slope*(tn-1+i+1));
-  const resid=Math.sqrt(tail.reduce((a,v,i)=>a+Math.pow(v-(intercept+slope*i),2),0)/tn)||Math.abs(slope)||1;
-
-  const all=data.concat(fcast);
-  const hi=all.map((v,i)=>i<n?v:v+resid*1.9*(i-n+1));
-  /* Тоо сөрөг байж чадахгүй (нислэг, зорчигч, вагон) — таамгийн доод хязгаар 0-оос
-     доош орохгүй; өмнө нь хавтгай 0 цувааны тэнхлэг −6…6 болж байв (DG: Y тэнхлэг 0-ээс). */
-  const lo=all.map((v,i)=>Math.max(0,i<n?v:v-resid*1.9*(i-n+1)));
-  /* Дутуу сарын цэг (partial) — шугам/прогнозд ОРОХГҮЙ, гэвч Y хүрээнд багтана. */
-  const pv=(partial!=null&&isFinite(partial)&&partial>=0)?partial:null;
-  const rawMax=Math.max.apply(null,hi.concat(pv!=null?[pv]:[])), rawMin=Math.min.apply(null,lo.concat(pv!=null?[pv]:[]));
-  /* Сөрөг байж чадахгүй хэмжигдэхүүнд (нислэг, зорчигч, тонн) тэнхлэг 0-ээс
-     эхэлнэ — эс бөгөөс дутуу сарын бага утга хуурамчаар харагдана.
-     Алхам 1/2/2.5/5×10^k (чартын стандарт CH): өмнө 10^k алхмаар дээд утгыг
-     4-т хуваадаг байсан тул «0 · 16 · 31 · 47 · 62» гэх мэт тэнхлэг гардаг байв. */
-  const lo0=rawMin>=0?0:rawMin, st0=((rawMax-lo0)||1)/4;
-  const mg=Math.pow(10,Math.floor(Math.log10(st0))), fq=st0/mg;
-  const niceStep=(fq<=1?1:fq<=2?2:fq<=2.5?2.5:fq<=5?5:10)*mg;
-  const niceMax=Math.ceil(rawMax/niceStep-1e-9)*niceStep||niceStep;
-  const niceMin=rawMin>=0?0:Math.floor(rawMin/niceStep)*niceStep;
-  const range=(niceMax-niceMin)||1;
-  const stepX=(w-padL-padR)/(n+FC-1);
-  const X=i=>padL+i*stepX, Y=v=>padT+(h-padT-padB)*(1-(v-niceMin)/range);
-
-  const xy=data.map((v,i)=>[X(i),Y(v)]);
-  const line='M'+xy.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L');
-  const area=line+` L${X(n-1).toFixed(1)},${(h-padB).toFixed(1)} L${X(0).toFixed(1)},${(h-padB).toFixed(1)} Z`;
-
-  const fxy=[[X(n-1),Y(data[n-1])]].concat(fcast.map((v,i)=>[X(n+i),Y(v)]));
-  const fline='M'+fxy.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L');
-  const upper=[[X(n-1),Y(data[n-1])]].concat(fcast.map((v,i)=>[X(n+i),Y(v+resid*1.9*(i+1))]));
-  const lower=fcast.map((v,i)=>[X(n+i),Y(v-resid*1.9*(i+1))]).reverse().concat([[X(n-1),Y(data[n-1])]]);
-  const band='M'+upper.concat(lower).map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L')+' Z';
-
-  const yTicks=[];
-  for(let val=niceMin;val<=niceMax+niceStep*1e-6;val+=niceStep){
-    const y=Y(val);
-    yTicks.push({y:y.toFixed(1),gy:y.toFixed(1),v:val,label:(+val.toFixed(6)).toLocaleString('en-US'),fx:0,fy:(y-7).toFixed(1)});
-  }
-  const every=data.length>8?2:1;
-  const xTicks=data.map((v,i)=>({x:X(i).toFixed(1),label:MONTHS[i+off]||'',fx:(X(i)-19).toFixed(1),fy:(h-padB+6).toFixed(1)})).filter((_,i)=>i%every===0);
-  /* Цэг дээр очиход ЯГ ТЭР сарын тоо гарна (SVG <title> — нэмэлт JS-гүй,
-     гар/скрин ридерт ч уншигдана). Өмнө нь график дээр тоо ОГТ харагддаггүй
-     байсан тул "энэ цэг хэдийг заасан бэ" гэдгийг мэдэх аргагүй байв. */
-  const dotPts=xy.map((p,i)=>({cx:p[0].toFixed(1),cy:p[1].toFixed(1),r:'2.6',dash:'none',
-    tip:(MONTHS[i+off]?MONTHS[i+off]+' — ':'')+Math.round(data[i]).toLocaleString('en-US')}));
-
-  // peak annotation
-  const pi=data.indexOf(Math.max.apply(null,data));
-  const peak={cx:X(pi).toFixed(1),cy:Y(data[pi]).toFixed(1),
-    lx:Math.min(Math.max(X(pi)-58,padL+2),w-padR-120).toFixed(1),ly:Math.max(Y(data[pi])-38,2).toFixed(1),
-    label:(MONTHS[pi+off]||'')+' · '+stxt('chart.peak','оргил'),value:data[pi].toLocaleString()};
-  const fcLabel={x:(X(n)+4).toFixed(1),y:(padT+4).toFixed(1),
-    text:stxt('chart.forecast_prefix','AI прогноз +')+FC+' '+stxt('chart.forecast_suffix','сар'),
-    delta:((fcast[FC-1]-data[n-1])/(data[n-1]||1)*100)};
-  const avgVal=data.reduce((a,v)=>a+v,0)/data.length, avgY=Y(avgVal).toFixed(1);
-  /* Дутуу сар: forecast-ын ЯГ ТЭР слот дээр (X(n)) hollow цэг. Шошгыг дээр нь. */
-  const pY=pv!=null?Y(pv):0;
-  /* Дутуу сар = ОДООГИЙН сар (dropPartialMonth). Хүртэлх өдрийг УБ-ийн
-     огнооноос авна — сар бүр өөр тул hardcode хийхгүй. */
-  /* pday — эх сурвалжийн мэдээ ХҮРСЭН өдөр ({day,dim}); мэдэгдвэл түүгээр (ETL хоцорвол
-     өнөөдрийн огноо «1–26» гэж худал хэлнэ), N/M хоног ба өдрийн дунджийг tooltip-д ИЛ. */
-  const upToDay=(pday&&pday.day>0)?pday.day:new Date(Date.now()+8*3600000).getUTCDate();
-  const pDays=(pday&&pday.day>0&&pday.dim>0)?' · '+stxt('chart.partial_days','{d}/{m} хоногоор').replace('{d}',pday.day).replace('{m}',pday.dim):'';
-  const pAvg=(pv!=null&&upToDay>0)?' · '+stxt('chart.partial_daily_avg','өдрийн дундаж')+' '+Math.round(pv/upToDay).toLocaleString('en-US'):'';
-  const partialLabel=pv!=null?(MONTHS[n+off]||'')+' (1–'+upToDay+' '+stxt('chart.partial_upto','хүртэл')+pDays+'): '
-    +Math.round(pv).toLocaleString('en-US')+' · '+stxt('chart.partial_mark','дутуу')+' '+stxt('chart.partial_word','сар (хэсэгчилсэн)')+pAvg
-    +' · '+stxt('chart.partial_joins','сар дуусахад шугамд нэмэгдэнэ'):'';
-  /* График дээрх богино шошго (баруун ирмэгт багтана); бүтэн текст нь tooltip-д.
-     «1–N» — бүтэн сартай зэрэгцэх бага цэгийг «уналт» гэж уншихаас сэргийлнэ. */
-  const partialShort=pv!=null?(MONTHS[n+off]||'')+' 1–'+upToDay+' · '+Math.round(pv).toLocaleString('en-US')+' · '+stxt('chart.partial_mark','дутуу'):'';
-  /* Тайлбар (legend) — зөвхөн графикт ЗУРАГДСАН цувааг нэрлэнэ. */
-  const legend=[{key:'actual',label:stxt('chart.legend_actual','Бодит (бүтэн сар)'),lineStyle:'solid'}]
-    .concat(pv!=null?[{key:'partial',label:stxt('chart.legend_partial','Хэсэгчилсэн (одоогийн сар)'),lineStyle:'dotted'}]:[])
-    .concat(noForecast?[]:[{key:'forecast',label:stxt('chart.legend_forecast','Таамаг'),lineStyle:'dashed'}]);
-  /* noForecast — датасэтийн дэлгэрэнгүй: прогнозын шугам/зурвас шошгогүй
-     тул загварын таамгийг бодит дата мэт харуулахгүй. */
-  return {line,area,fline:noForecast?'':fline,band:noForecast?'':band,yTicks,xTicks,dotPts,peak,fcLabel,legend,
-    hasPartial:pv!=null,partialCx:X(n).toFixed(1),partialCy:pY.toFixed(1),
-    partialLy:Math.max(pY-9,padT+8).toFixed(1),partialLabel,partialShort,
-    // SVG <text> дотор {{ }} харагдахгүй тул шошгыг foreignObject-ээр зурна:
-    // төвлөрүүлсэн 180-өргөн хайрцаг, дээд ирмэг = суурь − 0.8·fs (fs=9.5).
-    partialFx:(X(n)-90).toFixed(1),partialFy:(Math.max(pY-9,padT+8)-7.6).toFixed(1),
-    fcSplitX:X(n-1).toFixed(1),fcEndX:X(n+FC-1).toFixed(1),
-    fcDeltaLabel:(fcLabel.delta>0?'+':'')+fcLabel.delta.toFixed(1)+'%',
-    avgY,avgYLabel:Math.max(0,avgY-15).toFixed(1),avgLabel:stxt('range.average','дундаж')+' '+Math.round(avgVal).toLocaleString(),
-    w,h,padL,padR,padT,padB,axisX1:padL,axisX2:w-padR,axisY:(h-padB).toFixed(1)};
+  /* Модель нь js/erthub-glossary.js (EHGlossary.trendModel) — админы t05 preview-тэй НЭГ функц
+     (2026-10-29: preview өөрийн хялбар шугамыг зурж, сайттай зөрдөг байв). Цуваа хоосон бол хавтгай
+     0 цуваа (нурахгүй) — «мэдээлэл алга»-г дуудагч тал (t05 / датасэтийн хуудас) ил хэлнэ. */
+  return EHGlossary.trendModel(data,off,partial,noForecast,pday,MONTHS,stxt);
 }
 
 // Багана(зүүн тэнхлэг)+шугам(баруун тэнхлэг) хосолсон chart — эх
@@ -9344,21 +9184,9 @@ const AGG_METHODS={
    Эх сурвалж ЦОНХООР ачаалагддаг тул дутуу сарын НИЙТИЙГ бүтэн сартай харьцуулбал худал
    уналт гарна: хамрагдсан (coverage) хоногийн дундаж × сарын хоног = сарын эквивалент,
    partial=true (hollow цэг, tooltip-д N/M хоног). Хамрагдсан хоног 0 бол v=null — шугам
-   тасарна, тоо зохиохгүй. ЦЭВЭР — tests/run.js RI бүлэг. */
+   тасарна, тоо зохиохгүй. Функц нь EHGlossary-д — админы i06 preview-тэй НЭГ (tests/run.js RI). */
 function roadPaxMonthSeries(h,year,months){
-  if(!h||h.status!=='ok'||!Array.isArray(h.months)||!year||!(months>0)) return null;
-  const by={};
-  h.months.forEach(m=>{ if(m&&m.month) by[m.month]=m; });
-  const out=[];
-  for(let i=0;i<months;i++){
-    const m=by[year+'-'+String(i+1).padStart(2,'0')];
-    const dim=(m&&+m.days_in_month)||new Date(Date.UTC(year,i+1,0)).getUTCDate();
-    const days=m?(+m.days||0):0;
-    if(days<=0){ out.push({v:null,partial:false,days:0,dim}); continue; }
-    if(days>=dim) out.push({v:+m.passengers||0,partial:false,days,dim});
-    else out.push({v:(m.passengers_covered!=null?+m.passengers_covered:(+m.passengers||0))/days*dim,partial:true,days,dim});
-  }
-  return out.some(x=>x.v!=null)?out:null;
+  return EHGlossary.roadPaxMonthSeries(h,year,months);
 }
 
 /* Нүүрний 02-р хэсэг «7 хоногийн тайлан» — weekReport/weekLag/weekAxis/weekBars нь
@@ -15202,7 +15030,7 @@ class Component extends DCLogic {
     // (0..months-1) буцаана; air амьд үед бодит тоогоор, эс үгүй бол
     // хуучин статик 12 сарын массиваар (аль аль нь ижил уртад тайрагдана).
     const cw=this.compareWindow();
-    const months=cw.months, lastIdx=months-1;
+    const months=cw.months;
     // verified бус (эх сурвалжгүй) салбарыг ХАВТГАЙ 0 гэж үзнэ — тусгай
     // стиль (тасархай зураас, саарал) шаардлагагүй, 0 бол зүгээр л
     // одоогийн бодит байдал (H5).
@@ -15262,45 +15090,21 @@ class Component extends DCLogic {
       return x&&x.partial?' ('+stxt('compare_window.partial_tip','{d}/{m} хоног · хоногийн дунджаар').replace('{d}',x.days).replace('{m}',x.dim)+')':''; };
     /* "Бодит өгөгдөлтэй" гэдэг нь registry-д бүртгэгдсэн + цуваа ИРСЭН. */
     const liveI06=(k)=>verifiedSet.has(k)&&(k==='air'?!!airI06:k==='road'?roadOk:!!liveSeriesFor(k));
-    const W=620,Hh=200,pL=40,pR=62,pT=14,pB=26;
     /* EMP: цуваа ирээгүй салбарыг (ус — эх сурвалжгүй) ХАВТГАЙ 0 шугамаар зурахгүй; эрэмбэд
        «мэдээлэл алга» гэж ил үлдэнэ (r06). Чип нь шугамыг нуух/харуулах тул тэдэнд ч гарахгүй. */
     const all=ckeys.filter(k=>!off.includes(k)&&liveI06(k));
-    const vals=all.length?all.flatMap(k=>trendI06(k)).filter(v=>v!=null):[60,130];
-    const vmax=Math.ceil(Math.max.apply(null,vals)/10)*10, vmin=Math.floor(Math.min.apply(null,vals)/10)*10;
-    const rng=(vmax-vmin)||1, stepX=(W-pL-pR)/Math.max(1,lastIdx);
-    const Y=(v)=>pT+(Hh-pT-pB)*(1-(v-vmin)/rng);
     const iUnit=stxt('chart.index_unit','индекс');
-    /* Авто тээврийн дутуу сар — hollow цэг + «N/M хоног» tooltip (DG: дутуу ≠ бүтэн);
-       сүүлийн цэг дутуу бол төгсгөлийн цэг өөрөө hollow. */
-    const comparePartialPts=[];
-    const compareLines=all.map(k=>{
-      const t=trendI06(k), li=lastOf(t);
-      // Мэдээгүй сар (null) — шугам ТАСАРНА (M), 0 гэж зурахгүй.
-      let d='', pen=false;
-      t.forEach((v,i)=>{ if(v==null){ pen=false; return; }
-        d+=(pen?' L':(d?' M':'M'))+(pL+i*stepX).toFixed(1)+','+Y(v).toFixed(1); pen=true; });
-      const endPartial=k==='road'&&!!(roadSer&&roadSer[li]&&roadSer[li].partial);
-      if(k==='road'&&roadSer) t.forEach((v,i)=>{ if(v!=null&&i!==li&&roadSer[i].partial)
-        comparePartialPts.push({cx:(pL+i*stepX).toFixed(1),cy:Y(v).toFixed(1),color:NEON[k],
-          tip:SECTORS[k].label+' — '+MONTHS[i]+': '+Math.round(v)+' '+iUnit+partialTip(i)}); });
-      return {key:k,color:NEON[k],tip:SECTORS[k].label+' — '+(li!==lastIdx?MONTHS[li]+': ':'')+Math.round(t[li])+' '+iUnit+(k==='road'?partialTip(li):''),
-        // H5: verified эсэхээс үл хамааран бүх шугам ижил (тасралтгүй)
-        // стильтэй — 0 бол зүгээр нэг үнэн тоо, тусгай ялгаа шаардлагагүй.
-        dash:'none',
-        eFill:endPartial?'var(--surface)':NEON[k],eStroke:endPartial?NEON[k]:'#FFFFFF',
-        endLabel:Math.round(t[li]),endLabelY:(Y(t[li])-6.5).toFixed(1),endLabelX:(pL+li*stepX+7).toFixed(1),
-        d:d||('M'+pL+','+Y(0).toFixed(1)),
-        ex:(pL+li*stepX).toFixed(1),ey:Y(t[li]).toFixed(1)};
-    });
-    // declutter endpoint labels: keep >=12px apart
-    const ordered=compareLines.slice().sort((a,b)=>parseFloat(a.endLabelY)-parseFloat(b.endLabelY));
-    let prevY=-99;
-    ordered.forEach(l=>{
-      let y=parseFloat(l.endLabelY);
-      if(y-prevY<12) y=prevY+12;
-      l.endLabelY=y.toFixed(1); prevY=y;
-    });
+    /* CH: EHChartKit.compare — админы i06 preview-тэй НЭГ хувиргалт (тэнхлэг 1·2·2.5·5 алхмаар,
+       суурь 100 нь тэнхлэгт багтана, төгсгөлийн утга баруун захад давхцахгүй). Авто тээврийн
+       дутуу сар — hollow цэг + «N/M хоног» tooltip (DG: дутуу ≠ бүтэн); мэдээгүй сар (null) —
+       шугам ТАСАРНА, 0 гэж зурахгүй. Шугамгүй бол frame зурахгүй («мэдээлэл алга»). */
+    const compareFr=typeof EHChartKit==='undefined'?null:EHChartKit.compare({
+      labels:MONTHS.slice(0,months),unit:iUnit,base:100,
+      est:stxt('chart.legend_estimated','Цоорхойтой сар (хоногийн дунджаар)'),
+      lines:all.map(k=>{ const t=trendI06(k), isRoad=k==='road'&&!!roadSer;
+        return {key:k,label:SECTORS[k].label,color:NEON[k],vals:t,
+          hollow:t.map((v,i)=>isRoad&&!!(roadSer[i]&&roadSer[i].partial)),
+          note:t.map((v,i)=>isRoad?partialTip(i):'')}; })});
     const cRank=ckeys.map(k=>{
       const t=trendI06(k,airR06),a=t[0],b=t[lastOf(t)];
       // a===0 үед (0)-той харьцуулж хувь ТООЦООХГүй — 0÷0 тодорхойгүй
@@ -15337,24 +15141,11 @@ class Component extends DCLogic {
     const showLeadLag=verifiedRank.length>=2;
     const cLead=verifiedRank[0]||{label:'',ch:0,color:'#828EA8'};
     const cLag=verifiedRank[verifiedRank.length-1]||{label:'',ch:0,color:'#828EA8'};
-    const compareY=[0,0.5,1].map(fr=>({label:Math.round(vmin+rng*fr),y:(pT+(Hh-pT-pB)*(1-fr)).toFixed(1),fy:(pT+(Hh-pT-pB)*(1-fr)-7).toFixed(1)}));
-    const compareBaseShow=(100>=vmin&&100<=vmax);
-    const compareBaseY=Y(100).toFixed(1);
-    /* Шошгийг шугамын ДЭЭР байрлуулна — foreignObject өөрөө clip хийдэг тул
-       transform-оор өргөвөл шошго нуугдана (харагдацын аудит: text-overflow). */
-    const compareBaseYLabel=Math.max(0,Y(100)-15).toFixed(1);
-    // 5 тэмдэглэгээ хүртэл жигд тараана, сүүлийн цэгийг үргэлж оруулна.
-    const tickN=Math.min(5,months);
-    const tickStep=tickN>1?lastIdx/(tickN-1):0;
-    const compareX=Array.from({length:tickN},(_,i)=>Math.round(i*tickStep))
-      .filter((v,i,arr)=>arr.indexOf(v)===i)
-      .map(idx=>({label:(idx+1)+'-р сар',fx:(pL+idx*stepX-20).toFixed(1),fy:(Hh-pB+6).toFixed(1)}));
     const compareChips=ckeys.filter(k=>liveI06(k)).map(k=>({key:k,label:SECTORS[k].label,glyph:GLYPH[k],
       toggle:()=>{ const s=new Set(off); if(s.has(k)) s.delete(k); else s.add(k); this.setState({compareOff:Array.from(s).join(',')}); },
       style:'cursor:pointer;display:flex;align-items:center;gap:7px;border-radius:999px;padding:7px 14px;font-size:12.5px;font-family:inherit;white-space:nowrap;transition:.16s var(--ease);'
         +(off.includes(k)?'border:1px solid var(--line);background:transparent;color:var(--ink3);':'border:1.5px solid '+NEON[k]+';background:'+NEON[k]+'1c;color:var(--ink);font-weight:600;')
     }));
-    const compareGeom={axisX1:pL,axisX2:W-pR,axisY:(Hh-pB).toFixed(1),padT:pT};
     const compareLastLabel=cw.lastLabel;
 
     const aiChips=AI_QA.map((qa,i)=>({q:qa.q,pick:()=>this.askAi(qa.q,i),
@@ -15406,7 +15197,7 @@ class Component extends DCLogic {
       w2pMark:section02Marks.w2p,w2pbMark:section02Marks.w2pb,w2pxMark:section02Marks.w2px,
       w2cMark:section02Marks.w2c,w2cbMark:section02Marks.w2cb,w2cxMark:section02Marks.w2cx,
       weekCargoBars:wCargo.bars,weekCargoBase:wCargo.base,weekCargoLegend:wCargo.legend,weekCargoYTicks:wCargo.yTicks,weekCargoDonut:wCargo.donut,weekCargoStats:wCargo.stats,weekCargoPlan:wCargo.plan,weekCargoUnit:wCargo.unit,weekCargoTotal:wCargo.total,weekCargoDelta:wCargo.delta,weekCargoDeltaCols:String(Math.max(1,wCargo.delta.length)),weekCargoAirOnlyNote:wCargo.airOnlyNote,
-      compareLines,comparePartialPts,compareY,compareX,compareChips,compareGeom,compareRank,compareBaseShow,compareBaseY,compareBaseYLabel,compareLastLabel,
+      compareFr,compareEmpty:compareFr?'':stxt('status.no_data','мэдээлэл алга'),compareChips,compareRank,compareLastLabel,
       showLeadLag,
       f04:{open:!!this.state.f04Open,toggle:()=>this.setState(s=>({f04Open:!s.f04Open})),
         btnStyle:'cursor:pointer;font-family:inherit;width:26px;height:26px;border-radius:8px;flex-shrink:0;font-size:12px;line-height:1;'+(this.state.f04Open?'border:1px solid #7C5CF0;background:#7C5CF01a;color:#7C5CF0;':'border:1px solid var(--line);background:var(--surface);color:var(--ink3);'),
@@ -15728,18 +15519,11 @@ class Component extends DCLogic {
       (!dsSec._liveSeriesDs||dsSec._liveSeriesDs===dsel.name)))&&
       Array.isArray(dsSec.c1d)&&dsSec.c1d.some(v=>+v>0);
     const dsTrend=dsHasTrend?buildTrendChart(dsSec.c1d,0,dsSec._partialValue,dsel.source==='railPax',dsSec._partialDay):null;
-    /* CH: тогтмол өндөртэй frame. Дутуу сар — тусдаа hollow цэг + богино шошго (DG-P). */
-    if(dsTrend){
-      const tc=NEON[dsel.sector]||'var(--ink2)', T=dsTrend;
-      T.fr=chFrame({...T,dotPts:T.dotPts.concat(T.hasPartial?[{cx:T.partialCx,cy:T.partialCy,tip:T.partialLabel,hollow:true}]:[])},
-        {line:{stroke:tc,sw:2.4},dotColor:tc,minW:330,n:dsSec.c1d.length,area:{fill:tc,fop:.1},
-          band:T.band?{fill:tc,fop:.13}:null,fline:T.fline?{stroke:tc,sw:2,dash:'6 5'}:null,
-          extraPaths:T.fline?[{d:'M'+T.fcSplitX+','+T.padT+' L'+T.fcSplitX+','+T.axisY,stroke:'var(--line2)',sw:1,dash:'2 4'}]:[],
-          /* Дутуу сарын богино шошго («10-р сар 1–28 · 54 · дутуу») hollow дээжийн ЛЕГЕНДЭД —
-             цэгийн хажууд бичихэд таамгийн шугамтай давхцаж байв (2026-10-28 зураг). */
-          legend:(T.legend||[]).map(l=>{const kind=l.lineStyle==='dashed'?'dash':l.lineStyle==='dotted'?'hollow':'line';
-            return {label:kind==='hollow'&&T.partialShort?T.partialShort:l.label,color:tc,kind};})});
-    }
+    /* CH: тогтмол өндөртэй frame — нүүрийн t05 ба админы preview-тэй НЭГ хувиргалт (EHChartKit.trendFrame).
+       Дутуу сар — тусдаа hollow цэг, богино шошго («10-р сар 1–28 · 54 · дутуу») нь ЛЕГЕНДЭД —
+       цэгийн хажууд бичихэд таамгийн шугамтай давхцаж байв (2026-10-28 зураг). */
+    if(dsTrend&&typeof EHChartKit!=='undefined')
+      dsTrend.fr=EHChartKit.trendFrame(dsTrend,{color:NEON[dsel.sector]||'var(--ink2)',n:dsSec.c1d.length});
     /* DG-P: трендийн картын хугацаа — c1d-ийн БОДИТ бичлэгтэй сарууд (c1dYear-ээр).
        Дутуу сар цуваанаас хасагдсан бол тэмдэглэнэ. Цуваа хоосон бол «мэдээлэл алга». */
     const dsTrendKeys=(dsHasTrend&&dsSec.c1dYear)?dsSec.c1d.map((v,i)=>(+v>0?dsSec.c1dYear+'-'+String(i+1).padStart(2,'0'):null)).filter(Boolean):[];
@@ -17956,21 +17740,14 @@ class Component extends DCLogic {
     trend.noData=!t05Verified;
     trend.noDataNote=stxt('status.no_series','чиг хандлагын цуваа алга');
     if(t05Verified) trend.showForecast=true;
-    /* Цоорхойтой сарын цэг: утга нь хоногийн дунджаар сарын эквивалент — tooltip-д ИЛ (HV/DG) */
-    if(t05Verified&&!t05Ser&&Array.isArray(s._c1dPartials)){
-      const off=win.length>1?mfr-1:0;
-      (trend.dotPts||[]).forEach((dp,i)=>{ const p=s._c1dPartials[i+off];
-        if(!p) return;
-        dp.tip+=' ('+stxt('compare_window.partial_tip','{d}/{m} хоног · хоногийн дунджаар')
-          .replace('{d}',p.days).replace('{m}',p.dim)+')';
-        /* Тасархай цагираг = тооцоолсон (бүтэн бус) сар — бодит бүтэн сараас нүдээр ялгарна */
-        dp.r='3.4'; dp.dash='2 2'; });
-      /* Оргил нь тооцоолсон сар бол «≈» — эквивалентыг бүртгэгдсэн дүн мэт харуулахгүй */
-      const pk=trend.peak, pi=pk?MONTHS.indexOf(String(pk.label).split(' · ')[0]):-1;
-      if(pi>=0&&s._c1dPartials[pi]) pk.value='≈'+pk.value;
-      if(s._c1dPartials.slice(off,off+(trend.dotPts||[]).length).some(Boolean)) trend.legend=(trend.legend||[]).concat([{key:'est',
-        label:stxt('chart.legend_estimated','Цоорхойтой сар (хоногийн дунджаар)'),lineStyle:'dotted'}]);
-    }
+    /* CH: EHChartKit.trendFrame — админы t05 preview-тэй НЭГ хувиргалт (CLAUDE.md: preview = сайт).
+       Цоорхойтой сарын цэг: утга нь хоногийн дунджаар сарын эквивалент — hollow цэг, tooltip-д
+       «N/M хоног» ИЛ (HV/DG), оргил нь тооцоолсон сар бол «≈», легендэд нэг мөр. */
+    const t05Est=(t05Verified&&!t05Ser&&Array.isArray(s._c1dPartials))?{partials:s._c1dPartials,off:win.length>1?mfr-1:0,
+      tip:stxt('compare_window.partial_tip','{d}/{m} хоног · хоногийн дунджаар'),
+      label:stxt('chart.legend_estimated','Цоорхойтой сар (хоногийн дунджаар)')}:null;
+    trend.fr=(t05Verified&&typeof EHChartKit!=='undefined')?EHChartKit.trendFrame(trend,{color,est:t05Est,
+      peak:stxt('chart.peak','оргил'),avg:!!this.state.f05Avg}):null;
     /* DG-P: t05-ийн хугацаа — зурсан цувааны БОДИТ бичлэгтэй сарууд (c1dYear-ээр).
        win нь 1 сараас цөөн бол бүтэн c1d зурагддаг (дээрх buildTrendChart-тай ижил). */
     const t05Src=t05Ser||(win.length>1?win:s.c1d), t05Off=(!t05Ser&&win.length>1)?mfr-1:0;

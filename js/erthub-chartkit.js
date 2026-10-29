@@ -175,7 +175,9 @@
     var dots = (o.dots || []).map(function (d) {
       var c = d.color || 'var(--ink2)';
       return { left: pct(px(+d.x)), top: pct(py(+d.y)), tip: d.tip || '',
-        bg: d.hollow ? 'var(--surface)' : c, bd: c, cls: 'eh-ch-dot' + (d.hollow ? ' eh-ch-dot-o' : '') };
+        bg: d.hollow ? 'var(--surface)' : c, bd: c,
+        /* hover — олон шугамын дунд цэг: зөвхөн хулгана очиход тодорно (tooltip хэвээр, шугам цэвэр) */
+        cls: 'eh-ch-dot' + (d.hollow ? ' eh-ch-dot-o' : '') + (d.hover && !d.hollow ? ' eh-ch-dot-h' : '') };
     });
     /* Утгын шошго цэгийн дээр төвлөрнө; plot-ын ирмэгт ойр бол дотогш зэрэгцэнэ (карт тасдахгүй) */
     var vals = (o.vals || []).map(function (v) {
@@ -269,7 +271,143 @@
     });
   }
 
-  var out = { niceStep: niceStep, axis: axis, tickLabel: tickLabel, frame: frame, fromModel: fromModel, thinX: thinX, relabel: relabel };
+  /* ── Нэг загварт олон дуудагч: сайт ба админы preview НЭГ хувиргалт ─────────────────────
+     ЯАГААД: нүүрийн t05/i06-ийг сайт frame-ээр, админы preview өөрийн хялбар шугамаар зурж
+     зөрдөг байв (2026-10-29) — preview ба сайт зөрөх нь энэ төслийн хамгийн их давтагдсан
+     алдаа (CLAUDE.md). Доорх хоёр функц өгөгдлийг ДУУДАГЧААС авч, дүрс/шошго/tooltip-ийг
+     НЭГ дүрмээр гаргана — хоёр тал ижил оролттой бол ижил график. */
+
+  var isNum = function (v) { return v != null && v !== '' && isFinite(+v); };
+  var shallow = function (m) { var o = {}; for (var k in m) if (Object.prototype.hasOwnProperty.call(m, k)) o[k] = m[k]; return o; };
+
+  /* Сарын чиг хандлага (EHGlossary.trendModel-ийн гаралт) → frame. Нүүрийн t05, датасэтийн
+     «чиг хандлага» ба админы t05 preview. o:
+       color   — шугам/цэг/талбайн өнгө
+       n, size — ангиллын тоо (аудит), plot-ын өндөр
+       est     — {partials:[{days,dim}|null], off, tip:'{d}/{m} …', label} цоорхойтой сарууд:
+                 hollow цэг, tooltip-д «(N/M хоног …)», оргил «≈», легендэд нэг мөр (DG: дутуу ≠ бүтэн)
+       peak    — үг («оргил») өгвөл оргил цэгийн дээр «оргил N» шошго
+       avg     — true бол дундаж шугам (тасархай) + «дундаж N» шошго
+     Таамгийн шугам/зурвас нь модель өөрөө (fline/band хоосон бол зурахгүй). Дутуу (одоогийн) сар —
+     тусдаа hollow цэг, богино шошго нь легендэд (цэгийн хажууд бичвэл таамгийн шугамтай давхцана). */
+  function trendFrame(T, o) {
+    if (!T) return null;
+    o = o || {};
+    var c = o.color || 'var(--ink2)';
+    var est = (o.est && Array.isArray(o.est.partials)) ? o.est : null, eoff = est ? (est.off || 0) : 0;
+    var pkI = -1;
+    var dots = (T.dotPts || []).map(function (d, i) {
+      var p = est ? est.partials[i + eoff] : null;
+      if (pkI < 0 && T.peak && d.cx === T.peak.cx && d.cy === T.peak.cy) pkI = i;
+      return { cx: d.cx, cy: d.cy, color: c, hollow: !!p,
+        tip: d.tip + (p ? ' (' + String(est.tip || '{d}/{m}').replace('{d}', p.days).replace('{m}', p.dim) + ')' : '') };
+    });
+    var hasEst = dots.some(function (d) { return d.hollow; });
+    if (T.hasPartial) dots.push({ cx: T.partialCx, cy: T.partialCy, tip: T.partialLabel, color: c, hollow: true });
+    var extra = [], vals = [];
+    if (T.fline) extra.push({ d: 'M' + T.fcSplitX + ',' + T.padT + ' L' + T.fcSplitX + ',' + T.axisY, stroke: 'var(--line2)', sw: 1, dash: '2 4' });
+    if (o.avg && isNum(T.avgY)) {
+      extra.push({ d: 'M' + T.axisX1 + ',' + T.avgY + ' L' + T.axisX2 + ',' + T.avgY, stroke: 'var(--ink3)', sw: 1, dash: '3 4' });
+      vals.push({ x: +T.axisX1, y: +T.avgY, label: T.avgLabel, anchor: 'start' });
+    }
+    if (o.peak && pkI >= 0) {
+      /* Оргил нь тооцоолсон (цоорхойтой) сар бол «≈» — эквивалентыг бүртгэгдсэн дүн мэт харуулахгүй */
+      vals.push({ x: +T.peak.cx, y: +T.peak.cy, label: o.peak + ' ' + (est && est.partials[pkI + eoff] ? '≈' : '') + T.peak.value });
+    }
+    var legend = (T.legend || []).map(function (l) {
+      var kind = l.lineStyle === 'dashed' ? 'dash' : l.lineStyle === 'dotted' ? 'hollow' : 'line';
+      return { label: l.key === 'partial' && T.partialShort ? T.partialShort : l.label, color: c, kind: kind };
+    }).concat(hasEst && est.label ? [{ label: est.label, color: c, kind: 'hollow' }] : []);
+    var m = shallow(T); m.dotPts = dots;
+    return fromModel(m, { line: { stroke: c, sw: 2.4 }, dotColor: c, size: o.size, n: o.n != null ? o.n : (T.dotPts || []).length,
+      area: { fill: c, fop: 0.1 }, band: T.band ? { fill: c, fop: 0.13 } : null, fline: T.fline ? { stroke: c, sw: 2, dash: '6 5' } : null,
+      extraPaths: extra, vals: vals, legend: legend });
+  }
+
+  /* Олон салбарын индексийн шугам (нүүрийн i06 «Салбар хоорондын харьцуулалт») → frame. o:
+       labels — X ангилал (сарын нэр), lines [{key,label,color,vals:[v|null], hollow:[bool], note:[str]}]
+       unit   — tooltip-ийн нэгж («индекс»), base — суурь утга (100; тасархай шугам, тэнхлэгт багтана)
+       est    — hollow цэгийн легенд, size
+     Мэдээгүй сар (null) — шугам ТАСАРНА (M), 0 гэж зурахгүй. Цэг бүр tooltip-тэй «Нэр — сар: N индекс»;
+     төгсгөлийн цэг тод, дунд цэг hover-оор (eh-ch-dot-h), дутуу сар hollow. Төгсгөлийн утга (Math.round)
+     plot-ын БАРУУН захад шугамын өнгөөр, давхцахгүй сийрүүлнэ (fr.ends). Шугамгүй бол null (EMP). */
+  function compare(o) {
+    o = o || {};
+    var labels = o.labels || [], N = labels.length;
+    var lines = (o.lines || []).filter(function (l) { return l && (l.vals || []).some(isNum); });
+    if (!N || !lines.length) return null;
+    var base = isNum(o.base) ? +o.base : null, all = base != null ? [base] : [];
+    lines.forEach(function (l) { l.vals.forEach(function (v) { if (isNum(v)) all.push(+v); }); });
+    var ax = axis(Math.min.apply(null, all), Math.max.apply(null, all));
+    var X = function (i) { return N > 1 ? i / (N - 1) * 1000 : 500; };
+    var Y = function (v) { return 1000 - (v - ax.lo) / ((ax.hi - ax.lo) || 1) * 1000; };
+    var paths = [], dots = [], ends = [], hasHollow = false;
+    if (base != null) paths.push({ d: 'M0,' + num(Y(base)) + ' L1000,' + num(Y(base)), stroke: 'var(--ink3)', sw: 1, dash: '3 4' });
+    lines.forEach(function (l) {
+      var d = '', pen = false, li = -1;
+      l.vals.forEach(function (v, i) {
+        if (!isNum(v)) { pen = false; return; }
+        d += (pen ? ' L' : (d ? ' M' : 'M')) + num(X(i)) + ',' + num(Y(+v)); pen = true; li = i;
+      });
+      paths.push({ d: d, stroke: l.color, sw: 2.2 });
+      l.vals.forEach(function (v, i) {
+        if (!isNum(v)) return;
+        var hol = !!(l.hollow && l.hollow[i]);
+        if (hol) hasHollow = true;
+        dots.push({ x: X(i), y: Y(+v), color: l.color, hollow: hol, hover: i !== li,
+          tip: l.label + ' — ' + labels[i] + ': ' + Math.round(+v) + (o.unit ? ' ' + o.unit : '') + ((l.note && l.note[i]) || '') });
+      });
+      ends.push({ t: Y(+l.vals[li]) / 10, label: String(Math.round(+l.vals[li])), color: l.color });
+    });
+    /* Төгсгөлийн шошго ≥7.5% зайтай (гар утасны 164px plot-д ≈12px) — дээрээс доош түлхэж, доод
+       ирмэгээс хэтэрвэл бүгдийг дээш шилжүүлнэ. */
+    ends.sort(function (a, b) { return a.t - b.t; });
+    var prev = -1e9;
+    ends.forEach(function (e) { if (e.t - prev < 7.5) e.t = prev + 7.5; prev = e.t; });
+    var over = ends.length ? ends[ends.length - 1].t - 100 : 0;
+    if (over > 0) ends.forEach(function (e) { e.t -= over; });
+    var fr = frame({ size: o.size, n: N,
+      y: ax.ticks.map(function (v) { return { y: Y(v), label: tickLabel(v, ax) }; }),
+      x: labels.map(function (lb, i) { return { x: X(i), label: lb }; }),
+      paths: paths, dots: dots,
+      legend: lines.map(function (l) { return { label: l.label, color: l.color, kind: 'line' }; })
+        .concat(hasHollow && o.est ? [{ label: o.est, color: 'var(--ink3)', kind: 'hollow' }] : []) });
+    fr.cls += ' eh-ch-y2';
+    fr.ends = ends.map(function (e) { return { top: pct(e.t), label: e.label, color: e.color }; });
+    fr.base = base != null ? { top: pct(Y(base) / 10) } : null;
+    return fr;
+  }
+
+  /* Frame-ийг HTML мөр болгоно — dc-runtime-гүй хуудас (админы preview) сайтын темплейтийн FRAME
+     хэсэгтэй ЯГ ижил бүтэц/анги зурна (index.html: .eh-ch-lg → .eh-ch-plot → svg → цэг → утга → X).
+     esc — HTML escape. extraLegend — легендийн төгсгөлд нэмэх HTML (жиш. суурь шугамын тайлбар). */
+  function html(fr, esc, extraLegend) {
+    if (!fr) return '';
+    esc = esc || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); };
+    var a = function (s) { return esc(s == null ? '' : s); };
+    var lg = (fr.hasLegend || extraLegend) ? '<div class="eh-ch-lg">' + fr.legend.map(function (l) {
+      return '<span><i class="' + a(l.sw) + '" style="' + a(l.style) + '"></i>' + a(l.label) + '</span>'; }).join('') + (extraLegend || '') + '</div>' : '';
+    return '<div class="' + a(fr.cls) + '" data-eh-chart="' + a(fr.n) + '">' + lg + '<div class="eh-ch-plot">' +
+      fr.gy.map(function (t) { return '<div class="' + a(t.cls) + '" style="top:' + a(t.top) + ';"><span>' + a(t.label) + '</span></div>'; }).join('') +
+      fr.gy2.map(function (t) { return '<div class="eh-ch-yr" style="top:' + a(t.top) + ';color:' + a(fr.y2c) + ';">' + a(t.label) + '</div>'; }).join('') +
+      (fr.ends || []).map(function (e) { return '<div class="eh-ch-yr eh-ch-end" style="top:' + a(e.top) + ';color:' + a(e.color) + ';">' + a(e.label) + '</div>'; }).join('') +
+      '<svg class="eh-ch-svg" viewBox="' + a(fr.vb) + '" preserveAspectRatio="none">' +
+      fr.rects.map(function (r) { return '<rect x="' + a(r.x) + '" y="' + a(r.y) + '" width="' + a(r.w) + '" height="' + a(r.h) + '" rx="' + a(r.rx) +
+        '" fill="' + a(r.fill) + '" fill-opacity="' + a(r.op) + '" stroke="' + a(r.stroke) + '" stroke-dasharray="' + a(r.dash) +
+        '" vector-effect="non-scaling-stroke"><title>' + a(r.tip) + '</title></rect>'; }).join('') +
+      fr.paths.map(function (p) { return '<path d="' + a(p.d) + '" fill="' + a(p.fill) + '" fill-opacity="' + a(p.fop) + '" stroke="' + a(p.stroke) +
+        '" stroke-width="' + a(p.sw) + '" stroke-dasharray="' + a(p.dash) + '" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"></path>'; }).join('') +
+      '</svg>' +
+      fr.dots.map(function (d) { return '<i class="' + a(d.cls) + '" style="left:' + a(d.left) + ';top:' + a(d.top) + ';background:' + a(d.bg) +
+        ';border-color:' + a(d.bd) + ';" data-tip="' + a(d.tip) + '"></i>'; }).join('') +
+      fr.vals.map(function (v) { return '<div class="' + a(v.cls) + '" style="left:' + a(v.left) + ';top:' + a(v.top) + ';">' + a(v.label) + '</div>'; }).join('') +
+      fr.gx.map(function (x) { return '<div class="' + a(x.cls) + '" style="left:' + a(x.left) + ';">' + a(x.label) + '</div>'; }).join('') +
+      '</div></div>';
+  }
+
+  var out = { niceStep: niceStep, axis: axis, tickLabel: tickLabel, frame: frame, fromModel: fromModel, thinX: thinX, relabel: relabel,
+    trendFrame: trendFrame, compare: compare, html: html };
   root.EHChartKit = out;
   if (typeof module !== 'undefined' && module.exports) module.exports = out;
 })(typeof window !== 'undefined' ? window : this);

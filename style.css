@@ -246,95 +246,11 @@ body{margin:0;}
 @keyframes barGrow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
 @keyframes glowPulse{0%,100%{opacity:.35;}50%{opacity:.85;}}
 
-/* Графикийн hover tooltip (js/erthub-tip.js). Хоёр темд ижил харагдахын тул
-   тогтмол өнгө: tooltip нь body-д байдаг, .eh-app-ийн theme хувьсагч хүрэхгүй. */
-.eh-tip {
-  position: fixed; z-index: 9999; left: 0; top: 0; pointer-events: none;
-  max-width: min(280px, calc(100vw - 16px));
-  padding: 8px 12px; border-radius: 10px;
-  background: #0f1b2d; color: #f4f7fb;
-  box-shadow: 0 8px 24px rgba(8,16,32,.28), 0 0 0 1px rgba(255,255,255,.08);
-  font: 600 12.5px/1.35 inherit; font-family: inherit;
-  display: flex; flex-direction: column; gap: 2px;
-}
-.eh-tip-n { overflow-wrap: anywhere; }
-.eh-tip-v { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #9cc4ff; }
+/* Графикийн hover tooltip (.eh-tip) — chart.css-д (админы preview ч ачаална). */
 
 /* Агаарын дэлгэрэнгүй, 2-р мөр: улсын жагсаалт (зүүн, 1.5fr) + ОУ/дотоодын харьцаа (баруун, 1fr)
    — 1-р мөртэй ИЖИЛ багана тул босоо хил нэг шугаманд. Урт жагсаалт өндрөө хязгаарлаж дотроо
    гүйлгэнэ; хажуугийн богино карт мөрийн өндрийг дүүргэж агуулгаа босоо төвд барина. */
 .eh-cap-list { max-height: 400px; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }
 
-/* ── ЧАРТЫН СТАНДАРТ (CH) — js/erthub-chartkit.js-ийн нэгдсэн frame ─────────────────────
-   Plot нь ТОГТМОЛ өндөртэй (s/m/l), өргөн нь картаа дүүргэнэ; svg нь зөвхөн дүрс
-   (preserveAspectRatio="none"), бүх текст/цэг HTML давхарга дээр → үсэг ямар ч өргөнд
-   10.5px хэвээр (өмнө нь viewBox-оор ×1.65 томордог байв). docs/chart-standard.md */
-.eh-ch { position: relative; font-family: 'JetBrains Mono', monospace; }
-.eh-ch-plot { position: relative; height: 196px; margin: 10px 6px 26px 48px; container-type: inline-size; }
-.eh-ch-s .eh-ch-plot { height: 138px; }
-.eh-ch-l .eh-ch-plot { height: 232px; }
-.eh-ch-y2 .eh-ch-plot { margin-right: 48px; }
-.eh-ch-noy .eh-ch-plot { margin-left: 6px; }
-.eh-ch-svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; display: block; }
-.eh-ch-gl { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--line); }
-.eh-ch-gl.eh-ch-base { border-top-color: var(--line2); }
-.eh-ch-gl > span { position: absolute; right: 100%; top: 0; transform: translateY(-50%); padding-right: 8px;
-  font-size: 10.5px; line-height: 1; color: var(--ink3); white-space: nowrap; }
-.eh-ch-yr { position: absolute; left: 100%; transform: translateY(-50%); padding-left: 8px;
-  font-size: 10.5px; line-height: 1; white-space: nowrap; }
-.eh-ch-xl { position: absolute; top: 100%; transform: translateX(-50%); margin-top: 8px;
-  font-size: 10.5px; line-height: 1.1; color: var(--ink3); white-space: nowrap; }
-.eh-ch-vl { position: absolute; transform: translate(-50%, -100%); margin-top: -5px;
-  font-size: 10.5px; line-height: 1; color: var(--ink2); font-weight: 600; white-space: nowrap; pointer-events: none; }
-.eh-ch-vl-e { transform: translate(-100%, -100%); margin-left: -6px; }
-.eh-ch-vl-s { transform: translate(0, -100%); margin-left: 6px; }
-.eh-ch-dot { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%;
-  border: 1.5px solid; box-sizing: border-box; box-shadow: 0 0 0 1.5px var(--surface); cursor: default; }
-.eh-ch-dot-o { width: 8px; height: 8px; margin: -4px 0 0 -4px; border-width: 2px; }
-.eh-ch-dot:hover { transform: scale(1.45); }
-.eh-ch-svg rect { transition: fill-opacity .15s ease; }
-.eh-ch-svg rect:hover { fill-opacity: 1; }
-/* Легенд — график ДЭЭР, дээж нь тэмдэгтэй яг ижил */
-.eh-ch-lg { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 8px; font-family: inherit;
-  font-size: 11.5px; line-height: 1.3; color: var(--ink2); }
-.eh-ch-lg > span { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
-.eh-ch-sw { flex-shrink: 0; display: inline-block; }
-.eh-ch-sw-bar { width: 10px; height: 10px; border-radius: 3px; }
-.eh-ch-sw-line { width: 16px; height: 2.5px; border-radius: 2px; }
-.eh-ch-sw-dash { width: 16px; height: 0; border-top: 2px dashed; }
-.eh-ch-sw-dot { width: 8px; height: 8px; border-radius: 50%; }
-.eh-ch-sw-hollow { width: 8px; height: 8px; border-radius: 50%; border: 2px solid; box-sizing: border-box; }
-.eh-ch-note { font-family: inherit; font-size: 11.5px; line-height: 1.5; color: var(--ink3); margin-top: 2px; }
-/* Treemap — HTML хайрцаг, тогтмол өндөр (svg viewBox-оор томрохгүй) */
-/* Өгөгдөлгүй график (EMP): хоосон тэнхлэг биш — plot-ын өндөртэй, төвд нэг мөр тайлбар */
-.eh-ch-empty { display: flex; align-items: center; justify-content: center; text-align: center; height: 196px; padding: 0 18px;
-  border: 1px dashed var(--line2); border-radius: 12px; font-size: 12.5px; line-height: 1.6; color: var(--ink3); }
-.eh-tm { position: relative; height: 260px; border-radius: 12px; overflow: hidden; }
-.eh-tm-box { position: absolute; box-sizing: border-box; border: 2px solid var(--surface); border-radius: 8px;
-  padding: 8px 10px; overflow: hidden; color: #fff; cursor: pointer; transition: filter .15s ease; }
-.eh-tm-box:hover { filter: brightness(1.07); }
-/* Нарийн хайрцагт шошго багтахгүй — нууж, hover tooltip-оор (шошго таслагдаж «11…» болохоос дээр) */
-.eh-tm-box { container-type: inline-size; }
-@container (max-width: 63.98px) { .eh-tm-box > b, .eh-tm-box > span { display: none; } }
-.eh-tm-box b { display: block; font-size: 13px; font-weight: 600; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.eh-tm-box span { display: block; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .92; }
-/* X шошгын сийрүүлэлт — plot-ын бодит өргөнөөр (erthub-chartkit.js thinX) */
-@container (max-width: 1399.98px) { .eh-ch-xw1400 { display: none; } }
-@container (max-width: 1039.98px) { .eh-ch-xw1040 { display: none; } }
-@container (max-width: 819.98px) { .eh-ch-xw820 { display: none; } }
-@container (max-width: 639.98px) { .eh-ch-xw640 { display: none; } }
-@container (max-width: 479.98px) { .eh-ch-xw480 { display: none; } }
-@container (max-width: 359.98px) { .eh-ch-xw360 { display: none; } }
-@media (max-width: 1100px) {
-  .eh-ch-l .eh-ch-plot { height: 210px; }
-}
-@media (max-width: 640px) {
-  .eh-ch-plot { height: 164px; margin-left: 44px; }
-  .eh-ch-s .eh-ch-plot { height: 124px; }
-  .eh-ch-l .eh-ch-plot { height: 184px; }
-  .eh-ch-y2 .eh-ch-plot { margin-right: 40px; }
-  .eh-ch-noy .eh-ch-plot { margin-left: 4px; }
-  .eh-ch-gl > span, .eh-ch-yr, .eh-ch-xl, .eh-ch-vl { font-size: 10px; }
-  .eh-tm { height: 220px; }
-  .eh-ch-empty { height: 164px; }
-}
+/* Чартын стандарт (CH) — frame-ийн хэв маяг chart.css-д (админы preview ч ачаална). */
