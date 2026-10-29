@@ -12148,6 +12148,96 @@ async function groupHE() {
     JSON.stringify([A.w2p && A.w2p.legLive, A.w2c && A.w2c.legField, A.dirty]));
 }
 
+/* ── PF. Админы виджет нээх хурд — pvHomeStrip кэш (2026-10-29) ─────────────────
+   Регресс: ls/d05-ийн засварын дэлгэц 6–20 сек царцдаг байв (DG-P25 локал дээр 120 сек
+   хэтэрч унадаг). chromeFields() ~70 замыг зондлож зам бүрт preview-г дахин зурдаг, preview
+   бүр pvHomeStrip()-ийг ~12 удаа дууддаг → EHGlossary.periodStrip (мужийн өдөр бүрээр гүйдэг)
+   нэг нээлтэд 836 (ls) – 1422 (d05) удаа. Одоо pvHomeStrip нь өгөгдөл ба салбарын түлхүүрээр
+   кэштэй (сайтын homeStrip()._hsMemo-тэй ижил). Хугацаа машинаас хамаардаг тул гол шалгуур нь
+   ДУУДЛАГЫН ТОО (гараар бодох фикстур дээр); хөтчийн хугацаа нь өгөөмөр дээд хязгаар (3 сек). */
+async function groupPF() {
+  group('PF. Админы виджет нээх хурд (pvHomeStrip кэш)');
+  const adm = adminScript();
+  const fm = adm.match(/\nvar PV_HS_MEMO=\{\};\r?\nfunction pvHomeStrip\(meas\)\{[\s\S]*?\r?\n\}\r?\n/);
+  check('PF1. pvHomeStrip нь кэштэй (PV_HS_MEMO — өгөгдөл/түлхүүрээр)', !!fm);
+  if (fm) {
+    let n = 0;
+    const G = { dayOf: (s) => String(s).slice(0, 10),
+      homeRange: (p, a) => ({ from: a.slice(0, 4) + '-01-01', to: a, preset: 'ytd' }),
+      periodStrip: (d, o) => { n++; return { from: o.from, to: o.to, measure: o.measure, keys: o.keys.slice(), gaps: o.gaps }; } };
+    const ST = { daily: { by: {}, last: '2026-10-20' }, gaps: null,
+      weekly: { passengers: { week_end: '2026-10-18' }, freight_tonnes: { week_end: '2026-10-11' } } };
+    const SECN = { air: 'Агаар', rail: 'Төмөр зам' };
+    const hs = new Function('EHGlossary', 'ST', 'SECN', fm[0] + 'return pvHomeStrip;')(G, ST, SECN);
+    const a = hs('passengers'), b = hs('passengers');
+    check('PF2. Ижил өгөгдөл → periodStrip НЭГ удаа, ижил объект (муж 01-01 — 10-18, ytd)',
+      n === 1 && a === b && a.from === '2026-01-01' && a.to === '2026-10-18' && a.preset === 'ytd', n + ' ' + JSON.stringify(a));
+    SECN.air = '@@PRB@@'; hs('passengers');
+    check('PF3. Салбарын НЭР (текст) зондоор солигдоход дахин бодохгүй', n === 1, String(n));
+    const f = hs('freight_tonnes');
+    check('PF4. Өөр хэмжүүр → тусдаа бодолт (ачаа 10-11 хүртэл), зорчигчийнх кэштээ',
+      n === 2 && f.measure === 'freight_tonnes' && f.to === '2026-10-11' && hs('passengers') === a && n === 2, n + ' ' + JSON.stringify(f));
+    ST.daily = { by: {}, last: '2026-10-21' }; const c = hs('passengers');
+    check('PF5. ST.daily солигдоход (шинэ ачаалт) дахин бодно', n === 3 && c !== a, String(n));
+    ST.gaps = { road: [{ from: '2026-10-01', to: '2026-10-02' }] }; const g = hs('passengers');
+    check('PF6. Цоорхой (ST.gaps) хожуу ирэхэд дахин бодно', n === 4 && g.gaps === ST.gaps, String(n));
+    ST.weekly = { passengers: { week_end: '2026-10-25' } }; const w = hs('passengers');
+    check('PF7. ST.weekly солигдоход дахин бодно (муж 10-25 хүртэл)', n === 5 && w.to === '2026-10-25', n + ' ' + w.to);
+    SECN.water = 'Усан'; const k = hs('passengers');
+    check('PF8. Салбарын ТҮЛХҮҮР нэмэгдэхэд дахин бодно', n === 6 && k.keys.join(',') === 'air,rail,water', n + ' ' + k.keys);
+    ST.daily = null;
+    check('PF9. Өдрийн мөр алга → null (кэшээс хуучныг буцаахгүй, тоо зохиохгүй)', hs('passengers') === null);
+  }
+  /* Кэшийн объект хуваалцагдана — дуудагч (hs/hsl/ph) түүний талбарт бичвэл дараагийн зурагт наалдана */
+  const mut = adm.match(/\b(hs|hsl|ph)\.[A-Za-z_]+\s*=(?!=)/g) || [];
+  check('PF10. pvHomeStrip-ийн үр дүнг дуудагч өөрчлөхгүй (hs./hsl./ph. руу бичихгүй)', mut.length === 0, mut.join(', '));
+
+  if (!CHROME) { skipped('PF11–PF13 (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
+  const PROBE = `async function(a,w){
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    await sleep(3500);
+    for(let i=0;i<60&&a.querySelector('.pvfeed');i++) await sleep(500);
+    const G=w.EHGlossary, ps=G.periodStrip; let n=0;
+    G.periodStrip=function(){ n++; return ps.apply(this,arguments); };
+    const SEC={ls:'sec-01',d05:'sec-05',t05:'sec-05',w2p:'sec-02'};
+    const line=()=>{ const e=a.querySelector('#pvhost [data-chart-period]'); return e?e.textContent.trim():''; };
+    const open=id=>{ let b,k=0; while((b=a.querySelector('[data-back]'))&&k++<6) b.click();
+      const s=a.querySelector('[data-section="'+SEC[id]+'"]'); if(s) s.click();
+      const c=a.querySelector('[data-widget="'+id+'"]'); n=0;
+      const t0=performance.now(); if(c) c.click();
+      return {ok:!!c,ms:Math.round(performance.now()-t0),calls:n,line:line(),
+        fields:[].slice.call(a.querySelectorAll('.e-fm [data-sf]')).map(e=>e.getAttribute('data-sf'))}; };
+    /* Нэгтгэлийн өдрийн мөр (ST.daily) ирэхийг хүлээнэ — ls-ийн хугацааны мөр гарсан даруй */
+    let first=null;
+    for(let i=0;i<40;i++){ first=open('ls'); if(first.line) break; await sleep(500); }
+    const out={first};
+    Object.keys(SEC).forEach(id=>{ out[id]=open(id); });
+    return out;
+  }`;
+  const srv = serve(), prevSrc = PROBE_SRC;
+  try {
+    PROBE_SRC = '/admin/index.html?fx=1';
+    const R = await runProbe(PROBE, 120000);
+    if (R.__err) { bad('PF11. Хөтчийн проб ажиллав', R.__err); return; }
+    const ids = ['first', 'ls', 'd05', 't05', 'w2p'];
+    const desc = ids.map((id) => id + ' ' + (R[id] ? R[id].ms + 'мс/' + R[id].calls + ' дуудлага' : '—')).join(' · ');
+    check('PF11. Нэгтгэлийн өдрийн мөр ирсэн (ls-ийн хугацааны мөр «Хугацаа: YYYY-01-01 — …»)',
+      /^Хугацаа: \d{4}-01-01 — /.test((R.ls || {}).line || ''), JSON.stringify(R.ls && R.ls.line));
+    check('PF12. Виджет нээхэд periodStrip ≤2 удаа (өмнө нь ls 836, d05 1422) — ' + desc,
+      ids.every((id) => R[id] && R[id].ok && R[id].calls <= 2), desc);
+    check('PF13. ls / d05 / t05 / w2p засварын дэлгэц 3 секундээс хурдан нээгдэнэ — ' + desc,
+      ids.every((id) => R[id] && R[id].ms < 3000), desc);
+    /* Кэш зондыг эвдээгүй: хугацааны мөр ба d05-ийн хугацааны үг засварлагдах талбар хэвээр */
+    const need = { ls: ['chart.period_prefix', 'chart.period_days', 'sectors.air', 'sector_total.unit_pax'],
+      d05: ['chart.period_prefix', 'sector_total.d05_period_ytd', 'sector_total.by_pax'] };
+    const miss = Object.keys(need).reduce((acc, id) => acc.concat(need[id].filter((p) => !((R[id] || {}).fields || []).includes(p)).map((p) => id + ':' + p)), []);
+    check('PF14. Кэштэй ч preview-д нөлөөлдөг зам «Preview-ийн нийтлэг текст»-д хэвээр (ls, d05)', miss.length === 0, miss.join(', '));
+  } finally {
+    PROBE_SRC = prevSrc;
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -12192,10 +12282,11 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=HK')) { await groupHK(); }
   else if (process.argv.includes('--only=HE')) { await groupHE(); }
   else if (process.argv.includes('--only=DA')) { await groupDA(); }
+  else if (process.argv.includes('--only=PF')) { await groupPF(); }
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupAF(); await groupHV(); await groupVIS();
+  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
