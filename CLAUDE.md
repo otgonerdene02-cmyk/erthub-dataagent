@@ -16,7 +16,8 @@
 | `tests/run.js` | Ерөнхий регресс (F = засварлагдалт, G/G3 = нийтлэл, Z = анхны сэтгэгдэл; `--only=Z`, `--only=G3`) |
 | `.claude/skills/first-impression-audit/` | `ux-qa-persona` агентын скилл — дэлгэц бүрийг анх орж буй хүний нүдээр 8 асуултаар шалгах |
 | `js/erthub-tip.js` | Графикийн hover tooltip — бүх `<title>`/`data-tip` тэмдэгт (HV стандарт) |
-| `js/erthub-chartkit.js` | Чартын стандарт (CH) — тогтмол өндөртэй frame, «гоё» тэнхлэг, шошгын нэг дүрэм (`docs/chart-standard.md`) |
+| `js/erthub-chartkit.js` | Чартын стандарт (CH) — тогтмол өндөртэй frame, «гоё» тэнхлэг, шошгын нэг дүрэм (`docs/chart-standard.md`); `trendFrame`/`compare`/`html` — сайт ба админы preview НЭГ frame |
+| `chart.css` | Frame ба hover tooltip-ийн хэв маяг — сайт ба админ ХОЁУЛАА ачаална (style.css-д БИШ) |
 | `.claude/agents/chart-stat-qa.md` | Статистикч агент — hover, тулгалт, нийлбэр, нэгжийг хүн шиг шалгана |
 | `tests/text-coverage.js` | Харагдах текстийн хамрах хүрээ + round-trip (5 тест) |
 | `scripts/check-ui-standard.js` | UI стандартын статик шалгагч (хүснэгт · мөр · дараалал) |
@@ -332,6 +333,9 @@ line/график** · **гарчиг**. Аль нэг нь хуучнаараа
 - **Өгөгдөлгүй бол frame зурахгүй** — `<sc-if value="{{ X.fr.cls }}">` + plot-ын өндөртэй
   `.eh-ch-empty` «мэдээлэл алга» (хоосон тэнхлэг = 70% хоосон карт).
 - Үл хамаарал (газрын зураг, зураглал): svg мөрөнд `data-ch-ok="шалтгаан"`.
+- **Админы preview = сайтын frame.** Preview-д график зурахдаа сайтын функцийг дууд
+  (`EHChartKit.trendFrame` / `compare` → `EHChartKit.html()`, модель нь `EHGlossary`-д) —
+  өөр «хялбар» шугам бичихгүй. Frame-ийн CSS `chart.css`-д (админ ч ачаална).
 
 Хамгаалалт: `check-ui-standard.js` CH1–CH3 · `layout-audit` `chart-lonely` ·
 `node tests/run.js --only=CS` (тэнхлэг/шошго/сийрүүлэлтийг гараар бодох фикстур дээр,

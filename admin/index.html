@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ErtHub · Агаарын тээврийн виджет холбоос</title>
+<!-- Чартын стандарт (CH) — сайттай НЭГ хэв маяг (t05/i06 preview нь сайтын frame-ийг зурна) -->
+<link rel="stylesheet" href="../chart.css?v=0970086f">
 <style>
 :root{
   --ink:#131A2E;--ink2:#3A4460;--ink3:#7A85A3;--ink4:#A7B0C6;
@@ -236,6 +238,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 
 /* ── сайтын харагдац (бодит CSS токен) ── */
 .sitepv{background:#E6EDF7;border-radius:12px;padding:16px;margin-bottom:10px}
+/* t05/i06 frame (../chart.css) — сайтын гэрэл темийн хувьсагчаар (index.html applyTheme), админыхаар БИШ:
+   preview дээрх сүлжээ/шошгын өнгө сайттай ижил байна */
+.sitepv .eh-ch{--surface:#fff;--line:rgba(20,32,58,.09);--line2:rgba(20,32,58,.16);--ink2:#465575;--ink3:#7D8CA8;
+  font-family:'JetBrains Mono',var(--mono);margin-top:4px}
 .sp-card{background:rgba(255,255,255,.82);border:1px solid rgba(20,32,58,.09);border-radius:14px;padding:15px 16px}
 .sp-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:13px}
 .sp-g{font-size:14px}
@@ -463,7 +469,9 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="../js/erthub-publish.js?v=ffe215f9"></script>
 <script src="../js/erthub-backend.js?v=a96de8ab"></script>
 <script src="../js/erthub-chart.js?v=422174bf"></script>
-<script src="../js/erthub-glossary.js?v=311d361e"></script>
+<script src="../js/erthub-glossary.js?v=452cb979"></script>
+<script src="../js/erthub-chartkit.js?v=2913aee9"></script>
+<script src="../js/erthub-tip.js?v=ba005e59"></script>
 </head>
 <body>
 
@@ -864,6 +872,13 @@ function computeSeries(byYear,latest){
     FEED.partialDropped=yr+'-'+p2(months.pop().m+1);
   }
   FEED.months=months;
+  /* t05-ийн frame (EHGlossary.trendModel) — сайтын SECTORS.air.c1d-тэй ИЖИЛ: 1-р сараас сүүлийн
+     бичлэгтэй сар хүртэл ЗАВСАРГҮЙ (бичлэггүй сар = 0), явагдаж буй сар хасагдаж утга нь
+     partialValue (тусдаа hollow цэг) — сайтын recomputeAirData() + dropPartialMonth(). */
+  var lastSeen=-1; for(var j=11;j>=0;j--) if(seen[j]){ lastSeen=j; break; }
+  var mc=lastSeen>=0?cnt.slice(0,lastSeen+1):[];
+  FEED.partialValue=(FEED.partialDropped&&mc.length)?mc.pop():null;
+  FEED.monthCounts=mc;
   FEED.lastLabel=months.length?months[months.length-1].label:'';
   /* air.monthly_growth_index — transform: index[m]=count[m]/count[0]*100 */
   var base=months.length?months[0].v||1:1;
@@ -883,6 +898,10 @@ function computeSeries(byYear,latest){
     var cy=newest.year, cmo=(newest.month||1)-1;
     if(cmo<1){ cmo=12; cy=newest.year-1; }
     FEED.cmpYear=byYear[cy]?cy:null; FEED.cmpMonths=FEED.cmpYear?Math.min(12,cmo):0;
+    /* i06-ийн агаарын шугам — сайтын compareWindow().airCounts: тэр оны БҮХ нислэгийг сараар */
+    FEED.cmpCounts=null;
+    if(FEED.cmpYear){ FEED.cmpCounts=new Array(12).fill(0);
+      byYear[FEED.cmpYear].forEach(function(f){var m=f.month||1;if(m>=1&&m<=12)FEED.cmpCounts[m-1]++}); }
     /* air.weekly_pax / air.weekly_cargo — filter: сүүлийн бичлэгийн
        ӨДРӨӨС ӨМНӨХ бүтэн 7 хоног (lastFullWeekWindow(0)) */
     var end=Date.UTC(newest.year,(newest.month||1)-1,newest.day||1)-86400000;
@@ -1014,6 +1033,8 @@ function loadSectorTotalWeekly(){
     ST.gaps=(h&&h.coverage&&Array.isArray(h.coverage.gaps))?{road:h.coverage.gaps}:null;
     /* t05.road — сайтын applySectorSeries('road')-тэй ИЖИЛ цэвэр функц (EHGlossary.roadPaxSeries) */
     ST.roadSeries=(typeof EHGlossary!=='undefined'&&EHGlossary.roadPaxSeries)?EHGlossary.roadPaxSeries(h):null;
+    /* i06.road — сайтын this._roadPaxAll-тай ИЖИЛ түүх (EHGlossary.roadPaxMonthSeries-ийн оролт) */
+    ST.roadHist=h||null;
   },function(){ ST.gaps=null }):Promise.resolve();
   return Promise.all([EHBackend.fetchSectorTotal(),gp]).then(function(r){
     var d=r[0];
@@ -2062,6 +2083,51 @@ function feedNote(){
   if(FEED.state==='error') return '<span class="pvfeed err">'+esc(utxt('feed.error','дата ачаалагдаагүй'))+'</span>';
   return '';
 }
+/* ── t05 / i06 — сайтын ЯГ ТЭР frame (CH, 2026-10-29) ─────────────────────────────────────
+   Өмнө нь preview нь өөрийн хялбар шугамыг (svgLine) зурж, сайтын графиктай (тэнхлэг, таамаг,
+   дутуу сар, легенд) огт өөр харагддаг байв. Одоо дүрс/шошго/tooltip нь EHChartKit.trendFrame /
+   compare (сайттай НЭГ функц), модель нь EHGlossary.trendModel / roadPaxMonthSeries. Өгөгдөл —
+   сайтын АНХДАГЧ харагдацтай ижил оролт: t05 = толгой метрикийн салбар (агаар; утгын тохиргоотой
+   бол түүний цуваа), «дундаж» унтраалттай; i06 = registry-ийн бүх шугам, compareWindow-ын он/урт. */
+function pvST(p,fb){ var v=siteGet(p.split('.')); return (v==null||v==='')?fb:v }
+function pvChartKit(){ return typeof EHChartKit!=='undefined'&&EHChartKit.trendFrame&&typeof EHGlossary!=='undefined'&&EHGlossary.trendModel }
+function pvTrendFrame(id){
+  if(!pvChartKit()) return null;
+  var serRes=widgetValueRes(id), data=null, partial=null;
+  if(serRes&&serRes.series&&serRes.series.length>1) data=serRes.series.slice();
+  else if(FEED.state==='ready'&&headMetric(id)==='air.monthly_flight_series'&&FEED.monthCounts&&FEED.monthCounts.length>1){
+    data=FEED.monthCounts.slice(); partial=FEED.partialValue; }
+  if(!data) return null;
+  var T=EHGlossary.trendModel(data,0,partial,false,null,MONTHS,pvST);
+  return EHChartKit.trendFrame(T,{color:NEON.air,peak:pvST('chart.peak','оргил')});
+}
+function pvCompareFrame(id){
+  if(!pvChartKit()||FEED.state!=='ready'||!FEED.cmpYear) return null;
+  var months=FEED.cmpMonths, w=REG.widgets&&REG.widgets[id], ver=(w&&Array.isArray(w.sectors))?w.sectors:[];
+  var idx=function(src){ if(!src) return null; var b=src[0]||1; return src.slice(0,months).map(function(v){return v/b*100}) };
+  /* Агаар — утгын тохиргоотой бол СОНГОСОН хэмжигдэхүүний сар тутмын цуваа (сайтын airFromSpec) */
+  var vr=widgetValueRes(id), air=FEED.cmpCounts;
+  if(vr&&vr.series&&vr.n){ air=new Array(12).fill(0);
+    (vr.labels||[]).forEach(function(lb,i){ var m=MONTHS.indexOf(lb); if(m>=0) air[m]=vr.series[i] }); }
+  var rs=SERIES.rail, railOk=rs&&rs.state==='ready'&&rs.series&&rs.year===FEED.cmpYear&&rs.series.length>=months;
+  var road=(ver.indexOf('road')>=0&&EHGlossary.roadPaxMonthSeries&&ST.roadHist)?EHGlossary.roadPaxMonthSeries(ST.roadHist,FEED.cmpYear,months):null;
+  var roadOk=!!(road&&road[0]&&road[0].v>0);
+  var tip=pvST('compare_window.partial_tip','{d}/{m} хоног · хоногийн дунджаар');
+  /* Шугамын дараалал = сайтын TREND (road, rail, air, water) — легенд ижил дараалалтай */
+  var lines=['road','rail','air','water'].filter(function(k){return ver.indexOf(k)>=0}).map(function(k){
+    var vals=k==='air'?idx(air):k==='rail'?(railOk?idx(rs.series.map(function(x){return x.v})):null)
+      :k==='road'?(roadOk?road.map(function(x){return x.v==null?null:x.v/road[0].v*100}):null):null;
+    if(!vals) return null;
+    return {key:k,label:SECN[k]||k,color:NEON[k],vals:vals,
+      hollow:vals.map(function(v,i){return k==='road'&&!!(road[i]&&road[i].partial)}),
+      note:vals.map(function(v,i){ var x=k==='road'&&road[i];
+        return x&&x.partial?' ('+tip.replace('{d}',x.days).replace('{m}',x.dim)+')':'' })};
+  }).filter(Boolean);
+  return EHChartKit.compare({labels:MONTHS.slice(0,months),unit:pvST('chart.index_unit','индекс'),base:100,
+    est:pvST('chart.legend_estimated','Цоорхойтой сар (хоногийн дунджаар)'),lines:lines});
+}
+/* Сайтын frame-ээр зурагддаг виджет — previewFor ба chromeFields (легенд/оргилын текст) хоёулаа үүнийг уншина */
+var PV_FRAME={t05:pvTrendFrame,i06:pvCompareFrame};
 /* previewFor(id, mini) — mini=true бол жагсаалтын жижиг хувилбар */
 /* Виджетийн "царай" — сайт дээр ЯМАР салбарын тэмдэг/өнгөтэй харагддаг.
    Өмнө нь 16 виджет БҮГД ✈️ (агаар) тэмдэгтэй харагддаг байсан нь олон
@@ -2225,7 +2291,7 @@ function previewFor(id,mini){
   var foot =(S.widget===id&&S.td&&S.td.foot!=null)?S.td.foot:(c.foot||'');
   var foot2=(S.widget===id&&S.td&&S.td.foot2!=null)?S.td.foot2:(c.foot2||'');
   var mk=TEXT_ONLY[id]?null:headMetric(id);
-  var face=widgetFace(id), accent=face.accent, body='';
+  var face=widgetFace(id), accent=face.accent, body='', cfr=null, subInChart=false;
   var W=mini?190:300, H=mini?34:56;
 
   /* ── Гүйдэг мөр: сайт дээр карт БИШ, hero баннерын дээд ирмэгийн
@@ -2358,6 +2424,12 @@ function previewFor(id,mini){
             : '—')+'</div>'+
           (nt?'<div class="l" style="margin-top:2px">'+esc(nt)+'</div>':'')+
           '</div>'}).join('')+'</div>';
+  } else if((kind==='line'||kind==='multiline')&&!mini&&(cfr=PV_FRAME[id]?PV_FRAME[id](id):null)){
+    /* Сайтын ЯГ ТЭР frame (EHChartKit.html = index.html-ийн FRAME темплейт). i06-ийн дэд гарчиг
+       («суурь индекс = 100») сайт дээрх шиг легендэд, суурь шугамын тайлбар болж засварлагдана. */
+    subInChart=!!cfr.base;
+    body=EHChartKit.html(cfr,esc,subInChart?'<span class="eh-ch-base-note"><i class="eh-ch-sw eh-ch-sw-dash" style="border-top-color:var(--ink3);"></i>'+
+      (sub?'<span class="ed" data-ed="sub">'+esc(sub)+'</span>':'<span class="ed empty" data-ed="sub">'+esc(utxt('preview.add_sub','+ дэд гарчиг'))+'</span>')+'</span>':'');
   } else if(kind==='line'||kind==='multiline'){
     /* Тохиргоотой бол цуваа нь сонгосон хэмжигдэхүүний сар тутмынх. */
     var serRes=widgetValueRes(id);
@@ -2498,7 +2570,7 @@ function previewFor(id,mini){
   return '<div class="sitepv'+(mini?' mini':'')+'" style="--sc:'+accent+'"><div class="sp-card">'+
     '<div class="sp-top"><span class="sp-g">'+face.glyph+'</span>'+
       '<span class="ed" data-ed="title">'+esc(title)+'</span>'+
-      (sub?'<span class="ed sp-sub" data-ed="sub">'+esc(sub)+'</span>'
+      (subInChart?'':sub?'<span class="ed sp-sub" data-ed="sub">'+esc(sub)+'</span>'
           :(!mini&&('sub' in c)?'<span class="ed sp-sub empty" data-ed="sub">'+esc(utxt('preview.add_sub','+ дэд гарчиг'))+'</span>':''))+
       feedNote()+
       '<span class="pvshape">'+esc(SHAPEN[kind]||kind)+'</span>'+
@@ -4071,6 +4143,12 @@ function chromeFields(id){
            'sector_total.unit_pax','sector_total.unit_tonne','status.share_single','ui.preview.d05_fallback');
   /* (4г) 02-р хэсгийн багана — цоорхойтой долоо хоногийн легенд (сайтын buildWeek-тэй НЭГ текст) */
   out.push('week.legend_gap');
+  /* (4д) t05/i06 frame — легенд, оргил, дутуу сарын тэмдэг (EHGlossary.trendModel / EHChartKit,
+         сайттай НЭГ текст). Зөвхөн tooltip-д орох үг (chart.index_unit, chart.partial_upto) энд ОРОХГҮЙ —
+         preview дээр харагдахгүй тул засварын талбар нь «үхмэл» мэт санагдана. Бусад виджетэд
+         зондлохгүй (зам бүр preview-г 2 удаа дахин зурдаг — виджет нээх хугацаа өсдөг). */
+  if(PV_FRAME[id]) out.push('chart.legend_actual','chart.legend_partial','chart.legend_forecast','chart.legend_estimated',
+           'chart.partial_mark','chart.peak');
   /* (5) ҮХМЭЛ ТАЛБАР ҮҮСГЭХГҮЙ: зам бүрийг pathAffectsPreview()-ээр
          шалгаж, preview-д ҮНЭХЭЭР нөлөөлдгийг нь л үлдээнэ. Нөхцөл
          (метрик, дата, хэлбэр) өөрчлөгдөхөд жагсаалт өөрөө дагана. */

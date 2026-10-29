@@ -925,9 +925,129 @@
     return { bars: bars, yTicks: yTicks, avg: avg, base: base, top: top, legend: legend, hasBars: hasBars };
   }
 
+  /* (5ж) Сарын чиг хандлагын МОДЕЛЬ (+3 сарын таамаг, итгэлцлийн зурвас, оргил, дундаж, дутуу
+     сарын hollow цэг). Сайтын buildTrendChart() (нүүрийн t05, датасэтийн «чиг хандлага») ба
+     админы t05 preview ХОЁУЛАА ЭНИЙГ дуудна — 2026-10-29-өөс өмнө зөвхөн index.html-д байсан тул
+     preview өөрийн хялбар шугамыг зурж, сайттай зөрдөг байв. Координат нь 600×170 (pad 46/12/14/26);
+     дэлгэцэнд EHChartKit.trendFrame() тогтмол өндөртэй frame болгоно (CH).
+     DG: Y тэнхлэг 0-ээс (тоо сөрөг байж чадахгүй), алхам 1·2·2.5·5×10^k; дутуу сар шугам/таамагт
+     ОРОХГҮЙ, тусдаа цэг. M = сарын нэрс (content.json site.months), T = stxt(path, fallback). */
+  function trendModel(data, off, partial, noForecast, pday, M, T) {
+    /* Цуваа ХООСОН байж болно (эх сурвалжаас ирээгүй) — Math.max.apply(null,[]) = -Infinity болж
+       нурахаас сэргийлж хавтгай 0 цуваа; «мэдээлэл алга»-г дуудагч тал ӨӨРИЙН шошгоор хэлнэ. */
+    if (!Array.isArray(data) || !data.length) data = new Array(12).fill(0);
+    off = off || 0;
+    var w = 600, h = 170, padL = 46, padR = 12, padT = 14, padB = 26;
+    var FC = 3;   /* таамгийн алхам */
+    var n = data.length;
+    var f1 = function (v) { return v.toFixed(1); };
+    var pt = function (p) { return f1(p[0]) + ',' + f1(p[1]); };
+    /* Сүүлийн 6 цэгийн шугаман регресс → таамаг */
+    var tail = data.slice(-6), tn = tail.length;
+    var sx = 0, sy = 0, sxy = 0, sxx = 0;
+    tail.forEach(function (v, i) { sx += i; sy += v; sxy += i * v; sxx += i * i; });
+    var slope = (tn * sxy - sx * sy) / (tn * sxx - sx * sx || 1), intercept = (sy - slope * sx) / tn;
+    var fcast = []; for (var fi = 0; fi < FC; fi++) fcast.push(intercept + slope * (tn - 1 + fi + 1));
+    var resid = Math.sqrt(tail.reduce(function (a, v, i) { return a + Math.pow(v - (intercept + slope * i), 2); }, 0) / tn) || Math.abs(slope) || 1;
+    var all = data.concat(fcast);
+    var hi = all.map(function (v, i) { return i < n ? v : v + resid * 1.9 * (i - n + 1); });
+    /* Таамгийн доод хязгаар 0-оос доош орохгүй — хавтгай 0 цувааны тэнхлэг −6…6 болж байв */
+    var lo = all.map(function (v, i) { return Math.max(0, i < n ? v : v - resid * 1.9 * (i - n + 1)); });
+    /* Дутуу сарын цэг — шугам/таамагт ОРОХГҮЙ, гэвч Y хүрээнд багтана */
+    var pv = (partial != null && isFinite(partial) && partial >= 0) ? partial : null;
+    var rawMax = Math.max.apply(null, hi.concat(pv != null ? [pv] : [])), rawMin = Math.min.apply(null, lo.concat(pv != null ? [pv] : []));
+    var lo0 = rawMin >= 0 ? 0 : rawMin, st0 = ((rawMax - lo0) || 1) / 4;
+    var mg = Math.pow(10, Math.floor(Math.log10(st0))), fq = st0 / mg;
+    var step = (fq <= 1 ? 1 : fq <= 2 ? 2 : fq <= 2.5 ? 2.5 : fq <= 5 ? 5 : 10) * mg;
+    var niceMax = Math.ceil(rawMax / step - 1e-9) * step || step;
+    var niceMin = rawMin >= 0 ? 0 : Math.floor(rawMin / step) * step;
+    var range = (niceMax - niceMin) || 1;
+    var stepX = (w - padL - padR) / (n + FC - 1);
+    var X = function (i) { return padL + i * stepX; }, Y = function (v) { return padT + (h - padT - padB) * (1 - (v - niceMin) / range); };
+
+    var xy = data.map(function (v, i) { return [X(i), Y(v)]; });
+    var line = 'M' + xy.map(pt).join(' L');
+    var area = line + ' L' + f1(X(n - 1)) + ',' + f1(h - padB) + ' L' + f1(X(0)) + ',' + f1(h - padB) + ' Z';
+    var fxy = [[X(n - 1), Y(data[n - 1])]].concat(fcast.map(function (v, i) { return [X(n + i), Y(v)]; }));
+    var fline = 'M' + fxy.map(pt).join(' L');
+    var upper = [[X(n - 1), Y(data[n - 1])]].concat(fcast.map(function (v, i) { return [X(n + i), Y(v + resid * 1.9 * (i + 1))]; }));
+    var lower = fcast.map(function (v, i) { return [X(n + i), Y(v - resid * 1.9 * (i + 1))]; }).reverse().concat([[X(n - 1), Y(data[n - 1])]]);
+    var band = 'M' + upper.concat(lower).map(pt).join(' L') + ' Z';
+
+    var yTicks = [];
+    for (var val = niceMin; val <= niceMax + step * 1e-6; val += step) {
+      var yv = Y(val);
+      yTicks.push({ y: f1(yv), gy: f1(yv), v: val, label: (+val.toFixed(6)).toLocaleString('en-US'), fx: 0, fy: f1(yv - 7) });
+    }
+    var every = data.length > 8 ? 2 : 1;
+    var xTicks = data.map(function (v, i) { return { x: f1(X(i)), label: M[i + off] || '', fx: f1(X(i) - 19), fy: f1(h - padB + 6) }; })
+      .filter(function (_, i) { return i % every === 0; });
+    /* Цэг бүр ЯГ ТЭР сарын тоотой (HV: «Сар — тоо») */
+    var dotPts = xy.map(function (p, i) {
+      return { cx: f1(p[0]), cy: f1(p[1]), r: '2.6', dash: 'none',
+        tip: (M[i + off] ? M[i + off] + ' — ' : '') + Math.round(data[i]).toLocaleString('en-US') };
+    });
+
+    var pi = data.indexOf(Math.max.apply(null, data));
+    var peak = { cx: f1(X(pi)), cy: f1(Y(data[pi])),
+      lx: f1(Math.min(Math.max(X(pi) - 58, padL + 2), w - padR - 120)), ly: f1(Math.max(Y(data[pi]) - 38, 2)),
+      label: (M[pi + off] || '') + ' · ' + T('chart.peak', 'оргил'), value: data[pi].toLocaleString() };
+    var fcLabel = { x: f1(X(n) + 4), y: f1(padT + 4),
+      text: T('chart.forecast_prefix', 'AI прогноз +') + FC + ' ' + T('chart.forecast_suffix', 'сар'),
+      delta: ((fcast[FC - 1] - data[n - 1]) / (data[n - 1] || 1) * 100) };
+    var avgVal = data.reduce(function (a, v) { return a + v; }, 0) / data.length, avgY = f1(Y(avgVal));
+    var pY = pv != null ? Y(pv) : 0;
+    /* Дутуу сар = ОДООГИЙН сар. pday — эх сурвалжийн мэдээ ХҮРСЭН өдөр ({day,dim}); мэдэгдвэл
+       түүгээр (ETL хоцорвол өнөөдрийн огноо «1–26» гэж худал хэлнэ), эс бөгөөс УБ-ийн өнөөдөр. */
+    var upToDay = (pday && pday.day > 0) ? pday.day : new Date(Date.now() + 8 * 3600000).getUTCDate();
+    var pDays = (pday && pday.day > 0 && pday.dim > 0) ? ' · ' + T('chart.partial_days', '{d}/{m} хоногоор').replace('{d}', pday.day).replace('{m}', pday.dim) : '';
+    var pAvg = (pv != null && upToDay > 0) ? ' · ' + T('chart.partial_daily_avg', 'өдрийн дундаж') + ' ' + Math.round(pv / upToDay).toLocaleString('en-US') : '';
+    var partialLabel = pv != null ? (M[n + off] || '') + ' (1–' + upToDay + ' ' + T('chart.partial_upto', 'хүртэл') + pDays + '): ' +
+      Math.round(pv).toLocaleString('en-US') + ' · ' + T('chart.partial_mark', 'дутуу') + ' ' + T('chart.partial_word', 'сар (хэсэгчилсэн)') + pAvg +
+      ' · ' + T('chart.partial_joins', 'сар дуусахад шугамд нэмэгдэнэ') : '';
+    /* Богино шошго (легендэд); бүтэн текст нь tooltip-д. «1–N» — бага цэгийг «уналт» гэж уншихаас сэргийлнэ */
+    var partialShort = pv != null ? (M[n + off] || '') + ' 1–' + upToDay + ' · ' + Math.round(pv).toLocaleString('en-US') + ' · ' + T('chart.partial_mark', 'дутуу') : '';
+    /* Легенд — зөвхөн ЗУРАГДСАН цувааг нэрлэнэ */
+    var legend = [{ key: 'actual', label: T('chart.legend_actual', 'Бодит (бүтэн сар)'), lineStyle: 'solid' }]
+      .concat(pv != null ? [{ key: 'partial', label: T('chart.legend_partial', 'Хэсэгчилсэн (одоогийн сар)'), lineStyle: 'dotted' }] : [])
+      .concat(noForecast ? [] : [{ key: 'forecast', label: T('chart.legend_forecast', 'Таамаг'), lineStyle: 'dashed' }]);
+    /* noForecast — прогнозын шугам/зурвасгүй (загварын таамгийг бодит дата мэт харуулахгүй) */
+    return { line: line, area: area, fline: noForecast ? '' : fline, band: noForecast ? '' : band, yTicks: yTicks, xTicks: xTicks,
+      dotPts: dotPts, peak: peak, fcLabel: fcLabel, legend: legend,
+      hasPartial: pv != null, partialCx: f1(X(n)), partialCy: f1(pY),
+      partialLy: f1(Math.max(pY - 9, padT + 8)), partialLabel: partialLabel, partialShort: partialShort,
+      partialFx: f1(X(n) - 90), partialFy: f1(Math.max(pY - 9, padT + 8) - 7.6),
+      fcSplitX: f1(X(n - 1)), fcEndX: f1(X(n + FC - 1)),
+      fcDeltaLabel: (fcLabel.delta > 0 ? '+' : '') + fcLabel.delta.toFixed(1) + '%',
+      avgY: avgY, avgYLabel: Math.max(0, avgY - 15).toFixed(1), avgLabel: T('range.average', 'дундаж') + ' ' + Math.round(avgVal).toLocaleString(),
+      w: w, h: h, padL: padL, padR: padR, padT: padT, padB: padB, axisX1: padL, axisX2: w - padR, axisY: f1(h - padB) };
+  }
+
+  /* (5з) 06-р хэсгийн индекс (i06/r06) — авто тээврийн зорчигчийн сарын цуваа (roadPax түүх),
+     `year` оны 1…`months` сар. Эх сурвалж ЦОНХООР ачаалагддаг тул дутуу сарын НИЙТИЙГ бүтэн
+     сартай харьцуулбал худал уналт гарна: хамрагдсан хоногийн дундаж × сарын хоног = сарын
+     эквивалент, partial=true (hollow цэг, tooltip-д N/M хоног). Хамрагдсан хоног 0 бол v=null —
+     шугам тасарна, тоо зохиохгүй. Сайт (index.html roadPaxMonthSeries) ба админы i06 preview
+     ХОЁУЛАА ЭНИЙГ дуудна. tests/run.js RI бүлэг. */
+  function roadPaxMonthSeries(h, year, months) {
+    if (!h || h.status !== 'ok' || !Array.isArray(h.months) || !year || !(months > 0)) return null;
+    var by = {};
+    h.months.forEach(function (m) { if (m && m.month) by[m.month] = m; });
+    var out = [];
+    for (var i = 0; i < months; i++) {
+      var m = by[year + '-' + String(i + 1).padStart(2, '0')];
+      var dim = (m && +m.days_in_month) || new Date(Date.UTC(year, i + 1, 0)).getUTCDate();
+      var days = m ? (+m.days || 0) : 0;
+      if (days <= 0) { out.push({ v: null, partial: false, days: 0, dim: dim }); continue; }
+      if (days >= dim) out.push({ v: +m.passengers || 0, partial: false, days: days, dim: dim });
+      else out.push({ v: (m.passengers_covered != null ? +m.passengers_covered : (+m.passengers || 0)) / days * dim, partial: true, days: days, dim: dim });
+    }
+    return out.some(function (x) { return x.v != null; }) ? out : null;
+  }
+
   var api = {
     weekReport: weekReport, weekLag: weekLag, weekAxis: weekAxis, weekBars: weekBars,
-    roadPaxSeries: roadPaxSeries,
+    roadPaxSeries: roadPaxSeries, trendModel: trendModel, roadPaxMonthSeries: roadPaxMonthSeries,
     airPaxSplit: airPaxSplit, norm: norm, airFlightKind: airFlightKind, KIND_LABEL: KIND_LABEL, AIR_KIND: AIR_KIND,
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,
