@@ -9105,7 +9105,7 @@ function groupRPX() {
   const src = dcScript();
   const am = src.match(/\nfunction roadPaxAnalysisModel\(all,sel,year,mr\)\{([\s\S]*?)\n\}/);
   const wm = src.match(/\nfunction roadPaxWeeklyModel\(all\)\{([\s\S]*?)\n\}/);
-  const bm = src.match(/\nfunction buildRoadPaxWeekBars\(weeks,values,color,words\)\{([\s\S]*?)\n\}/);
+  const bm = src.match(/\nfunction buildRoadPaxWeekBars\(weeks,values,color,words,recorded\)\{([\s\S]*?)\n\}/);
   const yoc = src.match(/\nfunction yoyCompare\(months,yr,mFrom,mTo,key\)\{([\s\S]*?)\n\}/);
   const colM = src.match(/const ROAD_PAX_TYPE_COLORS=(\{[^}]*\});/);
   const exM = src.match(/const ROAD_PAX_EXTRA_COLORS=(\[[^\]]*\]);/);
@@ -9123,7 +9123,7 @@ function groupRPX() {
   const AM = (all, sel, year, mr) => new Function('ROAD_PAX_COMPLETE_RATIO', 'ROAD_PAX_YOY_MIN', 'yoyCompare', 'roadPaxTypeColor', 'monthOverMonth',
     'all', 'sel', 'year', 'mr', am[1])(+crM[1], +ymM[1], YOC, typeColor, MOM, all, sel, year, mr);
   const WM = (all) => new Function('roadPaxTypeColor', 'all', wm[1])(typeColor, all);
-  const BM = new Function('weeks', 'values', 'color', 'words', bm[1]);
+  const BM = new Function('weeks', 'values', 'color', 'words', 'recorded', bm[1]);
   const H = 'Хот хооронд', U = 'Улс хооронд';
   const mo = (month, days, dim, last, bt, rt) => ({ month, days, days_in_month: dim, last_date: last,
     passengers: Object.values(bt).reduce((a, b) => a + b, 0), refunded: Object.values(rt || {}).reduce((a, b) => a + b, 0),
@@ -9320,6 +9320,60 @@ function groupRPX() {
     src.includes('momOrYoyKpi(m,T,dash,ROAD_PAX_YOY_MIN)') && src.includes('momOrYoyKpi(m,T,dash,FREIGHT_YOY_MIN)'));
   check('RPX31. Өдрийн дундаж = мэдээтэй өдрийн зорчигч / мэдээтэй өдөр (хуваагч ба хуваагдагч ижил олонлог)',
     src.includes('perDay:days>0?ms.reduce((t,m)=>t+m.paxCovered,0)/days:null'));
+  /* Регресс (хэрэглэгч 2026-10-29): «9 сарын мэдээ байхад 08.31, 09.07-д яагаад мэдээгүй гэж харуулав».
+     Амьд backend: 2026-08-31…09-06 missing:true, days:0, passengers:null ч by_type Хот 145 · Улс 90
+     (босгоос доош цөөн билет). «мэдээгүй» биш «≥145» (доод хязгаар); бичлэг огт алга бол «мэдээгүй» хэвээр. */
+  const WK5 = JSON.parse(JSON.stringify(WK));
+  Object.assign(WK5.weekly.weeks[0], { missing: true, days: 0, passengers: null, by_type: { [H]: 145, [U]: 90 } });
+  const w5 = WM(WK5), h5 = w5.perType.find(p => p.type === H);
+  check('RPX35. Цоорхойтой 7 хоног: бүртгэгдсэн билет recorded-д (Хот 145, нийт 145+90 = 235), цуваа null хэвээр, харьцуулахгүй',
+    JSON.stringify(h5.recorded) === '[145,null]' && JSON.stringify(w5.total.recorded) === '[235,null]' &&
+    h5.series[0] === null && w5.total.wow === null && w5.gapWeeks === 1, JSON.stringify([h5.recorded, w5.total.recorded, w5.gapWeeks]));
+  const WK6 = JSON.parse(JSON.stringify(WK5)); WK6.weekly.weeks[0].by_type = { [H]: 0, [U]: 0 };
+  check('RPX35. Бичлэг огт алга (by_type 0) → recorded null, gapWeeks 0 (тоо зохиохгүй)',
+    WM(WK6).perType[0].recorded[0] === null && WM(WK6).gapWeeks === 0);
+  const gw = { unit: 'зорчигч', partial: '{d}/7 өдөр бүрэн мэдээтэй — эх сурвалжийн цоорхой', noneShort: 'мэдээгүй', none: 'мэдээлэл алга' };
+  const b6 = BM(WK5.weekly.weeks, [null, 160], '#000', gw, [145, null]);
+  check('RPX36. Цоорхойтой 7 хоногийн шошго «≥145», tooltip «10.05–10.11 — ≥145 зорчигч (0/7 өдөр бүрэн …)», «мэдээгүй» ГАРАХГҮЙ',
+    b6.labels[0].label === '≥145' && b6.bars[0].tip === '10.05–10.11 — ≥145 зорчигч (0/7 өдөр бүрэн мэдээтэй — эх сурвалжийн цоорхой)' &&
+    !b6.labels.some(l => /мэдээгүй|алга/.test(l.label)) && !b6.bars.some(r => /мэдээлэл алга/.test(r.tip)),
+    JSON.stringify([b6.labels.map(l => l.label), b6.bars.map(r => r.tip)]));
+  /* Тэмдгийн өндөр утгатайгаа пропорциональ (145/160 × бүтэн баганын өндөр), шошго оройд нь;
+     38 мянгатай нэг масштабд 145 = 0.4px болж алга болох тул доод тал нь 3 (b6t: 1 vs 160) */
+  const markTop = mk => +String(mk.d).split(',')[1].split(' ')[0];
+  const markH = mk => +String(mk.d).match(/ v([0-9.]+) /)[1];
+  const fullH = +b6.baseY - +b6.bars[1].y;
+  const b6t = BM(WK5.weekly.weeks, [null, 160], '#000', gw, [1, null]);
+  check('RPX36. Цоорхойн тууз хэвээр (7 хоног бүрд нэг багана — индекс таарна) + тасархай бүдэг багана (пропорциональ, доод тал 3), шошго оройд нь',
+    b6.bars.length === 2 && b6.marks.length === 1 && b6.marks[0].dash === '3 2' &&
+    Math.abs(markH(b6.marks[0]) / fullH - 145 / 160) < 0.01 && Math.abs(+b6.labels[0].vy - markTop(b6.marks[0])) < 0.11 &&
+    Math.abs(+b6.labels[1].vy - +b6.bars[1].y) < 0.11 && markH(b6t.marks[0]) === 3 && b6t.labels[0].label === '≥1',
+    JSON.stringify([b6.marks, b6.labels.map(l => l.vy), b6.baseY, b6t.marks]));
+  const b7 = BM(WK5.weekly.weeks, [null, 160], '#000', gw, [null, null]);
+  check('RPX36. recorded алга → «мэдээгүй» тууз (өмнөх зан төлөв)', b7.labels[0].label === 'мэдээгүй' && b7.marks.length === 0 && /мэдээлэл алга$/.test(b7.bars[0].tip));
+  const b8 = BM(WK3.weekly.weeks, [20, 160], '#000', gw);
+  check('RPX37. Хэсэгчилсэн 7 хоног «≥20» (нүүрний weekBars-тай нэг дүрэм) + тасархай хүрээ; бүтэн 7 хоног «≥»-гүй',
+    b8.labels[0].label === '≥20' && b8.bars[0].stroke === '#000' && b8.bars[0].dash === '3 2' && b8.labels[1].label === '160' &&
+    !b8.bars[1].stroke && /— ≥20 зорчигч \(2\/7 өдөр/.test(b8.bars[0].tip), JSON.stringify([b8.labels, b8.bars[0]]));
+  check('RPX37. 7 хоногийн карт recorded-ийг дамжуулж, «≥»-ийн тайлбар босгыг нэрлэнэ; YTD «мэдээгүй» биш «мэдээ дутуу»',
+    src.includes("noneShort:T('wk_none_short','мэдээгүй')},p.recorded)") && src.includes("T('wk_gap_note',") &&
+    (content.site.road_pax_an.wk_gap_note || '').includes('{min}') && !/мэдээгүй/.test(content.site.road_pax_an.wk_ytd_gap || 'мэдээгүй') &&
+    src.includes('vals:c.labels.map(l=>({x:+l.cx,y:+l.vy,'));
+  /* Сарын график: бүрэн мэдээтэй өдөргүй сард (амьд 2025-10: 199, 2025-12: 74) цоорхойн тууз хэвээр, tooltip «≥N» */
+  const ALL7 = Object.assign({}, ALL, { months: ALL.months.concat([mo('2025-12', 0, 31, '2025-12-30', { [H]: 70, [U]: 4 }, {})]) });
+  const m7 = AM(ALL7, null, 'all', null);
+  const i25 = m7.series.labels.indexOf('25-12'), i11 = m7.series.labels.indexOf('25-11');
+  check('RPX38. Сарын цуваа: мэдээтэй өдөргүй 2025-12 → gap + gapPax 74; бичлэггүй дүүргэлтийн сар (2025-11) gapPax null',
+    i25 > 0 && m7.series.gap[i25] === true && m7.series.gapPax[i25] === 74 && i11 > 0 && m7.series.gapPax[i11] === null &&
+    m7.series.gapPax.length === m7.series.labels.length, JSON.stringify([i25, m7.series.gapPax]));
+  const fsc = src.match(/\nfunction buildFreightStackedChart\(stacks,lineSeries,labels,gaps,words\)\{([\s\S]*?)\n\}/);
+  const FSC = fsc ? new Function('stacks', 'lineSeries', 'labels', 'gaps', 'words', fsc[1]) : null;
+  const fc = FSC && FSC([{ label: H, color: '#000', values: [null, 10] }], [null, 1], ['25-12', '26-01'], [true, false],
+    { none: 'мэдээлэл алга', gapTip: i => i === 0 ? '≥74 зорчигч бүртгэгдсэн' : '' });
+  const fc0 = FSC && FSC([{ label: H, color: '#000', values: [null, 10] }], [null, 1], ['25-11', '26-01'], [true, false], { none: 'мэдээлэл алга' });
+  check('RPX38. Сарын туузны tooltip: gapTip өгвөл «25-12 — ≥74 …», өгөөгүй (ачаа тээвэр) бол «мэдээлэл алга» хэвээр',
+    !!fc && fc.barRects[0].tip === '25-12 — ≥74 зорчигч бүртгэгдсэн' && fc0.barRects[0].tip === '25-11 — мэдээлэл алга' &&
+    src.includes("gapTip:i=>{const g=m.series.gapPax[i];"), fc && fc.barRects[0].tip);
   /* Текст бүр content.json-д (T('k','fallback') → site.road_pax_an.k) — дутуу/үхмэл түлхүүргүй */
   const body = (src.split('  buildRoadPaxAnalysis(dsel){')[1] || '').split('  buildDocDetail(){')[0];
   /* «Өмнөх оноос»/«Өмнөх сараас» карт нийтлэг momOrYoyKpi()-д (ачаа тээвэртэй хамт) — түүний текст ч road_pax_an-аас */
