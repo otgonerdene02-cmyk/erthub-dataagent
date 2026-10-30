@@ -1069,15 +1069,26 @@ function loadSectorDaily(){
   },function(){ ST.dailyState='error' });
 }
 /* Сайтын homeStrip() (өгөгдмөл муж) — НЭГ функц EHGlossary.periodStrip: ижил салбар (сайтын
-   homeSectorKeys = SECN-ийн дараалал), ижил цоорхой (ST.gaps), ижил харьцуулалт. */
+   homeSectorKeys = SECN-ийн дараалал), ижил цоорхой (ST.gaps), ижил харьцуулалт.
+   КЭШ: periodStrip нь мужийн өдөр бүрээр гүйдэг (~7–12 мс), нэг preview зурахад ~12 удаа,
+   виджет нээхэд chromeFields()-ийн зонд бүрт (~70×) дахин дуудагдаж ls/d05 нээхэд 6–20 сек
+   царцдаг байв (2026-10-29). Үр дүн зөвхөн ӨГӨГДЛӨӨС (ST.daily/weekly/gaps) ба салбарын
+   ТҮЛХҮҮРЭЭС хамаарна — текстээс БИШ, тиймээс зонд кэшийг эвдэхгүй. Эдгээрийн аль нэг нь
+   солигдоход дахин бодно. Буцаасан объект хуваалцагдана — дуудагч ӨӨРЧЛӨХГҮЙ (PF тест). */
+var PV_HS_MEMO={};
 function pvHomeStrip(meas){
   var G=typeof EHGlossary!=='undefined'?EHGlossary:null;
   if(!G||!ST.daily||!ST.weekly) return null;
   meas=meas==='freight_tonnes'?'freight_tonnes':'passengers';
+  var keys=Object.keys(SECN), kj=keys.join(','), c=PV_HS_MEMO[meas];
+  if(c&&c.daily===ST.daily&&c.weekly===ST.weekly&&c.gaps===ST.gaps&&c.keys===kj) return c.m;
   var w=ST.weekly[meas], a=w&&G.dayOf(w.week_end);
-  var r=G.homeRange('ytd',a||ST.daily.last); if(!r) return null;
-  var m=G.periodStrip(ST.daily,{from:r.from,to:r.to,measure:meas,keys:Object.keys(SECN),gaps:ST.gaps||null});
-  if(m) m.preset=r.preset;
+  var r=G.homeRange('ytd',a||ST.daily.last), m=null;
+  if(r){
+    m=G.periodStrip(ST.daily,{from:r.from,to:r.to,measure:meas,keys:keys,gaps:ST.gaps||null});
+    if(m) m.preset=r.preset;
+  }
+  PV_HS_MEMO[meas]={daily:ST.daily,weekly:ST.weekly,gaps:ST.gaps,keys:kj,m:m};
   return m;
 }
 function pvT_home(k,fb){ return pvSiteT('home_range',k,fb) }
