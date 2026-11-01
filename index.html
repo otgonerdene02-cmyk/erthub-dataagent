@@ -9265,20 +9265,30 @@ function sectorTotalModel(api,year,mr){
       const lf=lfl(all.find(x=>x.key===s.key)||{});
       const val=(c,month)=>{ if(!lf) return c.value; const r=idx[month+'|'+s.key], p=r&&r.freight_parts;
         return p?lf.keep.reduce((t,o)=>t+(+p[o]||0),0):c.value; };
+      const byMo={};
       for(let mo=mFrom;mo<=mTo;mo++){
         const ma=yoyYear+'-'+pad(mo), mb=(yoyYear-1)+'-'+pad(mo);
         const a=cell(ma,s.key,k), b=cell(mb,s.key,k);
-        if(a&&b&&a.complete&&b.complete){ cur+=val(a,ma); prev+=val(b,mb); used.push(mo); }
+        if(a&&b&&a.complete&&b.complete){ const va=val(a,ma), vb=val(b,mb); cur+=va; prev+=vb; used.push(mo); byMo[mo]=[va,vb]; }
       }
-      return {key:s.key,name:s.name,color:s.color,cur,prev,months:used,pct:(used.length&&prev>0)?(cur/prev-1)*100:null,
+      return {key:s.key,name:s.name,color:s.color,cur,prev,months:used,byMo,pct:(used.length&&prev>0)?(cur/prev-1)*100:null,
         excl:lf&&used.length?lf.drop:[]};
     });
-    /* Нийт % — ИЖИЛ сарын олонлогоор харьцуулсан салбаруудаар л (хамгийн урт олонлог = жишиг).
-       Эх сурвалж нь хожуу эхэлсэн салбарыг (авто тээвэр 2025-08-аас) богино цонхоор нь нийтэд
-       хольбол бусад салбарын 1–9 сартай нийлж худал хувь гарна; салбарын мөрөнд өөрийн %-тай үлдэнэ. */
-    const refM=yoy.filter(y=>y.pct!==null).reduce((r,y)=>y.months.length>r.length?y.months:r,[]).join(',');
-    const cmp=yoy.filter(y=>y.pct!==null&&y.months.join(',')===refM);
-    const yCur=cmp.reduce((t,y)=>t+y.cur,0), yPrev=cmp.reduce((t,y)=>t+y.prev,0);
+    /* Нийт % — ИЖИЛ сарын олонлогоор, салбар бүрийг тэр саруудаар л (жишиг = хамгийн олон
+       «салбар × сар» хамарсан олонлог; тэнцвэл урт нь). Эх сурвалж нь хожуу эхэлсэн салбарыг
+       (авто тээвэр 2025-08-аас) богино цонхоор нь хольбол худал хувь гарна; мөн нэг сар илүү бүтэн
+       жижиг салбар (агаар, тонны 0.03%) ганцаараа жишиг болж бусдыг хасаж болохгүй (2026-11-01:
+       «−3.6%, зөвхөн агаар»). Салбарын мөрөнд өөрийн сар, өөрийн %-тай үлдэнэ. */
+    const pool=yoy.filter(y=>y.pct!==null);
+    const covers=(y,ms)=>ms.every(mo=>y.months.indexOf(mo)>=0);
+    let refM=[],refScore=0;
+    for(let mask=1;mask<(1<<pool.length);mask++){
+      const ms=pool.filter((y,i)=>mask>>i&1).map(y=>y.months).reduce((p,q)=>p.filter(mo=>q.indexOf(mo)>=0));
+      const score=ms.length*pool.filter(y=>covers(y,ms)).length;
+      if(score>refScore||(score===refScore&&ms.length>refM.length)){ refScore=score; refM=ms; }
+    }
+    const cmp=refM.length?pool.filter(y=>covers(y,refM)):[];
+    const yCur=cmp.reduce((t,y)=>refM.reduce((u,mo)=>u+y.byMo[mo][0],t),0), yPrev=cmp.reduce((t,y)=>refM.reduce((u,mo)=>u+y.byMo[mo][1],t),0);
     const chartMonths=yr==='all'?winMonths.slice(-24):winMonths;
     const series=chartMonths.map(m=>{
       const parts=sectors.map(s=>{const c=cell(m,s.key,k);
@@ -9287,7 +9297,7 @@ function sectorTotalModel(api,year,mr){
     });
     measures[k]={bySec,total,shareMonths,shareTotal,shareTrimmed,sharePartial,hasData:bySec.some(s=>s.value!==null),withData:bySec.filter(s=>s.value!==null).length,
       yoy,yoyPct:(cmp.length&&yPrev>0)?(yCur/yPrev-1)*100:null,yoyCur:yCur,yoyPrev:yPrev,yoyYear,
-      yoySectors:cmp.map(y=>y.key),yoyExcl:[].concat(...cmp.map(y=>y.excl||[])),series,chartTrimmed:chartMonths.length<winMonths.length};
+      yoySectors:cmp.map(y=>y.key),yoyRef:refM,yoyExcl:[].concat(...cmp.map(y=>y.excl||[])),series,chartTrimmed:chartMonths.length<winMonths.length};
   });
   const lasts=[];
   sectors.forEach(s=>{ if(s.paxLast) lasts.push(s.paxLast); if(s.freightLast) lasts.push(s.freightLast); });
@@ -11046,7 +11056,7 @@ class Component extends DCLogic {
     const monthPer=ser=>{const s=ser.filter(c=>!c.missing), pt=s.filter(c=>c.partial), lastP=pt.length?pt[pt.length-1].month:'';
       const pTo=lastP&&lastP===(s[s.length-1]||{}).month&&String(m.lastDate||'').slice(0,7)===lastP?m.lastDate:undefined;
       return chartPeriodText(s.length?{periodKeys:s.map(c=>c.month),partialN:pt.length,partialTo:pTo}:{},TP);};
-    const yoyMonths=x=>{const ms=[...new Set([].concat(...x.yoy.filter(y=>x.yoySectors.indexOf(y.key)>=0).map(y=>y.months)))].sort((a,b)=>a-b);
+    const yoyMonths=x=>{const ms=x.yoyRef;
       return ms.length?(ms.length===1?String(ms[0]):ms[0]+'–'+ms[ms.length-1])+' '+T('f_month_unit','сар'):'';};
     const yoySub=x=>x.yoyPct==null?T('kpi_yoy_none','харьцуулах бүтэн сар алга')
       :(x.yoyYear+' / '+(x.yoyYear-1)+' · '+yoyMonths(x)+(x.yoySectors.length<x.withData?' · '+T('kpi_yoy_partial','зөвхөн {names}').replace('{names}',x.yoy.filter(y=>x.yoySectors.indexOf(y.key)>=0).map(y=>y.name).join(', ')):'')

@@ -10746,6 +10746,24 @@ function groupST() {
   check('ST6a. Өмнөх оноос: богино цонхтой салбар (авто, зөвхөн 8-р сар) нийт %-д ОРОХГҮЙ — нийт +3.75%, авто өөрийн мөрөнд −50%',
     Math.abs(P2.yoyPct - 3.75) < 1e-9 && JSON.stringify(P2.yoySectors) === '["air","rail"]' && Math.abs(yD.pct + 50) < 1e-9,
     JSON.stringify([P2.yoyPct, P2.yoySectors, yD]));
+  /* Сарын эхэнд: агаарын 10-р сар бүтэн, төмөр замынх дутуу. Хамгийн урт олонлогоор бол жижиг
+     салбар (тонны 0.03%) ганцаараа жишиг болж «−3.6%, зөвхөн агаар» гарч байв (2026-11-01 тулгалт).
+     Гараар: 2025 агаар 10/10/10, төмөр зам 1000/1000/1000 | 2026 агаар 9/9/9, төмөр зам 1200/1200/800 (3-р сар 20/31)
+     → нийтлэг 1–2 сар: 2418/2020 = +19.703%; агаар өөрийн мөрөнд 27/30 = −10% (1–3 сар) */
+  const API6b = { status: 'ok', sectors: API.sectors,
+    months: [mo('2025-01', 'air', null, 10, 31, 31), mo('2025-02', 'air', null, 10, 28, 28), mo('2025-03', 'air', null, 10, 31, 31),
+      mo('2025-01', 'rail', null, 1000, 31, 31), mo('2025-02', 'rail', null, 1000, 28, 28), mo('2025-03', 'rail', null, 1000, 31, 31),
+      mo('2026-01', 'air', null, 9, 31, 31), mo('2026-02', 'air', null, 9, 28, 28), mo('2026-03', 'air', null, 9, 31, 31),
+      mo('2026-01', 'rail', null, 1200, 31, 31), mo('2026-02', 'rail', null, 1200, 28, 28), mo('2026-03', 'rail', null, 800, 20, 31)] };
+  const F6b = L.sectorTotalModel(API6b, 2026, { from: 1, to: 12 }).measures.freight_tonnes;
+  const yA6b = F6b.yoy.find(y => y.key === 'air');
+  check('ST6b. Нэг сар илүү бүтэн жижиг салбар нийт %-ийг булаахгүй: нийтлэг 1–2 сараар +19.70%, хоёр салбар хоёулаа; агаар өөрийн мөрөнд −10% (1–3 сар)',
+    Math.abs(F6b.yoyPct - (2418 / 2020 - 1) * 100) < 1e-9 && JSON.stringify(F6b.yoySectors) === '["air","rail"]' &&
+    JSON.stringify(F6b.yoyRef) === '[1,2]' && F6b.yoyCur === 2418 && F6b.yoyPrev === 2020 &&
+    Math.abs(yA6b.pct + 10) < 1e-9 && JSON.stringify(yA6b.months) === '[1,2,3]',
+    JSON.stringify([F6b.yoyPct, F6b.yoySectors, F6b.yoyRef, F6b.yoyCur, F6b.yoyPrev, yA6b.pct, yA6b.months]));
+  check('ST6c. Богино цонхтой салбарын хамаарал хэвээр: авто (8-р сар) жишигт нөлөөлөхгүй, жишиг 8–9 сар',
+    JSON.stringify(P2.yoyRef) === '[8,9]', JSON.stringify(P2.yoyRef));
   check('ST7. Эх сурвалж алга / no_data → hasData:false (тоо зохиохгүй)',
     !L.sectorTotalModel(null, 'all').hasData && !L.sectorTotalModel({ status: 'no_data', sectors: [], months: [] }, 'all').hasData);
 
