@@ -1,41 +1,74 @@
 <!DOCTYPE html>
-<html><head>
+<html lang="mn"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>window.__resources = {};</script>
-<link rel="preload" as="script" href="js/vendor/d3.v7.min.js?v=f2094bbf">
-<link rel="preload" as="script" href="js/vendor/topojson-client.min.js?v=25cd02ae">
-<link rel="preload" as="script" href="js/vendor/starter-component.js?v=fff26d08">
-<link rel="preload" as="script" href="js/vendor/xlsx.full.min.js?v=c9506197">
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="js/firebase-config.js?v=9bd9b315"></script>
-<script src="js/dataset-views.js?v=374f24b0"></script>
-<script src="js/erthub-store.js?v=f9a42775"></script>
-<script src="js/backend-config.js?v=23239b1c"></script>
-<script src="js/publish-mock.js?v=38676b91"></script>
-<script src="js/erthub-publish.js?v=ffe215f9"></script>
-<script src="js/erthub-backend.js?v=a96de8ab"></script>
-<script src="js/erthub-chart.js?v=422174bf"></script>
-<script src="js/erthub-glossary.js?v=452cb979"></script>
-<script src="js/erthub-tip.js?v=ba005e59"></script>
-<script src="js/erthub-chartkit.js?v=2913aee9"></script>
-<script src="js/vendor/dc-runtime.js?v=8fe7df74"></script>
+<title>ErtHub — Зам, тээврийн нээлттэй өгөгдөл</title>
+<meta name="description" content="Монгол Улсын зам, тээврийн салбарын нээлттэй өгөгдлийн портал: агаар, төмөр зам, авто тээврийн зорчигч ба ачааны статистик, датасэт, API.">
+<meta name="theme-color" content="#2E7CF6">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ErtHub">
+<meta property="og:locale" content="mn_MN">
+<meta property="og:title" content="ErtHub — Зам, тээврийн нээлттэй өгөгдөл">
+<meta property="og:description" content="Агаар, төмөр зам, авто тээврийн зорчигч ба ачааны статистик — эх сурвалжтай, өдөр бүр шинэчлэгддэг нээлттэй датасэт.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>window.__resources = {};
+try{var ehT=localStorage.getItem('eh-theme');if(ehT==='dark'||(!ehT&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-eh-boot','dark');}catch(e){}</script>
+<!-- Анхны дэлгэц: JS/өгөгдөл ирэхээс ӨМНӨ нэг дор зурагдана. Темплейт (x-dc) зурагдахгүй. -->
+<style>
+html{background:#E6EDF7}
+html[data-eh-boot="dark"]{background:#0B1220}
+x-dc{display:none!important}
+#eh-boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#131A2E;background:#E6EDF7}
+html[data-eh-boot="dark"] #eh-boot{background:#0B1220;color:#E8EEF9}
+body:has(#dc-root:not(:empty)) #eh-boot{display:none}
+.eh-boot-mark{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;background:linear-gradient(135deg,#2E7CF6,#3355ff)}
+.eh-boot-t{font-size:20px;font-weight:700;margin-top:6px}
+.eh-boot-s{font-size:13px;opacity:.75;max-width:340px;line-height:1.5}
+.eh-boot-bar{width:160px;height:3px;border-radius:2px;overflow:hidden;background:rgba(46,124,246,.18);margin-top:8px}
+.eh-boot-bar i{display:block;width:40%;height:100%;border-radius:2px;background:#2E7CF6;animation:ehBootBar 1.1s ease-in-out infinite}
+@keyframes ehBootBar{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+@media (prefers-reduced-motion:reduce){.eh-boot-bar i{animation:none;width:100%;opacity:.5}}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="style.css?v=642d604a">
+<link rel="stylesheet" href="chart.css?v=0970086f">
+<!-- defer: дараалал хадгалагдана, парсерыг блоклохгүй. React орон нутгаас —
+     unpkg унавал сайт цагаан болж үлддэг байв (dc-runtime нь window.React байвал CDN-ээс татахгүй). -->
+<script src="js/vendor/react.production.min.js?v=d949f1c3" defer></script>
+<script src="js/vendor/react-dom.production.min.js?v=35f4f974" defer></script>
+<script src="js/vendor/d3.v7.min.js?v=f2094bbf" defer></script>
+<script src="js/vendor/topojson-client.min.js?v=25cd02ae" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" defer></script>
+<script src="js/firebase-config.js?v=9bd9b315" defer></script>
+<script src="js/dataset-views.js?v=374f24b0" defer></script>
+<script src="js/erthub-store.js?v=f9a42775" defer></script>
+<script src="js/backend-config.js?v=23239b1c" defer></script>
+<script src="js/publish-mock.js?v=38676b91" defer></script>
+<script src="js/erthub-publish.js?v=ffe215f9" defer></script>
+<script src="js/erthub-backend.js?v=a96de8ab" defer></script>
+<script src="js/erthub-chart.js?v=422174bf" defer></script>
+<script src="js/erthub-glossary.js?v=452cb979" defer></script>
+<script src="js/erthub-tip.js?v=ba005e59" defer></script>
+<script src="js/erthub-chartkit.js?v=2913aee9" defer></script>
+<script src="js/vendor/dc-runtime.js?v=8fe7df74" defer></script>
 </head>
 <body>
+<div id="eh-boot" role="status" aria-live="polite">
+  <div class="eh-boot-mark" aria-hidden="true">ЗТЯ</div>
+  <div class="eh-boot-t">ErtHub</div>
+  <div class="eh-boot-s" id="eh-boot-msg">Зам, тээврийн нээлттэй өгөгдлийг ачаалж байна…</div>
+  <div class="eh-boot-bar" aria-hidden="true"><i></i></div>
+  <noscript><div class="eh-boot-s">Энэ сайтыг харахын тулд хөтчийн JavaScript-ийг идэвхжүүлнэ үү.</div></noscript>
+</div>
+<script>setTimeout(function(){var r=document.getElementById('dc-root'),m=document.getElementById('eh-boot-msg');if(m&&!(r&&r.firstChild))m.textContent='Ачаалахад удаж байна. Сүлжээгээ шалгаад хуудсаа дахин ачаална уу.';},20000);</script>
 
+<!-- template: дотор нь {{ }}-тэй SVG атрибутууд байгаа тул шууд DOM-д парс хийвэл
+     хөтөч 200+ алдаа консолд бичдэг. Идэвхгүй баримтад парс хийж, дараа нь зөөнө. -->
+<template id="eh-tpl">
 <x-dc>
-<helmet>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="js/vendor/starter-component.js?v=fff26d08"></script>
-  <script src="js/vendor/d3.v7.min.js?v=f2094bbf"></script>
-  <script src="js/vendor/topojson-client.min.js?v=25cd02ae"></script>
-  <script src="js/vendor/xlsx.full.min.js?v=c9506197"></script>
-  <link rel="stylesheet" href="style.css?v=642d604a">
-  <link rel="stylesheet" href="chart.css?v=0970086f">
-</helmet>
 
 <div class="eh-app" data-theme="{{ themeAttr }}" style="{{ rootStyle }}">
 
@@ -5756,6 +5789,8 @@
   </svg>
 </template>
 </x-dc>
+</template>
+<script>(function(){var t=document.getElementById('eh-tpl');t.parentNode.insertBefore(t.content.firstElementChild,t);t.parentNode.removeChild(t);})();</script>
 <script type="text/x-dc" data-dc-script="">
 const NEON = {road:'#8CA9E8',rail:'#B48CFF',air:'#2FE0C4',water:'#4FA8FF',weekend:'#F2A93B',
   /* Салбарын нэгтгэл (sectorTotal) — каталог/дэлгэрэнгүй хуудасны өнгө; нүүрний салбарт орохгүй */
@@ -9594,6 +9629,32 @@ function mapFirebaseError(err){
   return map[code] || 'Тодорхойгүй алдаа гарлаа. Дахин оролдоно уу.';
 }
 
+/* Excel сан (~860 КБ) зөвхөн «Excel татах» дарахад ачаалагдана — хуудас бүрийн
+   зочин үүнийг татаж, задлах ёсгүй. Давхар дарвал ижил Promise-оо буцаана. */
+let xlsxLoading=null;
+function loadXlsx(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(xlsxLoading) return xlsxLoading;
+  xlsxLoading=new Promise((resolve,reject)=>{
+    const el=document.createElement('script');
+    el.src='js/vendor/xlsx.full.min.js';
+    el.onload=()=>window.XLSX?resolve(window.XLSX):reject(new Error('XLSX алга'));
+    el.onerror=()=>reject(new Error('xlsx.full.min.js ачаалагдсангүй'));
+    document.head.appendChild(el);
+  }).catch(e=>{ xlsxLoading=null; throw e; });
+  return xlsxLoading;
+}
+/* Хөтчийн табын нэр — ЦЭВЭР (tests/run.js PG4). */
+function docTitleOf(page,dataset,pageLabel,brand,homeTitle){
+  if(page==='detail'&&dataset&&dataset.name) return dataset.name+' — '+brand;
+  if(!page||page==='home'||!pageLabel) return homeTitle;
+  return pageLabel+' — '+brand;
+}
+/* Суурь шинэчлэлийн дахин зурах хугацаа — ЦЭВЭР (tests/run.js PG2). Бүтэн зурах нь
+   ~350 мс; өмнөх зурсан хугацаанаас богино давтамжтай зурвал гол урсгал чөлөөлөгдөхгүй. */
+function bgRenderWait(lastMs){
+  return Math.min(400,Math.max(24,Math.round((lastMs||0)*1.2)));
+}
 class Component extends DCLogic {
   state={ authed:false, authBusy:false, authReady:false, mobileNavOpen:false, viewportW:(typeof window!=='undefined'?window.innerWidth:1280),
     airYear:null, airType:'all', airDir:'all', airRegion:'all', airYearLoading:false,
@@ -9623,7 +9684,7 @@ class Component extends DCLogic {
       }catch(e){}
       return 'light';
     })(),
-    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', vehTab:VEHREG_TAB_DEFAULT, globeReady:false, globeRotation:0, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', pvColFilter:{}, pvColTyped:{}, weekTab:'pax', aiIndex:0, compareOff:'', fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'stage', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
+    authTab:'login', authRole:'citizen', profile:null, authName:'', authLast:'', authReg:'', authPhone:'', authOrg:'', authTtd:'', authEmail:'', authPass:'', authPass2:'', authRemember:true, authTerms:false, authNews:true, authErr:'', aiInput:'', aiThread:null, aiThinking:false, aiStep:0, activeSector:'road', vehTab:VEHREG_TAB_DEFAULT, globeReady:false, page:'home', dataFilter:'all', dsListPage:0, histTab:'timeline', histSector:'all', histPage:0, histOpen:-1, peopleCat:'all', peoplePage:0, peopleQuery:'', peopleOpen:-1, docCat:'research', docListPage:0, docQ:'', docRatings:null, docReviews:null, docRemote:null, dsFollow:null, docMyStars:0, docReviewDraft:'', docSaved:null, docShareOpen:false, docIndex:-1, docTab:'about', docPage:1, docExpand:false, dsIndex:0, dsAction:'', dsQ:'', dsSort:0, dsDir:-1, dsPage:0, pvFilterOpen:false, pvStatusFilter:'all', pvColFilter:{}, pvColTyped:{}, weekTab:'pax', aiIndex:0, compareOff:'', fYear:'2026', mFrom:1, mTo:12, svcTab:'citizen', svcQ:'', svcListPage:0, browseTab:'catalog', commTab:'projects', projOpen:-1, cFilter:'all', cSort:'stage', cVotes:null, cAgainst:null, cComments:null, cDraft:'', subStep:0, subType:'dash', subTitle:'', subDesc:'', subSector:'road', subLink:'', reqOpen:false, reqWhat:'', reqWhy:'', reqSector:'road', toast:'', newsTab:'docs' };
 
 /* ── ХАЯГ ↔ ХУУДАС ─────────────────────────────────────────────────
      Өмнө нь хуудас солигдоход хаяг ОГТ өөрчлөгддөггүй байв. Үүнээс болж:
@@ -9751,7 +9812,44 @@ class Component extends DCLogic {
     this.syncHash(to);
     if(window.scrollTo) window.scrollTo(0,0);
   }
+  /* ── Дахин зурах нэгтгэл (PG3) ──
+     Ачаалахад 30+ fetch тус бүр setState дуудаж, тус бүр нь бүх сайтыг (~350 мс) зурж
+     анхны 10+ секундэд гол урсгалыг эзэлдэг байв. Төлөв ШУУД шинэчлэгдэнэ (this.state-ийг
+     дараагийн мөр уншиж болно) — зөвхөн ЗУРАЛТ нэгтгэгдэнэ.
+     Хэрэглэгчийн үйлдэл (window.event бий) ШУУД зурна: controlled input-ийн утга ижил
+     tick-д шинэчлэгдэхгүй бол курсор үсэрнэ. */
+  setState(update,cb){
+    if((typeof window!=='undefined'&&window.event)||!this.__host){
+      if(this._bgTimer){
+        clearTimeout(this._bgTimer); this._bgTimer=null;
+        const pend=this._bgCbs; this._bgCbs=null;
+        if(pend) return super.setState(update,()=>{ pend.forEach(f=>f()); if(cb) cb(); });
+      }
+      return super.setState(update,cb);
+    }
+    const prev=this.state;
+    const patch=typeof update==='function'?update(prev):update;
+    this.state=Object.assign({},prev,patch);
+    if(cb) (this._bgCbs=this._bgCbs||[]).push(cb);
+    if(this._bgTimer) return;
+    this._bgTimer=setTimeout(()=>{
+      this._bgTimer=null;
+      const pend=this._bgCbs; this._bgCbs=null;
+      const t0=performance.now();
+      super.setState({},()=>{ this._bgRenderMs=performance.now()-t0; if(pend) pend.forEach(f=>f()); });
+    },bgRenderWait(this._bgRenderMs));
+  }
+  syncDocTitle(){
+    const st=this.state, p=PAGES.find(x=>x.id===st.page);
+    const title=docTitleOf(st.page,DATASETS[st.dsIndex],p&&stxt('nav.'+p.id,p.label),
+      stxt('brand.name','ErtHub'),stxt('brand.doc_title','ErtHub — Зам, тээврийн нээлттэй өгөгдөл'));
+    if(document.title!==title) document.title=title;
+  }
+  componentDidUpdate(){ this.syncDocTitle(); }
   componentDidMount(){
+    /* Анхны дэлгэц — темплейт зурагдсан тул хэрэггүй (текст нь DOM-д үлдэхгүй). */
+    const bootEl=document.getElementById('eh-boot'); if(bootEl) bootEl.remove();
+    this.syncDocTitle();
     /* Хаягт хуудас заасан бол ТҮҮГЭЭР эхэлнэ (хуваалцсан холбоос, F5). */
     var startRoute=this.routeFromHash();
     if(startRoute&&!this.applyRoute(startRoute)) this._pendingRoute=startRoute;
@@ -9907,7 +10005,6 @@ class Component extends DCLogic {
     this._wheelHintT=setTimeout(()=>this.setState({homeWheelHint:false}),1400);
     if(!this.state.homeWheelHint) this.setState({homeWheelHint:true});
   }
-  componentWillUnmount(){ if(this.rotInterval) clearInterval(this.rotInterval); }
   async loadGlobe(){
     let tries=0;
     while((!window.d3 || !window.topojson) && tries<60){ await new Promise(r=>setTimeout(r,100)); tries++; }
@@ -9916,25 +10013,21 @@ class Component extends DCLogic {
       const res=await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json');
       const topology=await res.json();
       const countries=window.topojson.feature(topology, topology.objects.countries);
-      this.landFeature=window.topojson.merge(topology, topology.objects.countries.geometries);
       this.worldCountries=countries.features;
-      this.mongoliaFeature=countries.features.find(f=>String(f.id)==='496' || (f.properties && f.properties.name==='Mongolia'));
       this.setState({globeReady:true});
-      // Зөвхөн нүүр хуудсанд эргүүлнэ. Өмнө нь энэ 60мс тутам хуудас
-      // харгалзалгүй setState дуудаж, датасетийн дэлгэрэнгүй хуудсан дээр
-      // (150 мөр x 31 багана хүснэгттэй) бүх template-ийг дэмий дахин
-      // render хийлгэж байсан.
-      this.rotInterval=setInterval(()=>{
-        if(this.state.page!=='home') return;
-        this.setState(s=>({globeRotation:(s.globeRotation+0.5)%360}));
-      },60);
+      /* АНХААР: энд 60мс тутам setState хийдэг автомат эргэлт байсан — бөмбөрцөг нь
+         темплейтээс аль эрт хасагдсан ч таймер үлдэж, нүүр хуудас хоосон зогсоход
+         ч бүх сайтыг дахин зурж гол урсгалыг 100% эзэлж байв (2026-11-01 аудит: 8 сек
+         дотор 31 урт таск, 8,076 мс). Давтамжтай setState ХОРИОТОЙ — хөдөлгөөнийг
+         CSS-ээр хий (PG1). */
     }catch(e){}
   }
   // Аймгийн (admin-1) хилийн шугам — Bilgee/mongolia-geojson repo-гийн
   // хялбаршуулсан хувилбар (~225KB), веритех dashboard-той ижил эх сурвалж.
   async loadMongoliaGeo(){
     try{
-      const res=await fetch('https://raw.githubusercontent.com/Bilgee/mongolia-geojson/master/mongolia.prefectures.geojson');
+      /* Commit-оор бэхэлсэн — master солигдвол аймгийн зураг чимээгүй эвдрэхгүй */
+      const res=await fetch('https://raw.githubusercontent.com/Bilgee/mongolia-geojson/e67e606088a03e8b29a3af24b81036ad4786a61a/mongolia.prefectures.geojson');
       const geoJson=await res.json();
       geoJson.features.forEach(f=>{ f.properties.name=AIMAG_NAME_MAP[f.properties.prefecture]||f.properties.prefecture; });
       this.mongoliaAimags=geoJson;
@@ -13081,15 +13174,22 @@ class Component extends DCLogic {
         :stxt('detail.raw_truncated','Сүүлийн {n} мөр харагдаж байна (нийт {total}) — он, сараар нарийсгаж үзнэ үү.'))
         .replace('{n}',fmtNum(sc.loaded)).replace('{total}',fmtNum(sc.total)):'',
       pvExport:()=>{
-        const XLSX=window.XLSX;
-        if(!XLSX){ this.setState({toast:'Excel сан ачаалагдаж байна, түр хүлээгээд дахин оролдоно уу.'}); this.fadeToast&&this.fadeToast(); return; }
-        const header=sc.head;
-        const body=rows.map(r=>hasStatus?r.slice(0,-1).concat([String(r[r.length-1]).split(':')[1]||String(r[r.length-1])]):r.slice(0,-1));
-        const ws=XLSX.utils.aoa_to_sheet([header].concat(body));
-        const wb=XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb,ws,dsel.name.slice(0,28)||'Дата');
-        const today=new Date().toISOString().slice(0,10);
-        XLSX.writeFile(wb,dsel.sector+'_'+today+'.xlsx');
+        const save=(XLSX)=>{
+          const header=sc.head;
+          const body=rows.map(r=>hasStatus?r.slice(0,-1).concat([String(r[r.length-1]).split(':')[1]||String(r[r.length-1])]):r.slice(0,-1));
+          const ws=XLSX.utils.aoa_to_sheet([header].concat(body));
+          const wb=XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb,ws,dsel.name.slice(0,28)||'Дата');
+          const today=new Date().toISOString().slice(0,10);
+          XLSX.writeFile(wb,dsel.sector+'_'+today+'.xlsx');
+        };
+        if(window.XLSX) return save(window.XLSX);
+        this.setState({toast:stxt('detail.xlsx_loading','Excel файл бэлдэж байна…')});
+        this.fadeToast&&this.fadeToast();
+        loadXlsx().then(save,()=>{
+          this.setState({toast:stxt('detail.xlsx_failed','Excel сан ачаалагдсангүй — сүлжээгээ шалгаад дахин оролдоно уу.')});
+          this.fadeToast&&this.fadeToast();
+        });
       },
       toggleFilter:()=>this.setState(s=>({pvFilterOpen:!s.pvFilterOpen})),
       pvFilterOpen:!!this.state.pvFilterOpen,
@@ -16269,25 +16369,6 @@ class Component extends DCLogic {
     return {period,arcs,activePct,activePctLabel:(act.live?pctOf(actP,0):'—'),activeName:act.label,note,hasNote:!!note,
       measureChips,hasMeasure:!!st};
   }
-  buildGlobe(){
-    const d3=window.d3;
-    const rotation=[this.state.globeRotation,-18,0];
-    const proj=d3.geoOrthographic().scale(88).translate([95,95]).rotate(rotation).clipAngle(90);
-    const pathGen=d3.geoPath(proj);
-    const sphere=pathGen({type:'Sphere'});
-    const land=this.landFeature?pathGen(this.landFeature):'';
-    const mn=this.mongoliaFeature?pathGen(this.mongoliaFeature):'';
-    let markerVisible=false, markerX=95, markerY=95;
-    if(this.mongoliaFeature){
-      const centroid=d3.geoCentroid(this.mongoliaFeature);
-      const dist=d3.geoDistance(centroid,[-rotation[0],-rotation[1]]);
-      if(dist<Math.PI/2){
-        const pt=proj(centroid);
-        if(pt){ markerVisible=true; markerX=pt[0]; markerY=pt[1]; }
-      }
-    }
-    return {sphere,land,mn,markerVisible,markerX,markerY};
-  }
   // "AI туслах" — эх veritech dashboard-ын "ачаалагдсан бүх бичлэг дээр
   // шууд, локал тооцоолол хийж хариулна (Claude API дуудахгүй)" гэсэн
   // зарчмыг яг адилхан давтана: түлхүүр үг/улсын нэрээр таамаглаж,
@@ -17098,7 +17179,7 @@ class Component extends DCLogic {
   // bubble map (veritech-flights-dashboard-ийн ECharts хувилбартай ижил
   // өгөгдлийн эх сурвалж/логиктой, гэхдээ энд d3 projection зөвхөн координат
   // ТООЦООЛОЛД ашиглагдаж, үр дүнг plain SVG болгон declarative template-рүү
-  // дамжуулна — buildGlobe()-той адил зарчим, dc-runtime-ийн re-render-тэй
+  // дамжуулна — buildHomeMap()-той адил зарчим, dc-runtime-ийн re-render-тэй
   // зөрчилдөх imperative DOM library (жиш. ECharts instance) шаардлагагүй.
   // Өнгийг NEON.air/--surface-rgb-ээс тооцоолсон hash-based HSL/RGB утгаар
   // үүсгэдэг тул hardcode hex алга (theme солиход автоматаар зохицно).
@@ -18024,7 +18105,6 @@ class Component extends DCLogic {
       sector:s,
       sectorTabs,
       orbitDots,
-      globe:this.buildGlobe(),
       donut:this.buildDonut(key),trendPeriod:t05Period,
       ...this.buildPageVals(),
       ...this.buildExtras(),

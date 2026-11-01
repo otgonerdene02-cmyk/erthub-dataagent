@@ -8594,7 +8594,7 @@ async function groupDGA() {
        зорчигч (weekly.ytd 2026-01-01…10-18): агаар 100, төмөр зам 300 → 25.0% / 75.0%, нийт 100%
        ачаа (weekly алга → 2026 оны сарын нэгтгэл): агаар 4, төмөр зам 1700 (02-р сар null — тооцохгүй),
          2025-12 (өмнөх он) орохгүй → 4/1704 = 0.2%, 1700/1704 = 99.8%; хугацаа 2026-01 — 2026-02 · 2 сар */
-  const mD = site.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  buildGlobe\(\)/);
+  const mD = site.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  \/\/ "AI туслах"/);
   const mS = site.match(/\n  sectorShareFromTotal\(keys\)\{([\s\S]*?)\n  \}\n/);
   check('DG-P26. Сайтын buildDonut + sectorShareFromTotal олдов, хоёр тал EHGlossary.sectorShare-ээр',
     !!(mD && mS) && /EHGlossary\.sectorShare\(/.test(mS ? mS[1] : '') && /EHGlossary\.sectorShare\(/.test(parts[3]));
@@ -9735,7 +9735,7 @@ function groupDG() {
 
   /* DG8. Нүүрний share/donut: ганц салбар 100% бол ил анхааруулга, «0.0%» биш «—» (регресс).
      d05 buildDonut-ыг гараар бодох фикстур дээр ажиллуулна: агаар 1000, төмөр зам 500. */
-  const mD = idx.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  buildGlobe\(\)/);
+  const mD = idx.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  \/\/ "AI туслах"/);
   if (!mD) { bad('DG8. buildDonut() задарсангүй'); }
   else {
     const SEC = {
@@ -10725,7 +10725,7 @@ function groupST() {
     L.sectorDonutArcs([{ name: 'A', color: '#1', value: 0, pct: 0 }, { name: 'B', color: '#2', value: 5, pct: 100 }], 'т').length === 1);
 
   /* d05 — нүүрний «Салбарын харьцаа» (регресс: төмөр зам ОГТ гардаггүй байв) */
-  const mD = idx.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  buildGlobe\(\)/);
+  const mD = idx.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  \/\/ "AI туслах"/);
   const mS = idx.match(/\n  sectorShareFromTotal\(keys\)\{([\s\S]*?)\n  \}\n/);
   check('ST13. buildDonut + sectorShareFromTotal олдов', !!(mD && mS));
   if (mD && mS) {
@@ -12238,12 +12238,157 @@ async function groupPF() {
   }
 }
 
+async function groupPG() {
+  group('PG. Сайтын ачаалал (хоосон зогсолт, зурах нэгтгэл, толгой, Excel-ийн хойшлуулалт)');
+  const html = read('index.html').replace(/\r\n/g, '\n'), src = dcScript().replace(/\r\n/g, '\n');
+  const tpl = html.slice(0, html.indexOf('<script type="text/x-dc"'));
+
+  /* 2026-11-01 аудит: темплейтээс хасагдсан бөмбөрцгийн 60мс таймер нүүрийг хоосон
+     зогсоход гол урсгалын 100%-ийг эзэлж байв (8 сек — 31 урт таск, 8,076 мс). */
+  const ivs = [...src.matchAll(/setInterval\(/g)].map((m) => src.slice(m.index, m.index + 240));
+  check('PG1. Давтамжтай setState алга (setInterval → setState, бөмбөрцгийн үлдэгдэл)',
+    !ivs.some((b) => /setState/.test(b)) && !/buildGlobe|globeRotation|rotInterval/.test(src) && !/\{\{\s*globe/.test(tpl),
+    ivs.length + ' setInterval');
+
+  const bw = src.match(/\nfunction bgRenderWait\(lastMs\)\{[\s\S]*?\n\}/);
+  check('PG2. bgRenderWait олдов', !!bw);
+  const wait = bw ? new Function(bw[0] + ';return bgRenderWait;')() : null;
+  if (wait) check('PG2. Хүлээлт = зурсан хугацаа × 1.2, 24–400 мс (0→24, 100→120, 350→400)',
+    wait(0) === 24 && wait(undefined) === 24 && wait(100) === 120 && wait(350) === 400,
+    [wait(0), wait(undefined), wait(100), wait(350)].join(','));
+
+  const sm = src.match(/\n  setState\(update,cb\)\{[\s\S]*?\n  \}(?=\n  syncDocTitle)/);
+  check('PG3. setState нэгтгэл олдов', !!sm);
+  if (sm) {
+    class Base {
+      constructor() { this.renders = 0; this.state = { a: 1, b: 1 }; this.__host = {}; }
+      setState(u, cb) {
+        const p = typeof u === 'function' ? u(this.state) : u;
+        this.state = Object.assign({}, this.state, p); this.renders++; if (cb) cb();
+      }
+    }
+    const w = { event: null }, timers = new Map(); let tid = 0;
+    const fire = () => { const q = [...timers.values()]; timers.clear(); q.forEach((f) => f()); };
+    const C = new Function('Base', 'bgRenderWait', 'window', 'performance', 'setTimeout', 'clearTimeout',
+      'return class extends Base {' + sm[0] + '\n};')(Base, () => 24, w, { now: () => 0 },
+      (f) => { timers.set(++tid, f); return tid; }, (id) => { timers.delete(id); });
+    const c = new C(), log = [];
+    c.setState({ a: 2 }); c.setState((s) => ({ b: s.a + 1 })); c.setState({ a: 5 }, () => log.push('cb1'));
+    check('PG3a. 3 суурь setState → төлөв ШУУД (a=5, b=3), зураагүй, 1 таймер',
+      c.state.a === 5 && c.state.b === 3 && c.renders === 0 && timers.size === 1 && log.length === 0,
+      JSON.stringify(c.state) + ' r=' + c.renders + ' t=' + timers.size);
+    fire();
+    check('PG3b. Таймер → НЭГ зураг, callback дараа нь', c.renders === 1 && log.join() === 'cb1', c.renders + ' ' + log);
+    w.event = {}; c.setState({ a: 9 });
+    check('PG3c. Хэрэглэгчийн үйлдэл (window.event) → ШУУД зурна, таймергүй (курсор үсрэхгүй)',
+      c.renders === 2 && c.state.a === 9 && timers.size === 0, c.renders + ' ' + timers.size);
+    w.event = null; c.setState({ b: 7 }, () => log.push('cb2'));
+    w.event = {}; c.setState({ a: 10 }, () => log.push('cb3'));
+    check('PG3d. Хүлээгдэж буй суурь + үйлдэл → нэг зураг, таймер цуцлагдана, ХОЁР callback (дарааллаар)',
+      c.renders === 3 && timers.size === 0 && c.state.b === 7 && c.state.a === 10 && log.join() === 'cb1,cb2,cb3',
+      c.renders + ' ' + timers.size + ' ' + log);
+    w.event = null; c.setState({ b: 8 }); w.event = {}; c.setState({ a: 11 });
+    check('PG3e. Callback-гүй хүлээгдэж буй + үйлдэл → таймер цуцлагдана', c.renders === 4 && timers.size === 0, c.renders + ' ' + timers.size);
+    w.event = null; const c2 = new C(); c2.__host = null; c2.setState({ a: 3 });
+    check('PG3f. Холбогдоогүй үед таймер үүсгэхгүй (эцэг рүү дамжина)', timers.size === 0 && c2.renders === 1, String(timers.size));
+  }
+
+  const dt = src.match(/\nfunction docTitleOf\([^)]*\)\{[\s\S]*?\n\}/);
+  check('PG4. docTitleOf олдов', !!dt);
+  if (dt) {
+    const f = new Function(dt[0] + ';return docTitleOf;')();
+    check('PG4. Табын нэр: датасэт → «нэр — брэнд», хуудас → «шошго — брэнд», нүүр/үл мэдэгдэх → нүүрийн нэр',
+      f('detail', { name: 'Агаар' }, 'Дата', 'ErtHub', 'H') === 'Агаар — ErtHub'
+      && f('browse', { name: 'Агаар' }, 'Дата', 'ErtHub', 'H') === 'Дата — ErtHub'
+      && f('home', { name: 'Агаар' }, 'Нүүр', 'ErtHub', 'H') === 'H'
+      && f('detail', undefined, undefined, 'ErtHub', 'H') === 'H'
+      && f(null, null, null, 'ErtHub', 'H') === 'H');
+  }
+
+  const head = html.slice(0, html.indexOf('</head>'));
+  const tags = [...head.matchAll(/<script src="([^"]+)"([^>]*)><\/script>/g)].map((m) => ({ src: m[1].split('?')[0], attrs: m[2] }));
+  const at = (name) => tags.findIndex((x) => x.src === name);
+  check('PG5a. <html lang="mn"> + <head> нь яг ийм (fx фикстур үүн дээр тарьдаг)', /<html lang="mn"><head>/.test(html));
+  check('PG5b. Гарчиг, тайлбар, OG, favicon бий; favicon файл байна',
+    /<title>[^<]{5,}<\/title>/.test(head) && /name="description" content="[^"]{30,}"/.test(head)
+    && /property="og:title"/.test(head) && /rel="icon"[^>]*href="favicon\.svg"/.test(head) && fs.existsSync(path.join(ROOT, 'favicon.svg')));
+  check('PG5c. Толгойн бүх <script src> нь defer (парсерыг блоклохгүй)', tags.length > 10 && tags.every((x) => /\bdefer\b/.test(x.attrs)), JSON.stringify(tags.filter((x) => !/defer/.test(x.attrs))));
+  check('PG5d. Дараалал: react < react-dom < backend-config < publish-mock < erthub-publish < dc-runtime (сүүлд)',
+    at('js/vendor/react.production.min.js') > -1 && at('js/vendor/react.production.min.js') < at('js/vendor/react-dom.production.min.js')
+    && at('js/vendor/react-dom.production.min.js') < at('js/backend-config.js') && at('js/backend-config.js') < at('js/publish-mock.js')
+    && at('js/publish-mock.js') < at('js/erthub-publish.js') && at('js/vendor/dc-runtime.js') === tags.length - 1, tags.map((x) => x.src).join(' '));
+  check('PG5e. Хэрэглэгддэггүй/хүнд сан ачаалалд алга (helmet, starter-component, xlsx)',
+    !/<helmet>/.test(html) && !/starter-component/.test(html) && !/xlsx\.full\.min\.js/.test(tpl) && !fs.existsSync(path.join(ROOT, 'js/vendor/starter-component.js')));
+  check('PG5f. React нь локал файл (unpkg унавал сайт цагаан болдог байв) ба байнга CDN-ээс татахгүй',
+    fs.existsSync(path.join(ROOT, 'js/vendor/react.production.min.js')) && fs.existsSync(path.join(ROOT, 'js/vendor/react-dom.production.min.js')));
+  check('PG5g. Темплейт нь идэвхгүй <template> дотор (SVG атрибутын 200+ консолын алдаа)',
+    /<template id="eh-tpl">\s*<x-dc>/.test(html) && /<\/x-dc>\s*<\/template>/.test(html));
+
+  const lx = src.match(/\nlet xlsxLoading=null;\nfunction loadXlsx\(\)\{[\s\S]*?\n\}/);
+  check('PG6. loadXlsx олдов', !!lx);
+  if (lx) {
+    const added = [];
+    const doc = { createElement: () => ({}), head: { appendChild: (el) => added.push(el) } };
+    const w = {};
+    const load = new Function('window', 'document', lx[0] + ';return loadXlsx;')(w, doc);
+    const p1 = load(), p2 = load();
+    check('PG6a. Давхар дарвал НЭГ л скрипт, ижил Promise', added.length === 1 && p1 === p2, String(added.length));
+    added[0].onerror();
+    const failed = await p1.then(() => false, () => true);
+    const p3 = load();
+    check('PG6b. Сүлжээ унавал алдаа буцааж, дараагийн дарахад ДАХИН оролдоно', failed && added.length === 2 && p3 !== p1, added.length + ' ' + failed);
+    w.XLSX = { ok: 1 }; added[1].onload();
+    const got = await p3;
+    const again = await load();
+    check('PG6c. Ачаалагдсан бол сан буцаана, шинэ скрипт нэмэхгүй', got === w.XLSX && again === w.XLSX && added.length === 2, String(added.length));
+  }
+  check('PG6d. pvExport сангүй үед «дахин оролдоно уу» гэж буцаахгүй — өөрөө ачаалж үргэлжилнэ',
+    /loadXlsx\(\)\.then\(save,/.test(src) && !/түр хүлээгээд дахин оролдоно/.test(src));
+
+  if (!CHROME) { skipped('PG7+ (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
+  const srv = serve(), prevSrc = PROBE_SRC;
+  try {
+    PROBE_SRC = '/index.html?fx=1';
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      const R={};
+      for(let i=0;i<160&&!d.querySelector('.eh-app');i++) await sleep(250);
+      R.mounted=!!d.querySelector('.eh-app');
+      R.boot=!!d.getElementById('eh-boot');
+      R.tplLeft=!!d.getElementById('eh-tpl');
+      R.xlsxEarly=!!w.XLSX; R.title=d.title; R.lang=d.documentElement.lang;
+      await sleep(9000);
+      const lt=[]; const po=new w.PerformanceObserver(l=>l.getEntries().forEach(e=>lt.push(Math.round(e.duration))));
+      po.observe({entryTypes:['longtask']});
+      await sleep(4000);
+      po.disconnect();
+      R.idleTasks=lt;
+      const go=async h=>{ w.location.hash=h; await sleep(1500); return d.title; };
+      R.tBrowse=await go('#/browse');
+      R.tDetail=await go('#/browse/'+encodeURIComponent('Агаарын тээврийн статистик'));
+      R.tHome=await go('#/home');
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('PG7. Хөтчийн проб ажиллав', R.__err); return; }
+    check('PG7. Хуудас зурагдсан, анхны дэлгэц ба идэвхгүй темплейт DOM-оос алга (текст нь 100%-ийн хамрах хүрээнд тоологдохгүй)',
+      R.mounted && !R.boot && !R.tplLeft, JSON.stringify([R.mounted, R.boot, R.tplLeft]));
+    check('PG8. Хоосон зогсоход (4 сек) гол урсгал чөлөөтэй — урт таск ≤2 (өмнө нь 4 сек дотор ~15)', R.idleTasks.length <= 2, JSON.stringify(R.idleTasks));
+    check('PG9. Excel сан хуудас ачаалахад татагдахгүй', !R.xlsxEarly);
+    check('PG10. Табын нэр: нүүр → брэнд, lang=mn', /^ErtHub/.test(R.title) && R.lang === 'mn', R.title + ' ' + R.lang);
+    check('PG11. Табын нэр хуудас дагаж солигдоно, буцаад нүүрийнх болно', / — ErtHub$/.test(R.tBrowse) && /^ErtHub/.test(R.tHome), JSON.stringify([R.tBrowse, R.tDetail, R.tHome]));
+  } finally {
+    PROBE_SRC = prevSrc;
+    srv.close();
+  }
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
+  else if (process.argv.includes('--only=PG')) { await groupPG(); }
   else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
   else if (process.argv.includes('--only=HV')) { await groupHV(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
@@ -12286,7 +12431,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
+  await groupPG(); groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
