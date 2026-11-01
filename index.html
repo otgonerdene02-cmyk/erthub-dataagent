@@ -9726,7 +9726,8 @@ class Component extends DCLogic {
        анхны таб дээр бууна. */
     if(parts[0]==='vehreg'&&parts.length>1&&parts[1])
       return {page:'vehreg',vehTab:parts[1]};
-    return PAGES.some(function(p){return p.id===parts[0]})?{page:parts[0]}:null;
+    /* auth нь цэсэнд байхгүй ч сайт өөрөө #/auth гэж бичдэг — дахин ачаалахад нэвтрэх хуудас хэвээр */
+    return (parts[0]==='auth'||PAGES.some(function(p){return p.id===parts[0]}))?{page:parts[0]}:null;
   }
   /* Дээрх агуулгын өндрийг өөрчилдөг сонголтын дараа товч хэрэглэгчийн хулганы доор
      үлдэнэ (scroll anchoring) — dc-runtime DOM-ыг дахин барьдаг тул хөтчийн
@@ -9862,7 +9863,8 @@ class Component extends DCLogic {
   componentDidUpdate(){ this.syncDocTitle(); this.syncFieldNames(); }
   /* Танигдаагүй "#/…" хаягт чимээгүй нүүр рүү унагахгүй — хэрэглэгч буруу хаяг гэдгээ мэдэх ёстой. */
   noteBadRoute(r){
-    if(r||!/^#\/./.test(String(location.hash||''))) return;
+    /* #/doc: баримт дотоод төлөвтэй тул дахин ачаалахад нээгдэхгүй, сайт өөрөө бичдэг хаяг — алдаа биш */
+    if(r||!/^#\/./.test(String(location.hash||''))||/^#\/doc\b/.test(location.hash)) return;
     this.setState({toast:stxt('a11y.not_found','Энэ хаягаар хуудас олдсонгүй — нүүр хуудсыг нээлээ.')});
     this.fadeToast&&this.fadeToast(5000);
   }

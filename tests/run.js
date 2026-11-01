@@ -12416,6 +12416,11 @@ async function groupPG() {
       w.location.hash='#/oldsongui-hudas'; await sleep(900);
       R.badToast=(d.body.innerText||'').includes('хуудас олдсонгүй');
       await go('#/home');
+      await sleep(5200);
+      w.location.hash='#/auth'; await sleep(900);
+      R.authPage=!!d.querySelector('#dc-root input[type=email],#dc-root input[placeholder*="@"]');
+      R.authToast=(d.body.innerText||'').includes('хуудас олдсонгүй');
+      await go('#/home');
       /* Товч биш дарагддаг элемент гараар */
       const bad=[...root.querySelectorAll('[role=button]')].filter(e=>e.getAttribute('tabindex')==null);
       R.roleNoTab=bad.length;
@@ -12432,6 +12437,7 @@ async function groupPG() {
     check('PG18. Оролт бүр дэлгэц уншигчид нэртэй', R.unnamed.length === 0 && R.unsynced === 0, JSON.stringify(R.unnamed) + ' ' + R.unsynced);
     check('PG19. Skip холбоос: нуугдмал → гараар нээгдэнэ → main руу шилжинэ', R.skipW <= 1 && R.skipFocusW > 20 && R.mainFocused === 'eh-main', [R.skipW, R.skipFocusW, R.mainFocused].join(' '));
     check('PG20. Танигдаагүй "#/…" хаяг → мэдэгдэл (чимээгүй нүүр биш)', R.badToast === true);
+    check('PG20a. Сайтын өөрийн #/auth хаяг → нэвтрэх хуудас, «олдсонгүй» биш', R.authPage === true && R.authToast === false, JSON.stringify([R.authPage, R.authToast]));
     check('PG21. role=button бүр гараар очих боломжтой (tabindex)', R.roleNoTab === 0, String(R.roleNoTab));
     check('PG11. Табын нэр хуудас дагаж солигдоно, буцаад нүүрийнх болно', / — ErtHub$/.test(R.tBrowse) && /^ErtHub/.test(R.tHome), JSON.stringify([R.tBrowse, R.tDetail, R.tHome]));
   } finally {
