@@ -7905,6 +7905,64 @@ function groupFR() {
   check('FT11. Нэгтгэлийн бүх харагдах текст content.json-д (freight_an.total_*)',
     ['total_wk_title', 'total_orgs_title', 'total_week_chart_title', 'total_split_title', 'total_kpi_week', 'total_kpi_ytd',
       'total_kpi_wow', 'total_kpi_yoy', 'total_stale_note'].every(k => typeof content.site.freight_an[k] === 'string'));
+
+  /* ── FR-LF. Ижил тээвэрлэгчээр «Өмнөх оноос» (2026-10-23 тулгалт) ──
+     Регресс (амьд): МТЗ 2026-02-01-ээс бичлэггүй → нэгтгэл 2026 (зөвхөн УБТЗ) / 2025 (УБТЗ + МТЗ)
+     = «+4.0%», УБТЗ дангаараа «+23.3%». Гараар бодох фикстур (1–3 сар):
+       2025: сар бүр УБТЗ 60 + МТЗ 40 = 100      2026: сар бүр УБТЗ 90 (МТЗ алга)
+     → хуучин: 270/300 − 1 = −10.0% (худал уналт);  шинэ: 270/180 − 1 = +50.0%, «МТЗ ороогүй» */
+  const GLF = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+  const lf1 = GLF.likeForLike([{ code: 'УБТЗ', first: '2022-01-01', last: '2026-03-31' }, { code: 'МТЗ', first: '2023-01-02', last: '2026-02-01' }],
+    '2026-01-01', '2026-03-31');
+  const lf2 = GLF.likeForLike([{ code: 'УБТЗ', first: '2022-01-01', last: '2026-10-21' }, { code: 'МТЗ', first: '2023-01-02', last: '2026-02-01' }],
+    '2025-01-01', '2025-12-31');
+  const lf3 = GLF.likeForLike([{ code: 'УБТЗ', first: '2022-01-01', last: '2026-10-21' }, { code: 'МТЗ', first: '2023-01-02', last: '2026-02-01' }],
+    '2023-01-01', '2023-12-31');
+  check('FR-LF1. likeForLike: 2026 1–3 сар — МТЗ (сүүлийн 02-01) хасагдана; 2025 он — хоёулаа; 2023 он — МТЗ (2022 онд мэдээгүй) хасагдана',
+    JSON.stringify(lf1.keep) === '["УБТЗ"]' && lf1.drop[0].code === 'МТЗ' && lf1.drop[0].last === '2026-02-01' &&
+    lf2.drop.length === 0 && lf2.keep.length === 2 && JSON.stringify(lf3.keep) === '["УБТЗ"]' &&
+    GLF.likeForLike([{ code: 'A' }], '', '').drop.length === 0, JSON.stringify([lf1, lf2, lf3]));
+  const flf = src.match(/\nfunction freightLikeForLike\(all,months,yr,mFrom,mTo\)\{([\s\S]*?)\n\}/);
+  check('FR-LF2. freightLikeForLike тодорхойлогдсон, freightAnalysisModel дуудна', !!flf && fam[1].includes('freightLikeForLike(all,months,yr,mFrom,mTo)'));
+  if (flf) {
+    const FLF = new Function('all', 'months', 'yr', 'mFrom', 'mTo', flf[1]);
+    const FA2 = (all, sel, year, mr) => new Function('FREIGHT_DIRS', 'FREIGHT_YOY_MIN', 'yoyCompare', 'monthOverMonth', 'freightLikeForLike', 'all', 'sel', 'year', 'mr', fam[1])
+      (eval(dirsM[1]), 3, YOC, MOM, FLF, all, sel, year, mr);
+    const months = [];
+    const org_months = [];
+    [1, 2, 3].forEach(m => {
+      const k25 = '2025-0' + m, k26 = '2026-0' + m;
+      const end = ['', '-31', '-28', '-31'][m];
+      months.push(fm(k25, 30, k25 + end, { domestic_tonnes: 100 }), fm(k26, 30, k26 + end, { domestic_tonnes: 90 }));
+      org_months.push({ month: k25, org: 'УБТЗ', tonnes: 60 }, { month: k25, org: 'МТЗ', tonnes: 40 }, { month: k26, org: 'УБТЗ', tonnes: 90 });
+    });
+    months.sort((a, b) => a.month < b.month ? -1 : 1);
+    const ALL = { status: 'ok', months, org_months,
+      by_org: [{ org: 'УБТЗ', name: 'Улаанбаатар төмөр зам ХНН', first_date: '2022-01-01', last_date: '2026-03-31' },
+        { org: 'МТЗ', name: 'Монголын төмөр зам ТӨХК', first_date: '2023-01-02', last_date: '2026-02-01' }] };
+    const mOld = FA(ALL, null, 2026, null), mNew = FA2(ALL, null, 2026, null);
+    const ONE = Object.assign({}, ALL, { by_org: [ALL.by_org[0]] });
+    check('FR-LF3. Ачааны нэгтгэл: хуучин −10.0% → ижил тээвэрлэгчээр +50.0% (270/180), МТЗ нэрлэгдэнэ; нэг тээвэрлэгчтэй датасэт хөндөгдөхгүй',
+      Math.abs(mOld.yoy.pct + 10) < 1e-9 && Math.abs(mNew.yoy.pct - 50) < 1e-9 && mNew.yoy.months === 3 &&
+      mNew.yoy.excl[0].code === 'МТЗ' && Math.abs(FA2(ONE, null, 2026, null).yoy.pct + 10) < 1e-9 && !FA2(ONE, null, 2026, null).yoy.excl,
+      JSON.stringify([mOld.yoy, mNew.yoy]));
+  }
+  if (ftm && fcol) {
+    const TM2 = (all, year, mr) => new Function('FREIGHT_ORG_COLORS', 'all', 'year', 'mr', ftm[1])(eval(fcol[1]), all, year, mr);
+    /* YTD 2026 = УБТЗ 1000 + МТЗ 200 (1-р сар) = 1200 / 2025 = УБТЗ 800 + МТЗ 700 = 1500
+       → хуучин −20.0%; ижил тээвэрлэгчээр УБТЗ 1000/800 = +25.0%; «оны эхнээс» 1200 ХЭВЭЭР */
+    const W2 = { status: 'ok', org_months: [],
+      by_org: [{ org: 'УБТЗ', name: 'УБТЗ', first_date: '2022-01-01', last_date: '2026-10-18' }, { org: 'МТЗ', name: 'МТЗ', first_date: '2023-01-02', last_date: '2026-02-01' }],
+      weekly: { week_end: '2026-10-18', weeks: [{ week_start: '2026-10-12', week_end: '2026-10-18', missing: false, tonnes: 10, by_org: {} }],
+        ytd: { year: 2026, from: '2026-01-01', to: '2026-10-18', tonnes: 1200, by_org: { 'УБТЗ': { tonnes: 1000 }, 'МТЗ': { tonnes: 200 } } },
+        prev_ytd: { year: 2025, from: '2025-01-01', to: '2025-10-18', tonnes: 1500, by_org: { 'УБТЗ': { tonnes: 800 }, 'МТЗ': { tonnes: 700 } } } } };
+    const tw = TM2(W2, 'all', null).weekly;
+    check('FR-LF4. Ачааны нэгтгэлийн 7 хоног: мөн үеэс ижил тээвэрлэгчээр +25.0% (хуучин −20.0%), оны эхнээс 1200 хэвээр, МТЗ нэрлэгдэнэ',
+      Math.abs(tw.yoy - 25) < 1e-9 && tw.ytd.tonnes === 1200 && tw.yoyPrev === 800 && tw.yoyExcl[0].code === 'МТЗ',
+      JSON.stringify([tw.yoy, tw.yoyPrev, tw.yoyExcl]));
+  }
+  check('FR-LF5. Хасагдсан тээвэрлэгчийн тайлбар НЭГ helper (yoyExclText) — ачааны KPI, нэгтгэлийн KPI/мөр/7 хоног, нүүрний 02',
+    (src.match(/yoyExclText\(/g) || []).length >= 7 && typeof (content.site.yoy_lfl || {}).excl === 'string');
 }
 
 /* ─────────── UI. Датасэтийн хуудасны НЭГДСЭН UI стандарт (2026-10-15) ───────────
@@ -10640,7 +10698,8 @@ function groupST() {
   check('ST0. Модулийн блок олдов (sectorTotalModel … sectorDonutArcs)', a > 0 && b > a);
   if (!(a > 0 && b > a)) return;
   const NEON = { air: '#A', rail: '#R', road: '#D' };
-  const L = new Function('NEON', src.slice(a, b) + '\nreturn {sectorTotalModel,sectorTotalFallback,airMonthlyFromFlights,sectorWeeklyView,buildSectorStackChart,sectorDonutArcs,stPct,SECTOR_TOTAL_ORDER};')(NEON);
+  const L = Object.assign(new Function('NEON', src.slice(a, b) + '\nreturn {sectorTotalModel,sectorTotalFallback,sectorTotalWithCoverage,stRowDays,airMonthlyFromFlights,sectorWeeklyView,buildSectorStackChart,sectorDonutArcs,stPct,SECTOR_TOTAL_ORDER};')(NEON),
+    { weekSectorReport: require(path.join(ROOT, 'js', 'erthub-glossary.js')).weekReport });
   const mo = (month, sector, pax, ft, days, dim) => ({ month, sector, days_in_month: dim, passengers: pax, freight_tonnes: ft,
     passenger_days: days, freight_days: days, passenger_last: null, freight_last: null });
   const API = { status: 'ok',
@@ -10687,6 +10746,24 @@ function groupST() {
   check('ST6a. Өмнөх оноос: богино цонхтой салбар (авто, зөвхөн 8-р сар) нийт %-д ОРОХГҮЙ — нийт +3.75%, авто өөрийн мөрөнд −50%',
     Math.abs(P2.yoyPct - 3.75) < 1e-9 && JSON.stringify(P2.yoySectors) === '["air","rail"]' && Math.abs(yD.pct + 50) < 1e-9,
     JSON.stringify([P2.yoyPct, P2.yoySectors, yD]));
+  /* Сарын эхэнд: агаарын 10-р сар бүтэн, төмөр замынх дутуу. Хамгийн урт олонлогоор бол жижиг
+     салбар (тонны 0.03%) ганцаараа жишиг болж «−3.6%, зөвхөн агаар» гарч байв (2026-11-01 тулгалт).
+     Гараар: 2025 агаар 10/10/10, төмөр зам 1000/1000/1000 | 2026 агаар 9/9/9, төмөр зам 1200/1200/800 (3-р сар 20/31)
+     → нийтлэг 1–2 сар: 2418/2020 = +19.703%; агаар өөрийн мөрөнд 27/30 = −10% (1–3 сар) */
+  const API6b = { status: 'ok', sectors: API.sectors,
+    months: [mo('2025-01', 'air', null, 10, 31, 31), mo('2025-02', 'air', null, 10, 28, 28), mo('2025-03', 'air', null, 10, 31, 31),
+      mo('2025-01', 'rail', null, 1000, 31, 31), mo('2025-02', 'rail', null, 1000, 28, 28), mo('2025-03', 'rail', null, 1000, 31, 31),
+      mo('2026-01', 'air', null, 9, 31, 31), mo('2026-02', 'air', null, 9, 28, 28), mo('2026-03', 'air', null, 9, 31, 31),
+      mo('2026-01', 'rail', null, 1200, 31, 31), mo('2026-02', 'rail', null, 1200, 28, 28), mo('2026-03', 'rail', null, 800, 20, 31)] };
+  const F6b = L.sectorTotalModel(API6b, 2026, { from: 1, to: 12 }).measures.freight_tonnes;
+  const yA6b = F6b.yoy.find(y => y.key === 'air');
+  check('ST6b. Нэг сар илүү бүтэн жижиг салбар нийт %-ийг булаахгүй: нийтлэг 1–2 сараар +19.70%, хоёр салбар хоёулаа; агаар өөрийн мөрөнд −10% (1–3 сар)',
+    Math.abs(F6b.yoyPct - (2418 / 2020 - 1) * 100) < 1e-9 && JSON.stringify(F6b.yoySectors) === '["air","rail"]' &&
+    JSON.stringify(F6b.yoyRef) === '[1,2]' && F6b.yoyCur === 2418 && F6b.yoyPrev === 2020 &&
+    Math.abs(yA6b.pct + 10) < 1e-9 && JSON.stringify(yA6b.months) === '[1,2,3]',
+    JSON.stringify([F6b.yoyPct, F6b.yoySectors, F6b.yoyRef, F6b.yoyCur, F6b.yoyPrev, yA6b.pct, yA6b.months]));
+  check('ST6c. Богино цонхтой салбарын хамаарал хэвээр: авто (8-р сар) жишигт нөлөөлөхгүй, жишиг 8–9 сар',
+    JSON.stringify(P2.yoyRef) === '[8,9]', JSON.stringify(P2.yoyRef));
   check('ST7. Эх сурвалж алга / no_data → hasData:false (тоо зохиохгүй)',
     !L.sectorTotalModel(null, 'all').hasData && !L.sectorTotalModel({ status: 'no_data', sectors: [], months: [] }, 'all').hasData);
 
@@ -10810,6 +10887,99 @@ function groupST() {
   check('ST21. Салбарын нэгтгэлийн бүх текст content.json → site.sector_total-д', ma > 0 && mb > ma && missing.length === 0, missing.join(', '));
   check('ST22. content.json: site.datasets-д нэгтгэлийн мөр (sector:"total"), pv_scope.note_sector_total',
     (C.site.datasets || []).some(x => x.sector === 'total') && !!(C.site.pv_scope || {}).note_sector_total);
+
+  /* ── 2026-10-23 тулгалт: салбарын нэгтгэл ↔ салбарын датасэт НЭГ стандарт ──
+     Регресс (амьд): нэгтгэл авто тээврийн 2026-09-ийг 30/30 «бүтэн» гэж тооцож (билеттэй
+     өдөр), 2025-09-тэй харьцуулан «−25.5%» гаргаж байв; авто датасэт өөрөө 15/30 ба 24/30
+     хамрагдсан хоногтой ХОЁУЛАНГ «дутуу» гэдэг. Гараар бодох фикстур:
+       2025-09  агаар 100 · төмөр зам 300 · авто 1000 (билеттэй 30 өдөр, хамрагдсан 24)
+       2026-09  агаар 120 · төмөр зам 270 · авто  600 (билеттэй 30 өдөр, хамрагдсан 15)
+     → хамрах хүрээгүй: авто 600/1000 = −40% (худал); хамрах хүрээтэй: авто «—»,
+       нийт = агаар + төмөр зам 390/400 = −2.5%, авто утга 600 ХЭВЭЭР (тоо өөрчлөгдөхгүй). */
+  const API3 = { status: 'ok', sectors: API.sectors.map(s => s.sector === 'road' ? Object.assign({}, s, { has_passengers: true }) : s),
+    months: [mo('2025-09', 'air', 100, null, 30, 30), mo('2025-09', 'rail', 300, null, 30, 30), mo('2025-09', 'road', 1000, null, 30, 30),
+      mo('2026-09', 'air', 120, null, 30, 30), mo('2026-09', 'rail', 270, null, 30, 30), mo('2026-09', 'road', 600, null, 30, 30)],
+    weekly: { passengers: { sectors: ['air', 'road', 'rail'], comparable: ['air', 'rail'], week_end: '2026-09-27',
+      weeks: [{ week_start: '2026-08-31', week_end: '2026-09-06', missing: false, value: 150, by_sector: { air: { value: 50, days: 7 }, road: { value: 50, days: 7 }, rail: { value: 50, days: 7 } } },
+        { week_start: '2026-09-14', week_end: '2026-09-20', missing: false, value: 300, by_sector: { air: { value: 100, days: 7 }, road: { value: 100, days: 7 }, rail: { value: 100, days: 7 } } },
+        { week_start: '2026-09-21', week_end: '2026-09-27', missing: false, value: 330, by_sector: { air: { value: 100, days: 7 }, road: { value: 130, days: 7 }, rail: { value: 100, days: 7 } } }] } } };
+  const RH3 = { status: 'ok', months: [{ month: '2025-09', days: 24, data_days: 30, passengers: 1000 }, { month: '2026-09', days: 15, data_days: 30, passengers: 600 }],
+    coverage: { gaps: [{ from: '2026-08-22', to: '2026-09-15' }] } };
+  const raw3 = L.sectorTotalModel(API3, 2026, null).measures.passengers;
+  const cov3api = L.sectorTotalWithCoverage(API3, RH3);
+  const cov3 = L.sectorTotalModel(cov3api, 2026, null).measures.passengers;
+  const yR3 = cov3.yoy.find(y => y.key === 'road'), sR3 = cov3.series[0].parts.find(p => p.key === 'road');
+  check('ST23. Авто тээвэр: хамрах хүрээгүй −40% (худал) → хамрах хүрээтэй «—»; нийт −2.5% (агаар + төмөр зам), авто 600 хэвээр, «цоорхой 15/30»',
+    Math.abs(raw3.yoy.find(y => y.key === 'road').pct + 40) < 1e-9 && yR3.pct === null && Math.abs(cov3.yoyPct + 2.5) < 1e-9 &&
+    cov3.bySec.find(s => s.key === 'road').value === 600 && sR3.complete === false && sR3.gap === true && sR3.days === 15 &&
+    API3.months[5].passenger_cov_days === undefined,
+    JSON.stringify([raw3.yoy.map(y => y.pct), cov3.yoy.map(y => y.pct), cov3.yoyPct, sR3]));
+  const d1 = L.stRowDays({ passenger_days: 30, passenger_cov_days: 15, freight_days: 0, days_in_month: 30 }, 'passengers');
+  const d2 = L.stRowDays({ passenger_days: 28, freight_days: 30, days_in_month: 30 }, 'passengers');
+  check('ST24. stRowDays (модель + хүснэгтийн «Төлөв» НЭГ дүрэм): авто 30 өдөр/15 хамрагдсан → дутуу+цоорхой; агаар 28/30 → бүтэн',
+    d1.days === 30 && d1.cov === 15 && !d1.complete && d1.gap && d2.cov === 28 && d2.complete && !d2.gap, JSON.stringify([d1, d2]));
+  const wv3 = L.sectorWeeklyView(cov3api.weekly.passengers, cov3api.sectors.map(s => ({ key: s.sector, name: s.name })));
+  const g3 = cov3api.weekly.passengers.weeks.map(x => !!x.by_sector.road.gap);
+  check('ST25. 7 хоног: цоорхойтой давхцсан авто долоо хоног тэмдэглэгдэнэ (08.31, 09.14 — 09.15 хүртэл), өмнөх 7 хоног цоорхойтой → харьцуулалт «—» (нүүрний 02-той ИЖИЛ)',
+    JSON.stringify(g3) === '[true,true,false]' && wv3.wow === null && L.sectorWeeklyView(API3.weekly.passengers, []).wow !== null,
+    JSON.stringify([g3, wv3.wow]));
+  /* Эзлэх хувь — давхцах хугацаагаар: төмөр зам 2024-01 (1000) + 2025-01 (100), агаар 2025-01 (300).
+     Бүх түүхээр төмөр зам 1100/1400 = 78.6% (худал — агаар 2024 онд мэдээгүй); давхцах 2025-01:
+     төмөр зам 100/400 = 25%, агаар 75%; нийт KPI 1400 хэвээр. */
+  const API4 = { status: 'ok', sectors: API.sectors,
+    months: [mo('2024-01', 'rail', 1000, null, 31, 31), mo('2025-01', 'air', 300, null, 31, 31), mo('2025-01', 'rail', 100, null, 31, 31)] };
+  const P4 = L.sectorTotalModel(API4, 'all', null).measures.passengers;
+  const r4 = P4.bySec.find(s => s.key === 'rail'), a4 = P4.bySec.find(s => s.key === 'air');
+  check('ST26. «Бүгд» он: эзлэх хувь давхцах хугацаагаар (2025-01) — төмөр зам 25%, агаар 75%; нийт 1400 хэвээр; таслагдсан гэж тэмдэглэнэ',
+    P4.total === 1400 && r4.value === 1100 && r4.shareValue === 100 && Math.abs(r4.pct - 25) < 1e-9 && Math.abs(a4.pct - 75) < 1e-9 &&
+    P4.shareTrimmed === true && JSON.stringify(P4.shareMonths) === '["2025-01"]' &&
+    L.sectorTotalModel(API, 2026, null).measures.passengers.shareTrimmed === false,
+    JSON.stringify([P4.total, r4, a4, P4.shareMonths]));
+  const fb5 = L.sectorTotalFallback({ roadPax: { status: 'ok', months: [{ month: '2026-09', days: 15, data_days: 30, passengers: 600, last_date: '2026-09-30' },
+    { month: '2023-10', days: 0, data_days: 26, passengers: 294 }, { month: '2022-07', days: 0, data_days: 1, passengers: 0 }] } });
+  const fr5 = fb5.months.filter(r => r.sector === 'road');
+  const c5 = L.sectorTotalModel(fb5, 2026, null).measures.passengers.series[0].parts[0];
+  check('ST27. Fallback = backend-ийн ижил дүрэм: авто мөр мэдээтэй өдрөөр (2023-10 294 — алга болохгүй), бүтэн/дутуу хамрагдсан хоногоор; 0 зорчигчтой сар мөргүй',
+    fr5.length === 2 && fr5.find(r => r.month === '2023-10').passengers === 294 && c5.complete === false && c5.days === 15,
+    JSON.stringify([fr5, c5]));
+
+  /* Төмөр замын ачаа — ИЖИЛ тээвэрлэгчээр (ачааны нэгтгэлийн датасэттэй НЭГ дүрэм, FR-LF).
+       2025-03  төмөр зам 300 = УБТЗ 200 + МТЗ 100   | агаар 10
+       2026-03  төмөр зам 260 = УБТЗ 260 (МТЗ алга)  | агаар 12
+     → хуучин: 260/300 − 1 = −13.33%; шинэ: УБТЗ 260/200 − 1 = +30.0%, агаар +20.0% (хөндөгдөхгүй);
+       нийт = (12 + 260)/(10 + 200) − 1 = +29.52%; ачааны дүн (KPI) 272 ХЭВЭЭР */
+  require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+  const API5 = { status: 'ok',
+    sectors: [{ sector: 'air', name: 'Агаарын тээвэр', has_freight: true, freight_last: '2026-03-31' },
+      { sector: 'rail', name: 'Төмөр зам', has_freight: true, freight_last: '2026-03-31' }],
+    months: [mo('2025-03', 'air', null, 10, 31, 31), mo('2025-03', 'rail', null, 300, 31, 31),
+      mo('2026-03', 'air', null, 12, 31, 31), mo('2026-03', 'rail', null, 260, 31, 31)],
+    weekly: { freight_tonnes: { sectors: ['air', 'rail'], comparable: ['air', 'rail'], yoy_cur: 272, yoy_prev: 310, week_end: '2026-03-29',
+      weeks: [{ week_start: '2026-03-23', week_end: '2026-03-29', missing: false, value: 70, by_sector: { air: { value: 3, days: 7 }, rail: { value: 67, days: 7 } } }],
+      ytd: { year: 2026, from: '2026-01-01', to: '2026-03-29', by_sector: { air: { value: 12 }, rail: { value: 260 } } },
+      prev_ytd: { year: 2025, from: '2025-01-01', to: '2025-03-29', by_sector: { air: { value: 10 }, rail: { value: 300 } } } } } };
+  const FA5 = { status: 'ok',
+    by_org: [{ org: 'УБТЗ', first_date: '2022-01-01', last_date: '2026-03-31' }, { org: 'МТЗ', first_date: '2023-01-02', last_date: '2026-02-01' }],
+    org_months: [{ month: '2025-03', org: 'УБТЗ', tonnes: 200 }, { month: '2025-03', org: 'МТЗ', tonnes: 100 }, { month: '2026-03', org: 'УБТЗ', tonnes: 260 }],
+    weekly: { ytd: { from: '2026-01-01', to: '2026-03-29', by_org: { 'УБТЗ': { tonnes: 260 }, 'МТЗ': { tonnes: 0 } } },
+      prev_ytd: { from: '2025-01-01', to: '2025-03-29', by_org: { 'УБТЗ': { tonnes: 200 }, 'МТЗ': { tonnes: 100 } } } } };
+  const F5o = L.sectorTotalModel(API5, 2026, { from: 3, to: 3 }).measures.freight_tonnes;
+  const c5api = L.sectorTotalWithCoverage(API5, null, FA5);
+  const F5 = L.sectorTotalModel(c5api, 2026, { from: 3, to: 3 }).measures.freight_tonnes;
+  const yr5 = F5.yoy.find(y => y.key === 'rail'), ya5 = F5.yoy.find(y => y.key === 'air');
+  check('ST28. Нэгтгэлийн ачаа «Өмнөх оноос» ижил тээвэрлэгчээр: төмөр зам −13.33% → +30.0%, агаар +20.0% хөндөгдөхгүй, нийт +29.52%; дүн 272 хэвээр; МТЗ нэрлэгдэнэ',
+    Math.abs(F5o.yoy.find(y => y.key === 'rail').pct - (260 / 300 - 1) * 100) < 1e-9 && Math.abs(yr5.pct - 30) < 1e-9 && Math.abs(ya5.pct - 20) < 1e-9 &&
+    Math.abs(F5.yoyPct - (272 / 210 - 1) * 100) < 1e-9 && F5.total === 272 && yr5.excl[0].code === 'МТЗ' && ya5.excl.length === 0 &&
+    F5.yoyExcl.length === 1, JSON.stringify([F5o.yoyPct, F5.yoyPct, yr5, ya5]));
+  const w5 = c5api.weekly.freight_tonnes;
+  const wv5 = L.sectorWeeklyView(w5, []);
+  check('ST29. 7 хоногийн «Өмнөх оны мөн үе» (оны эхнээс): 272/310 = −12.26% → 272/210 = +29.52%; «оны эхнээс» төмөр зам 260 ХЭВЭЭР (донут, нийлбэр)',
+    Math.abs(wv5.yoy - (272 / 210 - 1) * 100) < 1e-9 && w5.ytd.by_sector.rail.value === 260 && w5.ytd_cmp.by_sector.rail.value === 260 &&
+    w5.prev_ytd_cmp.by_sector.rail.value === 200 && wv5.yoyExcl[0].code === 'МТЗ' && wv5.ytdSlices.total === 272 &&
+    Math.abs(L.sectorWeeklyView(API5.weekly.freight_tonnes, []).yoy - (272 / 310 - 1) * 100) < 1e-9, JSON.stringify([wv5.yoy, w5.prev_ytd_cmp]));
+  const r5 = L.weekSectorReport(w5, ['air', 'rail'], null);
+  check('ST30. Нүүрний 02 (weekSectorReport) ижил дүнтэй: +29.52%, МТЗ нэрлэгдэнэ; оны эхнээс 272',
+    Math.abs(r5.yoy - (272 / 210 - 1) * 100) < 1e-9 && r5.yoyExcl[0].code === 'МТЗ' && r5.ytd === 272, JSON.stringify(r5));
 }
 
 /* ──────────────────────────────── SM ТООЦООЛЛЫН АРГА ──────────────────────────────── */

@@ -794,8 +794,11 @@
     });
     var total = weeks[weeks.length - 1].value, prevTotal = weeks.length > 1 ? weeks[weeks.length - 2].value : null;
     var cmp = ks.filter(function (k) { return (w.comparable || []).indexOf(k) >= 0; });
-    var yCur = (cmp.length && w.ytd) ? sumK(w.ytd.by_sector, cmp) : null;
-    var yPrev = (cmp.length && w.prev_ytd) ? sumK(w.prev_ytd.by_sector, cmp) : null;
+    /* ytd_cmp/prev_ytd_cmp — ижил тээвэрлэгчээр (sectorTotalWithCoverage; мэдээ ирүүлээгүй тээвэрлэгч
+       ХОЁР оноос хасагдсан). YTD дүн өөрөө (w.ytd) хэвээр — бодит бүртгэгдсэн тонн. */
+    var yc = w.ytd_cmp || w.ytd, yp = w.prev_ytd_cmp || w.prev_ytd;
+    var yCur = (cmp.length && yc) ? sumK(yc.by_sector, cmp) : null;
+    var yPrev = (cmp.length && yp) ? sumK(yp.by_sector, cmp) : null;
     /* Оны эхнээс: мэдээтэй хоног хүрээний хоногоос цөөн салбар (УБТЗ-ийн ачаа 298-аас 294) —
        дүн нь доод хязгаар, өмнөх онтой харьцуулалт бодитоос БАГА гарна → дуудагч ил нэрлэнэ. */
     var span = function (p) { return (p && p.from && p.to) ? Math.round((iso(p.to) - iso(p.from)) / DAY) + 1 : null; };
@@ -803,6 +806,7 @@
     return { keys: ks, weeks: weeks, total: total, prevTotal: prevTotal, wow: pct(total, prevTotal), bySector: bySector,
       ytd: w.ytd ? sumK(w.ytd.by_sector, ks) : null, ytdYear: w.ytd ? w.ytd.year : null,
       yoy: pct(yCur, yPrev), yoyKeys: cmp, weekStart: last.week_start, weekEnd: last.week_end,
+      yoyExcl: (w.ytd_cmp && cmp.indexOf('rail') >= 0 && w.yoy_excl) || [],
       yoyGapKeys: (w.ytd && w.prev_ytd) ? cmp.filter(function (k) { return shortY(w.ytd, k) && !shortY(w.prev_ytd, k); }) : [],
       stale: (w.stale || []).filter(function (k) { return ks.indexOf(k) >= 0; }),
       gapKeys: ks.filter(function (k) { return weeks.some(function (x) { return x.gap.indexOf(k) >= 0; }); }),
@@ -1045,9 +1049,34 @@
     return out.some(function (x) { return x.v != null; }) ? out : null;
   }
 
+  /* (5д) Ижил бүрэлдэхүүнтэй «Өмнөх оноос» (like-for-like). Нэгтгэл (төмөр замын ачаа = УБТЗ +
+     МТЗ) хэсэг бүр өөр хугацаанд мэдээ ирүүлдэг: МТЗ 2026-02-01-ээс хойш бичлэггүй тул 2026 оны
+     3–9 сар (зөвхөн УБТЗ) 2025 оны мөн сартай (УБТЗ + МТЗ) харьцуулагдаж нэгтгэлд «+4.0%», УБТЗ
+     дангаараа «+23.3%» гарч байв (2026-10-23 тулгалт). Хэсэг харьцуулалтад орно ⇔ өмнөх оны ижил
+     эхлэлээс өмнө эхэлсэн БА одоогийн хугацааны төгсгөл хүртэл мэдээ ирүүлсэн (tol хоногийн
+     хүлцэлтэй — өдрийн мэдээ маргааш нь ирдэг). parts = [{code, name, first, last}] (анхны/сүүлийн
+     бичлэг 'YYYY-MM-DD'); curFrom/curTo — харьцуулж буй ОДООГИЙН хугацаа. Огноо буруу бол бүгд
+     орно (зохиож хасахгүй). Буцаана {keep:[code], drop:[{code, name, first, last}]}. */
+  function likeForLike(parts, curFrom, curTo, tolDays) {
+    var tol = (tolDays == null ? 7 : +tolDays) * 864e5;
+    var ok = function (d) { return /^\d{4}-\d{2}-\d{2}/.test(String(d || '')); };
+    var ms = function (d) { return Date.parse(String(d).slice(0, 10) + 'T00:00:00Z'); };
+    var list = Array.isArray(parts) ? parts : [];
+    if (!ok(curFrom) || !ok(curTo)) return { keep: list.map(function (p) { return String(p.code); }), drop: [] };
+    var prevFrom = ms((+String(curFrom).slice(0, 4) - 1) + String(curFrom).slice(4, 10)), to = ms(curTo);
+    var keep = [], drop = [];
+    list.forEach(function (p) {
+      var good = ok(p.first) && ok(p.last) && ms(p.first) <= prevFrom + tol && ms(p.last) >= to - tol;
+      if (good) keep.push(String(p.code));
+      else drop.push({ code: String(p.code), name: p.name || String(p.code), first: p.first || null, last: p.last || null });
+    });
+    return { keep: keep, drop: drop };
+  }
+
   var api = {
     weekReport: weekReport, weekLag: weekLag, weekAxis: weekAxis, weekBars: weekBars,
     roadPaxSeries: roadPaxSeries, trendModel: trendModel, roadPaxMonthSeries: roadPaxMonthSeries,
+    likeForLike: likeForLike,
     airPaxSplit: airPaxSplit, norm: norm, airFlightKind: airFlightKind, KIND_LABEL: KIND_LABEL, AIR_KIND: AIR_KIND,
     SECTOR_PAIRS: SECTOR_PAIRS, ratioSanity: ratioSanity, isCurrentMonth: isCurrentMonth, unitTitleOk: unitTitleOk,
     filterDimensions: filterDimensions, missingFilterCols: missingFilterCols,
