@@ -12528,6 +12528,48 @@ async function groupPH() {
   }
 }
 
+async function groupPS() {
+  group('PS. Нийтийн репо, Pages: дотоод мэдээлэл, нийтлэх хүрээ, дүрэм');
+  const { execSync } = require('child_process');
+  let tracked = [];
+  try { tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean); } catch (e) {}
+  /* git-гүй хуулбар дээр (архив) файлын системээр */
+  if (!tracked.length) {
+    const walk = (d) => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).flatMap((x) => {
+      if (x.name === '.git' || x.name === 'node_modules') return [];
+      const p = d ? d + '/' + x.name : x.name;
+      return x.isDirectory() ? walk(p) : [p];
+    });
+    tracked = walk('');
+  }
+  /* Загвар нь хэсэгчилсэн — энэ файл өөрөө мөрийн утгаа агуулахгүй */
+  const pats = [['10.2.', '115.40'], ['103.17.', '108.199'], ['platform', 'abackup'], ['platform', 'backup@']].map((x) => x.join(''));
+  const leaks = [];
+  tracked.filter((f) => /\.(md|js|json|html|css|yml|yaml|rules|txt|sh|sql)$/i.test(f) && fs.existsSync(path.join(ROOT, f)))
+    .forEach((f) => { const b = fs.readFileSync(path.join(ROOT, f), 'utf8'); pats.forEach((p) => { if (b.includes(p)) leaks.push(f + ':' + p); }); });
+  check('PS1. Дотоод IP, SSH хэрэглэгч tracked файлд алга (' + tracked.length + ' файл)', tracked.length > 50 && leaks.length === 0, leaks.join(', '));
+
+  const cfg = read('_config.yml');
+  const excl = (cfg.match(/^\s*-\s*(\S+)\s*$/gm) || []).map((l) => l.replace(/^\s*-\s*/, '').trim());
+  const must = ['CLAUDE.md', 'README.md', 'HANDOFF_widget_builder.md', 'qa-backlog.md', 'FL-TODO.md', 'firestore.rules', 'docs/', 'tests/', 'scripts/'];
+  check('PS2. _config.yml дотоод баримт, тест, скриптийг нийтлэхгүй', must.every((m) => excl.includes(m)), must.filter((m) => !excl.includes(m)).join(', '));
+  /* Хассан хавтаснаас сайт ЮУ Ч ачаалахгүй — эс тэгвэл амьд сайт эвдэрнэ */
+  const siteFiles = [read('index.html'), read('admin/index.html')].concat(fs.readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js')).map((f) => read('js/' + f)));
+  const refs = [];
+  const reRef = /(?:src|href)=["'](?:\.\.\/|\/)?(tests|scripts|docs)\/|fetch\(\s*['"`](?:\.\.\/|\/)?(tests|scripts|docs)\/|['"`](?:\.\.\/)?(README\.md|CLAUDE\.md|firestore\.rules)['"`]/g;
+  siteFiles.forEach((b) => { let m; while ((m = reRef.exec(b))) refs.push(m[0]); });
+  check('PS3. Сайт, админ, js нь нийтлэгдэхгүй файлыг ачаалдаггүй', refs.length === 0, refs.join(' | '));
+
+  const rules = read('firestore.rules').replace(/\r\n/g, '\n');
+  const up = rules.match(/allow update: if signedIn\(\) && resource\.data\.uid == request\.auth\.uid[\s\S]*?;/);
+  check('PS4. Сэтгэгдэл засахад uid, hidden өөрчлөгдөхгүй, текстийн хязгаартай',
+    !!up && /request\.resource\.data\.uid == resource\.data\.uid/.test(up[0]) && /request\.resource\.data\.hidden == resource\.data\.hidden/.test(up[0]) && /size\(\) <= 1000/.test(up[0])
+    && !/allow update, delete/.test(rules));
+  const wf = read('.github/workflows/tests.yml').replace(/\r\n/g, '\n');
+  const to = wf.match(/name: run\.js[^\n]*\n\s*runs-on:[^\n]*\n\s*timeout-minutes:\s*(\d+)/);
+  check('PS5. CI suites-ийн хугацааны тор ≥ 50 мин (бүтэн сьют ~32 мин)', !!to && +to[1] >= 50, to && to[1]);
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
@@ -12536,6 +12578,7 @@ console.log('ErtHub — систем тест');
   if (process.argv.includes('--only=BE')) { await groupBE(); }
   else if (process.argv.includes('--only=PG')) { await groupPG(); }
   else if (process.argv.includes('--only=PH')) { await groupPH(); }
+  else if (process.argv.includes('--only=PS')) { await groupPS(); }
   else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
   else if (process.argv.includes('--only=HV')) { await groupHV(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
@@ -12578,7 +12621,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  await groupPG(); await groupPH(); groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
+  await groupPG(); await groupPH(); await groupPS(); groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));

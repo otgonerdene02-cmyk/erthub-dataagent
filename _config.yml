@@ -1,0 +1,15 @@
+# GitHub Pages (Jekyll): ЗӨВХӨН сайтын файлууд нийтлэгдэнэ. Хөгжүүлэлтийн баримт, тест, скрипт
+# нь репод байна, сайтаар тараагдахгүй (2026-11-01 аудит). Энд шинэ хавтас нэмэхээс өмнө
+# сайт үүнийг ачааллын үед fetch хийдэггүй эсэхийг шалга (tests/run.js PS3).
+exclude:
+  - CLAUDE.md
+  - README.md
+  - FL-TODO.md
+  - HANDOFF_widget_builder.md
+  - qa-backlog.md
+  - firestore.rules
+  - docs/
+  - tests/
+  - scripts/
+  - .github/
+  - .claude/
