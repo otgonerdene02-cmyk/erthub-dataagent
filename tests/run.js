@@ -252,10 +252,15 @@ function groupB() {
     deadSite.length ? 'алга: ' + deadSite.join(', ') : '');
 
   /* B5. Нүүр хуудасны темплейт мужид хатуу бичигдсэн монгол текст үлдээгүй.
-     Муж = hero-гоос 08-р хэсэг хүртэл (бусад хуудас хамрах хүрээнд ОРОХГҮЙ). */
+     Муж = хүсэлтийн цонхны дараанаас sec-06 хүртэл (бусад хуудас хамрах хүрээнд ОРОХГҮЙ).
+     Мөрийн дугаараар БИШ, тэмдэглэгээгээр — толгойд мөр нэмэгдэхэд муж хөдөлж худал унадаг. */
   const lines = read('index.html').split('\n');
   const hard = [];
-  for (let i = 395; i < 1340; i++) {
+  const b5Req = lines.findIndex((l) => l.includes('{{ reqOpen }}'));
+  const b5From = lines.findIndex((l, i) => i > b5Req && /^  <\/sc-if>/.test(l));
+  const b5To = lines.findIndex((l) => l.includes('id="sec-06"'));
+  check('B5. Нүүрний темплейтийн муж олдов', b5Req > 0 && b5From > b5Req && b5To > b5From);
+  for (let i = b5From + 1; i <= b5To; i++) {
     const line = lines[i];
     if (!line) continue;
     (line.match(/>([^<>{}]*[А-Яа-яӨөҮүЁё][^<>{}]*)</g) || []).forEach(x => {
@@ -7138,7 +7143,7 @@ async function groupHV() {
   }
 
   /* ── HV2. Статик ── */
-  check('HV2. Сайт tooltip модулийг ачаална', /<script src="js\/erthub-tip\.js(\?v=[0-9a-f]{8})?"><\/script>/.test(idx));
+  check('HV2. Сайт tooltip модулийг ачаална', /<script src="js\/erthub-tip\.js(\?v=[0-9a-f]{8})?"( defer)?><\/script>/.test(idx));
   const a0 = idx.indexOf('<svg class="eh-fmap"');
   const tplFlow = idx.slice(a0, idx.indexOf('<sc-if value="{{ detail.flowMap.detail }}">', a0));
   [
@@ -9731,7 +9736,7 @@ function groupDG() {
   check('DG7. Улсын жагсаалт ОУ нислэгээс (ОН нислэг "Тодорхойгүй" улс болж орохгүй)',
     /if\(f\.cntry && airFlightKind\(f\.ou\)==='intl'\)\{\s*byCountry\[f\.cntry\]/.test(idx));
   check('DG7. index.html домэйны толийг ачаална',
-    /<script src="js\/erthub-glossary\.js(\?v=[0-9a-f]{8})?"><\/script>/.test(idx));
+    /<script src="js\/erthub-glossary\.js(\?v=[0-9a-f]{8})?"( defer)?><\/script>/.test(idx));
 
   /* DG8. Нүүрний share/donut: ганц салбар 100% бол ил анхааруулга, «0.0%» биш «—» (регресс).
      d05 buildDonut-ыг гараар бодох фикстур дээр ажиллуулна: агаар 1000, төмөр зам 500. */
