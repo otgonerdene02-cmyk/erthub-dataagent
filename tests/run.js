@@ -8546,6 +8546,17 @@ async function groupDGA() {
     t05 === 'Хугацаа: 2026-01 — 2026-09 · 9 сар · дутуу сар хасагдсан' && FEED.partialDropped === '2026-10' &&
     FEED.months.length === 8, t05 + ' · ' + FEED.partialDropped + ' · ' + FEED.months.length);
   check('DG-P20. t05: админ = сайт (dropPartialMonth + t05Period-ийн дүрэм)', t05 === siteT05, t05 + ' ≠ ' + siteT05);
+  /* Нүүрний муж ба дутуу сар: дээрх цуваа 1–9-р сар (10-р сар хасагдсан). Сайтын дүрэм mto > c1d.length:
+     сүүлийн бүтэн 7 хоног 09-27 → муж 9-р сард дуусна, 9 > 9 биш → тэмдэглэхгүй; 10-18 → 10 > 9 → тэмдэглэнэ */
+  const t05Wk = (weekEnd) => {
+    const K2 = mkKit({ FEED: newFeed(), ST: { state: 'ready', weekly: { passengers: { week_end: weekEnd } } } });
+    K2.computeSeries({ 2026: rows26 }, { year: 2026, rows: rows26 });
+    return K2.pvPeriodText('t05');
+  };
+  check('DG-P20a. t05: нүүрний муж дутуу сард хүрээгүй бол «хасагдсан» гэж хэлэхгүй (сайттай ижил, сарын эхэнд)',
+    t05Wk('2026-09-27') === 'Хугацаа: 2026-01 — 2026-09 · 9 сар', t05Wk('2026-09-27'));
+  check('DG-P20a. t05: муж дутуу сард хүрсэн бол тэмдэглэнэ',
+    t05Wk('2026-10-18') === 'Хугацаа: 2026-01 — 2026-09 · 9 сар · дутуу сар хасагдсан', t05Wk('2026-10-18'));
   check('DG-P21. i06/r06: харьцуулах цонх 1 — сүүлийн бүтэн сар (сайтын compareWindow)',
     K.pvPeriodText('i06') === 'Хугацаа: 2026-01 — 2026-09 · 9 сар' && K.pvPeriodText('r06') === K.pvPeriodText('i06'),
     K.pvPeriodText('i06'));

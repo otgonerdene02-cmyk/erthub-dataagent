@@ -2192,6 +2192,16 @@ function pvWeekModel(id){
 function pvMonthKeys(year,list){
   return year?list.filter(function(x){return +x.v>0}).map(function(x){return year+'-'+String(x.m+1).padStart(2,'0')}):[];
 }
+/* Сайтын t05Period-тэй ИЖИЛ дүрэм: нүүрний муж (оны эхнээс сүүлийн бүтэн 7 хоног хүртэл) дутуу
+   сард хүрээгүй бол зурсан сар бүгд бүтэн — «хасагдсан» гэж хэлэхгүй. Сарын эхний 7 хоногт сайт
+   хэлдэггүй, preview хэлдэг байв (2026-11-01). Муж мэдэгдэхгүй бол өмнөх шигээ тэмдэглэнэ. */
+function pvPartialInWindow(){
+  var G=typeof EHGlossary!=='undefined'?EHGlossary:null;
+  var w=ST.weekly&&ST.weekly.passengers, a=G&&w&&G.dayOf(w.week_end);
+  if(!a||+a.slice(0,4)!==+FEED.year) return true;
+  var mto=+a.slice(5,7);
+  return mto<=1||mto>(FEED.monthCounts||[]).length;
+}
 function pvTrendModel(id){
   var vr=widgetValueRes(id);
   if(vr&&vr.series&&vr.series.length>1)
@@ -2205,7 +2215,7 @@ function pvTrendModel(id){
   if(mk==='road.monthly_passenger_series'){ var rs=ST.roadSeries;
     return rs?{periodKeys:pvMonthKeys(rs.year,metricSeries(mk)),partialDropped:!!rs.partial}:{}; }
   var ser=mk?metricSeries(mk):null;
-  return (ser&&ser.length>1)?{periodKeys:pvMonthKeys(FEED.year,ser),partialDropped:!!FEED.partialDropped}:{};
+  return (ser&&ser.length>1)?{periodKeys:pvMonthKeys(FEED.year,ser),partialDropped:!!FEED.partialDropped&&pvPartialInWindow()}:{};
 }
 /* Нэг метрикийн утгын хугацаа (донутын мөр бүр) — метрик юу уншдагаас. */
 function pvMetricModel(mk){
