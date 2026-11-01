@@ -254,3 +254,14 @@ body{margin:0;}
 .eh-cap-list { max-height: 400px; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }
 
 /* Чартын стандарт (CH) — frame-ийн хэв маяг chart.css-д (админы preview ч ачаална). */
+
+/* Хандах боломж (PG12–PG15). Гараар шилжихэд аль элемент дээр байгаа нь ҮРГЭЛЖ харагдана —
+   inline "outline:none"-ийг дарахын тулд !important. Хулганаар дарахад гарахгүй (focus-visible). */
+:focus-visible { outline: 2px solid #2E7CF6 !important; outline-offset: 2px; }
+#eh-main:focus, #eh-main:focus-visible { outline: none !important; }
+.eh-skip { position: fixed; top: 8px; left: 8px; z-index: 200; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.eh-skip:focus { width: auto; height: auto; padding: 10px 16px; clip-path: none; border-radius: 9px; background: #0C1428; color: #fff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+/* Хөдөлгөөн багасгах сонголттой хэрэглэгчид: бүх хөдөлгөөн зогсоно (толгой эргэх, эпилепси) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

@@ -22,7 +22,7 @@ service cloud.firestore {
     }
 
     // ---- Хэрэглэгчийн профайл -------------------------------------------
-    // Регистр, утас зэрэг хувь хүний дата тул НИЙТЭД УНШУУЛАХГҮЙ.
+    // И-мэйл, нэр зэрэг хувь хүний дата тул НИЙТЭД УНШУУЛАХГҮЙ.
     // Сэтгэгдэлд харагдах нэрийг энэ бичлэгээс татахгүй — сэтгэгдэл дотроо
     // `byName`-ээ хуулж хадгалдаг.
     match /users/{uid} {
@@ -73,8 +73,16 @@ service cloud.firestore {
                       && request.resource.data.text.size() <= 1000
                       && request.resource.data.hidden == false;
 
-        // Зөвхөн өөрийн сэтгэгдлээ засна/устгана.
-        allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
+        // Зөвхөн өөрийн сэтгэгдлээ засна/устгана. Засахдаа эзэн (uid) ба нуусан
+        // төлөвийг (hidden) ӨӨРЧЛӨХГҮЙ — эс тэгвэл нуусан сэтгэгдлээ буцааж ил
+        // болгох, бусдын нэрээр шилжүүлэх боломжтой байв; текстийн хязгаар ч хамаарна.
+        allow update: if signedIn() && resource.data.uid == request.auth.uid
+                      && request.resource.data.uid == resource.data.uid
+                      && request.resource.data.hidden == resource.data.hidden
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 1000;
+        allow delete: if signedIn() && resource.data.uid == request.auth.uid;
       }
 
       // ---- Дагалт -------------------------------------------------------

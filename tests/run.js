@@ -252,10 +252,15 @@ function groupB() {
     deadSite.length ? 'алга: ' + deadSite.join(', ') : '');
 
   /* B5. Нүүр хуудасны темплейт мужид хатуу бичигдсэн монгол текст үлдээгүй.
-     Муж = hero-гоос 08-р хэсэг хүртэл (бусад хуудас хамрах хүрээнд ОРОХГҮЙ). */
+     Муж = хүсэлтийн цонхны дараанаас sec-06 хүртэл (бусад хуудас хамрах хүрээнд ОРОХГҮЙ).
+     Мөрийн дугаараар БИШ, тэмдэглэгээгээр — толгойд мөр нэмэгдэхэд муж хөдөлж худал унадаг. */
   const lines = read('index.html').split('\n');
   const hard = [];
-  for (let i = 395; i < 1340; i++) {
+  const b5Req = lines.findIndex((l) => l.includes('{{ reqOpen }}'));
+  const b5From = lines.findIndex((l, i) => i > b5Req && /^  <\/sc-if>/.test(l));
+  const b5To = lines.findIndex((l) => l.includes('id="sec-06"'));
+  check('B5. Нүүрний темплейтийн муж олдов', b5Req > 0 && b5From > b5Req && b5To > b5From);
+  for (let i = b5From + 1; i <= b5To; i++) {
     const line = lines[i];
     if (!line) continue;
     (line.match(/>([^<>{}]*[А-Яа-яӨөҮүЁё][^<>{}]*)</g) || []).forEach(x => {
@@ -7138,7 +7143,7 @@ async function groupHV() {
   }
 
   /* ── HV2. Статик ── */
-  check('HV2. Сайт tooltip модулийг ачаална', /<script src="js\/erthub-tip\.js(\?v=[0-9a-f]{8})?"><\/script>/.test(idx));
+  check('HV2. Сайт tooltip модулийг ачаална', /<script src="js\/erthub-tip\.js(\?v=[0-9a-f]{8})?"( defer)?><\/script>/.test(idx));
   const a0 = idx.indexOf('<svg class="eh-fmap"');
   const tplFlow = idx.slice(a0, idx.indexOf('<sc-if value="{{ detail.flowMap.detail }}">', a0));
   [
@@ -8541,6 +8546,17 @@ async function groupDGA() {
     t05 === 'Хугацаа: 2026-01 — 2026-09 · 9 сар · дутуу сар хасагдсан' && FEED.partialDropped === '2026-10' &&
     FEED.months.length === 8, t05 + ' · ' + FEED.partialDropped + ' · ' + FEED.months.length);
   check('DG-P20. t05: админ = сайт (dropPartialMonth + t05Period-ийн дүрэм)', t05 === siteT05, t05 + ' ≠ ' + siteT05);
+  /* Нүүрний муж ба дутуу сар: дээрх цуваа 1–9-р сар (10-р сар хасагдсан). Сайтын дүрэм mto > c1d.length:
+     сүүлийн бүтэн 7 хоног 09-27 → муж 9-р сард дуусна, 9 > 9 биш → тэмдэглэхгүй; 10-18 → 10 > 9 → тэмдэглэнэ */
+  const t05Wk = (weekEnd) => {
+    const K2 = mkKit({ FEED: newFeed(), ST: { state: 'ready', weekly: { passengers: { week_end: weekEnd } } } });
+    K2.computeSeries({ 2026: rows26 }, { year: 2026, rows: rows26 });
+    return K2.pvPeriodText('t05');
+  };
+  check('DG-P20a. t05: нүүрний муж дутуу сард хүрээгүй бол «хасагдсан» гэж хэлэхгүй (сайттай ижил, сарын эхэнд)',
+    t05Wk('2026-09-27') === 'Хугацаа: 2026-01 — 2026-09 · 9 сар', t05Wk('2026-09-27'));
+  check('DG-P20a. t05: муж дутуу сард хүрсэн бол тэмдэглэнэ',
+    t05Wk('2026-10-18') === 'Хугацаа: 2026-01 — 2026-09 · 9 сар · дутуу сар хасагдсан', t05Wk('2026-10-18'));
   check('DG-P21. i06/r06: харьцуулах цонх 1 — сүүлийн бүтэн сар (сайтын compareWindow)',
     K.pvPeriodText('i06') === 'Хугацаа: 2026-01 — 2026-09 · 9 сар' && K.pvPeriodText('r06') === K.pvPeriodText('i06'),
     K.pvPeriodText('i06'));
@@ -8594,7 +8610,7 @@ async function groupDGA() {
        зорчигч (weekly.ytd 2026-01-01…10-18): агаар 100, төмөр зам 300 → 25.0% / 75.0%, нийт 100%
        ачаа (weekly алга → 2026 оны сарын нэгтгэл): агаар 4, төмөр зам 1700 (02-р сар null — тооцохгүй),
          2025-12 (өмнөх он) орохгүй → 4/1704 = 0.2%, 1700/1704 = 99.8%; хугацаа 2026-01 — 2026-02 · 2 сар */
-  const mD = site.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  buildGlobe\(\)/);
+  const mD = site.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  \/\/ "AI туслах"/);
   const mS = site.match(/\n  sectorShareFromTotal\(keys\)\{([\s\S]*?)\n  \}\n/);
   check('DG-P26. Сайтын buildDonut + sectorShareFromTotal олдов, хоёр тал EHGlossary.sectorShare-ээр',
     !!(mD && mS) && /EHGlossary\.sectorShare\(/.test(mS ? mS[1] : '') && /EHGlossary\.sectorShare\(/.test(parts[3]));
@@ -9731,11 +9747,11 @@ function groupDG() {
   check('DG7. Улсын жагсаалт ОУ нислэгээс (ОН нислэг "Тодорхойгүй" улс болж орохгүй)',
     /if\(f\.cntry && airFlightKind\(f\.ou\)==='intl'\)\{\s*byCountry\[f\.cntry\]/.test(idx));
   check('DG7. index.html домэйны толийг ачаална',
-    /<script src="js\/erthub-glossary\.js(\?v=[0-9a-f]{8})?"><\/script>/.test(idx));
+    /<script src="js\/erthub-glossary\.js(\?v=[0-9a-f]{8})?"( defer)?><\/script>/.test(idx));
 
   /* DG8. Нүүрний share/donut: ганц салбар 100% бол ил анхааруулга, «0.0%» биш «—» (регресс).
      d05 buildDonut-ыг гараар бодох фикстур дээр ажиллуулна: агаар 1000, төмөр зам 500. */
-  const mD = idx.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  buildGlobe\(\)/);
+  const mD = idx.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  \/\/ "AI туслах"/);
   if (!mD) { bad('DG8. buildDonut() задарсангүй'); }
   else {
     const SEC = {
@@ -10725,7 +10741,7 @@ function groupST() {
     L.sectorDonutArcs([{ name: 'A', color: '#1', value: 0, pct: 0 }, { name: 'B', color: '#2', value: 5, pct: 100 }], 'т').length === 1);
 
   /* d05 — нүүрний «Салбарын харьцаа» (регресс: төмөр зам ОГТ гардаггүй байв) */
-  const mD = idx.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  buildGlobe\(\)/);
+  const mD = idx.match(/\n  buildDonut\(activeKey\)\{([\s\S]*?)\n  \}\n  \/\/ "AI туслах"/);
   const mS = idx.match(/\n  sectorShareFromTotal\(keys\)\{([\s\S]*?)\n  \}\n/);
   check('ST13. buildDonut + sectorShareFromTotal олдов', !!(mD && mS));
   if (mD && mS) {
@@ -12238,12 +12254,353 @@ async function groupPF() {
   }
 }
 
+async function groupPG() {
+  group('PG. Сайтын ачаалал (хоосон зогсолт, зурах нэгтгэл, толгой, Excel-ийн хойшлуулалт)');
+  const html = read('index.html').replace(/\r\n/g, '\n'), src = dcScript().replace(/\r\n/g, '\n');
+  const tpl = html.slice(0, html.indexOf('<script type="text/x-dc"'));
+
+  /* 2026-11-01 аудит: темплейтээс хасагдсан бөмбөрцгийн 60мс таймер нүүрийг хоосон
+     зогсоход гол урсгалын 100%-ийг эзэлж байв (8 сек — 31 урт таск, 8,076 мс). */
+  const ivs = [...src.matchAll(/setInterval\(/g)].map((m) => src.slice(m.index, m.index + 240));
+  check('PG1. Давтамжтай setState алга (setInterval → setState, бөмбөрцгийн үлдэгдэл)',
+    !ivs.some((b) => /setState/.test(b)) && !/buildGlobe|globeRotation|rotInterval/.test(src) && !/\{\{\s*globe/.test(tpl),
+    ivs.length + ' setInterval');
+
+  const bw = src.match(/\nfunction bgRenderWait\(lastMs\)\{[\s\S]*?\n\}/);
+  check('PG2. bgRenderWait олдов', !!bw);
+  const wait = bw ? new Function(bw[0] + ';return bgRenderWait;')() : null;
+  if (wait) check('PG2. Хүлээлт = зурсан хугацаа × 1.2, 24–400 мс (0→24, 100→120, 350→400)',
+    wait(0) === 24 && wait(undefined) === 24 && wait(100) === 120 && wait(350) === 400,
+    [wait(0), wait(undefined), wait(100), wait(350)].join(','));
+
+  const sm = src.match(/\n  setState\(update,cb\)\{[\s\S]*?\n  \}(?=\n  syncDocTitle)/);
+  check('PG3. setState нэгтгэл олдов', !!sm);
+  if (sm) {
+    class Base {
+      constructor() { this.renders = 0; this.state = { a: 1, b: 1 }; this.__host = {}; }
+      setState(u, cb) {
+        const p = typeof u === 'function' ? u(this.state) : u;
+        this.state = Object.assign({}, this.state, p); this.renders++; if (cb) cb();
+      }
+    }
+    const w = { event: null }, timers = new Map(); let tid = 0;
+    const fire = () => { const q = [...timers.values()]; timers.clear(); q.forEach((f) => f()); };
+    const C = new Function('Base', 'bgRenderWait', 'window', 'performance', 'setTimeout', 'clearTimeout',
+      'return class extends Base {' + sm[0] + '\n};')(Base, () => 24, w, { now: () => 0 },
+      (f) => { timers.set(++tid, f); return tid; }, (id) => { timers.delete(id); });
+    const c = new C(), log = [];
+    c.setState({ a: 2 }); c.setState((s) => ({ b: s.a + 1 })); c.setState({ a: 5 }, () => log.push('cb1'));
+    check('PG3a. 3 суурь setState → төлөв ШУУД (a=5, b=3), зураагүй, 1 таймер',
+      c.state.a === 5 && c.state.b === 3 && c.renders === 0 && timers.size === 1 && log.length === 0,
+      JSON.stringify(c.state) + ' r=' + c.renders + ' t=' + timers.size);
+    fire();
+    check('PG3b. Таймер → НЭГ зураг, callback дараа нь', c.renders === 1 && log.join() === 'cb1', c.renders + ' ' + log);
+    w.event = {}; c.setState({ a: 9 });
+    check('PG3c. Хэрэглэгчийн үйлдэл (window.event) → ШУУД зурна, таймергүй (курсор үсрэхгүй)',
+      c.renders === 2 && c.state.a === 9 && timers.size === 0, c.renders + ' ' + timers.size);
+    w.event = null; c.setState({ b: 7 }, () => log.push('cb2'));
+    w.event = {}; c.setState({ a: 10 }, () => log.push('cb3'));
+    check('PG3d. Хүлээгдэж буй суурь + үйлдэл → нэг зураг, таймер цуцлагдана, ХОЁР callback (дарааллаар)',
+      c.renders === 3 && timers.size === 0 && c.state.b === 7 && c.state.a === 10 && log.join() === 'cb1,cb2,cb3',
+      c.renders + ' ' + timers.size + ' ' + log);
+    w.event = null; c.setState({ b: 8 }); w.event = {}; c.setState({ a: 11 });
+    check('PG3e. Callback-гүй хүлээгдэж буй + үйлдэл → таймер цуцлагдана', c.renders === 4 && timers.size === 0, c.renders + ' ' + timers.size);
+    w.event = null; const c2 = new C(); c2.__host = null; c2.setState({ a: 3 });
+    check('PG3f. Холбогдоогүй үед таймер үүсгэхгүй (эцэг рүү дамжина)', timers.size === 0 && c2.renders === 1, String(timers.size));
+  }
+
+  const dt = src.match(/\nfunction docTitleOf\([^)]*\)\{[\s\S]*?\n\}/);
+  check('PG4. docTitleOf олдов', !!dt);
+  if (dt) {
+    const f = new Function(dt[0] + ';return docTitleOf;')();
+    check('PG4. Табын нэр: датасэт → «нэр — брэнд», хуудас → «шошго — брэнд», нүүр/үл мэдэгдэх → нүүрийн нэр',
+      f('detail', { name: 'Агаар' }, 'Дата', 'ErtHub', 'H') === 'Агаар — ErtHub'
+      && f('browse', { name: 'Агаар' }, 'Дата', 'ErtHub', 'H') === 'Дата — ErtHub'
+      && f('home', { name: 'Агаар' }, 'Нүүр', 'ErtHub', 'H') === 'H'
+      && f('detail', undefined, undefined, 'ErtHub', 'H') === 'H'
+      && f(null, null, null, 'ErtHub', 'H') === 'H');
+  }
+
+  const head = html.slice(0, html.indexOf('</head>'));
+  const tags = [...head.matchAll(/<script src="([^"]+)"([^>]*)><\/script>/g)].map((m) => ({ src: m[1].split('?')[0], attrs: m[2] }));
+  const at = (name) => tags.findIndex((x) => x.src === name);
+  check('PG5a. <html lang="mn"> + <head> нь яг ийм (fx фикстур үүн дээр тарьдаг)', /<html lang="mn"><head>/.test(html));
+  check('PG5b. Гарчиг, тайлбар, OG, favicon бий; favicon файл байна',
+    /<title>[^<]{5,}<\/title>/.test(head) && /name="description" content="[^"]{30,}"/.test(head)
+    && /property="og:title"/.test(head) && /rel="icon"[^>]*href="favicon\.svg"/.test(head) && fs.existsSync(path.join(ROOT, 'favicon.svg')));
+  check('PG5c. Толгойн бүх <script src> нь defer (парсерыг блоклохгүй)', tags.length > 10 && tags.every((x) => /\bdefer\b/.test(x.attrs)), JSON.stringify(tags.filter((x) => !/defer/.test(x.attrs))));
+  check('PG5d. Дараалал: react < react-dom < backend-config < publish-mock < erthub-publish < dc-runtime (сүүлд)',
+    at('js/vendor/react.production.min.js') > -1 && at('js/vendor/react.production.min.js') < at('js/vendor/react-dom.production.min.js')
+    && at('js/vendor/react-dom.production.min.js') < at('js/backend-config.js') && at('js/backend-config.js') < at('js/publish-mock.js')
+    && at('js/publish-mock.js') < at('js/erthub-publish.js') && at('js/vendor/dc-runtime.js') === tags.length - 1, tags.map((x) => x.src).join(' '));
+  check('PG5e. Хэрэглэгддэггүй/хүнд сан ачаалалд алга (helmet, starter-component, xlsx)',
+    !/<helmet>/.test(html) && !/starter-component/.test(html) && !/xlsx\.full\.min\.js/.test(tpl) && !fs.existsSync(path.join(ROOT, 'js/vendor/starter-component.js')));
+  check('PG5f. React нь локал файл (unpkg унавал сайт цагаан болдог байв) ба байнга CDN-ээс татахгүй',
+    fs.existsSync(path.join(ROOT, 'js/vendor/react.production.min.js')) && fs.existsSync(path.join(ROOT, 'js/vendor/react-dom.production.min.js')));
+  check('PG5g. Темплейт нь идэвхгүй <template> дотор (SVG атрибутын 200+ консолын алдаа)',
+    /<template id="eh-tpl">\s*<x-dc>/.test(html) && /<\/x-dc>\s*<\/template>/.test(html));
+
+  const kb = src.match(/\nfunction kbdActivate\(e,MouseEv\)\{[\s\S]*?\n\}/);
+  check('PG12. kbdActivate олдов', !!kb);
+  if (kb) {
+    const f = new Function(kb[0] + ';return kbdActivate;')();
+    let clicks = 0, dispatched = null, prevented = 0;
+    class Mev { constructor(type, o) { this.type = type; this.bubbles = o.bubbles; } }
+    const ev = (key, t) => ({ key, target: t, preventDefault() { prevented++; } });
+    const el = (tag, role, extra) => Object.assign({ tagName: tag, getAttribute: (a) => (a === 'role' ? role : null) }, extra);
+    const div = el('DIV', 'button', { click() { clicks++; } });
+    check('PG12a. role=button + Enter/Space → дарна, хуудас гүйхгүй (preventDefault)',
+      f(ev('Enter', div), Mev) && f(ev(' ', div), Mev) && clicks === 2 && prevented === 2, clicks + ' ' + prevented);
+    const circle = el('circle', 'button', { dispatchEvent(e) { dispatched = e; } });
+    check('PG12b. SVG (click() алга) → bubbling click event',
+      f(ev('Enter', circle), Mev) && dispatched && dispatched.type === 'click' && dispatched.bubbles === true);
+    clicks = 0;
+    check('PG12c. Бусад товчлуур, жинхэнэ товч, role-гүй элемент → үл тоох',
+      !f(ev('a', div), Mev) && !f(ev('Enter', el('BUTTON', 'button', { click() { clicks++; } })), Mev)
+      && !f(ev('Enter', el('DIV', null, { click() { clicks++; } })), Mev) && !f({ key: 'Enter' }, Mev) && clicks === 0, String(clicks));
+  }
+  const fn = src.match(/\nfunction fieldA11yName\(el\)\{[\s\S]*?\n\}/);
+  check('PG13. fieldA11yName олдов', !!fn);
+  if (fn) {
+    const f = new Function(fn[0] + ';return fieldA11yName;')();
+    const el = (attrs, labels) => ({ getAttribute: (a) => attrs[a] || null, labels });
+    check('PG13a. Нэр: placeholder → title → null; өөрийн шошготой бол ҮЛ ДАРНА',
+      f(el({ placeholder: 'Хайх' })) === 'Хайх' && f(el({ title: 'Он' })) === 'Он' && f(el({})) === null
+      && f(el({ 'aria-label': 'X', placeholder: 'Хайх' })) === null && f(el({ placeholder: 'Хайх' }, [{}])) === null);
+  }
+  const css = read('style.css');
+  check('PG14. focus-visible ба reduced-motion нь бүх сайтад (style.css)',
+    /:focus-visible\s*\{[^}]*outline:[^}]*!important/.test(css) && /prefers-reduced-motion:\s*reduce\)\s*\{\s*\*,/.test(css));
+  check('PG15. 404.html монголоор, нүүр рүү холбоостой; админ индексжихгүй',
+    /Хуудас олдсонгүй/.test(read('404.html')) && /href="\/erthub-dataagent\/"/.test(read('404.html')) && /name="robots" content="noindex"/.test(read('admin/index.html')));
+
+  const lx = src.match(/\nlet xlsxLoading=null;\nfunction loadXlsx\(\)\{[\s\S]*?\n\}/);
+  check('PG6. loadXlsx олдов', !!lx);
+  if (lx) {
+    const added = [];
+    const doc = { createElement: () => ({}), head: { appendChild: (el) => added.push(el) } };
+    const w = {};
+    const load = new Function('window', 'document', lx[0] + ';return loadXlsx;')(w, doc);
+    const p1 = load(), p2 = load();
+    check('PG6a. Давхар дарвал НЭГ л скрипт, ижил Promise', added.length === 1 && p1 === p2, String(added.length));
+    added[0].onerror();
+    const failed = await p1.then(() => false, () => true);
+    const p3 = load();
+    check('PG6b. Сүлжээ унавал алдаа буцааж, дараагийн дарахад ДАХИН оролдоно', failed && added.length === 2 && p3 !== p1, added.length + ' ' + failed);
+    w.XLSX = { ok: 1 }; added[1].onload();
+    const got = await p3;
+    const again = await load();
+    check('PG6c. Ачаалагдсан бол сан буцаана, шинэ скрипт нэмэхгүй', got === w.XLSX && again === w.XLSX && added.length === 2, String(added.length));
+  }
+  check('PG6d. pvExport сангүй үед «дахин оролдоно уу» гэж буцаахгүй — өөрөө ачаалж үргэлжилнэ',
+    /loadXlsx\(\)\.then\(save,/.test(src) && !/түр хүлээгээд дахин оролдоно/.test(src));
+
+  if (!CHROME) { skipped('PG7+ (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
+  const srv = serve(), prevSrc = PROBE_SRC;
+  try {
+    PROBE_SRC = '/index.html?fx=1';
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      const R={};
+      for(let i=0;i<160&&!d.querySelector('.eh-app');i++) await sleep(250);
+      R.mounted=!!d.querySelector('.eh-app');
+      R.boot=!!d.getElementById('eh-boot');
+      R.tplLeft=!!d.getElementById('eh-tpl');
+      R.xlsxEarly=!!w.XLSX; R.title=d.title; R.lang=d.documentElement.lang;
+      await sleep(9000);
+      const lt=[]; const po=new w.PerformanceObserver(l=>l.getEntries().forEach(e=>lt.push(Math.round(e.duration))));
+      po.observe({entryTypes:['longtask']});
+      await sleep(4000);
+      po.disconnect();
+      R.idleTasks=lt;
+      const go=async h=>{ w.location.hash=h; await sleep(1500); return d.title; };
+      R.tBrowse=await go('#/browse');
+      R.tDetail=await go('#/browse/'+encodeURIComponent('Агаарын тээврийн статистик'));
+      R.tHome=await go('#/home');
+      await sleep(400);
+      const root=d.getElementById('dc-root');
+      R.lm=['[role=banner]','[role=navigation]','main#eh-main','[role=contentinfo]'].map(s=>root.querySelectorAll(s).length);
+      R.h1=root.querySelectorAll('h1').length;
+      R.h2=root.querySelectorAll('h2,[role=heading][aria-level="2"]').length;
+      R.unnamed=[...root.querySelectorAll('input,textarea,select')].filter(e=>e.type!=='hidden'&&!e.getAttribute('aria-label')&&!(e.labels&&e.labels.length)&&!e.getAttribute('placeholder')&&!e.getAttribute('title')).map(e=>e.outerHTML.slice(0,80));
+      const anyEmpty=[...root.querySelectorAll('input[placeholder]')].filter(e=>!e.getAttribute('aria-label')&&!(e.labels&&e.labels.length)).length;
+      R.unsynced=anyEmpty;
+      const skip=root.querySelector('.eh-skip');
+      R.skipW=skip?skip.getBoundingClientRect().width:-1;
+      if(skip){ skip.focus(); R.skipFocusW=skip.getBoundingClientRect().width; skip.click(); R.mainFocused=d.activeElement&&d.activeElement.id; }
+      /* Танигдаагүй хаяг → мэдэгдэл */
+      w.location.hash='#/oldsongui-hudas'; await sleep(900);
+      R.badToast=(d.body.innerText||'').includes('хуудас олдсонгүй');
+      await go('#/home');
+      await sleep(5200);
+      w.location.hash='#/auth'; await sleep(900);
+      R.authPage=!!d.querySelector('#dc-root input[type=email],#dc-root input[placeholder*="@"]');
+      R.authToast=(d.body.innerText||'').includes('хуудас олдсонгүй');
+      await go('#/home');
+      /* Товч биш дарагддаг элемент гараар */
+      const bad=[...root.querySelectorAll('[role=button]')].filter(e=>e.getAttribute('tabindex')==null);
+      R.roleNoTab=bad.length;
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('PG7. Хөтчийн проб ажиллав', R.__err); return; }
+    check('PG7. Хуудас зурагдсан, анхны дэлгэц ба идэвхгүй темплейт DOM-оос алга (текст нь 100%-ийн хамрах хүрээнд тоологдохгүй)',
+      R.mounted && !R.boot && !R.tplLeft, JSON.stringify([R.mounted, R.boot, R.tplLeft]));
+    check('PG8. Хоосон зогсоход (4 сек) гол урсгал чөлөөтэй — урт таск ≤2 (өмнө нь 4 сек дотор ~15)', R.idleTasks.length <= 2, JSON.stringify(R.idleTasks));
+    check('PG9. Excel сан хуудас ачаалахад татагдахгүй', !R.xlsxEarly);
+    check('PG10. Табын нэр: нүүр → брэнд, lang=mn', /^ErtHub/.test(R.title) && R.lang === 'mn', R.title + ' ' + R.lang);
+    check('PG16. Landmark: banner, navigation, main, contentinfo тус бүр 1', JSON.stringify(R.lm) === '[1,1,1,1]', JSON.stringify(R.lm));
+    check('PG17. Гарчгийн бүтэц: нүүрт h1 = 1, h2/heading ≥ 8', R.h1 === 1 && R.h2 >= 8, R.h1 + ' ' + R.h2);
+    check('PG18. Оролт бүр дэлгэц уншигчид нэртэй', R.unnamed.length === 0 && R.unsynced === 0, JSON.stringify(R.unnamed) + ' ' + R.unsynced);
+    check('PG19. Skip холбоос: нуугдмал → гараар нээгдэнэ → main руу шилжинэ', R.skipW <= 1 && R.skipFocusW > 20 && R.mainFocused === 'eh-main', [R.skipW, R.skipFocusW, R.mainFocused].join(' '));
+    check('PG20. Танигдаагүй "#/…" хаяг → мэдэгдэл (чимээгүй нүүр биш)', R.badToast === true);
+    check('PG20a. Сайтын өөрийн #/auth хаяг → нэвтрэх хуудас, «олдсонгүй» биш', R.authPage === true && R.authToast === false, JSON.stringify([R.authPage, R.authToast]));
+    check('PG21. role=button бүр гараар очих боломжтой (tabindex)', R.roleNoTab === 0, String(R.roleNoTab));
+    check('PG11. Табын нэр хуудас дагаж солигдоно, буцаад нүүрийнх болно', / — ErtHub$/.test(R.tBrowse) && /^ErtHub/.test(R.tHome), JSON.stringify([R.tBrowse, R.tDetail, R.tHome]));
+  } finally {
+    PROBE_SRC = prevSrc;
+    srv.close();
+  }
+}
+
+async function groupPH() {
+  group('PH. Хөндлөнгийн аудит: нотолгоогүй тоо, жишээ контент (Тоо ЗОХИОХГҮЙ)');
+  const src = dcScript().replace(/\r\n/g, '\n'), html = read('index.html'), con = read('content.json');
+  const all = html + '\n' + con;
+  const banned = ['412,000', '18.4%', '30 сая тонн', '120 шинэ автобус', '4,685,647', '2,292,513', '1.8 хоног', 'хугацаа 4 минут',
+    'Цахимаар 100%', 'МЭДЭЭЛЭЛ 24/7', 'бодит цагийн урсгал', 'SMS баталгаажуулалт', 'Регистрийн дугаар',
+    'Б.Отгонбаяр', 'Х.Мөнхзул', 'TechMongolia', 'ШУТИС ·', 'Санал бүр яаманд хүрч', 'түр дата хэвээр'];
+  const hit = banned.filter((b) => all.includes(b));
+  check('PH1. Нотолгоогүй тоо, бодит нэр, илүүдэл амлалт буцаж ороогүй', hit.length === 0, hit.join(' | '));
+  check('PH2. Мэдээ зохиохгүй: NEWS_ITEMS хоосон, хоосон төлөвийн тайлбартай',
+    /const NEWS_ITEMS=\[\];/.test(src) && /албан ёсны мэдээний эх сурвалж холбогдоогүй/.test(con));
+
+  const num = src.match(/\nconst TABLE_NUM_TYPES=[^\n]*/), cell = src.match(/\nfunction fmtTableCell\(v,type\)\{[\s\S]*?\n\}/);
+  check('PH3. fmtTableCell олдов', !!num && !!cell);
+  if (num && cell) {
+    const f = new Function(num[0] + cell[0] + ';return fmtTableCell;')();
+    check('PH3a. Түүхий "None" → «—» (бусад утга өөрчлөгдөхгүй)',
+      f('None', 'string') === '—' && f('null', 'enum') === '—' && f('OM301', 'string') === 'OM301' && f('Nonexistent', 'string') === 'Nonexistent'
+      && f(1234.4, 'int') === '1,234' && f('', 'int') === '—');
+  }
+
+  const kr = src.match(/\n  seriesKpiRow\(k\)\{[\s\S]*?\n  \}\n/);
+  check('PH4. seriesKpiRow олдов', !!kr);
+  if (kr) {
+    const MONTHS = ['1-р сар', '2-р сар', '3-р сар'];
+    const C = new Function('SECTOR_SERIES', 'stxt', 'MONTHS', 'fmtNum', 'return class{' + kr[0] + '};')(
+      { road: { labels: () => ({ kpi: 'K', unit: 'U' }) } }, (p, d) => d, MONTHS, (n) => String(n));
+    const run = (ss) => { const o = new C(); o._sectorSeries = { road: ss }; return o.seriesKpiRow('road'); };
+    const a = run({ counts: [100, 200], partials: [{ days: 15, dim: 30 }, null], year: 2026 });
+    check('PH4a. Өмнөх сар хагас: +100.0%, тайлбарт «1-р сар 15/30 хоногоор» ил', a[3] === '+100.0%' && a[5].includes('1-р сар 15/30 хоногоор') && a[1] === '200', JSON.stringify(a.slice(1, 6)));
+    const b = run({ counts: [100, 200], partials: [null, null], year: 2026 });
+    check('PH4b. Хоёр сар бүтэн: хоногийн тэмдэглэл ГАРАХГҮЙ', b[3] === '+100.0%' && !b[5].includes('хоногоор'), b[5]);
+    const e = run({ counts: [100, 200], partials: [null, { days: 10, dim: 28 }], year: 2026 });
+    check('PH4c. Одоогийн сар хагас: «≈200», 10/28 хоногоор (хуучин зан төлөв хэвээр)', e[1] === '≈200' && e[5].includes('10/28 хоногоор') && !e[5].includes('1-р сар 10'), JSON.stringify([e[1], e[5]]));
+    const y = run({ counts: [100, 200], partials: [{ days: 15, dim: 30 }, null], prev: { year: 2025, counts: [90, 160] }, year: 2026 });
+    check('PH4d. Өмнөх онтой харьцуулбал (160→200 = +25.0%) өмнөх сарын хагас хамаарахгүй', y[3] === '+25.0%' && !y[5].includes('15/30'), JSON.stringify([y[3], y[5]]));
+  }
+
+  const dv = {}; const store = {};
+  new Function('window', 'localStorage', 'sessionStorage', 'fetch', read('js/dataset-views.js'))(dv,
+    { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
+    { getItem: () => null, setItem: () => {} }, () => Promise.reject(new Error('сүлжээгүй')));
+  dv.datasetViews.track('x');
+  check('PH5. Локал үзэлт shared биш (1 удаа тоологдсон ч isShared=false)', dv.datasetViews.get('x') === 1 && dv.datasetViews.isShared('x') === false);
+  check('PH5a. Карт зөвхөн дундын тоог харуулна (isShared шалгалттай)', /datasetViews\.isShared\(datasetSlug\(decl\)\)\)\?window\.datasetViews\.get/.test(src));
+
+  const rq = src.match(/\nconst REQUESTS=\[[\s\S]*?\n\];/);
+  check('PH6. Хүсэлт бүр өөрийн салбартай (индексээр эргэлдэхгүй)', !!rq && /sector:r\.sector,/.test(src) && !/sector:keys\[i%keys\.length\]/.test(src));
+  if (rq) {
+    const R = new Function(rq[0] + ';return REQUESTS;')();
+    check('PH6a. «Нислэг…» = air, «Дугуйн зам…» = road; хэрэгжээгүй датасэт «Хэрэгжсэн» биш',
+      R.every((r) => r.sector) && R.find((r) => /^Нислэг/.test(r.title)).sector === 'air' && R.find((r) => /^Дугуйн/.test(r.title)).sector === 'road' && !R.some((r) => r.status === 'Хэрэгжсэн'), JSON.stringify(R.map((r) => r.sector)));
+  }
+  check('PH7. Бүртгэл иргэний регистр, утас цуглуулахгүй', !/authReg|authPhone|regNo/.test(src) && !/authReg|authPhone/.test(html));
+
+  if (!CHROME) { skipped('PH8+ (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
+  const srv = serve(), prevSrc = PROBE_SRC;
+  try {
+    PROBE_SRC = '/index.html?fx=1';
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      for(let i=0;i<160&&!d.querySelector('.eh-app');i++) await sleep(250);
+      await sleep(2500);
+      const R={};
+      const txt=()=>d.body.innerText||'';
+      R.home3=!!d.querySelector('#sec-03 ~ [data-sample-note]');
+      R.homeLive=txt().includes('24/7');
+      w.location.hash='#/community'; await sleep(1500);
+      R.comm=!!d.querySelector('[data-sample-note]')&&txt().includes('Жишээ агуулга');
+      R.commLead=txt().includes('яаманд хүрч');
+      w.location.hash='#/news'; await sleep(1500);
+      const tab=[...d.querySelectorAll('button')].find(b=>/Салбарын мэдээ/.test(b.textContent));
+      if(tab){ tab.click(); await sleep(800); }
+      R.tab=!!tab;
+      R.news=txt().includes('албан ёсны мэдээний эх сурвалж холбогдоогүй');
+      R.newsFake=txt().includes('412,000');
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('PH8. Хөтчийн проб ажиллав', R.__err); return; }
+    check('PH8. Нүүрийн 03-р хэсэг ба Коммунити хуудас «Жишээ» гэж ил хэлнэ', R.home3 === true && R.comm === true && R.commLead === false, JSON.stringify(R));
+    check('PH9. Мэдээний таб: зохиомол мэдээгүй, шалтгаантай хоосон төлөв (хуудас унахгүй)', R.tab === true && R.news === true && R.newsFake === false, JSON.stringify(R));
+    check('PH10. Нүүрт «24/7» амлалт алга', R.homeLive === false);
+  } finally {
+    PROBE_SRC = prevSrc;
+    srv.close();
+  }
+}
+
+async function groupPS() {
+  group('PS. Нийтийн репо, Pages: дотоод мэдээлэл, нийтлэх хүрээ, дүрэм');
+  const { execSync } = require('child_process');
+  let tracked = [];
+  try { tracked = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean); } catch (e) {}
+  /* git-гүй хуулбар дээр (архив) файлын системээр */
+  if (!tracked.length) {
+    const walk = (d) => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).flatMap((x) => {
+      if (x.name === '.git' || x.name === 'node_modules') return [];
+      const p = d ? d + '/' + x.name : x.name;
+      return x.isDirectory() ? walk(p) : [p];
+    });
+    tracked = walk('');
+  }
+  /* Загвар нь хэсэгчилсэн — энэ файл өөрөө мөрийн утгаа агуулахгүй */
+  const pats = [['10.2.', '115.40'], ['103.17.', '108.199'], ['platform', 'abackup'], ['platform', 'backup@']].map((x) => x.join(''));
+  const leaks = [];
+  tracked.filter((f) => /\.(md|js|json|html|css|yml|yaml|rules|txt|sh|sql)$/i.test(f) && fs.existsSync(path.join(ROOT, f)))
+    .forEach((f) => { const b = fs.readFileSync(path.join(ROOT, f), 'utf8'); pats.forEach((p) => { if (b.includes(p)) leaks.push(f + ':' + p); }); });
+  check('PS1. Дотоод IP, SSH хэрэглэгч tracked файлд алга (' + tracked.length + ' файл)', tracked.length > 50 && leaks.length === 0, leaks.join(', '));
+
+  const cfg = read('_config.yml');
+  const excl = (cfg.match(/^\s*-\s*(\S+)\s*$/gm) || []).map((l) => l.replace(/^\s*-\s*/, '').trim());
+  const must = ['CLAUDE.md', 'README.md', 'HANDOFF_widget_builder.md', 'qa-backlog.md', 'FL-TODO.md', 'firestore.rules', 'docs/', 'tests/', 'scripts/'];
+  check('PS2. _config.yml дотоод баримт, тест, скриптийг нийтлэхгүй', must.every((m) => excl.includes(m)), must.filter((m) => !excl.includes(m)).join(', '));
+  /* Хассан хавтаснаас сайт ЮУ Ч ачаалахгүй — эс тэгвэл амьд сайт эвдэрнэ */
+  const siteFiles = [read('index.html'), read('admin/index.html')].concat(fs.readdirSync(path.join(ROOT, 'js')).filter((f) => f.endsWith('.js')).map((f) => read('js/' + f)));
+  const refs = [];
+  const reRef = /(?:src|href)=["'](?:\.\.\/|\/)?(tests|scripts|docs)\/|fetch\(\s*['"`](?:\.\.\/|\/)?(tests|scripts|docs)\/|['"`](?:\.\.\/)?(README\.md|CLAUDE\.md|firestore\.rules)['"`]/g;
+  siteFiles.forEach((b) => { let m; while ((m = reRef.exec(b))) refs.push(m[0]); });
+  check('PS3. Сайт, админ, js нь нийтлэгдэхгүй файлыг ачаалдаггүй', refs.length === 0, refs.join(' | '));
+
+  const rules = read('firestore.rules').replace(/\r\n/g, '\n');
+  const up = rules.match(/allow update: if signedIn\(\) && resource\.data\.uid == request\.auth\.uid[\s\S]*?;/);
+  check('PS4. Сэтгэгдэл засахад uid, hidden өөрчлөгдөхгүй, текстийн хязгаартай',
+    !!up && /request\.resource\.data\.uid == resource\.data\.uid/.test(up[0]) && /request\.resource\.data\.hidden == resource\.data\.hidden/.test(up[0]) && /size\(\) <= 1000/.test(up[0])
+    && !/allow update, delete/.test(rules));
+  const wf = read('.github/workflows/tests.yml').replace(/\r\n/g, '\n');
+  const to = wf.match(/name: run\.js[^\n]*\n\s*runs-on:[^\n]*\n\s*timeout-minutes:\s*(\d+)/);
+  check('PS5. CI suites-ийн хугацааны тор ≥ 50 мин (бүтэн сьют ~32 мин)', !!to && +to[1] >= 50, to && to[1]);
+}
+
 /* ──────────────────────────────── АЖИЛЛУУЛАХ ──────────────────────────────── */
 console.log('ErtHub — систем тест');
 (async () => {
   /* --only=Z — нэг бүлгийг хурдан давтах (хөгжүүлэлтийн үед). Commit-ийн
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
+  else if (process.argv.includes('--only=PG')) { await groupPG(); }
+  else if (process.argv.includes('--only=PH')) { await groupPH(); }
+  else if (process.argv.includes('--only=PS')) { await groupPS(); }
   else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
   else if (process.argv.includes('--only=HV')) { await groupHV(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
@@ -12286,7 +12643,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
+  await groupPG(); await groupPH(); await groupPS(); groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));

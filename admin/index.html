@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
 <title>ErtHub · Агаарын тээврийн виджет холбоос</title>
 <!-- Чартын стандарт (CH) — сайттай НЭГ хэв маяг (t05/i06 preview нь сайтын frame-ийг зурна) -->
 <link rel="stylesheet" href="../chart.css?v=0970086f">
@@ -464,7 +465,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="../js/firebase-config.js?v=9bd9b315"></script>
-<script src="../js/backend-config.js?v=23239b1c"></script>
+<script src="../js/backend-config.js?v=7e19a107"></script>
 <script src="../js/publish-mock.js?v=38676b91" data-auth="1"></script>
 <script src="../js/erthub-publish.js?v=ffe215f9"></script>
 <script src="../js/erthub-backend.js?v=a96de8ab"></script>
@@ -2191,6 +2192,16 @@ function pvWeekModel(id){
 function pvMonthKeys(year,list){
   return year?list.filter(function(x){return +x.v>0}).map(function(x){return year+'-'+String(x.m+1).padStart(2,'0')}):[];
 }
+/* Сайтын t05Period-тэй ИЖИЛ дүрэм: нүүрний муж (оны эхнээс сүүлийн бүтэн 7 хоног хүртэл) дутуу
+   сард хүрээгүй бол зурсан сар бүгд бүтэн — «хасагдсан» гэж хэлэхгүй. Сарын эхний 7 хоногт сайт
+   хэлдэггүй, preview хэлдэг байв (2026-11-01). Муж мэдэгдэхгүй бол өмнөх шигээ тэмдэглэнэ. */
+function pvPartialInWindow(){
+  var G=typeof EHGlossary!=='undefined'?EHGlossary:null;
+  var w=ST.weekly&&ST.weekly.passengers, a=G&&w&&G.dayOf(w.week_end);
+  if(!a||+a.slice(0,4)!==+FEED.year) return true;
+  var mto=+a.slice(5,7);
+  return mto<=1||mto>(FEED.monthCounts||[]).length;
+}
 function pvTrendModel(id){
   var vr=widgetValueRes(id);
   if(vr&&vr.series&&vr.series.length>1)
@@ -2204,7 +2215,7 @@ function pvTrendModel(id){
   if(mk==='road.monthly_passenger_series'){ var rs=ST.roadSeries;
     return rs?{periodKeys:pvMonthKeys(rs.year,metricSeries(mk)),partialDropped:!!rs.partial}:{}; }
   var ser=mk?metricSeries(mk):null;
-  return (ser&&ser.length>1)?{periodKeys:pvMonthKeys(FEED.year,ser),partialDropped:!!FEED.partialDropped}:{};
+  return (ser&&ser.length>1)?{periodKeys:pvMonthKeys(FEED.year,ser),partialDropped:!!FEED.partialDropped&&pvPartialInWindow()}:{};
 }
 /* Нэг метрикийн утгын хугацаа (донутын мөр бүр) — метрик юу уншдагаас. */
 function pvMetricModel(mk){
