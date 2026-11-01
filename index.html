@@ -4658,7 +4658,7 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
       <div style="font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><span style="width:5px;height:5px;border-radius:50%;background:{{ detail.color }};flex-shrink:0;box-shadow:0 0 8px {{ detail.color }};"></span><span data-eh-card="dwp" data-eh-field="title">{{ detail.dwpTitle }}</span></div>
       <!-- UI стандарт: эх сурвалжгүй үед 4 том "—" нүд зурахгүй — нэг мөр тайлбар л үлдэнэ -->
       <sc-if value="{{ detail.wp.hasData }}">
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
+      <div class="eh-g-2c" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
         <div>
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Энэ 7 хоногт</div>
           <div data-wp-val="total" style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;">{{ detail.wp.total }}</div>
@@ -6388,15 +6388,7 @@ const RECENT = [
   /* Техникийн хяналтын үзлэг — вагонтой ижил зарчим: `date` ЗОРИУД хоосон,
      backend ирээгүй үед огноо ЗОХИОХГҮЙ. */
   {title:'Техникийн хяналтын үзлэгийн мэдээ', agency:'ЗТХЕГ', src:'API', date:'', sector:'road',
-   dataset:'Техникийн хяналтын үзлэгийн мэдээ', source:'roadInspect', bind:{date:'feedUpdated'}},
-  /* 2026-10-23 тулгалт: каталогийн 9 датасэтээс 4 нь л энд байсан — өдөр бүр шинэчлэгддэг
-     авто тээврийн зорчигч (2026-10-22) ба төмөр замын ачаа (2026-10-21) нь 28 хоног
-     хоцорсон үзлэгээс (2026-09-25) ДООР ч гарахгүй, «сүүлд шинэчлэгдсэн» нь худал эрэмбэ
-     болж байв. Огноо — датасэтийн хуудасны «Сүүлийн бичлэг»-тэй ИЖИЛ мета (тоо зохиохгүй). */
-  {title:'Авто тээврийн зорчигч тээврийн мэдээ', agency:'АТҮТ', src:'API', date:'', sector:'road',
-   dataset:'Авто тээврийн зорчигч тээврийн мэдээ', source:'roadPax', bind:{date:'feedUpdated'}},
-  {title:'Төмөр замын ачаа тээврийн нэгтгэл', agency:'УБТЗ · МТЗ', src:'API', date:'', sector:'rail',
-   dataset:'Төмөр замын ачаа тээврийн нэгтгэл', source:'railFreightAll', bind:{date:'feedUpdated'}}
+   dataset:'Техникийн хяналтын үзлэгийн мэдээ', source:'roadInspect', bind:{date:'feedUpdated'}}
 ];
 
 /* 07-д нэгэн зэрэг харуулах мөр — 3 баганын тор 2 бүтэн мөр (ганц орчигч карт гарахгүй). */
