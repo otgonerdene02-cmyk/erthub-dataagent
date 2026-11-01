@@ -12324,6 +12324,40 @@ async function groupPG() {
   check('PG5g. Темплейт нь идэвхгүй <template> дотор (SVG атрибутын 200+ консолын алдаа)',
     /<template id="eh-tpl">\s*<x-dc>/.test(html) && /<\/x-dc>\s*<\/template>/.test(html));
 
+  const kb = src.match(/\nfunction kbdActivate\(e,MouseEv\)\{[\s\S]*?\n\}/);
+  check('PG12. kbdActivate олдов', !!kb);
+  if (kb) {
+    const f = new Function(kb[0] + ';return kbdActivate;')();
+    let clicks = 0, dispatched = null, prevented = 0;
+    class Mev { constructor(type, o) { this.type = type; this.bubbles = o.bubbles; } }
+    const ev = (key, t) => ({ key, target: t, preventDefault() { prevented++; } });
+    const el = (tag, role, extra) => Object.assign({ tagName: tag, getAttribute: (a) => (a === 'role' ? role : null) }, extra);
+    const div = el('DIV', 'button', { click() { clicks++; } });
+    check('PG12a. role=button + Enter/Space → дарна, хуудас гүйхгүй (preventDefault)',
+      f(ev('Enter', div), Mev) && f(ev(' ', div), Mev) && clicks === 2 && prevented === 2, clicks + ' ' + prevented);
+    const circle = el('circle', 'button', { dispatchEvent(e) { dispatched = e; } });
+    check('PG12b. SVG (click() алга) → bubbling click event',
+      f(ev('Enter', circle), Mev) && dispatched && dispatched.type === 'click' && dispatched.bubbles === true);
+    clicks = 0;
+    check('PG12c. Бусад товчлуур, жинхэнэ товч, role-гүй элемент → үл тоох',
+      !f(ev('a', div), Mev) && !f(ev('Enter', el('BUTTON', 'button', { click() { clicks++; } })), Mev)
+      && !f(ev('Enter', el('DIV', null, { click() { clicks++; } })), Mev) && !f({ key: 'Enter' }, Mev) && clicks === 0, String(clicks));
+  }
+  const fn = src.match(/\nfunction fieldA11yName\(el\)\{[\s\S]*?\n\}/);
+  check('PG13. fieldA11yName олдов', !!fn);
+  if (fn) {
+    const f = new Function(fn[0] + ';return fieldA11yName;')();
+    const el = (attrs, labels) => ({ getAttribute: (a) => attrs[a] || null, labels });
+    check('PG13a. Нэр: placeholder → title → null; өөрийн шошготой бол ҮЛ ДАРНА',
+      f(el({ placeholder: 'Хайх' })) === 'Хайх' && f(el({ title: 'Он' })) === 'Он' && f(el({})) === null
+      && f(el({ 'aria-label': 'X', placeholder: 'Хайх' })) === null && f(el({ placeholder: 'Хайх' }, [{}])) === null);
+  }
+  const css = read('style.css');
+  check('PG14. focus-visible ба reduced-motion нь бүх сайтад (style.css)',
+    /:focus-visible\s*\{[^}]*outline:[^}]*!important/.test(css) && /prefers-reduced-motion:\s*reduce\)\s*\{\s*\*,/.test(css));
+  check('PG15. 404.html монголоор, нүүр рүү холбоостой; админ индексжихгүй',
+    /Хуудас олдсонгүй/.test(read('404.html')) && /href="\/erthub-dataagent\/"/.test(read('404.html')) && /name="robots" content="noindex"/.test(read('admin/index.html')));
+
   const lx = src.match(/\nlet xlsxLoading=null;\nfunction loadXlsx\(\)\{[\s\S]*?\n\}/);
   check('PG6. loadXlsx олдов', !!lx);
   if (lx) {
@@ -12367,6 +12401,24 @@ async function groupPG() {
       R.tBrowse=await go('#/browse');
       R.tDetail=await go('#/browse/'+encodeURIComponent('Агаарын тээврийн статистик'));
       R.tHome=await go('#/home');
+      await sleep(400);
+      const root=d.getElementById('dc-root');
+      R.lm=['[role=banner]','[role=navigation]','main#eh-main','[role=contentinfo]'].map(s=>root.querySelectorAll(s).length);
+      R.h1=root.querySelectorAll('h1').length;
+      R.h2=root.querySelectorAll('h2,[role=heading][aria-level="2"]').length;
+      R.unnamed=[...root.querySelectorAll('input,textarea,select')].filter(e=>e.type!=='hidden'&&!e.getAttribute('aria-label')&&!(e.labels&&e.labels.length)&&!e.getAttribute('placeholder')&&!e.getAttribute('title')).map(e=>e.outerHTML.slice(0,80));
+      const anyEmpty=[...root.querySelectorAll('input[placeholder]')].filter(e=>!e.getAttribute('aria-label')&&!(e.labels&&e.labels.length)).length;
+      R.unsynced=anyEmpty;
+      const skip=root.querySelector('.eh-skip');
+      R.skipW=skip?skip.getBoundingClientRect().width:-1;
+      if(skip){ skip.focus(); R.skipFocusW=skip.getBoundingClientRect().width; skip.click(); R.mainFocused=d.activeElement&&d.activeElement.id; }
+      /* Танигдаагүй хаяг → мэдэгдэл */
+      w.location.hash='#/oldsongui-hudas'; await sleep(900);
+      R.badToast=(d.body.innerText||'').includes('хуудас олдсонгүй');
+      await go('#/home');
+      /* Товч биш дарагддаг элемент гараар */
+      const bad=[...root.querySelectorAll('[role=button]')].filter(e=>e.getAttribute('tabindex')==null);
+      R.roleNoTab=bad.length;
       return R;
     }`, 90000);
     if (R.__err) { bad('PG7. Хөтчийн проб ажиллав', R.__err); return; }
@@ -12375,7 +12427,101 @@ async function groupPG() {
     check('PG8. Хоосон зогсоход (4 сек) гол урсгал чөлөөтэй — урт таск ≤2 (өмнө нь 4 сек дотор ~15)', R.idleTasks.length <= 2, JSON.stringify(R.idleTasks));
     check('PG9. Excel сан хуудас ачаалахад татагдахгүй', !R.xlsxEarly);
     check('PG10. Табын нэр: нүүр → брэнд, lang=mn', /^ErtHub/.test(R.title) && R.lang === 'mn', R.title + ' ' + R.lang);
+    check('PG16. Landmark: banner, navigation, main, contentinfo тус бүр 1', JSON.stringify(R.lm) === '[1,1,1,1]', JSON.stringify(R.lm));
+    check('PG17. Гарчгийн бүтэц: нүүрт h1 = 1, h2/heading ≥ 8', R.h1 === 1 && R.h2 >= 8, R.h1 + ' ' + R.h2);
+    check('PG18. Оролт бүр дэлгэц уншигчид нэртэй', R.unnamed.length === 0 && R.unsynced === 0, JSON.stringify(R.unnamed) + ' ' + R.unsynced);
+    check('PG19. Skip холбоос: нуугдмал → гараар нээгдэнэ → main руу шилжинэ', R.skipW <= 1 && R.skipFocusW > 20 && R.mainFocused === 'eh-main', [R.skipW, R.skipFocusW, R.mainFocused].join(' '));
+    check('PG20. Танигдаагүй "#/…" хаяг → мэдэгдэл (чимээгүй нүүр биш)', R.badToast === true);
+    check('PG21. role=button бүр гараар очих боломжтой (tabindex)', R.roleNoTab === 0, String(R.roleNoTab));
     check('PG11. Табын нэр хуудас дагаж солигдоно, буцаад нүүрийнх болно', / — ErtHub$/.test(R.tBrowse) && /^ErtHub/.test(R.tHome), JSON.stringify([R.tBrowse, R.tDetail, R.tHome]));
+  } finally {
+    PROBE_SRC = prevSrc;
+    srv.close();
+  }
+}
+
+async function groupPH() {
+  group('PH. Хөндлөнгийн аудит: нотолгоогүй тоо, жишээ контент (Тоо ЗОХИОХГҮЙ)');
+  const src = dcScript().replace(/\r\n/g, '\n'), html = read('index.html'), con = read('content.json');
+  const all = html + '\n' + con;
+  const banned = ['412,000', '18.4%', '30 сая тонн', '120 шинэ автобус', '4,685,647', '2,292,513', '1.8 хоног', 'хугацаа 4 минут',
+    'Цахимаар 100%', 'МЭДЭЭЛЭЛ 24/7', 'бодит цагийн урсгал', 'SMS баталгаажуулалт', 'Регистрийн дугаар',
+    'Б.Отгонбаяр', 'Х.Мөнхзул', 'TechMongolia', 'ШУТИС ·', 'Санал бүр яаманд хүрч', 'түр дата хэвээр'];
+  const hit = banned.filter((b) => all.includes(b));
+  check('PH1. Нотолгоогүй тоо, бодит нэр, илүүдэл амлалт буцаж ороогүй', hit.length === 0, hit.join(' | '));
+  check('PH2. Мэдээ зохиохгүй: NEWS_ITEMS хоосон, хоосон төлөвийн тайлбартай',
+    /const NEWS_ITEMS=\[\];/.test(src) && /албан ёсны мэдээний эх сурвалж холбогдоогүй/.test(con));
+
+  const num = src.match(/\nconst TABLE_NUM_TYPES=[^\n]*/), cell = src.match(/\nfunction fmtTableCell\(v,type\)\{[\s\S]*?\n\}/);
+  check('PH3. fmtTableCell олдов', !!num && !!cell);
+  if (num && cell) {
+    const f = new Function(num[0] + cell[0] + ';return fmtTableCell;')();
+    check('PH3a. Түүхий "None" → «—» (бусад утга өөрчлөгдөхгүй)',
+      f('None', 'string') === '—' && f('null', 'enum') === '—' && f('OM301', 'string') === 'OM301' && f('Nonexistent', 'string') === 'Nonexistent'
+      && f(1234.4, 'int') === '1,234' && f('', 'int') === '—');
+  }
+
+  const kr = src.match(/\n  seriesKpiRow\(k\)\{[\s\S]*?\n  \}\n/);
+  check('PH4. seriesKpiRow олдов', !!kr);
+  if (kr) {
+    const MONTHS = ['1-р сар', '2-р сар', '3-р сар'];
+    const C = new Function('SECTOR_SERIES', 'stxt', 'MONTHS', 'fmtNum', 'return class{' + kr[0] + '};')(
+      { road: { labels: () => ({ kpi: 'K', unit: 'U' }) } }, (p, d) => d, MONTHS, (n) => String(n));
+    const run = (ss) => { const o = new C(); o._sectorSeries = { road: ss }; return o.seriesKpiRow('road'); };
+    const a = run({ counts: [100, 200], partials: [{ days: 15, dim: 30 }, null], year: 2026 });
+    check('PH4a. Өмнөх сар хагас: +100.0%, тайлбарт «1-р сар 15/30 хоногоор» ил', a[3] === '+100.0%' && a[5].includes('1-р сар 15/30 хоногоор') && a[1] === '200', JSON.stringify(a.slice(1, 6)));
+    const b = run({ counts: [100, 200], partials: [null, null], year: 2026 });
+    check('PH4b. Хоёр сар бүтэн: хоногийн тэмдэглэл ГАРАХГҮЙ', b[3] === '+100.0%' && !b[5].includes('хоногоор'), b[5]);
+    const e = run({ counts: [100, 200], partials: [null, { days: 10, dim: 28 }], year: 2026 });
+    check('PH4c. Одоогийн сар хагас: «≈200», 10/28 хоногоор (хуучин зан төлөв хэвээр)', e[1] === '≈200' && e[5].includes('10/28 хоногоор') && !e[5].includes('1-р сар 10'), JSON.stringify([e[1], e[5]]));
+    const y = run({ counts: [100, 200], partials: [{ days: 15, dim: 30 }, null], prev: { year: 2025, counts: [90, 160] }, year: 2026 });
+    check('PH4d. Өмнөх онтой харьцуулбал (160→200 = +25.0%) өмнөх сарын хагас хамаарахгүй', y[3] === '+25.0%' && !y[5].includes('15/30'), JSON.stringify([y[3], y[5]]));
+  }
+
+  const dv = {}; const store = {};
+  new Function('window', 'localStorage', 'sessionStorage', 'fetch', read('js/dataset-views.js'))(dv,
+    { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
+    { getItem: () => null, setItem: () => {} }, () => Promise.reject(new Error('сүлжээгүй')));
+  dv.datasetViews.track('x');
+  check('PH5. Локал үзэлт shared биш (1 удаа тоологдсон ч isShared=false)', dv.datasetViews.get('x') === 1 && dv.datasetViews.isShared('x') === false);
+  check('PH5a. Карт зөвхөн дундын тоог харуулна (isShared шалгалттай)', /datasetViews\.isShared\(datasetSlug\(decl\)\)\)\?window\.datasetViews\.get/.test(src));
+
+  const rq = src.match(/\nconst REQUESTS=\[[\s\S]*?\n\];/);
+  check('PH6. Хүсэлт бүр өөрийн салбартай (индексээр эргэлдэхгүй)', !!rq && /sector:r\.sector,/.test(src) && !/sector:keys\[i%keys\.length\]/.test(src));
+  if (rq) {
+    const R = new Function(rq[0] + ';return REQUESTS;')();
+    check('PH6a. «Нислэг…» = air, «Дугуйн зам…» = road; хэрэгжээгүй датасэт «Хэрэгжсэн» биш',
+      R.every((r) => r.sector) && R.find((r) => /^Нислэг/.test(r.title)).sector === 'air' && R.find((r) => /^Дугуйн/.test(r.title)).sector === 'road' && !R.some((r) => r.status === 'Хэрэгжсэн'), JSON.stringify(R.map((r) => r.sector)));
+  }
+  check('PH7. Бүртгэл иргэний регистр, утас цуглуулахгүй', !/authReg|authPhone|regNo/.test(src) && !/authReg|authPhone/.test(html));
+
+  if (!CHROME) { skipped('PH8+ (браузерын хэсэг)', 'Chrome олдсонгүй'); return; }
+  const srv = serve(), prevSrc = PROBE_SRC;
+  try {
+    PROBE_SRC = '/index.html?fx=1';
+    const R = await runProbe(`async function(d,w){
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      for(let i=0;i<160&&!d.querySelector('.eh-app');i++) await sleep(250);
+      await sleep(2500);
+      const R={};
+      const txt=()=>d.body.innerText||'';
+      R.home3=!!d.querySelector('#sec-03 ~ [data-sample-note]');
+      R.homeLive=txt().includes('24/7');
+      w.location.hash='#/community'; await sleep(1500);
+      R.comm=!!d.querySelector('[data-sample-note]')&&txt().includes('Жишээ агуулга');
+      R.commLead=txt().includes('яаманд хүрч');
+      w.location.hash='#/news'; await sleep(1500);
+      const tab=[...d.querySelectorAll('button')].find(b=>/Салбарын мэдээ/.test(b.textContent));
+      if(tab){ tab.click(); await sleep(800); }
+      R.tab=!!tab;
+      R.news=txt().includes('албан ёсны мэдээний эх сурвалж холбогдоогүй');
+      R.newsFake=txt().includes('412,000');
+      return R;
+    }`, 90000);
+    if (R.__err) { bad('PH8. Хөтчийн проб ажиллав', R.__err); return; }
+    check('PH8. Нүүрийн 03-р хэсэг ба Коммунити хуудас «Жишээ» гэж ил хэлнэ', R.home3 === true && R.comm === true && R.commLead === false, JSON.stringify(R));
+    check('PH9. Мэдээний таб: зохиомол мэдээгүй, шалтгаантай хоосон төлөв (хуудас унахгүй)', R.tab === true && R.news === true && R.newsFake === false, JSON.stringify(R));
+    check('PH10. Нүүрт «24/7» амлалт алга', R.homeLive === false);
   } finally {
     PROBE_SRC = prevSrc;
     srv.close();
@@ -12389,6 +12535,7 @@ console.log('ErtHub — систем тест');
      өмнө ЗААВАЛ бүтнээр нь ажиллуулна. */
   if (process.argv.includes('--only=BE')) { await groupBE(); }
   else if (process.argv.includes('--only=PG')) { await groupPG(); }
+  else if (process.argv.includes('--only=PH')) { await groupPH(); }
   else if (process.argv.includes('--only=VIS')) { await groupVIS(); }
   else if (process.argv.includes('--only=HV')) { await groupHV(); }
   else if (process.argv.includes('--only=OD')) { await groupOD(); }
@@ -12431,7 +12578,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  await groupPG(); groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
+  await groupPG(); await groupPH(); groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));
