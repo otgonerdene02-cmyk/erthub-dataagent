@@ -32,7 +32,7 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
-<link rel="stylesheet" href="style.css?v=2beb7d9d">
+<link rel="stylesheet" href="style.css?v=e2ba81ef">
 <link rel="stylesheet" href="chart.css?v=0970086f">
 <!-- defer: дараалал хадгалагдана, парсерыг блоклохгүй. React орон нутгаас —
      unpkg унавал сайт цагаан болж үлддэг байв (dc-runtime нь window.React байвал CDN-ээс татахгүй). -->
@@ -50,7 +50,7 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
 <script src="js/erthub-publish.js?v=ffe215f9" defer></script>
 <script src="js/erthub-backend.js?v=a96de8ab" defer></script>
 <script src="js/erthub-chart.js?v=422174bf" defer></script>
-<script src="js/erthub-glossary.js?v=b3b2b5d1" defer></script>
+<script src="js/erthub-glossary.js?v=2dc91947" defer></script>
 <script src="js/erthub-tip.js?v=ba005e59" defer></script>
 <script src="js/erthub-chartkit.js?v=2913aee9" defer></script>
 <script src="js/vendor/dc-runtime.js?v=8fe7df74" defer></script>
@@ -502,7 +502,7 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
           </div>
 
           <div style="position:relative;">
-          <svg data-ch-ok="hero-ийн изометрик зураглал — график биш" sc-camel-view-box="0 0 700 460" style="position:relative;width:100%;height:auto;display:block;overflow:visible;">
+          <svg data-ch-ok="hero-ийн изометрик зураглал — график биш" aria-hidden="true" sc-camel-view-box="0 0 700 460" style="position:relative;width:100%;height:auto;display:block;overflow:visible;">
             <defs>
               <linearGradient id="isoTopA" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".98"></stop>
@@ -740,16 +740,12 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
             <div class="eh-uk-l" style="font-size:9.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.09em;font-family:'JetBrains Mono',monospace;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ uk.label }}</div>
           </div>
           <div style="position:relative;display:flex;align-items:baseline;gap:6px;">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;letter-spacing:-.035em;line-height:1;color:var(--ink);">{{ uk.value }}</div>
+            <div data-uk-value="1" style="{{ uk.valueStyle }}">{{ uk.value }}</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap;">{{ uk.unit }}</div>
           </div>
-          <div style="position:relative;display:flex;align-items:flex-end;gap:10px;margin-top:13px;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;color:{{ uk.deltaColor }};white-space:nowrap;flex-shrink:0;">{{ uk.delta }}</div>
-            <svg sc-camel-view-box="0 0 120 32" sc-camel-preserve-aspect-ratio="none" style="flex:1;height:20px;min-width:0;display:block;">
-              <path d="{{ uk.area }}" fill="{{ uk.color }}26" stroke="none"></path>
-              <path d="{{ uk.spark }}" fill="none" stroke="{{ uk.color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
-            </svg>
-          </div>
+          <sc-if value="{{ uk.delta }}">
+          <div style="position:relative;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;color:{{ uk.deltaColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ uk.delta }}</div>
+          </sc-if>
         </div>
       </sc-for>
     </div>
@@ -1760,7 +1756,7 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
           </div>
           
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ svcHero.taken }}</div>
+            <div data-hero-stat="taken" style="{{ svcHero.takenStyle }}">{{ svcHero.takenShow }}</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ svcHero.taken_label }}</div>
           </div>
         </div>
@@ -1784,9 +1780,9 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
     <sc-if value="{{ svcEmpty }}">
       <div style="border:1px dashed var(--line2);border-radius:18px;padding:40px;text-align:center;color:var(--ink3);font-size:13.5px;margin-bottom:44px;">Хайлтад тохирох үйлчилгээ олдсонгүй.</div>
     </sc-if>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin-bottom:14px;">
+    <div class="eh-fx" style="--fx:330px;display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin-bottom:14px;">
       <sc-for list="{{ svcList }}" as="sv" hint-placeholder-count="5">
-        <div style="background:linear-gradient(155deg,{{ sv.color }}14 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);box-shadow:var(--shadow);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);backdrop-filter:blur(18px) saturate(1.3);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:12px;transition:.18s var(--ease);" style-hover="box-shadow:var(--shadow-lg);transform:translateY(-3px);">
+        <div data-svc-card="1" style="background:linear-gradient(155deg,{{ sv.color }}14 0%,rgba(var(--surface-rgb),.94) 40%,rgba(var(--surface-rgb),.76) 100%);box-shadow:var(--shadow);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.9);backdrop-filter:blur(18px) saturate(1.3);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:12px;">
           <div style="display:flex;align-items:center;gap:11px;">
             <div style="width:34px;height:34px;border-radius:11px;background:{{ sv.color }}26;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">{{ sv.glyph }}</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);">{{ sv.sectorLabel }}</div>
@@ -1796,7 +1792,8 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
           <div style="font-size:13px;color:var(--ink2);line-height:1.55;text-wrap:pretty;">{{ sv.desc }}</div>
           <div style="margin-top:auto;padding-top:14px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;">
             <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ sv.color }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">{{ sv.stat }}</div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap;">{{ sCommOpen }}</div>
+            <sc-if value="{{ sv.hasUrl }}"><a data-svc-open="1" href="{{ sv.url }}" target="_blank" rel="noopener noreferrer" style="font-size:13px;font-weight:600;color:var(--accent,#3F6FD8);white-space:nowrap;text-decoration:none;">{{ svcOpenExt }}</a></sc-if>
+            <sc-if value="{{ sv.noUrl }}"><span data-svc-soon="1" style="font-size:12px;color:var(--ink3);white-space:nowrap;">{{ svcLinkSoon }}</span></sc-if>
           </div>
         </div>
       </sc-for>
@@ -1886,7 +1883,7 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
             </div>
             <div style="display:flex;align-items:baseline;gap:6px;">
               <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ browseHero.c1.value }}</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">{{ browseHero.c1.delta }}</div>
+              <sc-if value="{{ browseHero.c1.hasDelta }}"><div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">{{ browseHero.c1.delta }}</div></sc-if>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-top:9px;">
               <div style="flex:1;height:4px;border-radius:3px;background:var(--surface2);overflow:hidden;"><div style="height:100%;width:{{ browseHero.c1.barWidth }};border-radius:3px;background:linear-gradient(90deg,#0FA37Faa,#0FA37F);"></div></div>
@@ -1901,12 +1898,14 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
             </div>
             <div style="display:flex;align-items:baseline;gap:6px;">
               <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ browseHero.c2.value }}</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">{{ browseHero.c2.delta }}</div>
+              <sc-if value="{{ browseHero.c2.hasDelta }}"><div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">{{ browseHero.c2.delta }}</div></sc-if>
             </div>
+            <sc-if value="{{ browseHero.c2.hasSub }}">
             <div style="display:flex;align-items:center;gap:6px;margin-top:9px;">
               <div style="width:5px;height:5px;border-radius:50%;background:#0FA37F;animation:pulseGlow 1.8s infinite;flex-shrink:0;"></div>
               <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--ink3);white-space:nowrap;">{{ browseHero.c2.sub }}</div>
             </div>
+            </sc-if>
           </div>
           <div style="position:relative;overflow:hidden;min-width:132px;background:linear-gradient(158deg,#7C5CF01f 0%,rgba(var(--surface-rgb),.94) 46%,rgba(var(--surface-rgb),.8) 100%);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:14px 16px 13px;box-shadow:var(--shadow);transition:.2s var(--ease);" style-hover="box-shadow:var(--shadow-lg);transform:translateY(-2px);">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7C5CF0,#7C5CF000);"></div>
@@ -1915,12 +1914,10 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
               <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;">{{ browseHero.c3.label }}</div>
             </div>
             <div style="display:flex;align-items:baseline;gap:6px;">
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ browseHero.c3.value }}</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">{{ browseHero.c3.delta }}</div>
+              <sc-if value="{{ browseHero.c3.hasValue }}"><div style="font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ browseHero.c3.value }}</div></sc-if>
+              <sc-if value="{{ browseHero.c3.empty }}"><div data-browse-c3-empty="1" style="font-size:12.5px;font-weight:500;line-height:27px;color:var(--ink3);white-space:nowrap;">{{ browseHero.noData }}</div></sc-if>
+              <sc-if value="{{ browseHero.c3.hasDelta }}"><div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#0E8F63;white-space:nowrap;">{{ browseHero.c3.delta }}</div></sc-if>
             </div>
-            <svg sc-camel-view-box="0 0 120 32" sc-camel-preserve-aspect-ratio="none" style="width:100%;height:17px;display:block;margin-top:8px;">
-              <path d="M0,26 L20,23 L40,25 L60,17 L80,14 L100,9 L120,4" fill="none" stroke="#7C5CF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
-            </svg>
           </div>
         </div>
       </div>
@@ -5176,7 +5173,7 @@ body:has(#dc-root:not(:empty)) #eh-boot{display:none}
             <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ commHero.c1.label }}</div>
           </div>
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);">{{ commHero.c2.value }}</div>
+            <div data-hero-stat="c2" style="{{ commHero.c2.style }}">{{ commHero.c2.show }}</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-top:8px;white-space:nowrap;">{{ commHero.c2.label }}</div>
           </div>
           <div style="min-width:104px;background:rgba(var(--surface-rgb),.72);border:1px solid var(--line);border-top-color:rgba(var(--surface-rgb),.95);border-radius:15px;padding:15px 17px;box-shadow:var(--shadow);">
@@ -6857,6 +6854,12 @@ const PAGES=[
    бүлгийг НЭРЭЭР хайдаг тусдаа зураглал байсан тул админ
    нэрийг засмагц үйлчилгээ чимээгүйхэн "Иргэнд" бүлэг рүү унадаг байв.
    Текст талбарууд content.json → site.services-ээс давхарлагдана. */
+/* Үйлчилгээний хаяг — зөвхөн http(s). Хоосон/буруу (javascript: г.м.) бол '' →
+   карт «Холбоос удахгүй» гэж хэлнэ, хуурамч «Нээх» товч гаргахгүй. */
+function svcLinkOf(u){
+  const s=String(u==null?'':u).trim();
+  return /^https?:\/\/[^\s"'<>]+$/i.test(s)?s:'';
+}
 const SERVICES=[
   ['road','Хот хоорондын авто замын хураамжийн мэдэгдэл','Улс, хот хоорондын авто замын хураамжийн мэдэгдлийг цахимаар авах.','','citizen'],
   ['road','Тээврийн хэрэгслийн торгуулийн мэдээлэл','Авто тээврийн хэрэгслийн замын хөдөлгөөний торгуулийн лавлагаа шалгах.','','citizen'],
@@ -7094,10 +7097,18 @@ const DATASETS=[
 ];
 // Порталын нийт үзүүлэлт (uk) картны "Датасэт"/"Цахим үйлчилгээ" тоо —
 // ЗОХИОХГҮЙ, DATASETS/SERVICES-ийн бодит уртаас тооцоолно (KPI_UNIFIED-ийн
-// эхний 2 мөр). Судалгаа/Байгууллага (индекс 2-3) тохирох бодит массивгүй
-// тул «—» + тайлбар (status.uk_mock).
-KPI_UNIFIED[0][1]=String(DATASETS.length);
-KPI_UNIFIED[1][1]=String(SERVICES.length);
+// эхний 2 мөр). Оролцогч байгууллага (индекс 3) = каталогийн өгөгдөл нийлүүлэгч
+// байгууллага (EHGlossary.catalogPublishers, админы preview-тэй ижил). Судалгаа (2)
+// бодит массивгүй тул «мэдээлэл алга» + тайлбар (status.uk_mock).
+function syncCatalogKpis(){
+  KPI_UNIFIED[0][1]=String(DATASETS.length);
+  KPI_UNIFIED[1][1]=String(SERVICES.length);
+  if(typeof EHGlossary!=='undefined'&&EHGlossary.catalogPublishers&&KPI_UNIFIED[3]){
+    const n=EHGlossary.catalogPublishers(DATASETS).length;
+    KPI_UNIFIED[3][1]=n?String(n):'—';
+  }
+}
+syncCatalogKpis();
 /* Бодлогын санал — иргэн/байгууллагын САНАЛ (контент). 2026-10-05:
    `support` (1,284 / 962 …) нь ямар ч тоолуургүй ЗОХИОМОЛ тоо байсныг
    хаслаа — санал нь зөвхөн тухайн хэрэглэгчийн session-д хадгалагддаг.
@@ -7593,9 +7604,9 @@ function applySiteContent(){
       if(!DATASETS[i]) DATASETS[i]={sector:'road',name:'',agency:'',fmt:'',badges:[],freq:'',use:'',desc:''};
       TXT.forEach(k=>{ if(d[k]!==undefined&&d[k]!=='') DATASETS[i][k]=d[k] });
     });
-    /* Каталогийн тоо нь порталын "НЭЭЛТТЭЙ ӨГӨГДӨЛ" картад шууд тусна —
-       тоо ЗОХИОХГҮЙ, бодит жагсаалтын уртаас. */
-    if(typeof KPI_UNIFIED!=='undefined'&&KPI_UNIFIED[0]) KPI_UNIFIED[0][1]=String(DATASETS.length);
+    /* Каталогийн тоо нь порталын "НЭЭЛТТЭЙ ӨГӨГДӨЛ" ба "ОРОЛЦОГЧ БАЙГУУЛЛАГА" картад
+       шууд тусна — тоо ЗОХИОХГҮЙ, бодит жагсаалтаас (админ нийлүүлэгч нэмбэл дагана). */
+    if(typeof KPI_UNIFIED!=='undefined'&&KPI_UNIFIED[0]) syncCatalogKpis();
   }
   /* Цахим үйлчилгээний хуудасны таб ба алхмууд. Индексээр давхарлана —
      түлхүүр (tabs[i].key) нь SERVICES-ийн бүлэгтэй холбоотой тул
@@ -7629,14 +7640,15 @@ function applySiteContent(){
      индексээр давхарлана, жагсаалтаас илүү гарсан бичлэг нь админы
      нэмсэн ШИНЭ үйлчилгээ. Хэрэглэгчийн бүлэг (aud) ч эндээс солигдоно. */
   if(Array.isArray(S.services)){
-    const SF=['sector','name','desc','hits','aud'];
+    /* url — үйлчилгээний ЖИНХЭНЭ хаяг (админ бөглөнө). Хоосон бол карт дарагдахгүй. */
+    const SF=['sector','name','desc','hits','aud','url'];
     S.services.forEach((v,i)=>{
       if(!v||typeof v!=='object') return;
-      if(!SERVICES[i]) SERVICES[i]=['road','','','','citizen'];
+      if(!SERVICES[i]) SERVICES[i]=['road','','','','citizen',''];
       SF.forEach((k,c)=>{ if(v[k]!==undefined&&v[k]!=='') SERVICES[i][c]=v[k] });
     });
     /* Порталын "ЦАХИМ ҮЙЛЧИЛГЭЭ" карт — тоо ЗОХИОХГҮЙ, жагсаалтын уртаас. */
-    if(typeof KPI_UNIFIED!=='undefined'&&KPI_UNIFIED[1]) KPI_UNIFIED[1][1]=String(SERVICES.length);
+    if(typeof KPI_UNIFIED!=='undefined'&&KPI_UNIFIED[1]) syncCatalogKpis();
   }
   /* Порталын 4 карт (uk) */
   const pk=S.portal_kpi, pkeys=['open_data','eservice','research','orgs'];
@@ -7888,6 +7900,11 @@ const SECTOR_SERIES={
     labels:()=>({chart:stxt('sector_chart_road_live','Сарын зорчигч (билеттэй)'),
       kpi:stxt('sector_kpi_road_live.3','ЗОРЧИГЧ / САР'),unit:stxt('unit.passenger','зорчигч')})}
 };
+
+/* Салбарын сарын цувааг (t05) дүүргэдэг SOURCES ачаалагч. Ачаалагч дуусаагүй бол
+   «цуваа алга» биш «дата ачаалж байна…» (EHGlossary.seriesState). air — нислэгийн feed,
+   rail — loadEtransportBackend (summary), road — замын зорчигчийн түүх. */
+const SERIES_LOADER={air:'flights',rail:'railWagon',road:'roadPax'};
 
 /* Сарын цувааны ХАМРАХ ХҮРЭЭ — metric_registry.json →
    metrics.<id>.period_coverage. Өмнө нь энэ дүрэм ХОЁР газар ХОЁР
@@ -10241,11 +10258,29 @@ class Component extends DCLogic {
   // Бүртгэгдсэн эх сурвалж бүрийг зэрэг ачаална. Шинэ feed нэмэхэд энд юу ч
   // өөрчлөхгүй — SOURCES-д мөр нэмэхэд хангалттай.
   loadSources(){
+    this._srcSettled=this._srcSettled||{};
+    /* Ачаалагч дуусахад (амжилттай/алдаатай) тэмдэглэнэ — t05 «ачаалж байна»-аас «цуваа
+       алга» руу шилжих эсэхийг шийднэ. Цуваа ирээгүй (алдаа, 404) идэвхтэй салбарт л
+       дахин зурна: амжилттай ачаалагч өөрөө setState хийдэг тул илүү render хийхгүй. */
+    const settle=id=>{
+      this._srcSettled[id]=true;
+      const k=this.state.activeSector;
+      if(SERIES_LOADER[k]===id&&!this.seriesVerified('t05',k)) this.setState(s=>({srcSettledVer:(s.srcSettledVer||0)+1}));
+    };
     Object.keys(SOURCES).forEach(id=>{
       try{ Promise.resolve(SOURCES[id].load(this))
-        .catch(e=>console.warn('[ErtHub] «'+id+'» эх сурвалж ачаалагдсангүй:',e)); }
-      catch(e){ console.warn('[ErtHub] «'+id+'» эх сурвалж ачаалагдсангүй:',e); }
+        .catch(e=>console.warn('[ErtHub] «'+id+'» эх сурвалж ачаалагдсангүй:',e))
+        .then(()=>settle(id)); }
+      catch(e){ console.warn('[ErtHub] «'+id+'» эх сурвалж ачаалагдсангүй:',e); settle(id); }
     });
+  }
+  /* t05-ийн цувааны төлөв: 'live' | 'pending' | 'none' (EHGlossary.seriesState) */
+  seriesStateOf(k){
+    const live=this.seriesVerified('t05',k), id=SERIES_LOADER[k];
+    const settled=!id||!!(this._srcSettled&&this._srcSettled[id]);
+    return typeof EHGlossary!=='undefined'&&EHGlossary.seriesState
+      ?EHGlossary.seriesState(!!id&&this.sectorVerified('t05',k),live,settled)
+      :(live?'live':'none');
   }
   // ─── Виджетийн текст (content.json) ────────────────────────────────────
   // Админ самбараас засварлах гарчиг/дэд гарчиг/нэгж/хөл бичгийг сайт
@@ -14897,11 +14932,21 @@ class Component extends DCLogic {
     // ---- E-SERVICES ----
     const st=this.state.svcTab;
     const svcTabs=this.subNav(SVC_TABS,st,v=>({svcTab:v,svcListPage:0}));
-    const svcAll=SERVICES.map((s,i)=>({num:String(i+1).padStart(2,'0'),sector:s[0],name:s[1],desc:s[2],hits:s[3],
-      aud:s[4]||'citizen',color:NEON[s[0]],glyph:GLYPH[s[0]],sectorLabel:SECTORS[s[0]].label,
-      stat:s[3]||stxt('eservices.stat_fallback','Цахимаар шийдвэрлэнэ'),hasHits:!!s[3]}));
+    /* «Нээх →» нь ЖИНХЭНЭ хаягтай үйлчилгээнд л (svcLinkOf). Өмнө нь карт бүр дээр «Нээх →»
+       бичигдэж hover-оор өргөгддөг байсан ч дарахад юу ч болдоггүй байв (хуурамч affordance). */
+    const svcAll=SERVICES.map((s,i)=>{
+      const url=svcLinkOf(s[5]);
+      return {sector:s[0],name:s[1],desc:s[2],hits:s[3],
+        aud:s[4]||'citizen',color:NEON[s[0]],glyph:GLYPH[s[0]],sectorLabel:SECTORS[s[0]].label,
+        stat:s[3]||stxt('eservices.stat_fallback','Цахимаар шийдвэрлэнэ'),hasHits:!!s[3],
+        url,hasUrl:!!url,noUrl:!url};
+    });
+    const svcOpenExt=stxt('eservices.open_ext','Нээх ↗'), svcLinkSoon=stxt('eservices.link_soon','Холбоос удахгүй');
     const sq=(this.state.svcQ||'').toLowerCase().trim();
-    const svcList=svcAll.filter(s=>s.aud===st&&(!sq||(s.name+' '+s.desc+' '+s.sectorLabel).toLowerCase().includes(sq)));
+    /* Дугаар нь ШҮҮСЭН жагсаалт доторх байр — өмнө нь каталогийн индекс тул «Иргэнд» дээр
+       01…05, 08 гэж үсэрч, 06–07 алга мэт уншигддаг байв. */
+    const svcList=svcAll.filter(s=>s.aud===st&&(!sq||(s.name+' '+s.desc+' '+s.sectorLabel).toLowerCase().includes(sq)))
+      .map((s,i)=>Object.assign({},s,{num:String(i+1).padStart(2,'0')}));
     const svcFeatured=svcList.slice().sort((a,b)=>(b.hits?parseInt(b.hits.replace(/\D/g,'')):0)-(a.hits?parseInt(a.hits.replace(/\D/g,'')):0))[0]||svcAll[0];
     if(svcFeatured) svcFeatured.stat=svcFeatured.hits||stxt('eservices.featured_stat','Цахимаар шийдвэрлэнэ');
     const svcSteps=SERVICE_STEPS.map(s=>({num:s[0],title:s[1],body:s[2]}));
@@ -14926,7 +14971,9 @@ class Component extends DCLogic {
     const svcQuery=this.state.svcQ||'';
     const onSvcQuery=(e)=>this.setState({svcQ:e.target.value,svcListPage:0});
     const svcEmpty=svcList.length===0;
-    const SVCPER=6;
+    /* Бүлэг бүр 12-оос цөөн үйлчилгээтэй — 6-аар хуудаслахад 7 дахь нь ганцаараа
+       «2 / 2» хуудсанд нуугддаг байв. Жагсаалт урт болбол л хуудаслана. */
+    const SVCPER=12;
     const svcPages=Math.max(1,Math.ceil(svcList.length/SVCPER));
     const svcLp=Math.min(this.state.svcListPage||0,svcPages-1);
     const svcListShown=svcList.slice(svcLp*SVCPER,(svcLp+1)*SVCPER);
@@ -14959,6 +15006,10 @@ class Component extends DCLogic {
       c3:{label:stxt('browse.hero.c3_label','дуудлага/сар'),
           value:stxt('browse.hero.c3_value','')||'—',
           delta:stxt('browse.hero.c3_delta','')||'—'},
+      /* «—» (эх сурвалжгүй) нь харагдацад: том «—» биш «мэдээлэл алга», ногоон «—» дельта ба
+         «амьд» цохилдог цэг гаргахгүй (хоосон дээр амьд дохио өгөхгүй). Өмнө нь c3-ийн доор
+         хатуу бичсэн ӨСӨХ муруй зурагддаг байв — тоо байхгүй байхад зохиомол чиг хандлага. */
+      noData:stxt('status.no_data','мэдээлэл алга'),
       /* API лавлах ба Хөгжүүлэгчид табын бичиг */
       t:{h_method:stxt('browse.h_method','Метод'), h_desc:stxt('browse.h_desc','Тайлбар'),
          h_freq:stxt('browse.h_freq','Давтамж'), h_use:stxt('browse.h_use','Ашиглалт'),
@@ -14969,6 +15020,9 @@ class Component extends DCLogic {
          devCodeLive:stxt('browse.dev_code_live','Одоо ажиллах жишээ — түлхүүр шаардлагагүй'),
          more:stxt('browse.more','Дэлгэрэнгүй →')}
     };
+    ['c1','c2','c3'].forEach(c=>{ const o=browseHero[c];
+      o.hasDelta=!!o.delta&&o.delta!=='—'; o.hasSub=!!o.sub&&o.sub!=='—';
+      o.empty=o.value==='—'; o.hasValue=!o.empty; });
     const apiRows=API_ENDPOINTS.map(a=>({sector:a[0],method:a[1],path:a[2],desc:a[3],freq:a[4],use:a[5],
       color:NEON[a[0]],glyph:GLYPH[a[0]],sectorLabel:SECTORS[a[0]].label}));
     const devGuide=DEV_GUIDE.map((d,i)=>({num:String(i+1).padStart(2,'0'),title:d[0],body:d[1],isLast:i===DEV_GUIDE.length-1}));
@@ -15014,6 +15068,13 @@ class Component extends DCLogic {
       c2:{value:stxt('community.hero.c2_value','')||'—', label:stxt('community.hero.c2_label','санал дэмжсэн')},
       c3:{value:String(POLICIES.length), label:stxt('community.hero.c3_label','бодлогын санал')}
     };
+    /* Эх сурвалжгүй («—») утга том тоо мэт биш — «мэдээлэл алга» (каталог, порталын карттай ижил) */
+    const heroStatStyle=v=>v==='—'
+      ?'font-size:12.5px;font-weight:500;line-height:25px;color:var(--ink3);white-space:nowrap;'
+      :'font-family:\'Space Grotesk\',sans-serif;font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink);';
+    const heroStatText=v=>v==='—'?stxt('status.no_data','мэдээлэл алга'):v;
+    commHero.c2.show=heroStatText(commHero.c2.value); commHero.c2.style=heroStatStyle(commHero.c2.value);
+    svcHero.takenShow=heroStatText(svcHero.taken); svcHero.takenStyle=heroStatStyle(svcHero.taken);
 
     // ---- NEWS ----
     const nt=this.state.newsTab;
@@ -15082,7 +15143,7 @@ class Component extends DCLogic {
          samePeople:stxt('history.same_people','Ижил ангиллын хүмүүс')}
     };
 
-    return {svcTabs,svcHero,svcList:svcListShown,svcFeatured,svcSteps,svcCount,svcQuery,onSvcQuery,svcEmpty,
+    return {svcTabs,svcHero,svcList:svcListShown,svcFeatured,svcSteps,svcCount,svcQuery,onSvcQuery,svcEmpty,svcOpenExt,svcLinkSoon,
       svcListShowPager,svcListPageLabel,svcListPrev,svcListNext,
       isSvcCitizen:st==='citizen',showFeatured:svcList.length>1,
       browseTabs,browseHero,apiRows,devGuide,devTiers,devCodeTabs,devCode,isCatalog:bt==='catalog',isApi:bt==='api',isDev:bt==='dev',
@@ -15531,15 +15592,16 @@ class Component extends DCLogic {
                  stxt('portal_kpi.research.unit','судалгаа'),stxt('portal_kpi.orgs.unit','байгууллага')];
     /* Порталын картад цаг хугацааны цуваа ОГТ байхгүй — өмнө нь
        тэмдэглэл "+"-ээр эхэлбэл miniSpark() өгсөх муруй ЗОХИОЖ зурдаг
-       байв. Бодит цуваагүй тул хэвтээ шугам (buildKpis-ийн flatSpark-тай
-       ижил). */
-    const ukFlat=pathFor(new Array(10).fill(0),120,32,3).line;
+       байв, дараа нь хавтгай шугам. EMP: хавтгай «0» шугам ч ЗУРАХГҮЙ —
+       спарк хасагдсан. Эх сурвалжгүй карт том «—» биш, «мэдээлэл алга». */
     return {unifiedKpis:KPI_UNIFIED.map((k,i)=>{
-        const sp=ukFlat;
-        return {label:k[0],value:k[1],delta:k[2],color:k[3],tint:k[3]+'1c',
-          glyph:kGlyph[i],unit:kUnit[i],
-          deltaColor:/^\+/.test(k[2])?'#0E8F63':'var(--ink3)',
-          spark:sp,area:sp+' L120,32 L0,32 Z'};
+        const empty=!k[1]||k[1]==='—';
+        return {label:k[0],value:empty?stxt('status.no_data','мэдээлэл алга'):k[1],delta:k[2],color:k[3],tint:k[3]+'1c',
+          glyph:kGlyph[i],unit:empty?'':kUnit[i],empty,
+          valueStyle:empty
+            ?'font-size:14px;font-weight:500;line-height:36px;color:var(--ink3);'
+            :'font-family:\'Space Grotesk\',sans-serif;font-size:36px;font-weight:700;letter-spacing:-.035em;line-height:1;color:var(--ink);',
+          deltaColor:/^\+/.test(k[2])?'#0E8F63':'var(--ink3)'};
       }),
       weekPaxBars:wPax.bars,weekPaxBase:wPax.base,weekPaxLegend:wPax.legend,weekPaxYTicks:wPax.yTicks,weekPaxAvg:wPax.avgRef,weekPaxShare:wPax.share,weekPaxShareNote:wPax.shareNote,weekCargoAvg:wCargo.avgRef,weekCargoShare:wCargo.share,weekCargoShareNote:wCargo.shareNote,weekPaxDonut:wPax.donut,weekPaxStats:wPax.stats,weekPaxPlan:wPax.plan,weekPaxUnit:wPax.unit,weekPaxTotal:wPax.total,weekPaxDelta:wPax.delta,weekPaxDeltaCols:String(Math.max(1,wPax.delta.length)),weekPaxAirOnlyNote:wPax.airOnlyNote,
       section02MockNote,weekPaxPeriod:wPax.period,weekCargoPeriod:wCargo.period,
@@ -16533,7 +16595,9 @@ class Component extends DCLogic {
       histYFrom:yFrom||'',histYTo:yTo||'',onHistYFrom,onHistYTo,histYearInputStyle,histManualActive,
       histShowPager,histPageLabel,histPrev,histNext,
       datasetCount:datasetsAll.length+' өгөгдөл',dsListShowPager,dsListPageLabel,dsListPrev,dsListNext,dsListPrevStyle,dsListNextStyle,dsListPrevOff,dsListNextOff,
-      docCount:docs.length+' баримт'};
+      /* Ангиллын НИЙТ тоо (хуудасны биш) — өмнө нь 14 судалгаатай ангилалд хуудаслалтаас
+         болж «6 баримт» гэж бичигдэж, хажуугийн «Судалгаа 14»-тэй зөрдөг байв. */
+      docCount:docsAll.length+' '+this.stxt('news.hero.c1_label','баримт')};
   }
   /* DG-P: нүүрний салбарын карт (d05)-ын хугацаа — салбарын KPI/цувааны эх
      хугацаа: агаар = шүүлтийн сарын муж (monthly.periodKeys), бусад нь амьд
@@ -18079,7 +18143,10 @@ class Component extends DCLogic {
        ЯГ ИЖИЛ зарчим — тэнд аль хэдийн шийдэгдсэн байсан. */
     trend.hasData=!!t05Verified;
     trend.noData=!t05Verified;
-    trend.noDataNote=stxt('status.no_series','чиг хандлагын цуваа алга');
+    /* Эх сурвалж ачаалагдаж байхад «цуваа алга» гэж ХУДАЛ хэлэхгүй — ачаалж байна */
+    trend.noDataNote=(!t05Verified&&this.seriesStateOf(key)==='pending')
+      ?stxt('feed.stamp_pending','дата ачаалж байна…')
+      :stxt('status.no_series','чиг хандлагын цуваа алга');
     if(t05Verified) trend.showForecast=true;
     /* CH: EHChartKit.trendFrame — админы t05 preview-тэй НЭГ хувиргалт (CLAUDE.md: preview = сайт).
        Цоорхойтой сарын цэг: утга нь хоногийн дунджаар сарын эквивалент — hollow цэг, tooltip-д

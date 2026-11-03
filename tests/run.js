@@ -3086,33 +3086,29 @@ async function groupW() {
    "+"-ээр эхэлбэл miniSpark() өгсөх муруй ЗОХИОЖ зурдаг байв.
      X1. Кодын тогтмолд зохиомол тэмдэглэл үлдээгүй
      X2. content.json-д тоон тэмдэглэл үлдээгүй (талбар засварлагдах хэвээр)
-     X3. Жижиг график тэмдэглэлээс хамаарахгүй, хэвтээ шугам
+     X3. Жижиг график тэмдэглэлээс хамаарахгүй — 2026-11-03-аас ОГТ зурахгүй
+         (EMP: хавтгай «0» шугам ч хориотой; цаг хугацааны цуваа алга)
      X4. Сайт дээр "энэ улиралд" гарахгүй, бодит тоо хэвээр
    ══════════════════════════════════════════════════════════════════ */
 const PROBE_X = `async function(d,w){
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await sleep(7000);
-  /* Шошго цэс/hero-д ч давтагддаг тул "дээш алхаж текст агуулсан хүрээ"
-     гэвэл хэт том элемент сонгогдоно. Порталын карт = ЯГ НЭГ жижиг
-     график (svg path fill=none) ба 36px тоотой хамгийн ойрын эцэг. */
+  /* Шошго цэс/hero-д ч давтагддаг тул шошгоос дээш алхвал цэсний «Нээлттэй өгөгдөл»-өөс
+     эхэлж хэт том хэсэг сонгогдоно. Порталын карт = [data-uk-value]-ийн ГАНЦХАН утга
+     агуулсан хамгийн том эцэг; шошгыг тэр картын дотроос хайна. */
   const cs=x=>w.getComputedStyle(x);
   const norm=s=>s.replace(/\\s+/g,' ').trim().toUpperCase();
-  const leaves=[...d.querySelectorAll('div,span')].filter(x=>x.children.length===0);
+  const cardOf=v=>{ let c=v;
+    while(c.parentElement&&c.parentElement.querySelectorAll('[data-uk-value]').length===1) c=c.parentElement;
+    return c; };
+  const ukCards=[...d.querySelectorAll('[data-uk-value]')].map(v=>({v,c:cardOf(v)}));
   const labels=['НЭЭЛТТЭЙ ӨГӨГДӨЛ','ЦАХИМ ҮЙЛЧИЛГЭЭ','СУДАЛГАА','ОРОЛЦОГЧ БАЙГУУЛЛАГА'];
   const cards=labels.map(lb=>{
-    for(const lab of leaves.filter(x=>norm(x.textContent)===lb)){
-      let c=lab;
-      for(let h=0;h<6&&c;h++,c=c.parentElement){
-        const paths=c.querySelectorAll('svg path[fill="none"]');
-        const big=[...c.querySelectorAll('div')].find(x=>cs(x).fontSize==='36px');
-        if(paths.length===1&&big){
-          const dd=paths[0].getAttribute('d')||'';
-          const ys=[...dd.matchAll(/[ML]\\s*[-\\d.]+[ ,]\\s*([-\\d.]+)/g)].map(m=>+m[1]);
-          const chip=[...c.querySelectorAll('div')].find(x=>cs(x).fontSize==='10.5px'&&cs(x).fontWeight==='600');
-          return {lb, value:big.textContent.trim(), note:chip?chip.textContent.trim():null,
-                  flat:ys.length>1&&ys.every(y=>Math.abs(y-ys[0])<0.01)};
-        }
-      }
+    for(const {v,c} of ukCards){
+      if(![...c.querySelectorAll('div,span')].some(x=>x.children.length===0&&norm(x.textContent)===lb)) continue;
+      const chip=[...c.querySelectorAll('div')].find(x=>cs(x).fontSize==='10.5px'&&cs(x).fontWeight==='600');
+      return {lb, value:v.textContent.trim(), note:chip?chip.textContent.trim():'',
+              svg:c.querySelectorAll('svg').length};
     }
     return {lb, err:'карт олдсонгүй'};
   });
@@ -3131,8 +3127,8 @@ async function groupX() {
     notes.every((n) => typeof n === 'string' && !/\d/.test(n)), JSON.stringify(notes));
   const mapStart = idx.indexOf('return {unifiedKpis:KPI_UNIFIED.map(');
   const mapBody = mapStart >= 0 ? idx.slice(mapStart, idx.indexOf('}),', mapStart)) : '';
-  check('X3. Жижиг график тэмдэглэлээс ЗОХИОГДОХГҮЙ (хэвтээ шугам)',
-    !!mapBody && !mapBody.includes('miniSpark(') && mapBody.includes('const sp=ukFlat;'));
+  check('X3. Жижиг график тэмдэглэлээс ЗОХИОГДОХГҮЙ (огт зурахгүй — хавтгай шугам ч)',
+    !!mapBody && !mapBody.includes('miniSpark(') && !mapBody.includes('spark:') && !idx.includes('const ukFlat='));
 
   if (!CHROME) { skipped('X4. Сайт дээр (DOM)', 'Chrome олдсонгүй'); return; }
   const srv = serve();
@@ -3146,8 +3142,14 @@ async function groupX() {
     check('X4. Сайтын АЛЬ Ч хэсэгт "энэ улиралд" гарахгүй', r.pageQuarter === false);
     check('X4. 4 картын тэмдэглэл хоосон',
       (r.cards || []).every((c) => c.note === ''), JSON.stringify((r.cards || []).map((c) => c.note)));
-    check('X4. Жижиг график хэвтээ шугам (зохиомол муруй алга)',
-      (r.cards || []).every((c) => c.flat === true), JSON.stringify((r.cards || []).map((c) => c.flat)));
+    check('X4. Жижиг график АЛГА (зохиомол муруй ч, хавтгай «0» шугам ч)',
+      (r.cards || []).every((c) => c.svg === 0), JSON.stringify((r.cards || []).map((c) => c.svg)));
+    /* Оролцогч байгууллага — каталогийн нийлүүлэгч (UX1-тэй ижил функц); Судалгаа — эх сурвалжгүй */
+    const pubN = require(path.join(ROOT, 'js', 'erthub-glossary.js')).catalogPublishers(readJson('content.json').site.datasets).length;
+    check('X4. «Оролцогч байгууллага» = ' + pubN + ', «Судалгаа» = «мэдээлэл алга» (том «—» биш)',
+      (byLb['ОРОЛЦОГЧ БАЙГУУЛЛАГА'] || {}).value === String(pubN) &&
+      (byLb['СУДАЛГАА'] || {}).value === (readJson('content.json').site.status.no_data || 'мэдээлэл алга'),
+      JSON.stringify((r.cards || []).map((c) => c.lb + '=' + c.value)));
     /* Тоо нь каталогийн БОДИТ уртаас тооцоологддог тул тестэд ч хатуу
        бичихгүй — шинэ датасэт нэмэхэд шалгуур утгаа алдахгүй. */
     const cat4 = readJson('content.json').site;
@@ -7625,6 +7627,125 @@ async function groupOD() {
    searchDatasets() нь index.html-ээс задлагдаж, 3 датасэтийн
    ГАРААР БОДОХ БОЛОМЖТОЙ фикстур дээр шалгагдана.
    ══════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════
+   UX. UX шинжээчийн аудит (2026-11-03) — хуурамч дохионы регресс
+
+   Хэрэглэгчид ХУДАЛ дохио өгдөг байсан 6 зүйл, бүгд ГАРААР БОДОГДОХ
+   жижиг фикстур дээр (нүдээр "зөв харагдана" гэж батлахгүй):
+     (1) Цахим үйлчилгээ: карт бүр «Нээх →» ч дарахад юу ч болдоггүй;
+         дугаар 01…05, 08 гэж үсэрдэг; 7 үйлчилгээ 6-аар хуудаслагдаж
+         7 дахь нь ганцаараа «2 / 2»-т.
+     (2) Нүүрийн 05: эх сурвалж ачаалагдаж байхад «цуваа алга».
+     (3) Порталын 4 карт: хоёр нь том «—», бүгд хавтгай «0» шугамтай;
+         «Оролцогч байгууллага» каталогоос тоологдох боломжтой байв.
+     (4) Каталогийн «ДУУДЛАГА/САР» — тоо «—» ч ХАТУУ бичсэн өсөх муруй.
+     (5) Баримтын сан: 14 судалгаатай ангилалд «6 баримт» (хуудасны тоо).
+     (6) Гар утас: hero-ийн баруун багана (зураг + легенд) порталын картыг
+         1,183px-д (812px дэлгэцээс доош) түлхдэг; нуухад 719px.
+   ══════════════════════════════════════════════════════════════════ */
+function groupUX() {
+  group('UX. Хуурамч дохио — үйлчилгээ · 05 ачаалал · порталын карт · каталог');
+  const idx = read('index.html'), adm = read('admin/index.html'), con = readJson('content.json');
+  const css = read('style.css');
+  const G = require(path.join(ROOT, 'js', 'erthub-glossary.js'));
+
+  /* (3) Каталогийн нийлүүлэгч: нийлмэл «УБТЗ · МТЗ» задарч, давхардал/хоосон/«—» хасагдана */
+  const pubs = G.catalogPublishers([{ agency: 'ИНЕГ' }, { agency: 'УБТЗ' }, { agency: 'УБТЗ · МТЗ' },
+    { agency: 'ИНЕГ · УБТЗ · МТЗ · АТҮТ' }, { agency: '' }, { agency: '—' }, {}, null]);
+  check('UX1. catalogPublishers: 8 мөр → 4 байгууллага (ИНЕГ, УБТЗ, МТЗ, АТҮТ)',
+    JSON.stringify(pubs) === JSON.stringify(['ИНЕГ', 'УБТЗ', 'МТЗ', 'АТҮТ']), JSON.stringify(pubs));
+  check('UX1. Том/жижиг үсэг ялгахгүй, таслал ч тусгаарлагч',
+    G.catalogPublishers([{ agency: 'ЗТЯ, зтя' }, { agency: 'АТҮТ/ЗТХЕГ' }]).length === 3 &&
+    G.catalogPublishers(undefined).length === 0);
+  const live = G.catalogPublishers(con.site.datasets);
+  const manual = new Set();
+  con.site.datasets.forEach((d) => String(d.agency || '').split('·').forEach((a) => { if (a.trim()) manual.add(a.trim()); }));
+  check('UX1. content.json-ийн каталог дээр гараар тоолсонтой ТЭНЦҮҮ (' + live.length + ')',
+    live.length > 0 && live.length === manual.size, live.join(',') + ' vs ' + [...manual].join(','));
+
+  /* (2) Цувааны төлөв: холбогдсон + ачаалагч дуусаагүй → pending; дууссан → none */
+  const st = G.seriesState;
+  check('UX2. seriesState: холбогдсон, ачаалж байна → pending', st(true, false, false) === 'pending');
+  check('UX2. seriesState: холбогдсон, ачаалагч дууссан ч цувааагүй → none', st(true, false, true) === 'none');
+  check('UX2. seriesState: эх сурвалжгүй (ус) → шууд none', st(false, false, false) === 'none');
+  check('UX2. seriesState: цуваа ирсэн → live (бусдаас үл хамаарна)', st(true, true, false) === 'live' && st(false, true, true) === 'live');
+  const sl = idx.match(/const SERIES_LOADER=\{([^}]*)\}/);
+  const srcIds = (idx.match(/const SOURCES=\{[\s\S]*?\n\};/) || [''])[0];
+  const loaders = sl ? (sl[1].match(/'([A-Za-z]+)'/g) || []).map((x) => x.slice(1, -1)) : [];
+  check('UX2. SERIES_LOADER-ийн ачаалагч бүр SOURCES-д бүртгэлтэй (' + loaders.join(',') + ')',
+    loaders.length === 3 && loaders.every((id) => srcIds.includes('\n  ' + id + ':{')), loaders.join(','));
+  const flat = idx.replace(/\s+/g, ' ');
+  check('UX2. loadSources ачаалагч дуусахыг тэмдэглэнэ (амжилт ба алдаа хоёуланд)',
+    flat.includes('.then(()=>settle(id)); }') && /catch\(e\)\{ console\.warn\([^;]*\); settle\(id\); \}/.test(flat));
+  check('UX2. t05: pending үед «дата ачаалж байна…», эс бол «цуваа алга»',
+    flat.includes("trend.noDataNote=(!t05Verified&&this.seriesStateOf(key)==='pending') ?stxt('feed.stamp_pending'") &&
+    flat.includes(":stxt('status.no_series','чиг хандлагын цуваа алга');"));
+
+  /* (1) Цахим үйлчилгээ */
+  const lm = idx.match(/function svcLinkOf\(u\)\{[\s\S]*?\n\}/);
+  const svcLinkOf = lm ? new Function(lm[0] + '\nreturn svcLinkOf;')() : null;
+  check('UX3. svcLinkOf: зөвхөн http(s), хоосон/javascript: → ""',
+    !!svcLinkOf && svcLinkOf(' https://eticket.example.mn/a?b=1 ') === 'https://eticket.example.mn/a?b=1' &&
+    svcLinkOf('http://x.mn') === 'http://x.mn' && svcLinkOf('javascript:alert(1)') === '' &&
+    svcLinkOf('') === '' && svcLinkOf(null) === '' && svcLinkOf('www.x.mn') === '' && svcLinkOf('https://a.mn/"x') === '');
+  const card = (idx.match(/<div data-svc-card="1"[\s\S]*?<\/sc-for>/) || [''])[0];
+  check('UX3. Карт хаяггүй бол «Нээх» БИШ — «Холбоос удахгүй»; хаягтай бол жинхэнэ <a> (шинэ цонх, noopener)',
+    card.includes('<sc-if value="{{ sv.hasUrl }}"><a data-svc-open="1" href="{{ sv.url }}" target="_blank" rel="noopener noreferrer"') &&
+    /<sc-if value="\{\{ sv\.noUrl \}\}"><span data-svc-soon="1"[^>]*>\{\{ svcLinkSoon \}\}/.test(card) &&
+    !card.includes('{{ sCommOpen }}') && !card.includes('style-hover'), card.slice(0, 200));
+  check('UX3. Дугаар ШҮҮСЭН жагсаалт дотор (01, 02 … завсаргүй)',
+    flat.includes(".map((s,i)=>Object.assign({},s,{num:String(i+1).padStart(2,'0')}))") &&
+    !flat.includes('const svcAll=SERVICES.map((s,i)=>({num:'));
+  check('UX3. 12-оос цөөн үйлчилгээ нэг хуудсанд (SVCPER=12)', idx.includes('const SVCPER=12;'));
+  check('UX3. url талбар: сайт давхаргад, админы маягтад, шинэ бичлэгт',
+    idx.includes("const SF=['sector','name','desc','hits','aud','url'];") &&
+    adm.includes("['url', utxt('svc_cat.f_url',") && adm.includes("aud:'citizen',url:''}"));
+
+  /* (3) Порталын карт */
+  check('UX4. «Оролцогч байгууллага» = каталогийн нийлүүлэгч (сайт ба админы preview ижил функц)',
+    idx.includes("KPI_UNIFIED[3][1]=n?String(n):'—'") && idx.includes('EHGlossary.catalogPublishers(DATASETS)') &&
+    adm.includes("orgs:(CON.site&&Array.isArray(CON.site.datasets)&&typeof EHGlossary!=='undefined'&&EHGlossary.catalogPublishers)"));
+  check('UX4. Каталог давхарга ирэхэд дахин тоолно (applySiteContent → syncCatalogKpis)',
+    (idx.match(/syncCatalogKpis\(\)/g) || []).length >= 3);
+  const ukTpl = (idx.match(/<sc-for list="\{\{ unifiedKpis \}\}"[\s\S]*?<\/sc-for>/) || [''])[0];
+  check('UX4. Порталын карт: хавтгай шугам (svg) АЛГА, «—» → «мэдээлэл алга»',
+    !!ukTpl && !ukTpl.includes('<svg') && !idx.includes('const ukFlat=') &&
+    idx.includes("value:empty?stxt('status.no_data','мэдээлэл алга'):k[1]") && ukTpl.includes('{{ uk.valueStyle }}'));
+  check('UX4. Админы preview: эх сурвалжгүй карт «—» биш «мэдээлэл алга»',
+    adm.includes(": esc(pkNoData))+'</div>'+") && !adm.includes(": '—')+'</div>'+"));
+
+  /* (4) Каталог */
+  check('UX5. Каталогийн толгойд ХАТУУ бичсэн өсөх муруй АЛГА',
+    !idx.includes('M0,26 L20,23 L40,25 L60,17 L80,14 L100,9 L120,4'));
+  check('UX5. «—» дельта, «амьд» цэг, том «—» гарахгүй (sc-if)',
+    idx.includes('<sc-if value="{{ browseHero.c2.hasSub }}">') && idx.includes('{{ browseHero.c3.empty }}') &&
+    ['c1', 'c2', 'c3'].every((c) => idx.includes('<sc-if value="{{ browseHero.' + c + '.hasDelta }}">')) &&
+    idx.includes("o.hasDelta=!!o.delta&&o.delta!=='—'"));
+  check('UX5. Цахим үйлчилгээ, коммунитигийн толгойн «—» ч «мэдээлэл алга» (нэг дүрэм)',
+    idx.includes('{{ svcHero.takenShow }}') && idx.includes('{{ commHero.c2.show }}') && !idx.includes('>{{ svcHero.taken }}<'));
+
+  /* (5) Баримтын сан */
+  check('UX6. Баримтын тоо = ангиллын НИЙТ (хуудасны биш)',
+    idx.includes("docCount:docsAll.length+' '+this.stxt('news.hero.c1_label','баримт')") && !idx.includes("docCount:docs.length+' баримт'"));
+
+  /* (6) Гар утас */
+  const mob = (css.match(/@media \(max-width: 640px\) \{[\s\S]*?\n\}/) || [''])[0];
+  check('UX7. ≤640px: hero-ийн баруун багана (зураг + легенд) нуугдана, дата түрүүлнэ',
+    mob.includes('.eh-hero-r { display: none !important; }') && idx.includes('<div class="eh-hero-r" ') &&
+    /<svg data-ch-ok="hero-ийн изометрик зураглал — график биш" aria-hidden="true"/.test(idx));
+
+  /* (1б) 7 үйлчилгээ нэг хуудсанд → 3 баганад 3+3+1 орчигч үлдэж байв (VIS grid-orphan
+     /eservices @1440, @1024). Хувьсах тоот жагсаалтын стандарт .eh-fx (flex-wrap + grow). */
+  check('UX9. Үйлчилгээний картын жагсаалт .eh-fx (сүүлийн мөрт ганц орчигч үлдэхгүй)',
+    /<div class="eh-fx" style="--fx:330px;[^"]*">\s*<sc-for list="\{\{ svcList \}\}"/.test(idx));
+
+  /* Текст content.json-д (text-coverage F1/F2) */
+  const es = con.site.eservices;
+  check('UX8. Шинэ текст content.json-д бүртгэлтэй',
+    es.open_ext === 'Нээх ↗' && es.link_soon === 'Холбоос удахгүй' && !!con.ui.svc_cat.f_url &&
+    JSON.stringify(con.ui_form).includes('"open_ext"') && JSON.stringify(con.ui_form).includes('"f_url"'));
+}
+
 function groupHS() {
   group('HS. Нүүрийн хайлт → датасэт');
   const idx = read('index.html');
@@ -12789,6 +12910,8 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=I3')) { await groupI3(); }
   else if (process.argv.includes('--only=SP')) { groupSP(); }
   else if (process.argv.includes('--only=HS')) { groupHS(); }
+  else if (process.argv.includes('--only=UX')) { groupUX(); }
+  else if (process.argv.includes('--only=X')) { await groupX(); }
   else if (process.argv.includes('--only=DG')) { groupDG(); await groupDGP(); await groupDGA(); }
   else if (process.argv.includes('--only=FL')) { await groupFL(); }
   else if (process.argv.includes('--only=AF')) { await groupAF(); }
@@ -12813,7 +12936,7 @@ console.log('ErtHub — систем тест');
   else if (process.argv.includes('--only=Z')) { await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); }
   else {
   groupA(); groupB(); await groupC(); groupD(); groupE(); await groupF(); await groupG(); await groupG3(); await groupG4(); await groupH();
-  await groupPG(); await groupPH(); await groupPS(); groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
+  await groupPG(); await groupPH(); await groupPS(); groupI(); groupAX(); await groupI2(); await groupI3(); await groupI4(); await groupJ(); await groupK(); await groupL(); await groupM(); await groupN(); await groupO(); groupP(); groupQ(); groupR(); await groupS(); await groupU(); await groupW(); await groupX(); await groupY(); await groupZ(); await groupZ2(); await groupZ3(); await groupZ4(); await groupZ5(); await groupBE(); await groupAI(); await groupVR(); await groupOD(); await groupFM(); groupSP(); groupHS(); groupUX(); groupDG(); await groupFL(); groupUI(); await groupCS(); groupAS(); groupFR(); groupST(); await groupSM(); await groupAG(); await groupDGP(); await groupDGA(); groupWK(); groupRPX(); await groupRI(); await groupHM(); groupHR(); await groupHP(); await groupHK(); await groupHE(); await groupRT(); await groupDA(); await groupPF(); await groupAF(); await groupHV(); await groupVIS();
   }
 
   console.log('\n' + '═'.repeat(62));

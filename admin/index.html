@@ -470,7 +470,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:
 <script src="../js/erthub-publish.js?v=ffe215f9"></script>
 <script src="../js/erthub-backend.js?v=a96de8ab"></script>
 <script src="../js/erthub-chart.js?v=422174bf"></script>
-<script src="../js/erthub-glossary.js?v=b3b2b5d1"></script>
+<script src="../js/erthub-glossary.js?v=2dc91947"></script>
 <script src="../js/erthub-chartkit.js?v=2913aee9"></script>
 <script src="../js/erthub-tip.js?v=ba005e59"></script>
 </head>
@@ -2434,19 +2434,24 @@ function previewFor(id,mini){
            тоог нь харуулна. Өмнө нь "тооцоологдоно" гэсэн үгийн ард нэгж
            залгагдаж "тооцоологдоно датасет" гэж эвгүй гардаг байв. */
         pkComputed={open_data:(CON.site&&Array.isArray(CON.site.datasets))?CON.site.datasets.length:null,
-                    eservice:(CON.site&&Array.isArray(CON.site.services))?CON.site.services.length:null};
+                    eservice:(CON.site&&Array.isArray(CON.site.services))?CON.site.services.length:null,
+                    /* Сайттай НЭГ функц — каталогийн өгөгдөл нийлүүлэгч байгууллага (давхардалгүй) */
+                    orgs:(CON.site&&Array.isArray(CON.site.datasets)&&typeof EHGlossary!=='undefined'&&EHGlossary.catalogPublishers)
+                      ?(EHGlossary.catalogPublishers(CON.site.datasets).length||null):null},
+        /* Сайттай ижил: эх сурвалжгүй карт том «—» биш, «мэдээлэл алга» */
+        pkNoData=siteGet(['status','no_data'])||'мэдээлэл алга';
     body='<div class="pvgrid8" style="grid-template-columns:repeat(4,1fr)">'+
       pk4.map(function(k){
         var lb=siteGet(['portal_kpi',k,'label'])||pkDef[k].label,
             un=siteGet(['portal_kpi',k,'unit'])||pkDef[k].unit,
             nt=siteGet(['portal_kpi',k,'note']);
         return '<div class="pvgc"><div class="l">'+esc(lb)+'</div>'+
-          '<div class="v"'+((k in pkComputed)?'':' style="color:#A7B0C6"')+'>'+
+          '<div class="v"'+((k in pkComputed)?'':' style="color:#A7B0C6;font-size:12px;font-weight:500"')+'>'+
           ((k in pkComputed)
             ? (pkComputed[k]!=null
                 ? esc(String(pkComputed[k]))+' <span style="font-weight:400">'+esc(un)+'</span>'
                 : esc(utxt('portal_kpi.computed','тооцоологдоно')))
-            : '—')+'</div>'+
+            : esc(pkNoData))+'</div>'+
           (nt?'<div class="l" style="margin-top:2px">'+esc(nt)+'</div>':'')+
           '</div>'}).join('')+'</div>';
   } else if((kind==='line'||kind==='multiline')&&!mini&&(cfr=PV_FRAME[id]?PV_FRAME[id](id):null)){
@@ -3382,7 +3387,9 @@ function svcFieldDefs(){
   return [
     ['name', utxt('svc_cat.f_name','Нэр'), false],
     ['desc', utxt('svc_cat.f_desc','Тайлбар'), true],
-    ['hits', utxt('svc_cat.f_hits','Ашиглалт (жиш. "4,685,647 хандалт")'), false]
+    ['hits', utxt('svc_cat.f_hits','Ашиглалт (жиш. "4,685,647 хандалт")'), false],
+    /* Хоосон бол сайтад «Холбоос удахгүй» — дарагдахгүй карт (хуурамч «Нээх» гаргахгүй) */
+    ['url', utxt('svc_cat.f_url','Холбоос (https://…) — хоосон бол «Холбоос удахгүй»'), false]
   ];
 }
 /* Бүлгийн нэрийг САЙТЫН табнаас (site.eservices.tabs) уншина — админд
@@ -4907,7 +4914,7 @@ document.addEventListener('click',function(e){
   }
   if((el=t.closest&&t.closest('[data-sv-add]'))){
     CON.site=CON.site||{}; CON.site.services=CON.site.services||[];
-    CON.site.services.push({sector:'road',name:'',desc:'',hits:'',aud:'citizen'});
+    CON.site.services.push({sector:'road',name:'',desc:'',hits:'',aud:'citizen',url:''});
     log('services','Каталогт шинэ үйлчилгээ нэмэв'); render(); return;
   }
   if((el=t.closest&&t.closest('[data-sv-del]'))){

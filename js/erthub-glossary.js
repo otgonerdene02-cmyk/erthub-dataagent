@@ -1073,7 +1073,30 @@
     return { keep: keep, drop: drop };
   }
 
+  /* Каталогийн өгөгдөл нийлүүлэгч байгууллагууд — датасэтийн `agency` («УБТЗ · МТЗ» гэх мэт
+     нийлмэл ч байдаг) задалж давхардалгүй. Порталын «Оролцогч байгууллага» карт ҮҮНЭЭС
+     (сайт ба админы preview ижил) — тоо зохиохгүй, каталогийн бодит жагсаалт. */
+  function catalogPublishers(list) {
+    var seen = {}, out = [];
+    (Array.isArray(list) ? list : []).forEach(function (d) {
+      String((d && d.agency) || '').split(/\s*[·,;/]\s*/).forEach(function (a) {
+        var n = a.trim();
+        if (n && n !== '—' && !seen[n.toLowerCase()]) { seen[n.toLowerCase()] = 1; out.push(n); }
+      });
+    });
+    return out;
+  }
+
+  /* Цувааны төлөв: эх сурвалж холбогдсон (slotOn) ч дата хараахан ирээгүй, ачаалагч нь
+     дуусаагүй бол 'pending' — «цуваа алга» гэж ХУДАЛ хэлэхгүй (2026-11-03 UX аудит: нүүрийн
+     05 авто тээвэр анх нээхэд «чиг хандлагын цуваа алга», 2–3 сек дараа график гарч байв). */
+  function seriesState(slotOn, live, settled) {
+    if (live) return 'live';
+    return slotOn && !settled ? 'pending' : 'none';
+  }
+
   var api = {
+    catalogPublishers: catalogPublishers, seriesState: seriesState,
     weekReport: weekReport, weekLag: weekLag, weekAxis: weekAxis, weekBars: weekBars,
     roadPaxSeries: roadPaxSeries, trendModel: trendModel, roadPaxMonthSeries: roadPaxMonthSeries,
     likeForLike: likeForLike,
