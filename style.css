@@ -129,7 +129,17 @@ body{margin:0;}
   /* 01-р хэсгийн салбарын товч (sticky мөр): гар утсанд зөвхөн СОНГОСОН салбар нэртэй —
      4 нэр зэрэг 3 мөр болж sticky самбар дэлгэцийн 1/7-ийг эзэлдэг байв. Бусад нь дүрс + title. */
   [data-home-sector]:not([data-on="1"]) .eh-sec-chip-l { display: none; }
-  [data-home-sector]:not([data-on="1"]) { padding: 0 9px !important; }
+  [data-home-sector]:not([data-on="1"]) { padding: 0 8px !important; }
+  /* Тэгсэн ч ⚙ ШҮҮЛТ + 4 товч 2 мөрөнд хугарч, огнооны мөртэй нийлээд sticky самбар 134px
+     (375×812 дэлгэцийн 16%) байнга эзэлдэг байв. Шүүлтийн товч зөвхөн ⚙ (title/aria-label үлдэнэ),
+     товчнууд НЭГ мөрөнд (багтахгүй бол хэвтээ гүйлгэнэ), огноо доор нь — 2 мөр. */
+  .eh-home-bar { padding: 10px 12px !important; }
+  .eh-hb-chips { flex: 1 1 100%; flex-wrap: nowrap !important; overflow-x: auto; gap: 5px !important; scrollbar-width: none; }
+  .eh-hb-chips::-webkit-scrollbar { display: none; }
+  .eh-hb-chips > * { flex-shrink: 0; }
+  .eh-hb-chips > button:first-child { padding: 8px 11px !important; }
+  .eh-hb-fl { display: none; }
+  .eh-hb-range { margin-left: 0 !important; white-space: normal !important; flex-shrink: 1 !important; min-width: 0; font-size: 10px !important; }
   /* Сарын график + тээвэрлэгчийн жагсаалт: гар утсанд дараалан, жагсаалт бүтнээрээ */
   .eh-trend-rank { grid-template-columns: minmax(0, 1fr) !important; }
   .eh-ri-row { grid-template-columns: minmax(0, 1fr) !important; }

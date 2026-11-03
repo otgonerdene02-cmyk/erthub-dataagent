@@ -7744,6 +7744,61 @@ function groupUX() {
   check('UX8. Шинэ текст content.json-д бүртгэлтэй',
     es.open_ext === 'Нээх ↗' && es.link_soon === 'Холбоос удахгүй' && !!con.ui.svc_cat.f_url &&
     JSON.stringify(con.ui_form).includes('"open_ext"') && JSON.stringify(con.ui_form).includes('"f_url"'));
+
+  /* ── 2-р давалгаа ─────────────────────────────────────────────────────────────── */
+  /* (7) Тээврийн хэрэгсэл: блоклогдсон самбар 15 хоосон карт («— ТХ», «— нийт», «мэдээлэл алга»)
+     өрөхийн оронд нийтлэгдэх үзүүлэлтийн жагсаалт (нэр + эх багана). Builder-ийг эх кодоос таслан
+     ажиллуулна (VR бүлгийн арга) — хуулбар биш, нийтлэгдэх код. */
+  const vi = idx.indexOf('const VEHREG_DS='), vj = idx.indexOf('/* ── Сайтын ерөнхий текстийн ГАНЦ эх сурвалж');
+  const vstxt = (p, fb) => { let c = con.site; for (const k of String(p).split('.')) { if (c == null || typeof c !== 'object') return fb; c = c[k]; }
+    return (c == null || c === '') ? fb : c; };
+  let VB = null;
+  try {
+    VB = new Function('fmtNum', 'stxt', 'NEON', idx.slice(vi, vj) + '\nreturn {buildVehRegBoard,VEHREG_KPI,VEHREG_SHARE,VEHREG_TOP,VEHREG_FUEL_KPI,VEHREG_FUEL_TOP};')(
+      (n) => Number(n).toLocaleString('en-US'), vstxt, { road: '#8CA9E8' });
+  } catch (e) { VB = null; }
+  const vb = VB && VB.buildVehRegBoard(null, 'structure');
+  const nStruct = VB ? VB.VEHREG_KPI.length + 1 + VB.VEHREG_SHARE.length + VB.VEHREG_TOP.length : 0;
+  check('UX10. Блоклогдсон самбар: жагсаалт = 6 KPI + насжилт + 5 бөөрөнхий + 3 TOP = ' + nStruct + ' мөр',
+    !!vb && nStruct === 15 && vb.plan.length === nStruct && vb.planHead === con.site.vehreg.blocked.plan,
+    vb ? vb.plan.length + ' / ' + vb.planHead : 'builder алга');
+  check('UX10. Мөр бүр нэртэй, эх багана ЭСВЭЛ дутуу эх сурвалжийн тайлбартай; тоо огт алга',
+    !!vb && vb.plan.every((r) => r.name && (r.hasField ? /^[A-Z]+$/.test(r.field) : (r.showWhy && r.why))) &&
+    vb.plan.every((r) => !/[0-9]/.test(r.name)) && !vb.plan.some((r) => / — TOP /.test(r.name)),
+    vb ? JSON.stringify(vb.plan.filter((r) => !(r.hasField || r.showWhy))) : '');
+  const fp = vb && vb.fuel.plan;
+  check('UX10. Түлшний таб: 4 KPI + харьцаа + оноор + 2 TOP = 8 мөр',
+    !!fp && fp.length === VB.VEHREG_FUEL_KPI.length + 2 + VB.VEHREG_FUEL_TOP.length && fp.length === 8 && fp.every((r) => r.hasField),
+    fp ? fp.map((r) => r.name).join(',') : '');
+  const vtpl = idx.slice(idx.indexOf('<sc-if value="{{ isVehReg }}">'), idx.indexOf('<sc-if value="{{ isCommunity }}">'));
+  const planAt = vtpl.indexOf('data-vehreg-plan="structure"'), kpiAt = vtpl.indexOf('{{ vehreg.kpis }}');
+  check('UX10. Темплейт: жагсаалт блоклогдсон хайрцагт, картын grid зөвхөн {{ vehreg.live }} үед (structure ба fuel)',
+    planAt > 0 && kpiAt > planAt && /<sc-if value="\{\{ vehreg\.live \}\}">\s*<div class="eh-fx" style="--fx:182px;/.test(vtpl) &&
+    vtpl.includes('data-vehreg-plan="fuel"') && /<sc-if value="\{\{ vehreg\.live \}\}">\s*<div class="eh-fx" style="--fx:252px;/.test(vtpl) &&
+    vtpl.includes('{{ vehreg.fuel.plan }}'));
+
+  /* (8) Датасэтийн толгойн 2-р карт: дундын тоолуургүй бол «ҮЗСЭН —» + ногоон цэг гарч байв */
+  const mi = idx.indexOf('const METRICS={'), mj = idx.indexOf('\n};', mi);
+  let MX = null;
+  try { MX = new Function('fmtNum', 'return ' + idx.slice(mi + 'const METRICS='.length, mj + 2) + ';')((n) => Number(n).toLocaleString('en-US')); } catch (e) { MX = null; }
+  check('UX11. views: тоолуургүй → null (карт «амьд» болохгүй), 1234 → «1,234 удаа»',
+    !!MX && MX.views({ views: null }).value === null && MX.views({ views: 1234 }).value === '1,234 удаа');
+  check('UX11. coverage: 2020–2026 · ганц он 2025 · он алга бол null («undefined» биш)',
+    !!MX && MX.coverage({ meta: { yearFrom: '2020', yearTo: '2026' } }).value === '2020–2026' &&
+    MX.coverage({ meta: { yearFrom: 2025, yearTo: 2025 } }).value === '2025' &&
+    MX.coverage({ meta: { yearFrom: '2025', yearTo: '' } }).value === '2025' &&
+    MX.coverage({ meta: { lastRecord: '2026-10-31' } }).value === null && MX.coverage({}).value == null,
+    MX ? JSON.stringify(MX.coverage({ meta: { lastRecord: 'x' } })) : 'METRICS алга');
+  check('UX11. Толгой: тоолуур → хамрах хугацаа → нуух; карт зөвхөн live үед, дүрс нь картынх',
+    /const useCard=\[this\.bindCard\(dsel,'use',''\),this\.bindCard\(Object\.assign\(\{\},dsel,\{bind:\{use:'coverage'\}\}\),'use',''\)\]/.test(idx) &&
+    /<sc-if value="\{\{ detail\.useCard\.live \}\}">\s*<div data-ds-card="use"/.test(idx) && idx.includes('{{ detail.useCard.glyph }}'));
+
+  /* (9) Нүүрийн 01 sticky шүүлтийн мөр: гар утсанд 3 мөр (134px) → 2 мөр */
+  check('UX12. ≤640px: ⚙ зөвхөн дүрс (aria-label үлдэнэ), товчнууд НЭГ мөр (nowrap + хэвтээ гүйлгээ), огноо мөр шилжинэ',
+    mob.includes('.eh-hb-chips { flex: 1 1 100%; flex-wrap: nowrap !important; overflow-x: auto;') &&
+    mob.includes('.eh-hb-fl { display: none; }') && mob.includes('.eh-home-bar { padding: 10px 12px !important; }') &&
+    /\.eh-hb-range \{[^}]*white-space: normal !important/.test(mob) &&
+    /<div class="eh-hb-chips"[^>]*>\s*<button sc-camel-on-click="\{\{ toggleFilter \}\}"[^>]*aria-label="\{\{ sFilterBtn \}\}">[\s\S]*?<span class="eh-hb-fl"[\s\S]*?\{\{ sectorIcons \}\}[\s\S]*?<\/sc-for>\s*<\/div>\s*<div class="eh-hb-range"/.test(idx));
 }
 
 function groupHS() {
